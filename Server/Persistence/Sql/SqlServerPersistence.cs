@@ -581,12 +581,31 @@ namespace Server.Persistence.Sql
         public DatabaseProviderKind Provider => _provider;
 
         public SqlServerPersistence(DatabaseProviderKind provider)
+            : this(provider, CreateOptionsFromSettings())
+        {
+        }
+
+        /// <summary>
+        /// Creates a SQL persistence boundary with explicit connection options.
+        /// The settings-based overload remains the production default; explicit options
+        /// keep callers such as isolated SQLite fixtures from mutating global settings.
+        /// </summary>
+        public SqlServerPersistence(DatabaseProviderKind provider, SqlDatabaseOptions databaseOptions)
         {
             if (provider == DatabaseProviderKind.Legacy)
                 throw new ArgumentException("Legacy 不应使用 SqlServerPersistence。", nameof(provider));
+            if (databaseOptions == null)
+                throw new ArgumentNullException(nameof(databaseOptions));
 
             _provider = provider;
-            _databaseOptions = new SqlDatabaseOptions
+            _databaseOptions = databaseOptions;
+
+            _schemaMigrator = new SchemaMigrator(SchemaMigrator.CreateDefaultMigrations(), commandTimeoutSeconds: _databaseOptions.CommandTimeoutSeconds);
+        }
+
+        private static SqlDatabaseOptions CreateOptionsFromSettings()
+        {
+            return new SqlDatabaseOptions
             {
                 SqlitePath = Settings.SqlitePath,
                 MySqlConnectionString = Settings.MySqlConnectionString,
@@ -599,8 +618,6 @@ namespace Server.Persistence.Sql
                 MySqlConnectionLifeTimeSeconds = Settings.MySqlConnectionLifeTimeSeconds,
                 CommandTimeoutSeconds = 30,
             };
-
-            _schemaMigrator = new SchemaMigrator(SchemaMigrator.CreateDefaultMigrations(), commandTimeoutSeconds: _databaseOptions.CommandTimeoutSeconds);
         }
 
         private void EnsureInitialized()

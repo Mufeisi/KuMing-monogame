@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <RootNamespace>ShareProtocolCompat</RootNamespace>
+    <AssemblyName>ShareProtocolCompat</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="..\..\Client_MonoGame.Shared\Share\**\*.cs"
+             Exclude="..\..\Client_MonoGame.Shared\Share\Language.cs;..\..\Client_MonoGame.Shared\Share\Extensions\**\*.cs" />
+  </ItemGroup>
+</Project>

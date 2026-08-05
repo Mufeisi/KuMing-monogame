@@ -140,17 +140,21 @@ jobs:
         id: discover
         shell: pwsh
         run: |
+          $ErrorActionPreference = 'Stop'
           $projects = @(
             Get-ChildItem -Path . -Recurse -Filter *.csproj -File |
               Where-Object {
                 $_.FullName -notmatch '[\\/](bin|obj)[\\/]' -and
-                ($_.BaseName -match '(?i)(^|[.])-?tests?$' -or $_.FullName -match '[\\/]Tests[\\/]')
+                ($_.BaseName -match '(?i)(^|[.])-?tests?$' -or $_.FullName -match '[\\/]Tests[\\/]') -and
+                @(
+                  Select-Xml -LiteralPath $_.FullName -XPath "//*[local-name()='IsTestProject' and translate(normalize-space(.),'TRUE','true')='true']"
+                ).Count -gt 0
               }
           )
           if ($projects.Count -eq 0) {
-            Write-Host '::warning::No test project discovered. BASE-05 test implementation is not present yet.'
             'count=0' >> $env:GITHUB_OUTPUT
-            exit 0
+            Write-Error -ErrorAction Continue 'No test project with IsTestProject=true discovered. BASE-05 test implementation is required.'
+            exit 1
           }
           $projects | ForEach-Object { $_.FullName } | Set-Content -Encoding UTF8 test-projects.txt
           "count=$($projects.Count)" >> $env:GITHUB_OUTPUT

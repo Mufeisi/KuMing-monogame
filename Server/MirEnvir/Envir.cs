@@ -44,6 +44,40 @@ namespace Server.MirEnvir
             RandomWrapper.Value.Next(minValue, maxValue);
     }
 
+    internal enum EnvirStartState
+    {
+        NotStarted = 0,
+        Starting = 1,
+        Ready = 2,
+        Failed = 3,
+        Stopped = 4,
+    }
+
+    /// <summary>
+    /// Controls which existing server components are orchestrated by <see cref="Envir.Start"/>.
+    /// The defaults preserve the production startup path; callers that only need a headless
+    /// lifecycle smoke can explicitly disable resource loading, listeners and persistence.
+    /// </summary>
+    internal sealed class EnvirStartOptions
+    {
+        public bool LoadResources { get; init; } = true;
+        public bool BindNetwork { get; init; } = true;
+        public bool StartScripts { get; init; } = true;
+        public bool StartHttp { get; init; } = true;
+        public bool SaveOnStop { get; init; } = true;
+        public bool Multithreaded { get; init; } = true;
+
+        internal static EnvirStartOptions FromSettings()
+        {
+            return new EnvirStartOptions
+            {
+                StartScripts = Settings.CSharpScriptsEnabled,
+                StartHttp = Settings.StartHTTPService,
+                Multithreaded = Settings.Multithreaded,
+            };
+        }
+    }
+
     public class Envir
     {
         public static Envir Main { get; } = new Envir();
@@ -267,6 +301,9 @@ namespace Server.MirEnvir
         public RandomProvider Random = new RandomProvider();
 
         private Thread _thread;
+        private EnvirStartOptions _startOptions;
+        private int _startState;
+        private Exception _startFailure;
         private TcpListener _listener;
         private bool StatusPortEnabled = true;
         public List<MirStatusConnection> StatusConnections = new List<MirStatusConnection>();
@@ -345,6 +382,9 @@ namespace Server.MirEnvir
         public List<RankCharacterInfo>[] RankClass = new List<RankCharacterInfo>[5];
 
         static HttpServer http;
+
+        internal EnvirStartState StartState => (EnvirStartState)Volatile.Read(ref _startState);
+        internal Exception StartFailure => Volatile.Read(ref _startFailure);
 
         static Envir()
         {
@@ -693,8 +733,15 @@ namespace Server.MirEnvir
             }
         }
 
+        private void MarkStartupFailed(Exception failure)
+        {
+            Volatile.Write(ref _startFailure, failure ?? new InvalidOperationException("服务器启动失败。"));
+            Volatile.Write(ref _startState, (int)EnvirStartState.Failed);
+        }
+
         private void WorkLoop()
         {
+            var options = _startOptions ?? EnvirStartOptions.FromSettings();
             try
             {
                 Volatile.Write(ref _mainThreadId, Thread.CurrentThread.ManagedThreadId);
@@ -712,7 +759,7 @@ namespace Server.MirEnvir
 
                 LinkedListNode<MapObject> current = null;
 
-                if (Settings.Multithreaded)
+                if (options.Multithreaded)
                 {
                     for (var j = 0; j < MobThreads.Length; j++)
                     {
@@ -721,19 +768,24 @@ namespace Server.MirEnvir
                     }
                 }
 
-                StartEnvir();
-                var canstartserver = CanStartEnvir();
-                if (canstartserver != "true")
+                if (options.LoadResources)
                 {
-                    MessageQueue.Enqueue(canstartserver);
-                    StopEnvir();
-                    _thread = null;
-                    Volatile.Write(ref _mainThreadId, 0);
-                    Stop();
-                    return;
+                    StartEnvir();
+                    var canstartserver = CanStartEnvir();
+                    if (canstartserver != "true")
+                    {
+                        MarkStartupFailed(new InvalidOperationException(canstartserver));
+                        MessageQueue.Enqueue(canstartserver);
+                        StopEnvir();
+                        _thread = null;
+                        Volatile.Write(ref _mainThreadId, 0);
+                        _startOptions = null;
+                        Stop();
+                        return;
+                    }
                 }
 
-                if (Settings.Multithreaded)
+                if (options.Multithreaded)
                 {
                     for (var j = 0; j < MobThreads.Length; j++)
                     {
@@ -744,12 +796,15 @@ namespace Server.MirEnvir
                     }
                 }
 
-                StartNetwork();
-                if (Settings.StartHTTPService)
+                if (options.BindNetwork)
+                    StartNetwork();
+                if (options.StartHttp && Settings.StartHTTPService)
                 {
                     http = new HttpServer();
                     http.Start();
                 }
+
+                Volatile.Write(ref _startState, (int)EnvirStartState.Ready);
                 try
                 {
                     while (Running)
@@ -799,7 +854,7 @@ namespace Server.MirEnvir
                             startTime = Time;
                         }
 
-                        if (Settings.Multithreaded)
+                        if (options.Multithreaded)
                         {
                             for (var j = 1; j < MobThreads.Length; j++)
                             {
@@ -828,7 +883,7 @@ namespace Server.MirEnvir
                             }
 
                             var next = current.Next;
-                            if (!Settings.Multithreaded || current.Value.Race != ObjectType.Monster || current.Value.Master != null)
+                            if (!options.Multithreaded || current.Value.Race != ObjectType.Monster || current.Value.Master != null)
                             {
                                 if (Time > current.Value.OperateTime)
                                 {
@@ -849,7 +904,7 @@ namespace Server.MirEnvir
 
                         var forceAutoSave = Interlocked.Exchange(ref _autoSaveRequested, 0) == 1;
 
-                        if (Time >= saveTime || forceAutoSave)
+                        if (options.SaveOnStop && (Time >= saveTime || forceAutoSave))
                         {
                             saveTime = Time + Settings.SaveDelay * Settings.Minute;
                             TryAutoSave(SqlSaveDomain.Accounts, BeginSaveAccounts);
@@ -900,14 +955,22 @@ namespace Server.MirEnvir
                     MessageQueue.Enqueue($"[内循环错误 线程 {line}]" + ex);
                 }
 
-                StopNetwork();
-                StopEnvir();
-                SaveAccounts();
-                SaveGuilds(true);
-                SaveConquests(true);
+                if (options.BindNetwork)
+                    StopNetwork();
+                if (options.LoadResources)
+                    StopEnvir();
+                if (options.SaveOnStop)
+                {
+                    SaveAccounts();
+                    SaveGuilds(true);
+                    SaveConquests(true);
+                }
             }
             catch (Exception ex)
             {
+                if (StartState == EnvirStartState.Starting)
+                    MarkStartupFailed(ex);
+
                 try
                 {
                     http?.Stop();
@@ -920,7 +983,8 @@ namespace Server.MirEnvir
 
                 try
                 {
-                    StopNetwork();
+                    if (options.BindNetwork)
+                        StopNetwork();
                 }
                 catch
                 {
@@ -930,7 +994,8 @@ namespace Server.MirEnvir
 
                 try
                 {
-                    StopEnvir();
+                    if (options.LoadResources)
+                        StopEnvir();
                 }
                 catch
                 {
@@ -948,6 +1013,9 @@ namespace Server.MirEnvir
 
             Volatile.Write(ref _mainThreadId, 0);
             _thread = null;
+            _startOptions = null;
+            if (StartState == EnvirStartState.Ready)
+                Volatile.Write(ref _startState, (int)EnvirStartState.Stopped);
         }
 
         private void ThreadLoop(MobThread Info)
@@ -3451,9 +3519,19 @@ namespace Server.MirEnvir
 
         public void Start()
         {
-            if (Running || _thread != null) return;
+            Start(EnvirStartOptions.FromSettings());
+        }
 
-            if (Settings.CSharpScriptsEnabled)
+        internal void Start(EnvirStartOptions options)
+        {
+            if (Running || _thread != null) return;
+            if (options == null) throw new ArgumentNullException(nameof(options));
+
+            _startOptions = options;
+            Volatile.Write(ref _startFailure, null);
+            Volatile.Write(ref _startState, (int)EnvirStartState.Starting);
+
+            if (options.StartScripts && Settings.CSharpScriptsEnabled)
             {
                 try
                 {
