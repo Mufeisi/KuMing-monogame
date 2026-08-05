@@ -22,7 +22,7 @@ namespace Server
             if (MessageLog.Count < 100)
                 MessageLog.Enqueue(String.Format("[{0}]: {1}" + Environment.NewLine, DateTime.Now, msg));
 
-            //Logger.GetLogger(LogType.Server).Info(msg);
+            Logger.GetLogger(LogType.Server).Info(msg);
         }
 
         public void Enqueue(Exception ex)
@@ -30,7 +30,7 @@ namespace Server
             if (MessageLog.Count < 100)
                 MessageLog.Enqueue(String.Format("[{0}]: {1} - {2}" + Environment.NewLine, DateTime.Now, ex.TargetSite, ex));
 
-            //Logger.GetLogger(LogType.Server).Error(ex);
+            Logger.GetLogger(LogType.Server).Error(ex);
         }
 
         public void EnqueueDebugging(string msg)
@@ -38,7 +38,7 @@ namespace Server
             if (DebugLog.Count < 100)
                 DebugLog.Enqueue(String.Format("[{0}]: {1}" + Environment.NewLine, DateTime.Now, msg));
 
-            //Logger.GetLogger(LogType.Debug).Debug(msg);
+            Logger.GetLogger(LogType.Debug).Debug(msg);
         }
 
         public void EnqueueChat(string msg)
@@ -46,7 +46,7 @@ namespace Server
             if (ChatLog.Count < 100)
                 ChatLog.Enqueue(String.Format("[{0}]: {1}" + Environment.NewLine, DateTime.Now, msg));
 
-            //Logger.GetLogger(LogType.Chat).Info(msg);
+            Logger.GetLogger(LogType.Chat).Info(msg);
         }
     }
 }

@@ -4401,7 +4401,7 @@ namespace Server.MirObjects
                             var conquest = Envir.Conquests.FirstOrDefault(z => z.Info.Index == tempInt);
                             if (conquest == null) return;
 
-                            MessageQueue.Enqueue($"游戏管理员:{player.Name} 在账户目录为:{player.Info.AccountInfo.Index}上调用了 @CONQUESTREPAIRALL 命令");
+                            MessageQueue.Enqueue($"游戏管理员:{player.Name} 在账户目录为: {player.Info.AccountInfo.Index} 上调用了 @CONQUESTREPAIRALL 命令");
                             MessageQueue.Enqueue($"攻城战: {conquest.Info.Name}");
 
                             if (conquest.Guild != null)

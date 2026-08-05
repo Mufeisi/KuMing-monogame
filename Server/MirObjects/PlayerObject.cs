@@ -227,7 +227,7 @@ namespace Server.MirObjects
             if (Account.AdminAccount)
             {
                 IsGM = true;
-                MessageQueue.Enqueue(string.Format("{0} 以游戏管理员身份登录", Name));
+                MessageQueue.Enqueue(string.Format("游戏管理员:{0} 以游戏管理员身份登录", Name));
             }
 
             if (Level == 0) NewCharacter();
@@ -2206,13 +2206,13 @@ namespace Server.MirObjects
                 {
                     IsGM = true;
                     UpdateGMBuff();
-                    MessageQueue.Enqueue(string.Format("{0} 现在是游戏管理员身份", Name));
+                    MessageQueue.Enqueue(string.Format("游戏管理员:{0} 现在是游戏管理员身份", Name));
                     ReceiveChat("升级为游戏管理员", ChatType.System);
                     Envir.RemoveRank(Info);//remove gm chars from ranking to avoid causing bugs in rank list
                 }
                 else
                 {
-                    MessageQueue.Enqueue(string.Format("{0} 试图以游戏管理员身份登录", Name));
+                    MessageQueue.Enqueue(string.Format("游戏管理员:{0} 试图以游戏管理员身份登录", Name));
                     ReceiveChat("登录密码不正确", ChatType.System);
                 }
                 GMLogin = false;
@@ -2639,7 +2639,7 @@ namespace Server.MirObjects
                                 hero.LevelUp();
 
                                 ReceiveChat(string.Format("{0}的英雄等级 {1} -> {2}", player.Name, old, hero.Level), ChatType.System);
-                                MessageQueue.Enqueue(string.Format("游戏管理员:{3} 将玩家{0}的英雄等级由{1}调整到{2}", player.Name, old, hero.Level, Name));
+                                MessageQueue.Enqueue(string.Format("游戏管理员:{3} 将玩家:{0} 的英雄等级由{1}调整到{2}", player.Name, old, hero.Level, Name));
                                 Helpers.ChatSystem.SystemMessage(chatMessage: $"玩家 {player.Name} 的英雄等级已被提升：{old} -> {hero.Level}，操作人：管理员 {Name}");
                                 return;
                             }
@@ -2662,7 +2662,7 @@ namespace Server.MirObjects
                                 hero.LevelUp();
 
                                 ReceiveChat(string.Format("{0} {1} -> {2}", GameLanguage.LevelUp, old, hero.Level), ChatType.System);
-                                MessageQueue.Enqueue(string.Format("游戏管理员:{3} 将玩家{0}的英雄等级由{1}调整到{2}", Name, old, hero.Level, Name));
+                                MessageQueue.Enqueue(string.Format("游戏管理员:{3} 将玩家:{0} 的英雄等级由{1}调整到{2}", Name, old, hero.Level, Name));
                                 return;
                             }
                         }

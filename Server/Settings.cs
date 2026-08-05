@@ -72,6 +72,11 @@ namespace Server
         public static string TracePacketsLogPath = @".\Logs\PacketTrace.log";
         public static int TracePacketsRotateMB = 20;
 
+        //Logging (bounded asynchronous server logger)
+        public static string LogDirectory = @".\Logs";
+        public static int LogFileMaxSizeMB = 10;
+        public static int LogRetentionDays = 14;
+
         //HTTP
         public static bool StartHTTPService = false;
         public static string HTTPIPAddress = "http://127.0.0.1:7777/";
@@ -451,6 +456,17 @@ namespace Server
             TracePacketsLogPath = Reader.ReadString("Network", "TracePacketsLogPath", TracePacketsLogPath);
             TracePacketsRotateMB = Reader.ReadInt32("Network", "TracePacketsRotateMB", TracePacketsRotateMB);
 
+            //Logging
+            LogDirectory = Reader.ReadString("Logging", "Directory", LogDirectory);
+            LogFileMaxSizeMB = Math.Max(1, Reader.ReadInt32("Logging", "MaxFileSizeMB", LogFileMaxSizeMB));
+            LogRetentionDays = Math.Max(1, Reader.ReadInt32("Logging", "RetentionDays", LogRetentionDays));
+            Logger.Configure(new LoggerOptions
+            {
+                Directory = LogDirectory,
+                MaxFileSizeMB = LogFileMaxSizeMB,
+                RetentionDays = LogRetentionDays
+            });
+
             //HTTP
             StartHTTPService = Reader.ReadBoolean("Network", "StartHTTPService", StartHTTPService);
             HTTPIPAddress = Reader.ReadString("Network", "HTTPIPAddress", HTTPIPAddress);
@@ -743,6 +759,11 @@ namespace Server
             Reader.Write("Network", "TracePackets", TracePackets);
             Reader.Write("Network", "TracePacketsLogPath", TracePacketsLogPath);
             Reader.Write("Network", "TracePacketsRotateMB", TracePacketsRotateMB);
+
+            //Logging
+            Reader.Write("Logging", "Directory", LogDirectory);
+            Reader.Write("Logging", "MaxFileSizeMB", LogFileMaxSizeMB);
+            Reader.Write("Logging", "RetentionDays", LogRetentionDays);
 
             //HTTP
             Reader.Write("Network", "StartHTTPService", StartHTTPService);
