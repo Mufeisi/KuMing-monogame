@@ -1,0 +1,175 @@
+name: BASE-03 CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: base-03-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+
+jobs:
+  windows-build:
+    name: Windows build (solution filter)
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup stable .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: windows-nuget-${{ runner.os }}-${{ hashFiles('global.json', '**/*.csproj', '**/*.props', '**/*.targets') }}
+          restore-keys: |
+            windows-nuget-${{ runner.os }}-
+
+      - name: Restore Windows solution filter
+        run: dotnet restore LyoCrystal.Windows.slnf --verbosity minimal
+
+      - name: Build Windows solution filter
+        run: dotnet build LyoCrystal.Windows.slnf --configuration Release --no-restore --verbosity minimal
+
+      - name: Upload Windows build outputs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: base-03-windows-build
+          path: '**/bin/Release/**'
+          if-no-files-found: ignore
+          retention-days: 7
+
+  android-release:
+    name: Android Release arm64 AOT publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup stable .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Setup Java for Android workload
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Cache NuGet and Android workload packs
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.nuget/packages
+            ~/.dotnet/packs
+            ~/.dotnet/sdk-manifests
+          key: android-nuget-${{ runner.os }}-${{ hashFiles('global.json', 'Client_MonoGame.Android/Client_MonoGame.Android.csproj', 'Client_MonoGame.Mobile.props', 'Client_MonoGame.Shared/Client_MonoGame.Shared.csproj') }}
+          restore-keys: |
+            android-nuget-${{ runner.os }}-
+
+      - name: Install Android workload
+        run: dotnet workload install maui-android --skip-manifest-update
+
+      - name: Show SDK and workload state
+        run: dotnet --info
+
+      # BASE-06 owns net11 -> net10 migration. Until then this command is an
+      # intentional, visible preview-TFM blocker rather than a green fake gate.
+      - name: Publish Android Release arm64 AOT package
+        run: >-
+          dotnet publish Client_MonoGame.Android/Client_MonoGame.Android.csproj
+          -f net11.0-android
+          -c Release
+          -r android-arm64
+          -p:MobileBootstrapAssetMode=Micro
+          -p:AndroidPackageFormat=apk
+          -p:ArchiveOnBuild=false
+          -p:RunAOTCompilation=true
+          -p:PublishTrimmed=true
+          -v:minimal
+
+      - name: Upload Android publish output
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: base-03-android-arm64-aot
+          path: Client_MonoGame.Android/bin/Release/net11.0-android/android-arm64/publish/**
+          if-no-files-found: ignore
+          retention-days: 7
+
+  general-tests:
+    name: General tests (discovered projects)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup stable .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: tests-nuget-${{ runner.os }}-${{ hashFiles('global.json', '**/*.csproj', '**/*.props', '**/*.targets') }}
+          restore-keys: |
+            tests-nuget-${{ runner.os }}-
+
+      - name: Discover test projects
+        id: discover
+        shell: pwsh
+        run: |
+          $projects = @(
+            Get-ChildItem -Path . -Recurse -Filter *.csproj -File |
+              Where-Object {
+                $_.FullName -notmatch '[\\/](bin|obj)[\\/]' -and
+                ($_.BaseName -match '(?i)(^|[.])-?tests?$' -or $_.FullName -match '[\\/]Tests[\\/]')
+              }
+          )
+          if ($projects.Count -eq 0) {
+            Write-Host '::warning::No test project discovered. BASE-05 test implementation is not present yet.'
+            'count=0' >> $env:GITHUB_OUTPUT
+            exit 0
+          }
+          $projects | ForEach-Object { $_.FullName } | Set-Content -Encoding UTF8 test-projects.txt
+          "count=$($projects.Count)" >> $env:GITHUB_OUTPUT
+          $projects | ForEach-Object { Write-Host "Discovered test project: $($_.FullName)" }
+
+      - name: Run discovered test projects
+        if: steps.discover.outputs.count != '0'
+        shell: pwsh
+        run: |
+          Get-Content test-projects.txt | ForEach-Object {
+            dotnet test $_ --configuration Release --logger 'trx;LogFileName=test-results.trx' --results-directory TestResults --verbosity normal
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: base-03-test-results
+          path: TestResults/**
+          if-no-files-found: ignore
+          retention-days: 7
