@@ -1,0 +1,158 @@
+{
+  "schemaVersion": 1,
+  "manifestVersion": "2026-08-05",
+  "repositoryResourceSourceRevision": "caller-supplied-git-revision",
+  "sdk": {
+    "version": "10.0.200",
+    "rollForward": "disable",
+    "allowPrerelease": false
+  },
+  "hash": {
+    "algorithm": "SHA256",
+    "treeCanonicalization": "UTF-8 lines '<NFC repo-relative-path>|<bytes>|<file-sha256>\\n', lines sorted with StringComparer.Ordinal"
+  },
+  "resources": [
+    {
+      "id": "mobile-ui-retro",
+      "category": "bootstrap",
+      "required": true,
+      "path": "Client_MonoGame.Shared/Assets/UI/复古",
+      "source": {
+        "type": "repository",
+        "description": "仓库追踪的 FairyGUI 复古 UI 资源"
+      },
+      "version": "tracked-at-repository-resource-source-revision",
+      "fileCount": 32,
+      "bytes": 77437699,
+      "sha256": "e795d309cc33f7b70971d689850ceaab6474aef9b24fa5ca1ffe0ed201825fda"
+    },
+    {
+      "id": "mobile-ui-micro-variant",
+      "category": "bootstrap",
+      "required": true,
+      "path": "Client_MonoGame.Shared/Assets/UI/微变",
+      "source": {
+        "type": "repository",
+        "description": "仓库追踪的 FairyGUI 微变 UI 资源"
+      },
+      "version": "tracked-at-repository-resource-source-revision",
+      "fileCount": 31,
+      "bytes": 77932526,
+      "sha256": "7438d5138b65b3c227236e3fda4a73c2f2e4036713bb5ad41f6f618386e419ca"
+    },
+    {
+      "id": "mobile-content",
+      "category": "bootstrap",
+      "required": true,
+      "path": "Client_MonoGame.Shared/Content",
+      "source": {
+        "type": "repository",
+        "description": "仓库追踪的 MonoGame 内容描述与 hm.ttf 字体"
+      },
+      "version": "tracked-at-repository-resource-source-revision",
+      "fileCount": 2,
+      "bytes": 8227740,
+      "sha256": "877020e652b9a42b7a21f2af24dd1d36816205fbb1d42168f3c18e067ba89ea3"
+    },
+    {
+      "id": "mobile-bootstrap-assets",
+      "categories": ["bootstrap", "map"],
+      "required": true,
+      "path": "Client_MonoGame.Shared/BootstrapAssets",
+      "source": {
+        "type": "qq-share",
+        "description": "QQ群共享文件（群号 1063081017）；必须由用户提供本地镜像，未知文件不自动下载"
+      },
+      "version": "user-supplied",
+      "sha256": null,
+      "expected": {
+        "files": [
+          "bootstrap-packages.json",
+          "bootstrap-assets.txt",
+          "bootstrap-package-index.json",
+          "Language.ini",
+          "Mir2Config.ini",
+          "Data/ChrSel.Lib",
+          "Data/Prguse.Lib",
+          "Data/Title.Lib",
+          "Sound/100.wav",
+          "Sound/Log-in-long2.wav",
+          "Sound/sellect-loop2.wav",
+          "Sound/SoundList.lst"
+        ],
+        "globs": [
+          "bootstrap-package-manifests/*.json",
+          "Data/**/*.Lib",
+          "Map/**/*.map",
+          "Sound/*.wav"
+        ]
+      },
+      "notes": "现状缺失；Tools/Mobile-BootstrapPackageRepoExport.ps1 会在该目录存在后导出分包。"
+    },
+    {
+      "id": "pc-runtime-assets",
+      "category": "runtime",
+      "required": true,
+      "path": "Build/Client_VorticeDX11",
+      "source": {
+        "type": "qq-share",
+        "description": "QQ群共享文件或用户已授权的本地 PC 资源镜像；不从未知 URL 下载"
+      },
+      "version": "user-supplied",
+      "sha256": null,
+      "expected": {
+        "files": [
+          "Language.ini",
+          "Mir2Config.ini"
+        ],
+        "globs": [
+          "Data/**/*.Lib",
+          "Map/*.map",
+          "Sound/*.wav"
+        ]
+      },
+      "notes": "Build/Client_VorticeDX11 当前为空；PC Settings.cs 默认引用 Data、Map、Sound、Language.ini、Mir2Config.ini。"
+    },
+    {
+      "id": "patch-repository",
+      "category": "patch",
+      "required": true,
+      "path": "Build/Mobile/BootstrapRepo",
+      "source": {
+        "type": "generated-or-external",
+        "description": "由 Mobile-BootstrapPackageRepoExport.ps1 从已校验 BootstrapAssets 生成，或用户提供已授权镜像"
+      },
+      "version": "generated-after-bootstrap",
+      "sha256": null,
+      "expected": {
+        "files": [
+          "Packages/bootstrap-package-index.json"
+        ],
+        "globs": [
+          "Packages/*.zip",
+          "Packages/*.zip.sha256"
+        ]
+      },
+      "notes": "当前没有生成物；不得提交伪造 ZIP 或哈希。"
+    },
+    {
+      "id": "test-resources",
+      "category": "test",
+      "required": false,
+      "path": "Tests/Resources",
+      "source": {
+        "type": "none",
+        "description": "当前基线没有测试工程或测试资源目录（BASE-05 后补齐）"
+      },
+      "version": null,
+      "sha256": null,
+      "expected": {
+        "files": [],
+        "globs": [
+          "*"
+        ]
+      },
+      "notes": "此项用于记录缺口，不把不存在的 fixture 当作可复现输入。"
+    }
+  ]
+}

@@ -60,4 +60,9 @@
 #*.pdf   diff=astextplain
 #*.PDF   diff=astextplain
 #*.rtf   diff=astextplain
+
+# Resource-baseline text inputs are always checked out with LF so their tree
+# hashes remain stable across Windows core.autocrlf settings.
+/Client_MonoGame.Shared/Content/Content.mgcb text eol=lf
+/Client_MonoGame.Shared/Assets/UI/**/ui.version.txt text eol=lf
 #*.RTF   diff=astextplain
