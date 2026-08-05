@@ -1,0 +1,16 @@
+{
+  "solution": {
+    "path": "Legend of Mir.sln",
+    "projects": [
+      "Shared\\Shared.csproj",
+      "Server\\Server.Library.csproj",
+      "Server.MirForms\\Server.csproj",
+      "AutoPatcherAdmin\\AutoPatcherAdmin.csproj",
+      "Controls\\FixedListViewControl\\CustomFormControl.csproj",
+      "LibraryEditor\\LibraryEditor.csproj",
+      "LibraryViewer\\LibraryViewer.csproj",
+      "Client_VorticeDX11\\Client_VorticeDX11.csproj",
+      "Tools\\MobileBootstrapAudit\\MobileBootstrapAudit.csproj"
+    ]
+  }
+}

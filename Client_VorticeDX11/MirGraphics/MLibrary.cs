@@ -1,0 +1,1261 @@
+﻿using Client.MirObjects;
+using System;
+using System.Drawing.Drawing2D;
+using System.Drawing.Imaging;
+using System.IO;
+using System.IO.Compression;
+using System.Numerics;
+using System.Runtime.InteropServices;
+using System.Text.RegularExpressions;
+using Vortice;
+using Vortice.Direct2D1.Effects;
+using Vortice.Direct3D11;
+using Vortice.DXGI;
+
+namespace Client.MirGraphics
+{
+    public static class Libraries
+    {
+        public static bool Loaded;
+        public static int Count, Progress;
+
+        public static readonly MLibrary
+            ChrSel = new MLibrary(Settings.DataPath + "ChrSel"),
+            Prguse = new MLibrary(Settings.DataPath + "Prguse"),
+            Prguse2 = new MLibrary(Settings.DataPath + "Prguse2"),
+            Prguse3 = new MLibrary(Settings.DataPath + "Prguse3"),
+            UI_32bit = new MLibrary(Settings.DataPath + "UI_32bit"),
+            StateitemEffect = new MLibrary(Settings.DataPath + "StateitemEffect"),
+            BuffIcon = new MLibrary(Settings.DataPath + "BuffIcon"),
+            Help = new MLibrary(Settings.DataPath + "Help"),
+            MiniMap = new MLibrary(Settings.DataPath + "MMap"),
+            MapLinkIcon = new MLibrary(Settings.DataPath + "MapLinkIcon"),
+            Title = new MLibrary(Settings.DataPath + "Title"),
+            MagIcon = new MLibrary(Settings.DataPath + "MagIcon"),
+            MagIcon2 = new MLibrary(Settings.DataPath + "MagIcon2"),
+            Magic = new MLibrary(Settings.DataPath + "Magic"),
+            Magic2 = new MLibrary(Settings.DataPath + "Magic2"),
+            Magic3 = new MLibrary(Settings.DataPath + "Magic3"),
+            Magic_32bit = new MLibrary(Settings.DataPath + "Magic_32bit"),
+            Effect = new MLibrary(Settings.DataPath + "Effect"),
+            Effect2 = new MLibrary(Settings.DataPath + "Effect2"),
+            Effect_32bit = new MLibrary(Settings.DataPath + "Effect_32bit"),
+            MagicC = new MLibrary(Settings.DataPath + "MagicC"),
+            GuildSkill = new MLibrary(Settings.DataPath + "GuildSkill"),
+            Weather = new MLibrary(Settings.DataPath + "Weather");
+
+        public static readonly MLibrary
+            Background = new MLibrary(Settings.DataPath + "Background");
+
+
+        public static readonly MLibrary
+            Dragon = new MLibrary(Settings.DataPath + "Dragon");
+
+        //Map
+        public static readonly MLibrary[] MapLibs = new MLibrary[400];
+
+        //Items
+        public static readonly MLibrary
+            Items = new MLibrary(Settings.DataPath + "Items"),
+            StateItems = new MLibrary(Settings.DataPath + "StateItem"),
+            FloorItems = new MLibrary(Settings.DataPath + "DNItems");
+
+        //Deco
+        public static readonly MLibrary
+            Deco = new MLibrary(Settings.DataPath + "Deco");
+
+        public static MLibrary[] CArmours,
+                                          CWeapons,
+										  CWeaponEffect,
+										  CHair,
+                                          CHumEffect,
+                                          AArmours,
+                                          AWeaponsL,
+                                          AWeaponsR,
+                                          AWeaponEffectL,
+                                          AWeaponEffectR,
+                                          AHair,
+                                          AHumEffect,
+                                          ARArmours,
+                                          ARWeaponsEffect,
+                                          ARWeaponsEffectS,
+                                          ARWeapons,
+                                          ARWeaponsS,
+                                          ARHair,
+                                          ARHumEffect,
+                                          Monsters,
+                                          Gates,
+                                          Flags,
+                                          Siege,
+                                          Mounts,
+                                          NPCs,
+                                          Fishing,
+                                          Pets,
+                                          Transform,
+                                          TransformMounts,
+                                          TransformEffect,
+                                          TransformWeaponEffect;
+
+        static Libraries()
+        {
+            //Wiz/War/Tao
+            InitLibrary(ref CArmours, Settings.CArmourPath, "00");
+            InitLibrary(ref CHair, Settings.CHairPath, "00");
+            InitLibrary(ref CWeapons, Settings.CWeaponPath, "00");
+            InitLibrary(ref CWeaponEffect, Settings.CWeaponEffectPath, "00");
+            InitLibrary(ref CHumEffect, Settings.CHumEffectPath, "00");
+
+            //Assassin
+            InitLibrary(ref AArmours, Settings.AArmourPath, "00");
+            InitLibrary(ref AHair, Settings.AHairPath, "00");
+            InitLibrary(ref AWeaponsL, Settings.AWeaponPath, "00", " L");
+            InitLibrary(ref AWeaponsR, Settings.AWeaponPath, "00", " R");
+            InitLibrary(ref AWeaponEffectL, Settings.AWeaponEffectPath, "00", " L");
+            InitLibrary(ref AWeaponEffectR, Settings.AWeaponEffectPath, "00", " R");
+            InitLibrary(ref AHumEffect, Settings.AHumEffectPath, "00");
+
+            //Archer
+            InitLibrary(ref ARArmours, Settings.ARArmourPath, "00");
+            InitLibrary(ref ARHair, Settings.ARHairPath, "00");
+            InitLibrary(ref ARWeapons, Settings.ARWeaponPath, "00");
+            InitLibrary(ref ARWeaponsS, Settings.ARWeaponPath, "00", " S");
+            InitLibrary(ref ARWeaponsEffect, Settings.ARWeaponEffectPath, "00");
+            InitLibrary(ref ARWeaponsEffectS, Settings.ARWeaponEffectPath, "00", " S");
+            InitLibrary(ref ARHumEffect, Settings.ARHumEffectPath, "00");
+
+            //Other
+            InitLibrary(ref Monsters, Settings.MonsterPath, "000");
+            InitLibrary(ref Gates, Settings.GatePath, "00");
+            InitLibrary(ref Flags, Settings.FlagPath, "00");
+            InitLibrary(ref Siege, Settings.SiegePath, "00");
+            InitLibrary(ref NPCs, Settings.NPCPath, "00");
+            InitLibrary(ref Mounts, Settings.MountPath, "00");
+            InitLibrary(ref Fishing, Settings.FishingPath, "00");
+            InitLibrary(ref Pets, Settings.PetsPath, "00");
+            InitLibrary(ref Transform, Settings.TransformPath, "00");
+            InitLibrary(ref TransformMounts, Settings.TransformMountsPath, "00");
+            InitLibrary(ref TransformEffect, Settings.TransformEffectPath, "00");
+            InitLibrary(ref TransformWeaponEffect, Settings.TransformWeaponEffectPath, "00");
+
+            #region Maplibs
+            //wemade mir2 (allowed from 0-99)
+            MapLibs[0] = new MLibrary(Settings.DataPath + "Map\\WemadeMir2\\Tiles");
+            MapLibs[1] = new MLibrary(Settings.DataPath + "Map\\WemadeMir2\\Smtiles");
+            MapLibs[2] = new MLibrary(Settings.DataPath + "Map\\WemadeMir2\\Objects");
+            for (int i = 2; i < 28; i++)
+            {
+                MapLibs[i + 1] = new MLibrary(Settings.DataPath + "Map\\WemadeMir2\\Objects" + i.ToString());
+            }
+            MapLibs[90] = new MLibrary(Settings.DataPath + "Map\\WemadeMir2\\Objects_32bit");
+
+            //shanda mir2 (allowed from 100-199)
+            MapLibs[100] = new MLibrary(Settings.DataPath + "Map\\ShandaMir2\\Tiles");
+            for (int i = 1; i < 10; i++)
+            {
+                MapLibs[100 + i] = new MLibrary(Settings.DataPath + "Map\\ShandaMir2\\Tiles" + (i + 1));
+            }
+            MapLibs[110] = new MLibrary(Settings.DataPath + "Map\\ShandaMir2\\SmTiles");
+            for (int i = 1; i < 10; i++)
+            {
+                MapLibs[110 + i] = new MLibrary(Settings.DataPath + "Map\\ShandaMir2\\SmTiles" + (i + 1));
+            }
+            MapLibs[120] = new MLibrary(Settings.DataPath + "Map\\ShandaMir2\\Objects");
+            for (int i = 1; i < 31; i++)
+            {
+                MapLibs[120 + i] = new MLibrary(Settings.DataPath + "Map\\ShandaMir2\\Objects" + (i + 1));
+            }
+            MapLibs[190] = new MLibrary(Settings.DataPath + "Map\\ShandaMir2\\AniTiles1");
+            //wemade mir3 (allowed from 200-299)
+            string[] Mapstate = { "", "wood\\", "sand\\", "snow\\", "forest\\"};
+            for (int i = 0; i < Mapstate.Length; i++)
+            {
+                MapLibs[200 +(i*15)] = new MLibrary(Settings.DataPath + "Map\\WemadeMir3\\" + Mapstate[i] + "Tilesc");
+                MapLibs[201 +(i*15)] = new MLibrary(Settings.DataPath + "Map\\WemadeMir3\\" + Mapstate[i] + "Tiles30c");
+                MapLibs[202 +(i*15)] = new MLibrary(Settings.DataPath + "Map\\WemadeMir3\\" + Mapstate[i] + "Tiles5c");
+                MapLibs[203 +(i*15)] = new MLibrary(Settings.DataPath + "Map\\WemadeMir3\\" + Mapstate[i] + "Smtilesc");
+                MapLibs[204 +(i*15)] = new MLibrary(Settings.DataPath + "Map\\WemadeMir3\\" + Mapstate[i] + "Housesc");
+                MapLibs[205 +(i*15)] = new MLibrary(Settings.DataPath + "Map\\WemadeMir3\\" + Mapstate[i] + "Cliffsc");
+                MapLibs[206 +(i*15)] = new MLibrary(Settings.DataPath + "Map\\WemadeMir3\\" + Mapstate[i] + "Dungeonsc");
+                MapLibs[207 +(i*15)] = new MLibrary(Settings.DataPath + "Map\\WemadeMir3\\" + Mapstate[i] + "Innersc");
+                MapLibs[208 +(i*15)] = new MLibrary(Settings.DataPath + "Map\\WemadeMir3\\" + Mapstate[i] + "Furnituresc");
+                MapLibs[209 +(i*15)] = new MLibrary(Settings.DataPath + "Map\\WemadeMir3\\" + Mapstate[i] + "Wallsc");
+                MapLibs[210 +(i*15)] = new MLibrary(Settings.DataPath + "Map\\WemadeMir3\\" + Mapstate[i] + "smObjectsc");
+                MapLibs[211 +(i*15)] = new MLibrary(Settings.DataPath + "Map\\WemadeMir3\\" + Mapstate[i] + "Animationsc");
+                MapLibs[212 +(i*15)] = new MLibrary(Settings.DataPath + "Map\\WemadeMir3\\" + Mapstate[i] + "Object1c");
+                MapLibs[213 + (i * 15)] = new MLibrary(Settings.DataPath + "Map\\WemadeMir3\\" + Mapstate[i] + "Object2c");
+            }
+            Mapstate = new string[] { "", "wood", "sand", "snow", "forest"};
+            //shanda mir3 (allowed from 300-399)
+            for (int i = 0; i < Mapstate.Length; i++)
+            {
+                MapLibs[300 + (i * 15)] = new MLibrary(Settings.DataPath + "Map\\ShandaMir3\\" + "Tilesc" + Mapstate[i]);
+                MapLibs[301 + (i * 15)] = new MLibrary(Settings.DataPath + "Map\\ShandaMir3\\" + "Tiles30c" + Mapstate[i]);
+                MapLibs[302 + (i * 15)] = new MLibrary(Settings.DataPath + "Map\\ShandaMir3\\" + "Tiles5c" + Mapstate[i]);
+                MapLibs[303 + (i * 15)] = new MLibrary(Settings.DataPath + "Map\\ShandaMir3\\" + "Smtilesc" + Mapstate[i]);
+                MapLibs[304 + (i * 15)] = new MLibrary(Settings.DataPath + "Map\\ShandaMir3\\" + "Housesc" + Mapstate[i]);
+                MapLibs[305 + (i * 15)] = new MLibrary(Settings.DataPath + "Map\\ShandaMir3\\" + "Cliffsc" + Mapstate[i]);
+                MapLibs[306 + (i * 15)] = new MLibrary(Settings.DataPath + "Map\\ShandaMir3\\" + "Dungeonsc" + Mapstate[i]);
+                MapLibs[307 + (i * 15)] = new MLibrary(Settings.DataPath + "Map\\ShandaMir3\\" + "Innersc" + Mapstate[i]);
+                MapLibs[308 + (i * 15)] = new MLibrary(Settings.DataPath + "Map\\ShandaMir3\\" + "Furnituresc" + Mapstate[i]);
+                MapLibs[309 + (i * 15)] = new MLibrary(Settings.DataPath + "Map\\ShandaMir3\\" + "Wallsc" + Mapstate[i]);
+                MapLibs[310 + (i * 15)] = new MLibrary(Settings.DataPath + "Map\\ShandaMir3\\" + "smObjectsc" + Mapstate[i]);
+                MapLibs[311 + (i * 15)] = new MLibrary(Settings.DataPath + "Map\\ShandaMir3\\" + "Animationsc" + Mapstate[i]);
+                MapLibs[312 + (i * 15)] = new MLibrary(Settings.DataPath + "Map\\ShandaMir3\\" + "Object1c" + Mapstate[i]);
+                MapLibs[313 + (i * 15)] = new MLibrary(Settings.DataPath + "Map\\ShandaMir3\\" + "Object2c" + Mapstate[i]);
+            }
+            #endregion
+
+            LoadLibraries();
+
+            Thread thread = new Thread(LoadGameLibraries) { IsBackground = true };
+            thread.Start();
+        }
+
+        static void InitLibrary(ref MLibrary[] library, string path, string toStringValue, string suffix = "")
+        {
+            if (!Directory.Exists(path))
+            {
+                Directory.CreateDirectory(path);
+            }
+
+            var allFiles = Directory.GetFiles(path, "*" + suffix + MLibrary.Extention, SearchOption.TopDirectoryOnly).OrderBy(x => int.Parse(Regex.Match(x, @"\d+").Value));
+
+            var lastFile = allFiles.Count() > 0 ? Path.GetFileName(allFiles.Last()) : "0";
+
+            var count = int.Parse(Regex.Match(lastFile, @"\d+").Value) + 1;
+
+            library = new MLibrary[count];
+
+            for (int i = 0; i < count; i++)
+            {
+                library[i] = new MLibrary(path + i.ToString(toStringValue) + suffix);
+            }
+        }
+
+        static void LoadLibraries()
+        {
+            ChrSel.Initialize();
+            Progress++;
+
+            Prguse.Initialize();
+            Progress++;
+
+            Prguse2.Initialize();
+            Progress++;
+
+            Prguse3.Initialize();
+            Progress++;
+
+            UI_32bit.Initialize();
+            Progress++;
+
+            Title.Initialize();
+            Progress++;
+
+            StateitemEffect.Initialize();
+            Progress++;
+        }
+
+        private static void LoadGameLibraries()
+        {
+            Count = MapLibs.Length + Monsters.Length + Gates.Length + Flags.Length + Siege.Length + NPCs.Length + CArmours.Length +
+                CHair.Length + CWeapons.Length + CWeaponEffect.Length + AArmours.Length + AHair.Length + AWeaponsL.Length + AWeaponsR.Length +
+                AWeaponEffectL.Length + AWeaponEffectR.Length +ARArmours.Length + ARHair.Length + ARWeapons.Length + ARWeaponsS.Length + ARWeaponsEffect.Length + ARWeaponsEffectS.Length +
+                CHumEffect.Length + AHumEffect.Length + ARHumEffect.Length + Mounts.Length + Fishing.Length + Pets.Length +
+                Transform.Length + TransformMounts.Length + TransformEffect.Length + TransformWeaponEffect.Length + 18;
+
+            Dragon.Initialize();
+            Progress++;
+
+            BuffIcon.Initialize();
+            Progress++;
+
+            Help.Initialize();
+            Progress++;
+
+            MiniMap.Initialize();
+            Progress++;
+            MapLinkIcon.Initialize();
+            Progress++;
+
+            MagIcon.Initialize();
+            Progress++;
+            MagIcon2.Initialize();
+            Progress++;
+
+            Magic.Initialize();
+            Progress++;
+            Magic2.Initialize();
+            Progress++;
+            Magic3.Initialize();
+            Progress++;
+            Magic_32bit.Initialize();
+            Progress++;
+            MagicC.Initialize();
+            Progress++;
+
+            Effect.Initialize();
+            Progress++;
+            Effect2.Initialize();
+            Progress++;
+            Effect_32bit.Initialize();
+            Progress++;
+
+            Weather.Initialize();
+            Progress++;
+
+            GuildSkill.Initialize();
+            Progress++;
+
+            Background.Initialize();
+            Progress++;
+
+            Deco.Initialize();
+            Progress++;
+
+            Items.Initialize();
+            Progress++;
+            StateItems.Initialize();
+            Progress++;
+            FloorItems.Initialize();
+            Progress++;
+
+            for (int i = 0; i < MapLibs.Length; i++)
+            {
+                if (MapLibs[i] == null)
+                    MapLibs[i] = new MLibrary("");
+                else
+                    MapLibs[i].Initialize();
+                Progress++;
+            }
+
+            for (int i = 0; i < Monsters.Length; i++)
+            {
+                Monsters[i].Initialize();
+                Progress++;
+            }
+
+            for (int i = 0; i < Gates.Length; i++)
+            {
+                Gates[i].Initialize();
+                Progress++;
+            }
+
+            for (int i = 0; i < Flags.Length; i++)
+            {
+                Flags[i].Initialize();
+                Progress++;
+            }
+
+            for (int i = 0; i < Siege.Length; i++)
+            {
+                Siege[i].Initialize();
+                Progress++;
+            }
+
+            for (int i = 0; i < NPCs.Length; i++)
+            {
+                NPCs[i].Initialize();
+                Progress++;
+            }
+
+
+            for (int i = 0; i < CArmours.Length; i++)
+            {
+                CArmours[i].Initialize();
+                Progress++;
+            }
+
+            for (int i = 0; i < CHair.Length; i++)
+            {
+                CHair[i].Initialize();
+                Progress++;
+            }
+
+            for (int i = 0; i < CWeapons.Length; i++)
+            {
+                CWeapons[i].Initialize();
+                Progress++;
+            }
+
+			for (int i = 0; i < CWeaponEffect.Length; i++)
+			{
+				CWeaponEffect[i].Initialize();
+				Progress++;
+			}
+
+			for (int i = 0; i < AArmours.Length; i++)
+            {
+                AArmours[i].Initialize();
+                Progress++;
+            }
+
+            for (int i = 0; i < AHair.Length; i++)
+            {
+                AHair[i].Initialize();
+                Progress++;
+            }
+
+            for (int i = 0; i < AWeaponsL.Length; i++)
+            {
+                AWeaponsL[i].Initialize();
+                Progress++;
+            }
+
+            for (int i = 0; i < AWeaponsR.Length; i++)
+            {
+                AWeaponsR[i].Initialize();
+                Progress++;
+            }
+
+            for (int i = 0; i < AWeaponEffectL.Length; i++)
+            {
+                AWeaponEffectL[i].Initialize();
+                Progress++;
+            }
+
+            for (int i = 0; i < AWeaponEffectR.Length; i++)
+            {
+                AWeaponEffectR[i].Initialize();
+                Progress++;
+            }
+
+            for (int i = 0; i < ARArmours.Length; i++)
+            {
+                ARArmours[i].Initialize();
+                Progress++;
+            }
+
+            for (int i = 0; i < ARHair.Length; i++)
+            {
+                ARHair[i].Initialize();
+                Progress++;
+            }
+
+            for (int i = 0; i < ARWeapons.Length; i++)
+            {
+                ARWeapons[i].Initialize();
+                Progress++;
+            }
+
+            for (int i = 0; i < ARWeaponsS.Length; i++)
+            {
+                ARWeaponsS[i].Initialize();
+                Progress++;
+            }
+
+            for (int i = 0; i < ARWeaponsEffect.Length; i++)
+            {
+                ARWeaponsEffect[i].Initialize();
+                Progress++;
+            }
+
+            for (int i = 0; i < ARWeaponsEffectS.Length; i++)
+            {
+                ARWeaponsEffectS[i].Initialize();
+                Progress++;
+            }
+
+            for (int i = 0; i < CHumEffect.Length; i++)
+            {
+                CHumEffect[i].Initialize();
+                Progress++;
+            }
+
+            for (int i = 0; i < AHumEffect.Length; i++)
+            {
+                AHumEffect[i].Initialize();
+                Progress++;
+            }
+
+            for (int i = 0; i < ARHumEffect.Length; i++)
+            {
+                ARHumEffect[i].Initialize();
+                Progress++;
+            }
+
+            for (int i = 0; i < Mounts.Length; i++)
+            {
+                Mounts[i].Initialize();
+                Progress++;
+            }
+
+
+            for (int i = 0; i < Fishing.Length; i++)
+            {
+                Fishing[i].Initialize();
+                Progress++;
+            }
+
+            for (int i = 0; i < Pets.Length; i++)
+            {
+                Pets[i].Initialize();
+                Progress++;
+            }
+
+            for (int i = 0; i < Transform.Length; i++)
+            {
+                Transform[i].Initialize();
+                Progress++;
+            }
+
+            for (int i = 0; i < TransformEffect.Length; i++)
+            {
+                TransformEffect[i].Initialize();
+                Progress++;
+            }
+
+            for (int i = 0; i < TransformWeaponEffect.Length; i++)
+            {
+                TransformWeaponEffect[i].Initialize();
+                Progress++;
+            }
+
+            for (int i = 0; i < TransformMounts.Length; i++)
+            {
+                TransformMounts[i].Initialize();
+                Progress++;
+            }
+            
+            Loaded = true;
+        }
+
+    }
+
+    public sealed class MLibrary
+    {
+        public const string Extention = ".Lib";
+        public const int LibVersion = 3;
+
+        private readonly string _fileName;
+        private readonly string _microRelativeFilePath;
+
+        public MImage[] _images;
+        private FrameSet _frames;
+        private int[] _indexList;
+        private int _count;
+        private bool _initialized;
+
+        private BinaryReader _reader;
+        private FileStream _fStream;
+
+        public FrameSet Frames
+        {
+            get { return _frames; }
+        }
+
+        public MLibrary(string filename)
+        {
+            _microRelativeFilePath = NormalizeMicroRelativePath(filename + Extention);
+            _fileName = Path.ChangeExtension(filename, Extention);
+        }
+
+        public void Initialize()
+        {
+            _initialized = true;
+
+            if (!File.Exists(_fileName))
+            {
+                _initialized = false;
+                return;
+            }
+
+            try
+            {
+                _fStream = new FileStream(_fileName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+                _reader = new BinaryReader(_fStream);
+                int currentVersion = _reader.ReadInt32();
+                if (currentVersion < 2)
+                {
+                    System.Windows.Forms.MessageBox.Show("版本错误，lib可用版本： " + LibVersion.ToString() + " 找到的版本： " + currentVersion.ToString() + ".", _fileName, System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Error, System.Windows.Forms.MessageBoxDefaultButton.Button1);
+                    System.Windows.Forms.Application.Exit();
+                    return;
+                }
+                _count = _reader.ReadInt32();
+
+                int frameSeek = 0;
+                if (currentVersion >= 3)
+                {
+                    frameSeek = _reader.ReadInt32();
+                }
+
+                _images = new MImage[_count];
+                _indexList = new int[_count];
+
+                for (int i = 0; i < _count; i++)
+                    _indexList[i] = _reader.ReadInt32();
+
+                if (currentVersion >= 3)
+                {
+                    _fStream.Seek(frameSeek, SeekOrigin.Begin);
+
+                    var frameCount = _reader.ReadInt32();
+
+                    if (frameCount > 0)
+                    {
+                        _frames = new FrameSet();
+                        for (int i = 0; i < frameCount; i++)
+                        {
+                            _frames.Add((MirAction)_reader.ReadByte(), new Frame(_reader));
+                        }
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                _initialized = false;
+                throw;
+            }
+        }
+
+        public bool CheckImage(int index)
+        {
+            if (!EnsureInitialized())
+                return false;
+
+            if (_images == null || index < 0 || index >= _images.Length)
+                return false;
+
+            if (MicroLibraryHelper.IsConfigured && MicroLibraryHelper.IsLibraryImageDownloadPending(_microRelativeFilePath, index))
+                return false;
+
+            if (_images[index] == null)
+            {
+                _fStream.Position = _indexList[index];
+                _images[index] = new MImage(_reader);
+            }
+            MImage mi = _images[index];
+            if (!mi.TextureValid)
+            {
+                if ((mi.Width == 0) || (mi.Height == 0))
+                {
+                    _images[index] = null;
+                    if (MicroLibraryHelper.IsConfigured)
+                        MicroLibraryHelper.QueueLibraryImageDownload(_microRelativeFilePath, _fileName, index);
+                    return false;
+                }
+
+                _fStream.Seek(_indexList[index] + 17, SeekOrigin.Begin);
+                try
+                {
+                    mi.CreateTexture(_reader);
+                }
+                catch
+                {
+                    _images[index] = null;
+                    if (MicroLibraryHelper.IsConfigured)
+                        MicroLibraryHelper.QueueLibraryImageDownload(_microRelativeFilePath, _fileName, index);
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        public Point GetOffSet(int index)
+        {
+            if (!EnsureInitialized())
+                return Point.Empty;
+
+            if (_images == null || index < 0 || index >= _images.Length)
+                return Point.Empty;
+
+            if (MicroLibraryHelper.IsConfigured && MicroLibraryHelper.IsLibraryImageDownloadPending(_microRelativeFilePath, index))
+                return Point.Empty;
+
+            if (_images[index] == null)
+            {
+                _fStream.Seek(_indexList[index], SeekOrigin.Begin);
+                _images[index] = new MImage(_reader);
+            }
+
+            if ((_images[index].Width == 0) || (_images[index].Height == 0))
+            {
+                _images[index] = null;
+                if (MicroLibraryHelper.IsConfigured)
+                    MicroLibraryHelper.QueueLibraryImageDownload(_microRelativeFilePath, _fileName, index);
+                return Point.Empty;
+            }
+
+            return new Point(_images[index].X, _images[index].Y);
+        }
+        public Size GetSize(int index)
+        {
+            if (!EnsureInitialized())
+                return Size.Empty;
+            if (_images == null || index < 0 || index >= _images.Length)
+                return Size.Empty;
+
+            if (MicroLibraryHelper.IsConfigured && MicroLibraryHelper.IsLibraryImageDownloadPending(_microRelativeFilePath, index))
+                return Size.Empty;
+
+            if (_images[index] == null)
+            {
+                _fStream.Seek(_indexList[index], SeekOrigin.Begin);
+                _images[index] = new MImage(_reader);
+            }
+
+            if ((_images[index].Width == 0) || (_images[index].Height == 0))
+            {
+                _images[index] = null;
+                if (MicroLibraryHelper.IsConfigured)
+                    MicroLibraryHelper.QueueLibraryImageDownload(_microRelativeFilePath, _fileName, index);
+                return Size.Empty;
+            }
+
+            return new Size(_images[index].Width, _images[index].Height);
+        }
+        public Size GetTrueSize(int index)
+        {
+            if (!EnsureInitialized())
+                return Size.Empty;
+
+            if (_images == null || index < 0 || index >= _images.Length)
+                return Size.Empty;
+
+            if (MicroLibraryHelper.IsConfigured && MicroLibraryHelper.IsLibraryImageDownloadPending(_microRelativeFilePath, index))
+                return Size.Empty;
+
+            if (_images[index] == null)
+            {
+                _fStream.Position = _indexList[index];
+                _images[index] = new MImage(_reader);
+            }
+            MImage mi = _images[index];
+            if (mi.TrueSize.IsEmpty)
+            {
+                if (!mi.TextureValid)
+                {
+                    if ((mi.Width == 0) || (mi.Height == 0))
+                    {
+                        _images[index] = null;
+                        if (MicroLibraryHelper.IsConfigured)
+                            MicroLibraryHelper.QueueLibraryImageDownload(_microRelativeFilePath, _fileName, index);
+                        return Size.Empty;
+                    }
+
+                    _fStream.Seek(_indexList[index] + 17, SeekOrigin.Begin);
+                    try
+                    {
+                        mi.CreateTexture(_reader);
+                    }
+                    catch
+                    {
+                        _images[index] = null;
+                        if (MicroLibraryHelper.IsConfigured)
+                            MicroLibraryHelper.QueueLibraryImageDownload(_microRelativeFilePath, _fileName, index);
+                        return Size.Empty;
+                    }
+                }
+                return mi.GetTrueSize();
+            }
+            return mi.TrueSize;
+        }
+
+        private bool EnsureInitialized()
+        {
+            if (_initialized)
+                return true;
+
+            if (File.Exists(_fileName))
+            {
+                Initialize();
+                return _initialized;
+            }
+
+            if (MicroLibraryHelper.IsConfigured)
+                MicroLibraryHelper.QueueLibraryHeaderDownload(_microRelativeFilePath, _fileName);
+
+            return false;
+        }
+
+        private static string NormalizeMicroRelativePath(string microRelativePath)
+        {
+            string normalized = (microRelativePath ?? string.Empty)
+                .Replace('\\', '/')
+                .TrimStart('/');
+
+            while (normalized.StartsWith("./", StringComparison.Ordinal))
+                normalized = normalized.Substring(2);
+
+            return normalized;
+        }
+
+        public void Draw(int index, int x, int y)
+        {
+            if (x >= DXManager.RenderWidth || y >= DXManager.RenderHeight)
+                return;
+
+            if (!CheckImage(index))
+                return;
+
+            MImage mi = _images[index];
+
+            if (x + mi.Width < 0 || y + mi.Height < 0)
+                return;
+
+
+            DXManager.Draw(mi.Image, new Rectangle(0, 0, mi.Width, mi.Height), new Vector3((float)x, (float)y, 0.0F), Color.White);
+
+            mi.CleanTime = CMain.Time + Settings.CleanDelay;
+        }
+        public void Draw(int index, Point point, Color colour, bool offSet = false)
+        {
+            if (!CheckImage(index))
+                return;
+
+            MImage mi = _images[index];
+
+            if (offSet) point.Offset(mi.X, mi.Y);
+
+            if (point.X >= DXManager.RenderWidth || point.Y >= DXManager.RenderHeight || point.X + mi.Width < 0 || point.Y + mi.Height < 0)
+                return;
+
+            DXManager.Draw(mi.Image, new Rectangle(0, 0, mi.Width, mi.Height), new Vector3((float)point.X, (float)point.Y, 0.0F), colour);
+
+            mi.CleanTime = CMain.Time + Settings.CleanDelay;
+        }
+
+        public void Draw(int index, Point point, Color colour, bool offSet, float opacity)
+        {
+            if (!CheckImage(index))
+                return;
+
+            MImage mi = _images[index];
+
+            if (offSet) 
+                point.Offset(mi.X, mi.Y);//坐标平移量（图片向右向下偏移量）
+
+            if (point.X >= DXManager.RenderWidth || point.Y >= DXManager.RenderHeight || point.X + mi.Width < 0 || point.Y + mi.Height < 0)
+                return;
+
+            DXManager.DrawOpaque(mi.Image, new Rectangle(0, 0, mi.Width, mi.Height), new Vector3((float)point.X, (float)point.Y, 0.0F), colour, opacity); 
+
+            mi.CleanTime = CMain.Time + Settings.CleanDelay;
+        }
+
+        public void DrawBlend(int index, Point point, Color colour, bool offSet = false, float rate = 1)
+        {
+            if (!CheckImage(index))
+                return;
+
+            MImage mi = _images[index];
+
+            if (offSet) point.Offset(mi.X, mi.Y);
+
+            if (point.X >= DXManager.RenderWidth || point.Y >= DXManager.RenderHeight || point.X + mi.Width < 0 || point.Y + mi.Height < 0)
+                return;
+
+            bool oldBlend = DXManager.Blending;
+            DXManager.SetBlend(true, rate);
+
+            DXManager.Draw(mi.Image, new Rectangle(0, 0, mi.Width, mi.Height), new Vector3((float)point.X, (float)point.Y, 0.0F), colour);
+
+            DXManager.SetBlend(oldBlend);
+            mi.CleanTime = CMain.Time + Settings.CleanDelay;
+        }
+        public void Draw(int index, Rectangle section, Point point, Color colour, bool offSet)
+        {
+            if (!CheckImage(index))
+                return;
+
+            MImage mi = _images[index];
+
+            if (offSet) point.Offset(mi.X, mi.Y);
+
+
+            if (point.X >= DXManager.RenderWidth || point.Y >= DXManager.RenderHeight || point.X + mi.Width < 0 || point.Y + mi.Height < 0)
+                return;
+
+            if (section.Right > mi.Width)
+                section.Width -= section.Right - mi.Width;
+
+            if (section.Bottom > mi.Height)
+                section.Height -= section.Bottom - mi.Height;
+
+            DXManager.Draw(mi.Image, section, new Vector3((float)point.X, (float)point.Y, 0.0F), colour);
+
+            mi.CleanTime = CMain.Time + Settings.CleanDelay;
+        }
+        public void Draw(int index, Rectangle section, Point point, Color colour, float opacity)
+        {
+            if (!CheckImage(index))
+                return;
+
+            MImage mi = _images[index];
+
+
+            if (point.X >= DXManager.RenderWidth || point.Y >= DXManager.RenderHeight || point.X + mi.Width < 0 || point.Y + mi.Height < 0)
+                return;
+
+            if (section.Right > mi.Width)
+                section.Width -= section.Right - mi.Width;
+
+            if (section.Bottom > mi.Height)
+                section.Height -= section.Bottom - mi.Height;
+
+            DXManager.DrawOpaque(mi.Image, section, new Vector3((float)point.X, (float)point.Y, 0.0F), colour, opacity); 
+
+            mi.CleanTime = CMain.Time + Settings.CleanDelay;
+        }
+        public void Draw(int index, Point point, Size size, Color colour)
+        {
+            if (!CheckImage(index))
+                return;
+
+            MImage mi = _images[index];
+
+            if (point.X >= DXManager.RenderWidth || point.Y >= DXManager.RenderHeight || point.X + size.Width < 0 || point.Y + size.Height < 0)
+                return;
+
+            DXManager.Draw(
+                mi.Image,
+                new Rectangle(0, 0, mi.Width, mi.Height),
+                new Rectangle(point, size),
+                colour);
+
+            mi.CleanTime = CMain.Time + Settings.CleanDelay;
+        }
+
+        public void DrawTinted(int index, Point point, Color colour, Color Tint, bool offSet = false)
+        {
+            if (!CheckImage(index))
+                return;
+
+            MImage mi = _images[index];
+
+            if (offSet) point.Offset(mi.X, mi.Y);
+
+            if (point.X >= DXManager.RenderWidth || point.Y >= DXManager.RenderHeight || point.X + mi.Width < 0 || point.Y + mi.Height < 0)
+                return;
+
+            DXManager.Draw(mi.Image, new Rectangle(0, 0, mi.Width, mi.Height), new Vector3((float)point.X, (float)point.Y, 0.0F), colour);
+
+            if (mi.HasMask)
+            {
+                DXManager.Draw(mi.MaskImage, new Rectangle(0, 0, mi.Width, mi.Height), new Vector3((float)point.X, (float)point.Y, 0.0F), Tint);
+            }
+
+            mi.CleanTime = CMain.Time + Settings.CleanDelay;
+        }
+
+        public void DrawUp(int index, int x, int y)
+        {
+            if (x >= DXManager.RenderWidth)
+                return;
+
+            if (!CheckImage(index))
+                return;
+
+            MImage mi = _images[index];
+            y -= mi.Height;
+            if (y >= DXManager.RenderHeight)
+                return;
+            if (x + mi.Width < 0 || y + mi.Height < 0)
+                return;
+
+            DXManager.Draw(mi.Image, new Rectangle(0, 0, mi.Width, mi.Height), new Vector3(x, y, 0.0F), Color.White);
+
+            mi.CleanTime = CMain.Time + Settings.CleanDelay;
+        }
+        public void DrawUpBlend(int index, Point point)
+        {
+            if (!CheckImage(index))
+                return;
+
+            MImage mi = _images[index];
+
+            point.Y -= mi.Height;
+
+
+            if (point.X >= DXManager.RenderWidth || point.Y >= DXManager.RenderHeight || point.X + mi.Width < 0 || point.Y + mi.Height < 0)
+                return;
+
+            bool oldBlend = DXManager.Blending;
+            DXManager.SetBlend(true, 1);
+
+            DXManager.Draw(mi.Image, new Rectangle(0, 0, mi.Width, mi.Height), new Vector3((float)point.X, (float)point.Y, 0.0F), Color.White);
+
+            DXManager.SetBlend(oldBlend);
+            mi.CleanTime = CMain.Time + Settings.CleanDelay;
+        }
+
+        public bool VisiblePixel(int index, Point point, bool accuate)
+        {
+            if (!CheckImage(index))
+                return false;
+
+            if (accuate)
+                return _images[index].VisiblePixel(point);
+
+            int accuracy = 2;
+
+            for (int x = -accuracy; x <= accuracy; x++)
+                for (int y = -accuracy; y <= accuracy; y++)
+                    if (_images[index].VisiblePixel(new Point(point.X + x, point.Y + y)))
+                        return true;
+
+            return false;
+        }
+    }
+
+    public sealed class MImage
+    {
+        public short Width, Height, X, Y, ShadowX, ShadowY;
+        public byte Shadow;
+        public int Length;
+
+        public bool TextureValid;
+        public Vortice.Direct3D11.ID3D11Texture2D Image;
+
+        public short MaskWidth, MaskHeight, MaskX, MaskY;
+        public int MaskLength;
+
+        public Vortice.Direct3D11.ID3D11Texture2D MaskImage;
+        public Boolean HasMask;
+
+        public long CleanTime;
+        public Size TrueSize;
+
+        private byte[] _alphaData;
+
+        public unsafe byte* Data;
+
+        public MImage(BinaryReader reader)
+        {
+            Width = reader.ReadInt16();
+            Height = reader.ReadInt16();
+            X = reader.ReadInt16();
+            Y = reader.ReadInt16();
+            ShadowX = reader.ReadInt16();
+            ShadowY = reader.ReadInt16();
+            Shadow = reader.ReadByte();
+            Length = reader.ReadInt32();
+
+            HasMask = ((Shadow >> 7) == 1) ? true : false;
+            if (HasMask)
+            {
+                reader.ReadBytes(Length);
+                MaskWidth = reader.ReadInt16();
+                MaskHeight = reader.ReadInt16();
+                MaskX = reader.ReadInt16();
+                MaskY = reader.ReadInt16();
+                MaskLength = reader.ReadInt32();
+            }
+        }
+
+        public unsafe void CreateTexture(BinaryReader reader)
+        {
+            var decompressedData = DecompressData(reader.ReadBytes(Length));
+            EnsureAlphaData(decompressedData);
+            nint datapoint = 0;
+            Image = DXManager.CreateTextureFromBytes(decompressedData, (uint)Width, (uint)Height, ref datapoint);
+            if (HasMask)
+            {
+                reader.ReadBytes(12);
+
+                decompressedData = DecompressData(reader.ReadBytes(Length));
+                MaskImage = DXManager.CreateTextureFromBytes(decompressedData, (uint)Width, (uint)Height, ref datapoint);
+            }
+
+            DXManager.TextureList.Add(this);
+            TextureValid = true;
+            CleanTime = CMain.Time + Settings.CleanDelay;
+        }
+        static int num1 = 0, num2 = 0, count = 10;
+
+        public unsafe void DisposeTexture()
+        {
+            DXManager.TextureList.Remove(this);
+
+            if (Image != null)
+            {
+                Image.Dispose();
+            }
+
+            if (MaskImage != null)
+            {
+                MaskImage.Dispose();
+            }
+
+            TextureValid = false;
+            Image = null;
+            MaskImage = null;
+            Data = null;
+            _alphaData = null;
+        }
+
+        public unsafe bool VisiblePixel(Point p)
+        {
+            if (p.X < 0 || p.Y < 0 || p.X >= Width || p.Y >= Height)
+                return false;
+
+            if (_alphaData != null)
+            {
+                int index = p.Y * Width + p.X;
+                if ((uint)index >= (uint)_alphaData.Length)
+                    return false;
+                return _alphaData[index] != 0;
+            }
+
+            int w = Width;
+
+            bool result = false;
+            if (Data != null)
+            {
+                int x = p.X;
+                int y = p.Y;
+                
+                int index = (y * (w << 2)) + (x << 2) + 3;
+                
+                byte col = Data[index];
+
+                if (col == 0) 
+                    return false;
+                else return true;
+            }
+            return result;
+        }
+
+        private void EnsureAlphaData(byte[] bgraData)
+        {
+            if (_alphaData != null)
+                return;
+
+            int pixelCount = checked(Width * Height);
+            int expectedBytes = checked(pixelCount * 4);
+            if (bgraData == null || bgraData.Length < expectedBytes)
+                return;
+
+            var alpha = new byte[pixelCount];
+            int src = 3;
+            for (int i = 0; i < pixelCount; i++, src += 4)
+                alpha[i] = bgraData[src];
+
+            _alphaData = alpha;
+        }
+
+        public Size GetTrueSize()
+        {
+            if (TrueSize != Size.Empty) return TrueSize;
+
+            int l = 0, t = 0, r = Width, b = Height;
+
+            bool visible = false;
+            for (int x = 0; x < r; x++)
+            {
+                for (int y = 0; y < b; y++)
+                {
+                    if (!VisiblePixel(new Point(x, y))) continue;
+
+                    visible = true;
+                    break;
+                }
+
+                if (!visible) continue;
+
+                l = x;
+                break;
+            }
+
+            visible = false;
+            for (int y = 0; y < b; y++)
+            {
+                for (int x = l; x < r; x++)
+                {
+                    if (!VisiblePixel(new Point(x, y))) continue;
+
+                    visible = true;
+                    break;
+
+                }
+                if (!visible) continue;
+
+                t = y;
+                break;
+            }
+
+            visible = false;
+            for (int x = r - 1; x >= l; x--)
+            {
+                for (int y = 0; y < b; y++)
+                {
+                    if (!VisiblePixel(new Point(x, y))) continue;
+
+                    visible = true;
+                    break;
+                }
+
+                if (!visible) continue;
+
+                r = x + 1;
+                break;
+            }
+
+            visible = false;
+            for (int y = b - 1; y >= t; y--)
+            {
+                for (int x = l; x < r; x++)
+                {
+                    if (!VisiblePixel(new Point(x, y))) continue;
+
+                    visible = true;
+                    break;
+
+                }
+                if (!visible) continue;
+
+                b = y + 1;
+                break;
+            }
+
+            TrueSize = Rectangle.FromLTRB(l, t, r, b).Size;
+
+            return TrueSize;
+        }
+
+        private static byte[] DecompressImage(byte[] image)
+        {
+            using (GZipStream stream = new GZipStream(new MemoryStream(image), CompressionMode.Decompress))
+            {
+                const int size = 4096;
+                byte[] buffer = new byte[size];
+                using (MemoryStream memory = new MemoryStream())
+                {
+                    int count = 0;
+                    do
+                    {
+                        count = stream.Read(buffer, 0, size);
+                        if (count > 0)
+                        {
+                            memory.Write(buffer, 0, count);
+                        }
+                    }
+                    while (count > 0);
+                    return memory.ToArray();
+                }
+            }
+        }
+
+        private static void DecompressImage(byte[] data, Stream destination)
+        {
+            using (var stream = new GZipStream(new MemoryStream(data), CompressionMode.Decompress))
+            {
+                stream.CopyTo(destination);
+            }
+        }
+
+        private static byte[] DecompressData(byte[] compressedData)
+        {
+            byte[] decompressedData;
+            using (var inputStream = new MemoryStream(compressedData))
+            using (var gzipStream = new GZipStream(inputStream, CompressionMode.Decompress))
+            using (var outputStream = new MemoryStream())
+            {
+                gzipStream.CopyTo(outputStream);
+                decompressedData = outputStream.ToArray();
+            }
+            return decompressedData;
+        }
+    }
+}

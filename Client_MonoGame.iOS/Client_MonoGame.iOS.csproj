@@ -1,0 +1,46 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="..\Client_MonoGame.Mobile.props" Condition="Exists('..\Client_MonoGame.Mobile.props')" />
+
+  <PropertyGroup>
+    <TargetFramework>net11.0-ios</TargetFramework>
+    <SupportedOSPlatformVersion>15.0</SupportedOSPlatformVersion>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>Client_MonoGame.iOS</RootNamespace>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseMaui>true</UseMaui>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <ApplicationId>com.lommir.client.monogame.ios</ApplicationId>
+    <ApplicationVersion>20000</ApplicationVersion>
+    <ApplicationDisplayVersion>2.0.0</ApplicationDisplayVersion>
+    <MonoGamePlatform>iOS</MonoGamePlatform>
+    <DefineConstants>$(DefineConstants);REAL_IOS</DefineConstants>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <MtouchUseLlvm>true</MtouchUseLlvm>
+    <MtouchLink>SdkOnly</MtouchLink>
+    <DebugSymbols>false</DebugSymbols>
+    <IsAotCompatible>true</IsAotCompatible>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="AppDelegate.cs" />
+    <Compile Include="Main.cs" />
+    <Compile Include="MauiProgram.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="11.0.0-preview.2.*" />
+    <PackageReference Include="MonoGame.Content.Builder.Task" Version="$(MobileMonoGameVersion)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Client_MonoGame.Shared\Client_MonoGame.Shared.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <MonoGameContentReference Include="Content\Content.mgcb" />
+  </ItemGroup>
+</Project>

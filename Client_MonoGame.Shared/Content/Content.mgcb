@@ -1,0 +1,14 @@
+
+#----------------------------- Global Properties ----------------------------#
+
+/outputDir:../../Build/Mobile/Shared/Content/bin/$(Platform)
+/intermediateDir:../../Build/Mobile/Shared/Content/obj/$(Platform)
+/platform:Windows
+/config:
+/profile:Reach
+/compress:False
+
+#-------------------------------- References --------------------------------#
+
+
+#---------------------------------- Content ---------------------------------#

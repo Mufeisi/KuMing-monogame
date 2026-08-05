@@ -1,0 +1,60 @@
+<Project>
+  <PropertyGroup>
+    <MobileBuildRoot>$(MSBuildThisFileDirectory)Build\Mobile\</MobileBuildRoot>
+    <MobileMonoGameVersion>3.8.1.303</MobileMonoGameVersion>
+    <MobileFontStashSharpVersion>1.3.3</MobileFontStashSharpVersion>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(MSBuildProjectName)' == 'Client_MonoGame.Shared'">
+    <MobileCurrentContentBinRoot>$(MobileBuildRoot)Shared\Content\bin</MobileCurrentContentBinRoot>
+    <MobileCurrentContentObjRoot>$(MobileBuildRoot)Shared\Content\obj</MobileCurrentContentObjRoot>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(MSBuildProjectName)' == 'Client_MonoGame.Android'">
+    <MobileCurrentContentBinRoot>$(MobileBuildRoot)Android\Content\bin</MobileCurrentContentBinRoot>
+    <MobileCurrentContentObjRoot>$(MobileBuildRoot)Android\Content\obj</MobileCurrentContentObjRoot>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(MSBuildProjectName)' == 'Client_MonoGame.iOS'">
+    <MobileCurrentContentBinRoot>$(MobileBuildRoot)iOS\Content\bin</MobileCurrentContentBinRoot>
+    <MobileCurrentContentObjRoot>$(MobileBuildRoot)iOS\Content\obj</MobileCurrentContentObjRoot>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <LegacyMobileBuildDirectory Include="$(MobileBuildRoot)Shared\Debug\net6.0-android31.0" />
+    <LegacyMobileBuildDirectory Include="$(MobileBuildRoot)Android\Debug\net8.0-android" />
+    <LegacyMobileBuildDirectory Include="$(MobileBuildRoot)iOS\Debug\net8.0-ios" />
+    <LegacyMobileBuildDirectory Include="$(MobileBuildRoot)iOS\Debug\net6.0-ios15.4" />
+  </ItemGroup>
+
+  <Target Name="PrepareMobileOutputLayout" BeforeTargets="BuildContent">
+    <RemoveDir Directories="$(MSBuildProjectDirectory)\Build\Mobile"
+               Condition="Exists('$(MSBuildProjectDirectory)\Build\Mobile')" />
+    <RemoveDir Directories="$(MSBuildProjectDirectory)\Content\bin"
+               Condition="Exists('$(MSBuildProjectDirectory)\Content\bin')" />
+    <RemoveDir Directories="$(MSBuildProjectDirectory)\Content\obj"
+               Condition="Exists('$(MSBuildProjectDirectory)\Content\obj')" />
+    <RemoveDir Directories="$(MobileCurrentContentBinRoot)"
+               Condition="'$(MobileCurrentContentBinRoot)' != '' and Exists('$(MobileCurrentContentBinRoot)')" />
+    <RemoveDir Directories="$(MobileCurrentContentObjRoot)"
+               Condition="'$(MobileCurrentContentObjRoot)' != '' and Exists('$(MobileCurrentContentObjRoot)')" />
+    <RemoveDir Directories="@(LegacyMobileBuildDirectory)"
+               Condition="Exists('%(LegacyMobileBuildDirectory.Identity)')" />
+    <MakeDir Directories="$(MobileCurrentContentBinRoot)"
+             Condition="'$(MobileCurrentContentBinRoot)' != ''" />
+    <MakeDir Directories="$(MobileCurrentContentObjRoot)"
+             Condition="'$(MobileCurrentContentObjRoot)' != ''" />
+  </Target>
+
+  <Target Name="RedirectMobileMonoGameContentOutputs"
+          AfterTargets="CollectContentReferences"
+          BeforeTargets="PrepareContentBuilder"
+          Condition="'$(MobileCurrentContentBinRoot)' != '' and '@(ContentReference)' != ''">
+    <ItemGroup>
+      <ContentReference Update="@(ContentReference)">
+        <ContentOutputDir>$(MobileCurrentContentBinRoot)\$(MonoGamePlatform)\%(OutputFolder)</ContentOutputDir>
+        <ContentIntermediateOutputDir>$(MobileCurrentContentObjRoot)\$(MonoGamePlatform)\$(TargetFramework)\%(OutputFolder)</ContentIntermediateOutputDir>
+      </ContentReference>
+    </ItemGroup>
+  </Target>
+</Project>

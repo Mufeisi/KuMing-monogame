@@ -1,0 +1,130 @@
+<Project>
+  <PropertyGroup>
+    <BootstrapSharedRoot>$(MSBuildThisFileDirectory)Client_MonoGame.Shared\BootstrapAssets\</BootstrapSharedRoot>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <BootstrapShellAllowed Include="$(BootstrapSharedRoot)bootstrap-packages.json"
+                           Condition="Exists('$(BootstrapSharedRoot)bootstrap-packages.json')">
+      <Link>BootstrapAssets/bootstrap-packages.json</Link>
+    </BootstrapShellAllowed>
+    <BootstrapShellAllowed Include="$(BootstrapSharedRoot)bootstrap-assets.txt"
+                           Condition="Exists('$(BootstrapSharedRoot)bootstrap-assets.txt')">
+      <Link>BootstrapAssets/bootstrap-assets.txt</Link>
+    </BootstrapShellAllowed>
+    <BootstrapShellAllowed Include="$(BootstrapSharedRoot)bootstrap-package-index.json"
+                           Condition="Exists('$(BootstrapSharedRoot)bootstrap-package-index.json')">
+      <Link>BootstrapAssets/bootstrap-package-index.json</Link>
+    </BootstrapShellAllowed>
+    <BootstrapShellAllowed Include="$(BootstrapSharedRoot)bootstrap-package-manifests\*.json"
+                           Condition="Exists('$(BootstrapSharedRoot)bootstrap-package-manifests')">
+      <Link>BootstrapAssets/bootstrap-package-manifests/%(Filename)%(Extension)</Link>
+    </BootstrapShellAllowed>
+
+    <BootstrapShellAllowed Include="$(BootstrapSharedRoot)Language.ini"
+                           Condition="Exists('$(BootstrapSharedRoot)Language.ini')">
+      <Link>BootstrapAssets/Language.ini</Link>
+    </BootstrapShellAllowed>
+    <BootstrapShellAllowed Include="$(BootstrapSharedRoot)Mir2Config.ini"
+                           Condition="Exists('$(BootstrapSharedRoot)Mir2Config.ini')">
+      <Link>BootstrapAssets/Mir2Config.ini</Link>
+    </BootstrapShellAllowed>
+
+    <BootstrapShellAllowed Include="$(BootstrapSharedRoot)Data\Background.Lib"
+                           Condition="Exists('$(BootstrapSharedRoot)Data\Background.Lib')">
+      <Link>BootstrapAssets/Data/Background.Lib</Link>
+    </BootstrapShellAllowed>
+    <BootstrapShellAllowed Include="$(BootstrapSharedRoot)Data\BuffIcon.Lib"
+                           Condition="Exists('$(BootstrapSharedRoot)Data\BuffIcon.Lib')">
+      <Link>BootstrapAssets/Data/BuffIcon.Lib</Link>
+    </BootstrapShellAllowed>
+    <BootstrapShellAllowed Include="$(BootstrapSharedRoot)Data\ChrSel.Lib"
+                           Condition="Exists('$(BootstrapSharedRoot)Data\ChrSel.Lib')">
+      <Link>BootstrapAssets/Data/ChrSel.Lib</Link>
+    </BootstrapShellAllowed>
+    <BootstrapShellAllowed Include="$(BootstrapSharedRoot)Data\Items.Lib"
+                           Condition="Exists('$(BootstrapSharedRoot)Data\Items.Lib')">
+      <Link>BootstrapAssets/Data/Items.Lib</Link>
+    </BootstrapShellAllowed>
+    <BootstrapShellAllowed Include="$(BootstrapSharedRoot)Data\MagIcon.Lib"
+                           Condition="Exists('$(BootstrapSharedRoot)Data\MagIcon.Lib')">
+      <Link>BootstrapAssets/Data/MagIcon.Lib</Link>
+    </BootstrapShellAllowed>
+    <BootstrapShellAllowed Include="$(BootstrapSharedRoot)Data\MagIcon2.Lib"
+                           Condition="Exists('$(BootstrapSharedRoot)Data\MagIcon2.Lib')">
+      <Link>BootstrapAssets/Data/MagIcon2.Lib</Link>
+    </BootstrapShellAllowed>
+    <BootstrapShellAllowed Include="$(BootstrapSharedRoot)Data\MMap.Lib"
+                           Condition="Exists('$(BootstrapSharedRoot)Data\MMap.Lib')">
+      <Link>BootstrapAssets/Data/MMap.Lib</Link>
+    </BootstrapShellAllowed>
+    <BootstrapShellAllowed Include="$(BootstrapSharedRoot)Data\Prguse.Lib"
+                           Condition="Exists('$(BootstrapSharedRoot)Data\Prguse.Lib')">
+      <Link>BootstrapAssets/Data/Prguse.Lib</Link>
+    </BootstrapShellAllowed>
+    <BootstrapShellAllowed Include="$(BootstrapSharedRoot)Data\Prguse2.Lib"
+                           Condition="Exists('$(BootstrapSharedRoot)Data\Prguse2.Lib')">
+      <Link>BootstrapAssets/Data/Prguse2.Lib</Link>
+    </BootstrapShellAllowed>
+    <BootstrapShellAllowed Include="$(BootstrapSharedRoot)Data\Prguse3.Lib"
+                           Condition="Exists('$(BootstrapSharedRoot)Data\Prguse3.Lib')">
+      <Link>BootstrapAssets/Data/Prguse3.Lib</Link>
+    </BootstrapShellAllowed>
+    <BootstrapShellAllowed Include="$(BootstrapSharedRoot)Data\Title.Lib"
+                           Condition="Exists('$(BootstrapSharedRoot)Data\Title.Lib')">
+      <Link>BootstrapAssets/Data/Title.Lib</Link>
+    </BootstrapShellAllowed>
+
+    <BootstrapShellAllowed Include="$(BootstrapSharedRoot)Data\Map\WemadeMir2\Objects.Lib"
+                           Condition="Exists('$(BootstrapSharedRoot)Data\Map\WemadeMir2\Objects.Lib')">
+      <Link>BootstrapAssets/Data/Map/WemadeMir2/Objects.Lib</Link>
+    </BootstrapShellAllowed>
+    <BootstrapShellAllowed Include="$(BootstrapSharedRoot)Data\Map\WemadeMir2\SmTiles.Lib"
+                           Condition="Exists('$(BootstrapSharedRoot)Data\Map\WemadeMir2\SmTiles.Lib')">
+      <Link>BootstrapAssets/Data/Map/WemadeMir2/SmTiles.Lib</Link>
+    </BootstrapShellAllowed>
+    <BootstrapShellAllowed Include="$(BootstrapSharedRoot)Data\Map\WemadeMir2\Tiles.Lib"
+                           Condition="Exists('$(BootstrapSharedRoot)Data\Map\WemadeMir2\Tiles.Lib')">
+      <Link>BootstrapAssets/Data/Map/WemadeMir2/Tiles.Lib</Link>
+    </BootstrapShellAllowed>
+
+    <BootstrapShellAllowed Include="$(BootstrapSharedRoot)Sound\100.wav"
+                           Condition="Exists('$(BootstrapSharedRoot)Sound\100.wav')">
+      <Link>BootstrapAssets/Sound/100.wav</Link>
+    </BootstrapShellAllowed>
+    <BootstrapShellAllowed Include="$(BootstrapSharedRoot)Sound\Log-in-long2.wav"
+                           Condition="Exists('$(BootstrapSharedRoot)Sound\Log-in-long2.wav')">
+      <Link>BootstrapAssets/Sound/Log-in-long2.wav</Link>
+    </BootstrapShellAllowed>
+    <BootstrapShellAllowed Include="$(BootstrapSharedRoot)Sound\sellect-loop2.wav"
+                           Condition="Exists('$(BootstrapSharedRoot)Sound\sellect-loop2.wav')">
+      <Link>BootstrapAssets/Sound/sellect-loop2.wav</Link>
+    </BootstrapShellAllowed>
+    <BootstrapShellAllowed Include="$(BootstrapSharedRoot)Sound\SoundList.lst"
+                           Condition="Exists('$(BootstrapSharedRoot)Sound\SoundList.lst')">
+      <Link>BootstrapAssets/Sound/SoundList.lst</Link>
+    </BootstrapShellAllowed>
+  </ItemGroup>
+
+  <Target Name="ValidateBootstrapShellAssets"
+          BeforeTargets="PrepareForBuild"
+          Condition="'$(DisableBootstrapShellValidation)' != 'true' and ('@(AndroidAsset)' != '' or '@(BundleResource)' != '')">
+    <ItemGroup>
+      <_BootstrapShellActual Include="@(AndroidAsset)"
+                             Condition="'%(AndroidAsset.Link)' != '' and $([System.String]::Copy('%(AndroidAsset.Link)').StartsWith('BootstrapAssets/'))" />
+      <_BootstrapShellActual Include="@(BundleResource)"
+                             Condition="'%(BundleResource.Link)' != '' and $([System.String]::Copy('%(BundleResource.Link)').StartsWith('BootstrapAssets/'))" />
+
+      <_BootstrapShellUnexpected Include="@(_BootstrapShellActual)" />
+      <_BootstrapShellUnexpected Remove="@(BootstrapShellAllowed)" MatchOnMetadata="Link" />
+
+      <_BootstrapShellMissing Include="@(BootstrapShellAllowed)" />
+      <_BootstrapShellMissing Remove="@(_BootstrapShellActual)" MatchOnMetadata="Link" />
+    </ItemGroup>
+
+    <Error Text="Bootstrap 壳子资源超出 core-startup/manifests 白名单：@(_BootstrapShellUnexpected->'%(Link)', ', ')"
+           Condition="'@(_BootstrapShellUnexpected)' != ''" />
+    <Error Text="Bootstrap 壳子资源缺失：@(_BootstrapShellMissing->'%(Link)', ', ')"
+           Condition="'@(_BootstrapShellMissing)' != ''" />
+  </Target>
+</Project>
