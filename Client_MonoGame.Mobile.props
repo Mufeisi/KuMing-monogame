@@ -1,6 +1,8 @@
 <Project>
   <PropertyGroup>
     <MobileBuildRoot>$(MSBuildThisFileDirectory)Build\Mobile\</MobileBuildRoot>
+    <MauiVersion>10.0.20</MauiVersion>
+    <MobileLoggingVersion>10.0.0</MobileLoggingVersion>
     <MobileMonoGameVersion>3.8.1.303</MobileMonoGameVersion>
     <MobileFontStashSharpVersion>1.3.3</MobileFontStashSharpVersion>
   </PropertyGroup>

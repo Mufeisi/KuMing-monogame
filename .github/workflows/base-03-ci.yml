@@ -72,7 +72,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: '21'
 
       - name: Cache NuGet and Android workload packs
         uses: actions/cache@v4
@@ -86,17 +86,15 @@ jobs:
             android-nuget-${{ runner.os }}-
 
       - name: Install Android workload
-        run: dotnet workload install maui-android --skip-manifest-update
+        run: dotnet workload install maui-android
 
       - name: Show SDK and workload state
         run: dotnet --info
 
-      # BASE-06 owns net11 -> net10 migration. Until then this command is an
-      # intentional, visible preview-TFM blocker rather than a green fake gate.
       - name: Publish Android Release arm64 AOT package
         run: >-
           dotnet publish Client_MonoGame.Android/Client_MonoGame.Android.csproj
-          -f net11.0-android
+          -f net10.0-android
           -c Release
           -r android-arm64
           -p:MobileBootstrapAssetMode=Micro
@@ -111,7 +109,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: base-03-android-arm64-aot
-          path: Client_MonoGame.Android/bin/Release/net11.0-android/android-arm64/publish/**
+          path: Client_MonoGame.Android/bin/Release/net10.0-android/android-arm64/publish/**
           if-no-files-found: ignore
           retention-days: 7
 

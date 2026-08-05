@@ -2,7 +2,7 @@
   <Import Project="..\Client_MonoGame.Mobile.props" Condition="Exists('..\Client_MonoGame.Mobile.props')" />
 
   <PropertyGroup>
-    <TargetFramework>net11.0-ios</TargetFramework>
+    <TargetFramework>net10.0-ios</TargetFramework>
     <SupportedOSPlatformVersion>15.0</SupportedOSPlatformVersion>
     <OutputType>Exe</OutputType>
     <RootNamespace>Client_MonoGame.iOS</RootNamespace>
@@ -32,7 +32,7 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="11.0.0-preview.2.*" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="$(MobileLoggingVersion)" />
     <PackageReference Include="MonoGame.Content.Builder.Task" Version="$(MobileMonoGameVersion)" />
   </ItemGroup>
 

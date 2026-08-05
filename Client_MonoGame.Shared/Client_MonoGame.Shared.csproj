@@ -2,7 +2,7 @@
   <Import Project="..\Client_MonoGame.Mobile.props" Condition="Exists('..\Client_MonoGame.Mobile.props')" />
 
   <PropertyGroup>
-    <TargetFrameworks>net8.0;net11.0-android;net11.0-ios</TargetFrameworks>
+    <TargetFrameworks>net8.0;net10.0-android;net10.0-ios</TargetFrameworks>
     <ImplicitUsings>disable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
@@ -12,13 +12,13 @@
     <MobileBootstrapAssetMode Condition="'$(MobileBootstrapAssetMode)' == ''">Micro</MobileBootstrapAssetMode>
   </PropertyGroup>
 
-  <PropertyGroup Condition="'$(TargetFramework)' == 'net11.0-android'">
+  <PropertyGroup Condition="'$(TargetFramework)' == 'net10.0-android'">
     <UseMaui>true</UseMaui>
     <SingleProject>true</SingleProject>
     <DefineConstants>$(DefineConstants);MONOSHARE_XNA;REAL_ANDROID</DefineConstants>
   </PropertyGroup>
 
-  <PropertyGroup Condition="'$(TargetFramework)' == 'net11.0-ios'">
+  <PropertyGroup Condition="'$(TargetFramework)' == 'net10.0-ios'">
     <UseMaui>true</UseMaui>
     <SingleProject>true</SingleProject>
     <DefineConstants>$(DefineConstants);REAL_IOS</DefineConstants>
@@ -40,7 +40,7 @@
     <Compile Include="Compat\SoundManager.cs" />
   </ItemGroup>
 
-  <ItemGroup Condition="'$(TargetFramework)' == 'net11.0-android'">
+  <ItemGroup Condition="'$(TargetFramework)' == 'net10.0-android'">
     <Compile Include="InternalsVisibleTo.BootstrapRuntimeSmokeTest.cs" />
     <Compile Include="BootstrapPackageRuntime.cs" />
     <Compile Include="BootstrapPackageDownloader.cs" />
@@ -62,7 +62,7 @@
     <Compile Include="Maui\**\*.cs" />
   </ItemGroup>
 
-  <ItemGroup Condition="'$(TargetFramework)' == 'net11.0-ios'">
+  <ItemGroup Condition="'$(TargetFramework)' == 'net10.0-ios'">
     <Compile Include="InternalsVisibleTo.BootstrapRuntimeSmokeTest.cs" />
     <Compile Include="BootstrapPackageRuntime.cs" />
     <Compile Include="BootstrapPackageDownloader.cs" />
@@ -79,16 +79,16 @@
     <Compile Include="Maui\**\*.cs" />
   </ItemGroup>
 
-  <ItemGroup Condition="'$(TargetFramework)' == 'net11.0-android'">
+  <ItemGroup Condition="'$(TargetFramework)' == 'net10.0-android'">
     <PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="11.0.0-preview.2.*" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="$(MobileLoggingVersion)" />
     <PackageReference Include="MonoGame.Framework.Android" Version="$(MobileMonoGameVersion)" />
     <PackageReference Include="FontStashSharp.MonoGame" Version="$(MobileFontStashSharpVersion)" />
   </ItemGroup>
 
-  <ItemGroup Condition="'$(TargetFramework)' == 'net11.0-ios'">
+  <ItemGroup Condition="'$(TargetFramework)' == 'net10.0-ios'">
     <PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="11.0.0-preview.2.*" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="$(MobileLoggingVersion)" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(TargetFramework)' == 'net8.0'">

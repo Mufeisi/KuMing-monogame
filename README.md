@@ -35,7 +35,7 @@ pwsh -NoProfile -File Tools/ResourceBaseline.ps1 -Action Validate -Scope All
 pwsh -NoProfile -File Tools/ResourceBaseline.ps1 -Action Validate -Scope All
 ```
 
-该基线不提前执行 BASE-06/BASE-07 的 TFM 迁移；移动端当前仍为 `net11.0-*`，Server/PC 仍为 `net8.0-*`。在没有外部资源时可以构建不依赖资源的项目，例如：
+BASE-06 的移动端代码迁移与本机构建已完成，真机四态待验证（当前 adb 无设备）；移动端当前为稳定 `net10.0-*`。BASE-07 尚未执行，Server/PC 仍为 `net8.0-*`。在没有外部资源时可以构建不依赖资源的项目，例如：
 
 ```powershell
 dotnet build Shared/Shared.csproj
