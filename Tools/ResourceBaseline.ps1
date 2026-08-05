@@ -119,7 +119,8 @@ function Get-ResourceTarget($Resource) {
 
 function Get-ResourceSource($Resource) {
     if ([string]::IsNullOrWhiteSpace($externalRoot)) { return $null }
-    $source = Join-Path $externalRoot ($Resource.path.Replace('/', [IO.Path]::DirectorySeparatorChar))
+    $relative = if ([string]::IsNullOrWhiteSpace([string]$Resource.sourcePath)) { $Resource.path } else { $Resource.sourcePath }
+    $source = Join-Path $externalRoot ($relative.Replace('/', [IO.Path]::DirectorySeparatorChar))
     Assert-PathWithin $source $externalRoot "$($Resource.id) 外部源"
     if (Test-PathWithin $source $repo -or Test-PathWithin $repo $source) {
         throw "$($Resource.id) 外部源与仓库重叠，拒绝使用：$source。"
@@ -127,17 +128,38 @@ function Get-ResourceSource($Resource) {
     return $source
 }
 
-function Test-ExpectedFiles($Resource, [string]$Root, [string]$Label) {
-    if ($null -eq $Resource.expected) { return }
+function Get-ResourcePhaseSpec($Resource, [ValidateSet('source', 'acquired', 'final')][string]$Phase) {
+    $candidate = $null
+    if ($Phase -eq 'source' -and $Resource.source -and $null -ne $Resource.source.sha256) {
+        $candidate = $Resource.source
+    }
+    elseif ($Phase -eq 'acquired' -and $Resource.acquired) {
+        $candidate = $Resource.acquired
+    }
+    elseif ($Phase -eq 'final' -and $Resource.final) {
+        $candidate = $Resource.final
+    }
+    if ($null -ne $candidate) { return $candidate }
+    return [PSCustomObject]@{
+        fileCount = $Resource.fileCount
+        bytes = $Resource.bytes
+        sha256 = $Resource.sha256
+        expected = $Resource.expected
+    }
+}
+
+function Test-ExpectedFiles($Resource, [string]$Root, [string]$Label, $Expected = $null) {
+    if ($null -eq $Expected) { $Expected = $Resource.expected }
+    if ($null -eq $Expected) { return }
     $files = @(Get-ChildItem -LiteralPath $Root -File -Recurse -Force)
-    foreach ($required in @($Resource.expected.files | Where-Object { -not [string]::IsNullOrWhiteSpace([string]$_) })) {
+    foreach ($required in @($Expected.files | Where-Object { -not [string]::IsNullOrWhiteSpace([string]$_) })) {
         $relative = Assert-RelativePath ([string]$required) "$($Resource.id).expected.files"
         $candidate = Join-Path $Root ($relative.Replace('/', [IO.Path]::DirectorySeparatorChar))
         if (-not (Test-Path -LiteralPath $candidate -PathType Leaf)) {
             Add-Failure "$Label：缺少必需文件 $relative。"
         }
     }
-    foreach ($glob in @($Resource.expected.globs | Where-Object { -not [string]::IsNullOrWhiteSpace([string]$_) })) {
+    foreach ($glob in @($Expected.globs | Where-Object { -not [string]::IsNullOrWhiteSpace([string]$_) })) {
         $pattern = Assert-RelativePath ([string]$glob) "$($Resource.id).expected.globs"
         $matched = @($files | Where-Object {
             $relative = $_.FullName.Substring((Get-TrimmedFullPath $Root).Length + 1).Replace('\', '/')
@@ -149,7 +171,7 @@ function Test-ExpectedFiles($Resource, [string]$Root, [string]$Label) {
     }
 }
 
-function Test-Resource($Resource, [string]$Root, [string]$Label, [switch]$RequireHash) {
+function Test-Resource($Resource, [string]$Root, [string]$Label, [switch]$RequireHash, [ValidateSet('source', 'acquired', 'final')][string]$Phase = 'final') {
     if (-not (Test-Path -LiteralPath $Root -PathType Container)) {
         Add-Failure "$Label：目录不存在：$Root。"
         return $false
@@ -157,14 +179,20 @@ function Test-Resource($Resource, [string]$Root, [string]$Label, [switch]$Requir
     try {
         $failureCountBefore = $failures.Count
         Assert-NoReparseDescendants $Root $Label
-        Test-ExpectedFiles $Resource $Root $Label
+        $spec = Get-ResourcePhaseSpec $Resource $Phase
+        Test-ExpectedFiles $Resource $Root $Label $spec.expected
         $digest = Get-TreeDigest $Root ([string]$Resource.path)
-        if ($RequireHash -and [string]::IsNullOrWhiteSpace([string]$Resource.sha256)) {
+        $expectedHash = [string]$spec.sha256
+        $expectedFileCount = if ($null -ne $spec.fileCount) { [int]$spec.fileCount } else { $null }
+        $expectedBytes = if ($null -ne $spec.bytes) { [Int64]$spec.bytes } else { $null }
+        if ($null -ne $expectedFileCount -and ($digest.FileCount -ne $expectedFileCount -or $digest.Bytes -ne $expectedBytes)) {
+            Add-Failure "$Label：文件计数/大小不匹配，期望 $expectedFileCount 个/$expectedBytes bytes，实际 $($digest.FileCount) 个/$($digest.Bytes) bytes。"
+        }
+        if ($RequireHash -and [string]::IsNullOrWhiteSpace($expectedHash)) {
             Add-Failure "$Label：SHA256 未固定；未知外部资源不能进入可复现基线。"
         }
-        elseif (-not [string]::IsNullOrWhiteSpace([string]$Resource.sha256) -and
-            $digest.Sha256 -ne ([string]$Resource.sha256).ToLowerInvariant()) {
-            Add-Failure "$Label：目录 SHA256 不匹配，期望 $($Resource.sha256)，实际 $($digest.Sha256)。"
+        elseif (-not [string]::IsNullOrWhiteSpace($expectedHash) -and $digest.Sha256 -ne $expectedHash.ToLowerInvariant()) {
+            Add-Failure "$Label：目录 SHA256 不匹配，期望 $expectedHash，实际 $($digest.Sha256)。"
         }
         if ($failures.Count -eq $failureCountBefore) {
             Write-Host "[OK] $Label：$($digest.FileCount) files, $($digest.Bytes) bytes, sha256=$($digest.Sha256)" -ForegroundColor Green
@@ -175,6 +203,34 @@ function Test-Resource($Resource, [string]$Root, [string]$Label, [switch]$Requir
     catch {
         Add-Failure "$Label：$($_.Exception.Message)"
         return $false
+    }
+}
+
+function Test-ResourceOverlays($Resource, [string]$Label) {
+    if ($null -eq $Resource.overlays) { return }
+    foreach ($overlay in @($Resource.overlays)) {
+        $source = Join-Path $externalRoot ($overlay.sourcePath.Replace('/', [IO.Path]::DirectorySeparatorChar))
+        Assert-PathWithin $source $externalRoot "$Label overlay 源"
+        if (Test-PathWithin $source $repo -or Test-PathWithin $repo $source) {
+            Add-Failure "$Label overlay 源与仓库重叠：$source。"
+            continue
+        }
+        if (-not (Test-Path -LiteralPath $source -PathType Leaf)) {
+            Add-Failure "$Label overlay 源文件不存在：$source。"
+            continue
+        }
+        try { Assert-NoReparsePath $source "$Label overlay 源" } catch { Add-Failure "$Label：$($_.Exception.Message)"; continue }
+        $bytes = (Get-Item -LiteralPath $source -Force).Length
+        if ($null -ne $overlay.bytes -and [Int64]$overlay.bytes -ne [Int64]$bytes) {
+            Add-Failure "$Label overlay：文件大小不匹配，期望 $($overlay.bytes)，实际 $bytes。"
+        }
+        $hash = (Get-FileHash -Algorithm SHA256 -LiteralPath $source).Hash.ToLowerInvariant()
+        if ([string]::IsNullOrWhiteSpace([string]$overlay.sha256)) {
+            Add-Failure "$Label overlay：SHA256 未固定。"
+        }
+        elseif ($hash -ne ([string]$overlay.sha256).ToLowerInvariant()) {
+            Add-Failure "$Label overlay：SHA256 不匹配，期望 $($overlay.sha256)，实际 $hash。"
+        }
     }
 }
 
@@ -228,9 +284,25 @@ $resources = @($manifest.resources)
 $targetPaths = @{}
 foreach ($resource in $resources) {
     $resource.path = Assert-RelativePath ([string]$resource.path) "$($resource.id).path"
+    if (-not [string]::IsNullOrWhiteSpace([string]$resource.sourcePath)) {
+        $resource.sourcePath = Assert-RelativePath ([string]$resource.sourcePath) "$($resource.id).sourcePath"
+    }
     if ($resource.expected) {
         $resource.expected.files = @($resource.expected.files | ForEach-Object { Assert-RelativePath ([string]$_) "$($resource.id).expected.files" })
         $resource.expected.globs = @($resource.expected.globs | ForEach-Object { Assert-RelativePath ([string]$_) "$($resource.id).expected.globs" })
+    }
+    foreach ($phaseName in @('source', 'acquired', 'final')) {
+        $phaseSpec = $resource.PSObject.Properties[$phaseName].Value
+        if ($phaseSpec -and $phaseSpec.expected) {
+            $phaseSpec.expected.files = @($phaseSpec.expected.files | ForEach-Object { Assert-RelativePath ([string]$_) "$($resource.id).$phaseName.expected.files" })
+            $phaseSpec.expected.globs = @($phaseSpec.expected.globs | ForEach-Object { Assert-RelativePath ([string]$_) "$($resource.id).$phaseName.expected.globs" })
+        }
+    }
+    if ($resource.overlays) {
+        foreach ($overlay in @($resource.overlays)) {
+            $overlay.sourcePath = Assert-RelativePath ([string]$overlay.sourcePath) "$($resource.id).overlay.sourcePath"
+            $overlay.target = Assert-RelativePath ([string]$overlay.target) "$($resource.id).overlay.target"
+        }
     }
     $target = Get-ResourceTarget $resource
     Assert-PathWithin $target $repo "$($resource.id) 目标"
@@ -244,10 +316,14 @@ foreach ($resource in $resources) {
 }
 
 function Get-ExternalResources {
-    return @($resources | Where-Object { [string]$_.source.type -ne 'repository' -and [string]$_.source.type -ne 'none' })
+    return @($resources | Where-Object {
+        [string]$_.source.type -ne 'repository' -and
+        [string]$_.source.type -ne 'none' -and
+        [string]$_.source.type -ne 'generated'
+    })
 }
 
-function Validate-RepositoryTargets([switch]$IncludeExternal) {
+function Validate-RepositoryTargets([switch]$IncludeExternal, [switch]$SkipGenerated, [ValidateSet('acquired', 'final')][string]$Phase = 'final') {
     foreach ($resource in $resources) {
         $kind = [string]$resource.source.type
         if ($kind -eq 'none') {
@@ -258,15 +334,19 @@ function Validate-RepositoryTargets([switch]$IncludeExternal) {
             Write-Host "[SKIP] $($resource.id)：外部资源未在 Repository 范围验证。"
             continue
         }
+        if ($SkipGenerated -and $kind -eq 'generated') {
+            Write-Host "[SKIP] $($resource.id)：等待导出器生成补丁仓库。"
+            continue
+        }
         $target = Get-ResourceTarget $resource
-        [void](Test-Resource $resource $target "$($resource.id) 目标" -RequireHash)
+        [void](Test-Resource $resource $target "$($resource.id) 目标" -RequireHash -Phase $Phase)
     }
 }
 
 Write-Host "Resource baseline: action=$Action scope=$Scope manifest=$manifestPath"
 if ($Action -eq 'Validate') {
-    if ($Scope -eq 'All') { Validate-RepositoryTargets -IncludeExternal }
-    else { Validate-RepositoryTargets }
+    if ($Scope -eq 'All') { Validate-RepositoryTargets -IncludeExternal -Phase final }
+    else { Validate-RepositoryTargets -Phase final }
 }
 else {
     if ($Scope -ne 'All') { throw 'Acquire 必须使用 -Scope All，避免只获取一部分资源。' }
@@ -280,7 +360,8 @@ else {
             Add-Failure "$($resource.id) 源：目录不存在：$source。"
             continue
         }
-        [void](Test-Resource $resource $source "$($resource.id) 源" -RequireHash)
+        [void](Test-Resource $resource $source "$($resource.id) 源" -RequireHash -Phase source)
+        try { Test-ResourceOverlays $resource "$($resource.id)" } catch { Add-Failure "$($resource.id)：$($_.Exception.Message)" }
         [void](Test-TargetEmpty (Get-ResourceTarget $resource) "$($resource.id) 目标")
         if (Test-PathWithin $source (Get-ResourceTarget $resource) -or Test-PathWithin (Get-ResourceTarget $resource) $source) {
             Add-Failure "$($resource.id)：源与目标重叠，拒绝获取。"
@@ -297,7 +378,16 @@ else {
                 New-Item -ItemType Directory -Path (Split-Path -Parent $stageTarget) -Force | Out-Null
                 New-Item -ItemType Directory -Path $stageTarget -Force | Out-Null
                 Get-ChildItem -LiteralPath $source -Force | Copy-Item -Destination $stageTarget -Recurse
-                [void](Test-Resource $resource $stageTarget "$($resource.id) 临时目标" -RequireHash)
+                if ($null -ne $resource.overlays) {
+                    foreach ($overlay in @($resource.overlays)) {
+                        $overlaySource = Join-Path $externalRoot ($overlay.sourcePath.Replace('/', [IO.Path]::DirectorySeparatorChar))
+                        $overlayTarget = Join-Path $stageTarget ($overlay.target.Replace('/', [IO.Path]::DirectorySeparatorChar))
+                        Assert-PathWithin $overlayTarget $stageTarget "$($resource.id) overlay 目标"
+                        New-Item -ItemType Directory -Path (Split-Path -Parent $overlayTarget) -Force | Out-Null
+                        Copy-Item -LiteralPath $overlaySource -Destination $overlayTarget
+                    }
+                }
+                [void](Test-Resource $resource $stageTarget "$($resource.id) 临时目标" -RequireHash -Phase acquired)
             }
             if ($failures.Count -eq 0) {
                 foreach ($resource in $externalResources) {
@@ -310,7 +400,7 @@ else {
                     if (Test-Path -LiteralPath $target) { Remove-Item -LiteralPath $target -Force }
                     Move-Item -LiteralPath $stageTarget -Destination $parent
                 }
-                Validate-RepositoryTargets -IncludeExternal
+                Validate-RepositoryTargets -IncludeExternal -SkipGenerated -Phase acquired
             }
         }
         catch { Add-Failure "获取暂存/替换失败：$($_.Exception.Message)" }

@@ -5,44 +5,34 @@
 
 ## BASE-02 可复现构建基线
 
-仓库用 `global.json` 固定稳定 .NET SDK `10.0.200`（`rollForward=disable`，禁止 Preview）。先确认 SDK，再校验仓库内已提交资源：
+仓库用 `global.json` 固定稳定 .NET SDK `10.0.200`（`rollForward=disable`，禁止 Preview）。先确认 SDK，再校验仓库内资源：
 
 ```powershell
 dotnet --version
 pwsh -NoProfile -File Tools/ResourceBaseline.ps1 -Action Validate -Scope Repository
 ```
 
-资源版本、目录树 SHA256、来源和缺口记录在 [`resources.manifest.json`](resources.manifest.json)。当前仓库只包含 `Client_MonoGame.Shared/Assets/UI` 与 `Client_MonoGame.Shared/Content`；`BootstrapAssets`、PC `Data/Map/Sound`、地图样本和补丁仓库仍是外部输入。README 不提供未知 QQ 文件，也不伪造外部哈希。`.gitattributes` 将纳入哈希的文本资源固定为 LF，避免 Windows `core.autocrlf` 造成 fresh checkout 漂移。
+资源版本、目录树 SHA256、来源和三阶段摘要记录在 [`resources.manifest.json`](resources.manifest.json)。外部资源条目显式区分 `source`（授权源）、`acquired`（获取/overlay 后）和 `final`（导出器处理后）；脚本不会猜测或生成未知哈希。`.gitattributes` 将纳入哈希的文本资源固定为 LF，避免 Windows `core.autocrlf` 造成 fresh checkout 漂移。
 
-从 QQ 群共享（群号 `1063081017`）或其他已授权来源取得资源后，将目录按清单中的相对路径镜像到一个临时目录，例如：
-
-```text
-<资源镜像>/Client_MonoGame.Shared/BootstrapAssets/...
-<资源镜像>/Build/Client_VorticeDX11/...
-<资源镜像>/Build/Mobile/BootstrapRepo/...
-```
-
-外部条目的 `sha256` 目前明确为 `null`，因此它们仍是阻塞项。拿到来源方提供的确切版本和哈希后，先人工写入清单；脚本不会猜测或生成未知哈希。然后使用唯一获取链：脚本会先验证镜像结构和固定哈希，再复制到仓库内临时目录、复验、拒绝非空目标并安全替换，最后只校验仓库目标：
+当前授权镜像根为 `D:\ChuanQi\客户端`：移动资源位于 `monogame`，PC 资源位于 `Client_VorticeDX11`。不修改该源目录。BASE-02 的唯一可复现链是：先获取并校验 `acquired`，再运行现有分包导出器，最后校验 `final`。
 
 ```powershell
 pwsh -NoProfile -File Tools/ResourceBaseline.ps1 `
-  -Action Acquire -Scope All -ExternalRoot C:\path\to\authorized-resource-mirror
-```
+  -Action Acquire -Scope All -ExternalRoot D:\ChuanQi\客户端
 
-获取成功后（或只想复核当前仓库目标时）执行：
-
-```powershell
-pwsh -NoProfile -File Tools/ResourceBaseline.ps1 -Action Validate -Scope All
-```
-
-未提供外部资源、哈希仍为 `null`、源目录与仓库重叠、源含 reparse point、或目标目录非空时，命令都会以非零退出并列出阻塞原因。`Validate -Scope All` 不读取外部镜像，只验证实际仓库目标。
-
-当 `BootstrapAssets/bootstrap-packages.json` 已通过校验，可复用现有分包导出入口生成补丁仓库（脚本会在资源缺失时直接失败）：
-
-```powershell
 pwsh -NoProfile -File Tools/Mobile-BootstrapPackageRepoExport.ps1 `
   -RepositoryRoot (Get-Location).Path `
   -OutputRoot (Join-Path (Get-Location).Path 'Build/Mobile/BootstrapRepo')
+
+pwsh -NoProfile -File Tools/ResourceBaseline.ps1 -Action Validate -Scope All
+```
+
+`Acquire` 会先验证 `source`，把资源和声明的 overlay 复制到仓库内临时目录，验证 `acquired` 后再原子替换空目标；移动资源的导出器会规范化 `bootstrap-package-index.json` 并生成补丁仓库，随后 `Validate All` 只验证 `final`。源与仓库重叠、reparse point、目标非空或摘要不匹配时命令都会以非零退出。
+
+只需复核当前仓库目标时，可单独执行：
+
+```powershell
+pwsh -NoProfile -File Tools/ResourceBaseline.ps1 -Action Validate -Scope All
 ```
 
 该基线不提前执行 BASE-06/BASE-07 的 TFM 迁移；移动端当前仍为 `net11.0-*`，Server/PC 仍为 `net8.0-*`。在没有外部资源时可以构建不依赖资源的项目，例如：

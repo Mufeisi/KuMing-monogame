@@ -59,14 +59,43 @@
       "categories": ["bootstrap", "map"],
       "required": true,
       "path": "Client_MonoGame.Shared/BootstrapAssets",
+      "sourcePath": "monogame",
       "source": {
-        "type": "qq-share",
-        "description": "QQ群共享文件（群号 1063081017）；必须由用户提供本地镜像，未知文件不自动下载"
+        "type": "local-authorized",
+        "description": "用户授权的 D:/ChuanQi/客户端/monogame 资源源；不修改源目录",
+        "fileCount": 1644,
+        "bytes": 1268703048,
+        "sha256": "68ef95d004131e06d10feb6fd19cd4b44988d8a8de074427bb90f0db213bb202",
+        "expected": {
+          "files": [
+            "bootstrap-packages.json",
+            "bootstrap-assets.txt",
+            "bootstrap-package-index.json",
+            "Language.ini",
+            "Mir2Config.ini",
+            "Data/ChrSel.Lib",
+            "Data/Prguse.Lib",
+            "Data/Title.Lib",
+            "Sound/100.wav",
+            "Sound/Log-in-long2.wav",
+            "Sound/sellect-loop2.wav",
+            "Sound/SoundList.lst"
+          ],
+          "globs": [
+            "bootstrap-package-manifests/*.json",
+            "Data/*.Lib",
+            "Map/*.map",
+            "Sound/*.wav"
+          ]
+        }
       },
-      "version": "user-supplied",
-      "sha256": null,
-      "expected": {
-        "files": [
+      "version": "monogame|mtime-2026-08-05T03:22:46Z|source-tree-68ef95d0|deterministic-content-63ef7940",
+      "acquired": {
+        "fileCount": 1644,
+        "bytes": 1268703048,
+        "sha256": "68ef95d004131e06d10feb6fd19cd4b44988d8a8de074427bb90f0db213bb202",
+        "expected": {
+          "files": [
           "bootstrap-packages.json",
           "bootstrap-assets.txt",
           "bootstrap-package-index.json",
@@ -79,38 +108,88 @@
           "Sound/Log-in-long2.wav",
           "Sound/sellect-loop2.wav",
           "Sound/SoundList.lst"
-        ],
-        "globs": [
-          "bootstrap-package-manifests/*.json",
-          "Data/**/*.Lib",
-          "Map/**/*.map",
-          "Sound/*.wav"
-        ]
+          ],
+          "globs": [
+            "bootstrap-package-manifests/*.json",
+            "Data/*.Lib",
+            "Map/*.map",
+            "Sound/*.wav"
+          ]
+        }
       },
-      "notes": "现状缺失；Tools/Mobile-BootstrapPackageRepoExport.ps1 会在该目录存在后导出分包。"
+      "final": {
+        "fileCount": 1644,
+        "bytes": 1268678547,
+        "sha256": "74ae7886b7fbbbfc3b90cfb9097baf76b5becad5b145f7e98f67943eda0f4f44",
+        "expected": {
+          "files": [
+          "bootstrap-packages.json",
+          "bootstrap-assets.txt",
+          "bootstrap-package-index.json",
+          "Language.ini",
+          "Mir2Config.ini",
+          "Data/ChrSel.Lib",
+          "Data/Prguse.Lib",
+          "Data/Title.Lib",
+          "Sound/100.wav",
+          "Sound/Log-in-long2.wav",
+          "Sound/sellect-loop2.wav",
+          "Sound/SoundList.lst"
+          ],
+          "globs": [
+            "bootstrap-package-manifests/*.json",
+            "Data/*.Lib",
+            "Map/*.map",
+            "Sound/*.wav"
+          ]
+        }
+      },
+      "notes": "目录由授权源获取；导出器会规范化 bootstrap-package-index.json 并生成分包补丁。"
     },
     {
       "id": "pc-runtime-assets",
       "category": "runtime",
       "required": true,
       "path": "Build/Client_VorticeDX11",
+      "sourcePath": "Client_VorticeDX11",
       "source": {
-        "type": "qq-share",
-        "description": "QQ群共享文件或用户已授权的本地 PC 资源镜像；不从未知 URL 下载"
+        "type": "local-authorized",
+        "description": "用户授权的 D:/ChuanQi/客户端/Client_VorticeDX11 资源源；不修改源目录",
+        "fileCount": 6671,
+        "bytes": 8613613916,
+        "sha256": "d2edd0b0ac39a85ff46e670a745dc3fc47122ddd3268c14ae3869b7a07739c74",
+        "expected": {
+          "files": ["Language.ini"],
+          "globs": ["Data/*.Lib", "Map/*.map", "Sound/*.wav"]
+        }
       },
-      "version": "user-supplied",
-      "sha256": null,
-      "expected": {
-        "files": [
-          "Language.ini",
-          "Mir2Config.ini"
-        ],
-        "globs": [
-          "Data/**/*.Lib",
-          "Map/*.map",
-          "Sound/*.wav"
-        ]
+      "version": "Client_VorticeDX11|mtime-2026-08-05T03:18:01Z|tree-d2edd0b0+monogame/Mir2Config.ini|overlay-4a5197e7",
+      "acquired": {
+        "fileCount": 6672,
+        "bytes": 8613615619,
+        "sha256": "4ed7b9f9daa97df937e0ae5dfa8e4410f6e0c24b1f7568afaa460dfc6c8f0d23",
+        "expected": {
+          "files": ["Language.ini", "Mir2Config.ini"],
+          "globs": ["Data/*.Lib", "Map/*.map", "Sound/*.wav"]
+        }
       },
+      "final": {
+        "fileCount": 6672,
+        "bytes": 8613615619,
+        "sha256": "4ed7b9f9daa97df937e0ae5dfa8e4410f6e0c24b1f7568afaa460dfc6c8f0d23",
+        "expected": {
+          "files": ["Language.ini", "Mir2Config.ini"],
+          "globs": ["Data/*.Lib", "Map/*.map", "Sound/*.wav"]
+        }
+      },
+      "overlays": [
+        {
+          "sourcePath": "monogame/Mir2Config.ini",
+          "target": "Mir2Config.ini",
+          "bytes": 1703,
+          "sha256": "4a5197e729fbc52c79996b8aa3d50c93be4461fb62f60480e68805e660b6a3a7"
+        }
+      ],
       "notes": "Build/Client_VorticeDX11 当前为空；PC Settings.cs 默认引用 Data、Map、Sound、Language.ini、Mir2Config.ini。"
     },
     {
@@ -119,21 +198,25 @@
       "required": true,
       "path": "Build/Mobile/BootstrapRepo",
       "source": {
-        "type": "generated-or-external",
-        "description": "由 Mobile-BootstrapPackageRepoExport.ps1 从已校验 BootstrapAssets 生成，或用户提供已授权镜像"
+        "type": "generated",
+        "description": "由现有 Mobile-BootstrapPackageRepoExport.ps1 从已校验 BootstrapAssets 生成"
       },
-      "version": "generated-after-bootstrap",
-      "sha256": null,
-      "expected": {
-        "files": [
+      "version": "generated-deterministic-content-63ef7940|tree-a8086121",
+      "final": {
+        "fileCount": 523,
+        "bytes": 1235336854,
+        "sha256": "a8086121335b491cb9384c43a7945222876c94587cde6fb871e7d3bf2c6fc70d",
+        "expected": {
+          "files": [
           "Packages/bootstrap-package-index.json"
-        ],
-        "globs": [
-          "Packages/*.zip",
-          "Packages/*.zip.sha256"
-        ]
+          ],
+          "globs": [
+            "Packages/*.zip",
+            "Packages/*.zip.sha256"
+          ]
+        }
       },
-      "notes": "当前没有生成物；不得提交伪造 ZIP 或哈希。"
+      "notes": "由现有导出器生成；清单固定导出目录真实文件计数、大小与 SHA256。"
     },
     {
       "id": "test-resources",

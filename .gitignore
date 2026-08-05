@@ -68,3 +68,8 @@ CodeCoverage/
 *.VisualState.xml
 TestResult.xml
 nunit-*.xml
+
+# BASE-02 authorized external/generated resource targets (never commit GB-sized assets).
+/Client_MonoGame.Shared/BootstrapAssets/**
+/Build/Client_VorticeDX11/**
+/Build/Mobile/BootstrapRepo/**
