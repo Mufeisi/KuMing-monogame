@@ -116,7 +116,7 @@ GATE-P0 ──► GATE-P1 ──► GATE-P2 ──► GATE-P3 ──► GATE-P4 
 | BASE-06 | **Android/移动共享 net11→net10 迁移**：TFM 改 net10.0-android/ios、MAUI 包降版、workload 锁定、`SupportedOSPlatformVersion` 21→**24**；Debug/Release/AOT+Trim/Trim-only 模拟器验证 | BASE-02 | x86_64 模拟器四态验证通过；真机 arm64 四态延期至 RELEASE-03 最终设备验收；net10 可构建 |
 | BASE-07 | **Server/PC/Shared net8→net10 迁移**：TFM 改 net10.0；明确过渡期限；四态验证 | BASE-02 | net10 可构建；无 net8 残留 |
 | BASE-08 | **CI 全绿门禁 = GATE-P0**：BASE-05 测试集 + BASE-06/07 构建全绿 | BASE-05/06/07 | CI 全绿；iOS 不阻塞 Windows/Android 构建 |
-| BASE-09 | **iOS 隔离**：隔离 iOS TFM，确保 Windows/Android restore/build 不被 iOS workload 阻塞；不承诺 iOS 可编译 | BASE-06 | Windows/Android 构建不依赖 iOS workload |
+| BASE-09 | **iOS 隔离**：隔离 iOS TFM，确保 Windows/Android restore/build 不被 iOS workload 阻塞；不承诺 iOS 可编译 | BASE-06 | **已实现并本机验证**：Shared 默认 `net10.0;net10.0-android`，显式 `EnableIosTarget=true` 时仅求值 `net10.0;net10.0-ios`；Windows/Android graph 不含 iOS，iOS restore 为非门禁 |
 
 **GATE-P0 退出条件**：指定提交 + 资源脚本**本机**可复现构建；CI 矩阵全绿；net10 迁移完成；日志可查；最小测试集绿。（CI 裸克隆可重建 = BASE-02b，独立后续项，不阻塞 GATE-P0。）**不满足不得进入 P1。**
 

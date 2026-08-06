@@ -3,6 +3,7 @@
 
   <PropertyGroup>
     <TargetFramework>net10.0-ios</TargetFramework>
+    <EnableIosTarget>true</EnableIosTarget>
     <SupportedOSPlatformVersion>15.0</SupportedOSPlatformVersion>
     <OutputType>Exe</OutputType>
     <RootNamespace>Client_MonoGame.iOS</RootNamespace>
@@ -37,7 +38,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Client_MonoGame.Shared\Client_MonoGame.Shared.csproj" />
+    <ProjectReference Include="..\Client_MonoGame.Shared\Client_MonoGame.Shared.csproj"
+                      AdditionalProperties="EnableIosTarget=true" />
   </ItemGroup>
 
   <ItemGroup>

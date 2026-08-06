@@ -2,7 +2,9 @@
   <Import Project="..\Client_MonoGame.Mobile.props" Condition="Exists('..\Client_MonoGame.Mobile.props')" />
 
   <PropertyGroup>
-    <TargetFrameworks>net10.0;net10.0-android;net10.0-ios</TargetFrameworks>
+    <EnableIosTarget Condition="'$(EnableIosTarget)' == ''">false</EnableIosTarget>
+    <TargetFrameworks>net10.0;net10.0-android</TargetFrameworks>
+    <TargetFrameworks Condition="'$(EnableIosTarget)' == 'true'">net10.0;net10.0-ios</TargetFrameworks>
     <ImplicitUsings>disable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
