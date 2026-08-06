@@ -52,7 +52,7 @@ jobs:
         with:
           name: base-03-windows-build
           path: '**/bin/Release/**'
-          if-no-files-found: ignore
+          if-no-files-found: error
           retention-days: 7
 
   android-release:
@@ -110,7 +110,7 @@ jobs:
         with:
           name: base-03-android-arm64-aot
           path: Client_MonoGame.Android/bin/Release/net10.0-android/android-arm64/publish/**
-          if-no-files-found: ignore
+          if-no-files-found: error
           retention-days: 7
 
   general-tests:
@@ -162,10 +162,67 @@ jobs:
         if: steps.discover.outputs.count != '0'
         shell: pwsh
         run: |
-          Get-Content test-projects.txt | ForEach-Object {
-            dotnet test $_ --configuration Release --logger 'trx;LogFileName=test-results.trx' --results-directory TestResults --verbosity normal
-            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $ErrorActionPreference = 'Stop'
+          $resultsRoot = Join-Path (Get-Location) 'TestResults'
+          $runRoot = Join-Path $resultsRoot ([guid]::NewGuid().ToString('N'))
+          New-Item -ItemType Directory -Path $runRoot -Force | Out-Null
+          [int]$projectCount = 0
+          [long]$totalExecuted = 0
+          foreach ($project in Get-Content -LiteralPath test-projects.txt) {
+            if ([string]::IsNullOrWhiteSpace($project)) { continue }
+            $projectCount++
+            $projectRoot = Join-Path $runRoot ("project-{0}" -f $projectCount)
+            New-Item -ItemType Directory -Path $projectRoot -Force | Out-Null
+            dotnet test $project --configuration Release --logger 'trx;LogFileName=test-results.trx' --results-directory $projectRoot --verbosity normal
+            $testExit = $LASTEXITCODE
+            if ($testExit -ne 0) { exit $testExit }
+
+            $trxFiles = @(Get-ChildItem -LiteralPath $projectRoot -Filter '*.trx' -File -Recurse)
+            if ($trxFiles.Count -eq 0) {
+              Write-Error "No TRX result was produced for $project."
+              exit 1
+            }
+            [long]$projectTotal = 0
+            [long]$projectExecuted = 0
+            foreach ($trxFile in $trxFiles) {
+              try {
+                [xml]$trx = Get-Content -LiteralPath $trxFile.FullName -Raw -ErrorAction Stop
+              }
+              catch {
+                Write-Error "Unable to parse TRX $($trxFile.FullName): $($_.Exception.Message)"
+                exit 1
+              }
+              $counters = $trx.TestRun.ResultSummary.Counters
+              if ($null -eq $counters) {
+                Write-Error "TRX $($trxFile.FullName) has no ResultSummary/Counters."
+                exit 1
+              }
+              [long]$total = 0
+              [long]$executed = 0
+              if (-not [long]::TryParse([string]$counters.total, [ref]$total) -or
+                  -not [long]::TryParse([string]$counters.executed, [ref]$executed)) {
+                Write-Error "TRX $($trxFile.FullName) has invalid total/executed counters."
+                exit 1
+              }
+              if ($total -le 0 -or $executed -le 0) {
+                Write-Error "TRX $($trxFile.FullName) reports total=$total executed=$executed."
+                exit 1
+              }
+              $projectTotal += $total
+              $projectExecuted += $executed
+            }
+            if ($projectTotal -le 0 -or $projectExecuted -le 0) {
+              Write-Error "Test project $project produced no executed tests."
+              exit 1
+            }
+            $totalExecuted += $projectExecuted
+            Write-Host "Validated $($project): total=$projectTotal executed=$projectExecuted"
           }
+          if ($projectCount -le 0 -or $totalExecuted -le 0) {
+            Write-Error "No executed tests were validated across discovered projects."
+            exit 1
+          }
+          Write-Host "Validated executed tests: projects=$projectCount total=$totalExecuted"
 
       - name: Upload test results
         if: always()
@@ -173,5 +230,5 @@ jobs:
         with:
           name: base-03-test-results
           path: TestResults/**
-          if-no-files-found: ignore
+          if-no-files-found: error
           retention-days: 7

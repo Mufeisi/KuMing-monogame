@@ -35,7 +35,7 @@ pwsh -NoProfile -File Tools/ResourceBaseline.ps1 -Action Validate -Scope All
 pwsh -NoProfile -File Tools/ResourceBaseline.ps1 -Action Validate -Scope All
 ```
 
-BASE-06 的移动端代码迁移与本机构建已完成，模拟器 Debug/Release/AOT+Trim/Trim-only 四态已通过；真机 arm64 四态明确延期到 RELEASE-03 最终设备验收，不在本轮宣称通过。移动端当前为稳定 `net10.0-*`。BASE-07 的 Server/PC/Shared 迁移与本机构建已完成；Shared 的 net6 兼容目标必须在 BASE-08 执行期间删除，GATE-P0 不得在 net6 仍存在时通过。在没有外部资源时可以构建不依赖资源的项目，例如：
+BASE-06 的移动端代码迁移与本机构建已完成，模拟器 Debug/Release/AOT+Trim/Trim-only 四态已通过；真机 arm64 四态明确延期到 RELEASE-03 最终设备验收，不在本轮宣称通过。移动端当前为稳定 `net10.0-*`。BASE-07 的 Server/PC/Shared 迁移与本机构建已完成，BASE-08 已删除 Shared 的 net6 兼容目标。当前仅有本机等价矩阵证据；因仓库未配置远端，未宣称 GATE-P0 的远端 CI 全绿。在没有外部资源时可以构建不依赖资源的项目，例如：
 
 ```powershell
 dotnet build Shared/Shared.csproj
