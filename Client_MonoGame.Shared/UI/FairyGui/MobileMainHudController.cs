@@ -72,6 +72,7 @@ namespace MonoShare
             allBound &= Bind(reader, usedTargets, "Magic", "技能", new[] { "magic", "skill", "技能", "技" }, () => GameScene.Scene?.ToggleMobileMagicOverlay());
             allBound &= Bind(reader, usedTargets, "State", "角色", new[] { "dbtnstate", "state", "角色", "属性", "状态" }, () => GameScene.Scene?.ToggleMobileStateOverlay());
             allBound &= Bind(reader, usedTargets, "Inventory", "背包", new[] { "dbtnbag", "bag", "inventory", "背包", "包" }, () => GameScene.Scene?.ToggleMobileInventoryOverlay());
+            allBound &= Bind(reader, usedTargets, "Hero", "英雄", new[] { "hero", "heromanage", "managehero", "英雄管理", "管理英雄", "英雄" }, () => GameScene.Scene?.ToggleMobileHeroOverlay());
             allBound &= Bind(reader, usedTargets, "Chat", "聊天", new[] { "dbtnchat", "chat", "聊天", "聊" }, () => GameScene.Scene?.ToggleMobileChatOverlay());
             allBound &= Bind(reader, usedTargets, "Shop", "商店", new[] { "shop", "store", "mall", "商店", "商" }, () => GameScene.Scene?.ToggleMobileGameShopOverlay());
             allBound &= Bind(reader, usedTargets, "System", "系统", new[] { "system", "setting", "menu", "options", "help", "系统", "设置" }, () => GameScene.Scene?.ToggleMobileSystemMenuOverlay());

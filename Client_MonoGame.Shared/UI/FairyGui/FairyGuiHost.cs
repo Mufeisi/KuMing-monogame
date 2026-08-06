@@ -1404,6 +1404,7 @@ namespace MonoShare
             ResetMobileFriendBindings();
             ResetMobileGuildBindings();
             ResetMobileGroupBindings();
+            ResetMobileHeroBindings();
 
             foreach (KeyValuePair<string, GComponent> pair in MobileWindows)
             {
@@ -1917,6 +1918,11 @@ namespace MonoShare
             {
                 TryBindMobileStateWindowIfDue(windowKey, window, resolveInfo);
                 TryRefreshMobileStateIfDue(force: true);
+            }
+            else if (string.Equals(windowKey, "Hero", StringComparison.OrdinalIgnoreCase))
+            {
+                TryBindMobileHeroWindowIfDue(windowKey, window, resolveInfo);
+                TryRefreshMobileHeroIfDue(force: true);
             }
             else if (string.Equals(windowKey, "Npc", StringComparison.OrdinalIgnoreCase))
             {
@@ -10972,6 +10978,7 @@ namespace MonoShare
                   TryRefreshMobileBigMapIfDue(force: false);
                   TryAutoClearMobileMailItemLocksIfDue();
                   TryRefreshMobileMagicIfDue(force: false);
+                  TryRefreshMobileHeroIfDue(force: false);
                   TryRefreshMobileStorageIfDue(force: false);
                   TryApplyMobileInventoryStorageSideBySideLayoutIfDue(force: false);
                  TryRefreshMobileSystemIfDue(force: false);

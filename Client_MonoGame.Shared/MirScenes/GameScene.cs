@@ -179,6 +179,7 @@ namespace MonoShare.MirScenes
         public static List<ClientQuestInfo> QuestInfoList = new List<ClientQuestInfo>();
         public static readonly GameShopState MobileGameShopState = new GameShopState();
         public static IReadOnlyList<GameShopItem> GameShopInfoList => MobileGameShopState.Items;
+        public static readonly MobileHeroState MobileHeroState = new MobileHeroState();
         public static List<ClientRecipeInfo> RecipeInfoList = new List<ClientRecipeInfo>();
 
         public List<ClientBuff> Buffs = new List<ClientBuff>();
@@ -224,6 +225,7 @@ namespace MonoShare.MirScenes
         public GameScene()
         {
             MobileGameShopState.ResetForSession();
+            MobileHeroState.ResetForSession();
             MonoShare.FairyGuiHost.MarkMobileShopDirty();
 
             if (Settings.LogErrors && Environment.OSVersion.Platform != PlatformID.Win32NT)
@@ -480,6 +482,23 @@ namespace MonoShare.MirScenes
 
             if (MonoShare.FairyGuiHost.TryToggleMobileWindowByKeywords("Inventory", new[] { "背包_DBagUI", "背包", "Bag", "Inventory" }, out bool nowVisible) && nowVisible)
                 MonoShare.FairyGuiHost.HideAllMobileWindowsExcept("Inventory");
+        }
+
+        public void ToggleMobileHeroOverlay()
+        {
+            MapControl?.CancelMagicLocationSelection(showMessage: false);
+
+            if (Environment.OSVersion.Platform == PlatformID.Win32NT)
+                return;
+
+            if (MonoShare.FairyGuiHost.TryToggleMobileWindowByKeywords(
+                    "Hero",
+                    new[] { "英雄管理", "管理英雄", "英雄列表", "ManageHeroes", "HeroManage", "Hero", "英雄" },
+                    out bool nowVisible) && nowVisible)
+            {
+                MonoShare.FairyGuiHost.HideAllMobileWindowsExcept("Hero");
+                MonoShare.FairyGuiHost.MarkMobileHeroDirty();
+            }
         }
 
         public void ToggleMobileMagicOverlay()
@@ -2141,6 +2160,15 @@ namespace MonoShare.MirScenes
                     break;
                 case (short)ServerPacketIds.GuildRequestWar:
                     GuildRequestWar((S.GuildRequestWar)p);
+                    break;
+                case (short)ServerPacketIds.NewHeroInfo:
+                    NewHeroInfo((S.NewHeroInfo)p);
+                    break;
+                case (short)ServerPacketIds.ManageHeroes:
+                    ManageHeroes((S.ManageHeroes)p);
+                    break;
+                case (short)ServerPacketIds.ChangeHero:
+                    ChangeHero((S.ChangeHero)p);
                     break;
                 case (short)ServerPacketIds.DefaultNPC:
                     DefaultNPC((S.DefaultNPC)p);
@@ -6426,6 +6454,34 @@ namespace MonoShare.MirScenes
             messageBox.YesButton.Click += (o, e) => Network.Enqueue(new C.MentorReply { AcceptInvite = true });
             messageBox.NoButton.Click += (o, e) => Network.Enqueue(new C.MentorReply { AcceptInvite = false });
             messageBox.Show();
+        }
+
+        private void NewHeroInfo(S.NewHeroInfo p)
+        {
+            if (MobileHeroState.ApplyNewHeroInfo(p))
+                MonoShare.FairyGuiHost.MarkMobileHeroDirty();
+        }
+
+        private void ManageHeroes(S.ManageHeroes p)
+        {
+            bool applied = MobileHeroState.ApplyManageHeroes(p);
+            MonoShare.FairyGuiHost.MarkMobileHeroDirty();
+
+            if (Environment.OSVersion.Platform == PlatformID.Win32NT || !applied)
+                return;
+
+            if (MonoShare.FairyGuiHost.TryShowMobileWindowByKeywords(
+                    "Hero",
+                    new[] { "英雄管理", "管理英雄", "英雄列表", "ManageHeroes", "HeroManage", "Hero", "英雄" }))
+            {
+                MonoShare.FairyGuiHost.HideAllMobileWindowsExcept("Hero");
+            }
+        }
+
+        private void ChangeHero(S.ChangeHero p)
+        {
+            MobileHeroState.ApplyChangeHero(p);
+            MonoShare.FairyGuiHost.MarkMobileHeroDirty();
         }
 
         private bool UpdateGuildBuff(GuildBuff buff, bool Remove = false)
