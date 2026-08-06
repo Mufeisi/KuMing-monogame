@@ -59,7 +59,7 @@
 | 环境 | 必须构建 | 说明 |
 |---|---|---|
 | Windows | Shared、Server、Server.MirForms、Client_VorticeDX11、工具项目 | 用 `.slnf` 或明确项目列表 |
-| Android runner | Client_MonoGame.Android Release（arm64）、AOT 发布包 | 真实 Android 发布物 |
+| Android runner | Client_MonoGame.Android Release（arm64）、AOT 发布包 | 真实 Android 发布物；BASE-06 的当前四态门禁先以 x86_64 模拟器执行，arm64 真机验收延期至 RELEASE-03 |
 | macOS | iOS 工程（仅未来非阻塞验证） | 不进入本轮硬门禁 |
 | 通用测试 | 协议、持久化、密码迁移、配置、业务单元测试 | 见 §4.1 测试集 |
 
@@ -113,7 +113,7 @@ GATE-P0 ──► GATE-P1 ──► GATE-P2 ──► GATE-P3 ──► GATE-P4 
 | BASE-03 | **CI 骨架**：Windows 构建 + Android runner + 通用测试三段（§3） | BASE-02 | 三段 CI 骨架可跑 |
 | BASE-04 | 日志系统恢复：ILog 门面 + 有界异步队列（Debug/Info 满载丢弃并计数，Error/Fatal 走紧急通道）+ 按大小/日期轮转 + 保留天数 + 过滤 PII | BASE-01 | 崩溃现场有最近 N 分钟全量日志 |
 | BASE-05 | **最小测试集建立**（§4.1 T-01/T-04/T-06 先行，其余随阶段增量） | BASE-03 | §4.1 已启用项可跑 |
-| BASE-06 | **Android/移动共享 net11→net10 迁移**：TFM 改 net10.0-android/ios、MAUI 包降版、workload 锁定、`SupportedOSPlatformVersion` 21→**24**；Debug/Release/AOT/Trim 真机验证 | BASE-02 | 真机四态验证通过；net10 可构建 |
+| BASE-06 | **Android/移动共享 net11→net10 迁移**：TFM 改 net10.0-android/ios、MAUI 包降版、workload 锁定、`SupportedOSPlatformVersion` 21→**24**；Debug/Release/AOT+Trim/Trim-only 模拟器验证 | BASE-02 | x86_64 模拟器四态验证通过；真机 arm64 四态延期至 RELEASE-03 最终设备验收；net10 可构建 |
 | BASE-07 | **Server/PC/Shared net8→net10 迁移**：TFM 改 net10.0；明确过渡期限；四态验证 | BASE-02 | net10 可构建；无 net8 残留 |
 | BASE-08 | **CI 全绿门禁 = GATE-P0**：BASE-05 测试集 + BASE-06/07 构建全绿 | BASE-05/06/07 | CI 全绿；iOS 不阻塞 Windows/Android 构建 |
 | BASE-09 | **iOS 隔离**：隔离 iOS TFM，确保 Windows/Android restore/build 不被 iOS workload 阻塞；不承诺 iOS 可编译 | BASE-06 | Windows/Android 构建不依赖 iOS workload |
@@ -181,7 +181,7 @@ GATE-P0 ──► GATE-P1 ──► GATE-P2 ──► GATE-P3 ──► GATE-P4 
 | PROTO-03 | 兼容矩阵：服务端/客户端/协议/资源版本兼容矩阵 + 最低兼容版本 | PROTO-02 | 矩阵文档化 |
 | RELEASE-01 | 签名实现 + 密钥管理：APK 签名密钥与资源清单签名密钥**分开**；清单签名覆盖所有资源包哈希；Key ID/轮换/防降级；CI 从受保护密钥存储短暂获取 | SEC-06/OPS-BASIC-04 | 签名校验通过（T-07 通过）；密钥不出安全存储 |
 | RELEASE-02 | 发布流水线：构建 + 冒烟 + 导出 + 签名 + 灰度/回滚一条命令；事务化更新（下载→验证→切换→失败恢复，保留上一可运行版本）；**发布后错误率/崩溃率/回滚触发条件** | RELEASE-01/OPS-BASIC-01/02/03 | 一键发布 |
-| RELEASE-03 | **Android 生命周期与设备验收**：安装/覆盖升级/失败回滚；首次资源下载/断点续传/磁盘不足；登录→创建角色→移动→战斗→拾取→背包→装备→技能→NPC→任务→交易→邮件→公会；前后台切换/锁屏恢复/电话中断；Wi-Fi/移动网络切换；软键盘/安全区域/多分辨率；最低 API 24/推荐/内存档位；AOT/Trim 后反射裁剪验证；APK 签名密钥备份与灾难恢复 | RELEASE-02/OPS-BASIC-01..04 | 验收清单全绿 |
+| RELEASE-03 | **Android 生命周期与设备验收**：真机 arm64 Debug/Release/AOT+Trim/Trim-only 四态；安装/覆盖升级/失败回滚；首次资源下载/断点续传/磁盘不足；登录→创建角色→移动→战斗→拾取→背包→装备→技能→NPC→任务→交易→邮件→公会；前后台切换/锁屏恢复/电话中断；Wi-Fi/移动网络切换；软键盘/安全区域/多分辨率；最低 API 24/推荐/内存档位；AOT/Trim 后反射裁剪验证；APK 签名密钥备份与灾难恢复 | RELEASE-02/OPS-BASIC-01..04 | 验收清单全绿 |
 
 **GATE-P5 退出条件（Android 正式上线硬门禁）**：发布闭环全绿 + 生命周期验收通过 + OPS-BASIC-01..04 全部就绪。
 
@@ -273,7 +273,7 @@ GATE-P0 ──► GATE-P1 ──► GATE-P2 ──► GATE-P3 ──► GATE-P4 
 
 | 风险 | 概率 | 影响 | 缓解 |
 |---|---|---|---|
-| net11→net10 迁移（Maui/AOT/包降版） | 中 | **高（阻塞发布）** | P0 阻塞任务 BASE-06/07，真机四态验证 |
+| net11→net10 迁移（Maui/AOT/包降版） | 中 | **高（阻塞发布）** | BASE-06 的 P0 模拟器四态验证；arm64 真机四态纳入 RELEASE-03 设备验收 |
 | iOS 无 macOS 环境 | 中 | 高 | 仅隔离 TFM，不阻塞 Windows/Android（ADR-3） |
 | 协议收口波及移动端 | 高 | 中 | C# 为源 + manifest 自动生成 + 兼容测试 + 源码链接过渡 |
 | 安全改造影响现有登录 | 中 | 高 | V1 独立端口限期兼容 + 公网默认关闭明文；老账号透明升级 |

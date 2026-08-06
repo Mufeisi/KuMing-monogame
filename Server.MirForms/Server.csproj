@@ -7,7 +7,7 @@
 		<UseWindowsForms>true</UseWindowsForms>
 		<UseWPF>true</UseWPF>
 		<!--1、-windows+UseWindowsForms-PublishTrimmed(目前不支持winform)一起用不生成runtime后置目录（强制单平台环境）-->
-		<TargetFramework>net8.0-windows</TargetFramework>
+		<TargetFramework>net10.0-windows</TargetFramework>
 		<!---2、不生成framework+runtime前置目录-->
 		<AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
 		<AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>

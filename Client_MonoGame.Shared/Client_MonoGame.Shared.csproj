@@ -2,7 +2,7 @@
   <Import Project="..\Client_MonoGame.Mobile.props" Condition="Exists('..\Client_MonoGame.Mobile.props')" />
 
   <PropertyGroup>
-    <TargetFrameworks>net8.0;net10.0-android;net10.0-ios</TargetFrameworks>
+    <TargetFrameworks>net10.0;net10.0-android;net10.0-ios</TargetFrameworks>
     <ImplicitUsings>disable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
@@ -24,7 +24,7 @@
     <DefineConstants>$(DefineConstants);REAL_IOS</DefineConstants>
   </PropertyGroup>
 
-  <ItemGroup Condition="'$(TargetFramework)' == 'net8.0'">
+  <ItemGroup Condition="'$(TargetFramework)' == 'net10.0'">
     <Compile Include="InternalsVisibleTo.BootstrapRuntimeSmokeTest.cs" />
     <Compile Include="BootstrapPackageRuntime.cs" />
     <Compile Include="BootstrapPackageDownloader.cs" />
@@ -91,7 +91,7 @@
     <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="$(MobileLoggingVersion)" />
   </ItemGroup>
 
-  <ItemGroup Condition="'$(TargetFramework)' == 'net8.0'">
+  <ItemGroup Condition="'$(TargetFramework)' == 'net10.0'">
     <None Include="Content\hm.ttf">
       <Link>Content\hm.ttf</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
@@ -106,22 +106,22 @@
     </None>
   </ItemGroup>
 
-  <ItemGroup Condition="'$(TargetFramework)' != 'net8.0'">
+  <ItemGroup Condition="'$(TargetFramework)' != 'net10.0'">
     <MauiAsset Include="Content\hm.ttf" LogicalName="Content/hm.ttf" />
   </ItemGroup>
 
-  <ItemGroup Condition="'$(TargetFramework)' != 'net8.0' and '$(MobileBootstrapAssetMode)' == 'Full'">
+  <ItemGroup Condition="'$(TargetFramework)' != 'net10.0' and '$(MobileBootstrapAssetMode)' == 'Full'">
     <MauiAsset Include="Assets\UI\复古\**\*.*"
                Exclude="Assets\UI\复古\UILoadingRes_r7r823.wav;Assets\UI\复古\UIRes_vth6j.wav"
                LogicalName="Assets/UI/fui-retro/%(RecursiveDir)%(Filename)%(Extension)" />
     <MauiAsset Update="Assets\UI\复古\自定义组件_fui.bytes" LogicalName="Assets/UI/fui-retro/custom-components_fui.bytes" />
   </ItemGroup>
 
-  <ItemGroup Condition="'$(TargetFramework)' != 'net8.0' and '$(MobileBootstrapAssetMode)' == 'Full'">
+  <ItemGroup Condition="'$(TargetFramework)' != 'net10.0' and '$(MobileBootstrapAssetMode)' == 'Full'">
     <MauiAsset Include="BootstrapAssets\**\*.*" LogicalName="BootstrapAssets/%(RecursiveDir)%(Filename)%(Extension)" />
   </ItemGroup>
 
-  <ItemGroup Condition="'$(TargetFramework)' != 'net8.0' and '$(MobileBootstrapAssetMode)' != 'Full'">
+  <ItemGroup Condition="'$(TargetFramework)' != 'net10.0' and '$(MobileBootstrapAssetMode)' != 'Full'">
     <MauiAsset Include="BootstrapAssets\bootstrap-assets.txt" LogicalName="BootstrapAssets/bootstrap-assets.txt" />
     <MauiAsset Include="BootstrapAssets\bootstrap-package-index.json" LogicalName="BootstrapAssets/bootstrap-package-index.json" />
     <MauiAsset Include="BootstrapAssets\bootstrap-packages.json" LogicalName="BootstrapAssets/bootstrap-packages.json" />
