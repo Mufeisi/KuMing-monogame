@@ -17,6 +17,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Include="..\..\Client_MonoGame.Shared\MirScenes\GameShopState.cs" Link="Mobile\GameShopState.cs" />
     <ProjectReference Include="..\..\Shared\Shared.csproj" />
     <ProjectReference Include="..\..\Server\Server.Library.csproj" />
     <ProjectReference Include="..\ShareProtocolCompat\ShareProtocolCompat.csproj">

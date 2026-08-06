@@ -177,7 +177,8 @@ namespace MonoShare.MirScenes
         public static List<UserId> UserIdList = new List<UserId>();
         public static List<UserItem> ChatItemList = new List<UserItem>();
         public static List<ClientQuestInfo> QuestInfoList = new List<ClientQuestInfo>();
-        public static List<GameShopItem> GameShopInfoList = new List<GameShopItem>();
+        public static readonly GameShopState MobileGameShopState = new GameShopState();
+        public static IReadOnlyList<GameShopItem> GameShopInfoList => MobileGameShopState.Items;
         public static List<ClientRecipeInfo> RecipeInfoList = new List<ClientRecipeInfo>();
 
         public List<ClientBuff> Buffs = new List<ClientBuff>();
@@ -222,6 +223,9 @@ namespace MonoShare.MirScenes
 
         public GameScene()
         {
+            MobileGameShopState.ResetForSession();
+            MonoShare.FairyGuiHost.MarkMobileShopDirty();
+
             if (Settings.LogErrors && Environment.OSVersion.Platform != PlatformID.Win32NT)
                 CMain.SaveLog("进入地图：GameScene 构造开始（v20260328-asynclog）。");
 
@@ -6934,38 +6938,15 @@ namespace MonoShare.MirScenes
 
         private void GameShopUpdate(S.GameShopInfo p)
         {
-            p.Item.Stock = p.StockLevel;
-            GameShopInfoList.Add(p.Item);
-            //if (p.Item.Date > DateTime.Now.AddDays(-7)) GameShopDialog.New.Visible = true;
+            if (p == null || !MobileGameShopState.ApplyInfo(p.Item, p.StockLevel))
+                return;
+
             MonoShare.FairyGuiHost.MarkMobileShopDirty();
         }
 
         private void GameShopStock(S.GameShopStock p)
         {
-            bool changed = false;
-
-            for (int i = GameShopInfoList.Count - 1; i >= 0; i--)
-            {
-                GameShopItem item = GameShopInfoList[i];
-                if (item == null)
-                    continue;
-
-                bool match = item.GIndex == p.GIndex;
-                if (!match)
-                    match = item.ItemIndex == p.GIndex || item.Info?.Index == p.GIndex;
-
-                if (!match)
-                    continue;
-
-                if (p.StockLevel == 0)
-                    GameShopInfoList.RemoveAt(i);
-                else
-                    item.Stock = p.StockLevel;
-
-                changed = true;
-            }
-
-            if (changed)
+            if (p != null && MobileGameShopState.ApplyStock(p.GIndex, p.StockLevel))
                 MonoShare.FairyGuiHost.MarkMobileShopDirty();
         }
         public void AddItem(UserItem item)
@@ -13883,4 +13864,3 @@ namespace MonoShare.MirScenes
         }
     }
 }
-

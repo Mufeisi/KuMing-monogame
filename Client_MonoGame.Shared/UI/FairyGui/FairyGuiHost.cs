@@ -3721,6 +3721,13 @@ namespace MonoShare
             view.HasItem = false;
             view.LastIcon = 0;
 
+            ClearMobileShopBuyButton(view.BuyGoldButton, view.BuyGoldCallback);
+            view.BuyGoldCallback = null;
+            ClearMobileShopBuyButton(view.BuyCreditButton, view.BuyCreditCallback);
+            view.BuyCreditCallback = null;
+            ClearMobileShopBuyButton(view.BuyFallbackButton, view.BuyFallbackCallback);
+            view.BuyFallbackCallback = null;
+
             try
             {
                 if (view.Icon != null && !view.Icon._disposed)
@@ -3779,6 +3786,30 @@ namespace MonoShare
             }
         }
 
+        private static void ClearMobileShopBuyButton(GButton button, EventCallback0 callback)
+        {
+            if (button == null || button._disposed)
+                return;
+
+            try
+            {
+                if (callback != null)
+                    button.onClick.Remove(callback);
+            }
+            catch
+            {
+            }
+
+            try
+            {
+                button.visible = false;
+                button.touchable = false;
+            }
+            catch
+            {
+            }
+        }
+
         private static void TrySendMobileShopBuy(GameShopItem item, byte quantity, int pType)
         {
             if (item == null)
@@ -3810,7 +3841,7 @@ namespace MonoShare
             if (itemObject is not GComponent itemRoot || itemRoot._disposed)
                 return;
 
-            List<GameShopItem> list = null;
+            IReadOnlyList<GameShopItem> list = null;
             try
             {
                 list = GameScene.GameShopInfoList;
