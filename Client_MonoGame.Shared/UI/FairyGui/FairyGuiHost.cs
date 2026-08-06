@@ -1280,6 +1280,8 @@ namespace MonoShare
 
                 if (string.Equals(key, "Mentor", StringComparison.OrdinalIgnoreCase))
                     ResetMobileMentorBindings();
+                else if (string.Equals(key, "Mount", StringComparison.OrdinalIgnoreCase))
+                    ResetMobileMountBindings();
                 else if (string.Equals(key, "MarriagePrompt", StringComparison.OrdinalIgnoreCase))
                 {
                     ResetMobileMarriagePromptForHide();
@@ -1299,6 +1301,8 @@ namespace MonoShare
 
                 if (string.Equals(pair.Key, "Mentor", StringComparison.OrdinalIgnoreCase))
                     ResetMobileMentorBindings();
+                else if (string.Equals(pair.Key, "Mount", StringComparison.OrdinalIgnoreCase))
+                    ResetMobileMountBindings();
                 else if (string.Equals(pair.Key, "MarriagePrompt", StringComparison.OrdinalIgnoreCase))
                 {
                     ResetMobileMarriagePromptForHide();
@@ -1321,6 +1325,8 @@ namespace MonoShare
 
             if (string.Equals(windowKey, "Mentor", StringComparison.OrdinalIgnoreCase))
                 ResetMobileMentorBindings();
+            else if (string.Equals(windowKey, "Mount", StringComparison.OrdinalIgnoreCase))
+                ResetMobileMountBindings();
             else if (string.Equals(windowKey, "MarriagePrompt", StringComparison.OrdinalIgnoreCase))
             {
                 ResetMobileMarriagePromptForHide();
@@ -1394,6 +1400,8 @@ namespace MonoShare
             {
                 if (string.Equals(topKey, "Mentor", StringComparison.OrdinalIgnoreCase))
                     ResetMobileMentorBindings();
+                else if (string.Equals(topKey, "Mount", StringComparison.OrdinalIgnoreCase))
+                    ResetMobileMountBindings();
                 else if (string.Equals(topKey, "MarriagePrompt", StringComparison.OrdinalIgnoreCase))
                 {
                     ResetMobileMarriagePromptForHide();
@@ -1434,6 +1442,7 @@ namespace MonoShare
             ResetMobileGroupBindings();
             ResetMobileHeroBindings();
             ResetMobileMentorBindings();
+            ResetMobileMountBindings();
             ResetMobileMarriageBindings();
             ResetMobileMarriagePromptForHide();
 
@@ -1624,6 +1633,11 @@ namespace MonoShare
                         if (!TryCreateMobileMentorFallbackWindow(out component, out resolveInfo))
                             return false;
                     }
+                    else if (string.Equals(windowKey, "Mount", StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (!TryCreateMobileMountFallbackWindow(out component, out resolveInfo))
+                            return false;
+                    }
                     else
                     {
                         return false;
@@ -1702,8 +1716,13 @@ namespace MonoShare
 
                 if (!TryCreateMobileWindowComponent(windowKey, keywords, out GComponent component, out string resolveInfo))
                 {
-                    if (!string.Equals(windowKey, "Mentor", StringComparison.OrdinalIgnoreCase) ||
-                        !TryCreateMobileMentorFallbackWindow(out component, out resolveInfo))
+                    bool createdFallback = false;
+                    if (string.Equals(windowKey, "Mentor", StringComparison.OrdinalIgnoreCase))
+                        createdFallback = TryCreateMobileMentorFallbackWindow(out component, out resolveInfo);
+                    else if (string.Equals(windowKey, "Mount", StringComparison.OrdinalIgnoreCase))
+                        createdFallback = TryCreateMobileMountFallbackWindow(out component, out resolveInfo);
+
+                    if (!createdFallback)
                         return false;
                 }
 
@@ -1968,6 +1987,11 @@ namespace MonoShare
             {
                 TryBindMobileMentorWindowIfDue(windowKey, window, resolveInfo);
                 TryRefreshMobileMentorIfDue(force: true);
+            }
+            else if (string.Equals(windowKey, "Mount", StringComparison.OrdinalIgnoreCase))
+            {
+                TryBindMobileMountWindowIfDue(windowKey, window, resolveInfo);
+                TryRefreshMobileMountIfDue(force: true);
             }
             else if (string.Equals(windowKey, "Npc", StringComparison.OrdinalIgnoreCase))
             {
@@ -11025,6 +11049,7 @@ namespace MonoShare
                   TryRefreshMobileMagicIfDue(force: false);
                   TryRefreshMobileHeroIfDue(force: false);
                   TryRefreshMobileMentorIfDue(force: false);
+                  TryRefreshMobileMountIfDue(force: false);
                   TryRefreshMobileStorageIfDue(force: false);
                   TryApplyMobileInventoryStorageSideBySideLayoutIfDue(force: false);
                  TryRefreshMobileSystemIfDue(force: false);

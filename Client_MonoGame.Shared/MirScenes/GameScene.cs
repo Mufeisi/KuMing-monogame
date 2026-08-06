@@ -182,6 +182,7 @@ namespace MonoShare.MirScenes
         public static readonly MobileHeroState MobileHeroState = new MobileHeroState();
         public static readonly MobileMentorState MobileMentorState = new MobileMentorState();
         public static readonly MobileMarriageState MobileMarriageState = new MobileMarriageState();
+        public static readonly MobileMountState MobileMountState = new MobileMountState();
         public static List<ClientRecipeInfo> RecipeInfoList = new List<ClientRecipeInfo>();
 
         public List<ClientBuff> Buffs = new List<ClientBuff>();
@@ -230,9 +231,11 @@ namespace MonoShare.MirScenes
             MobileHeroState.ResetForSession();
             MobileMentorState.ResetForSession();
             MobileMarriageState.ResetForSession();
+            MobileMountState.ResetForSession();
             MonoShare.FairyGuiHost.MarkMobileShopDirty();
             MonoShare.FairyGuiHost.MarkMobileMentorDirty();
             MonoShare.FairyGuiHost.MarkMobileMarriageDirty();
+            MonoShare.FairyGuiHost.MarkMobileMountDirty();
 
             if (Settings.LogErrors && Environment.OSVersion.Platform != PlatformID.Win32NT)
                 CMain.SaveLog("进入地图：GameScene 构造开始（v20260328-asynclog）。");
@@ -591,6 +594,138 @@ namespace MonoShare.MirScenes
             MonoShare.FairyGuiHost.MarkMobileMarriageDirty();
         }
 
+        internal bool TryToggleMobileMount()
+        {
+            UserObject user = User;
+            if (user == null)
+                return false;
+
+            // Keep the client-side affordance aligned with the PC MountDialog.
+            // The server remains authoritative and validates the same rules.
+            SyncMobileMountSnapshot(user);
+            if (user.Dead || user.MountType < 0 ||
+                user.MountTime + 500 > CMain.Time ||
+                (user.CurrentAction != MirAction.Standing && user.CurrentAction != MirAction.MountStanding))
+            {
+                string message = user.MountType < 0 ? "没有坐骑..." : "当前无法乘骑。";
+                MobileMountState.ReportLocalError(message);
+                MobileReceiveChat(message, ChatType.System);
+                MonoShare.FairyGuiHost.MarkMobileMountDirty();
+                return false;
+            }
+
+            if (!MobileMountState.BeginToggleRide(CMain.Time))
+            {
+                MobileReceiveChat(MobileMountState.Error ?? "乘骑请求无效。", ChatType.System);
+                MonoShare.FairyGuiHost.MarkMobileMountDirty();
+                return false;
+            }
+
+            // There is no MountRequest packet in the wire protocol.  Preserve
+            // the PC command path so the server applies all mount/map/shape
+            // permissions in one place.
+            Network.Enqueue(new C.Chat { Message = MobileMountState.RideCommand });
+            MonoShare.FairyGuiHost.MarkMobileMountDirty();
+            return true;
+        }
+
+        internal bool CanToggleMobileMount
+        {
+            get
+            {
+                UserObject user = User;
+                return user != null && MobileMountState.CanToggleAt(
+                    CMain.Time,
+                    user.Dead,
+                    user.MountType,
+                    user.MountTime,
+                    user.CurrentAction,
+                    MobileMountState.HasPendingToggleRequest);
+            }
+        }
+
+        private static void SyncMobileMountSnapshot(UserObject user)
+        {
+            if (user == null)
+                return;
+
+            // Re-seeding only on a real authoritative change preserves the
+            // one-shot pending guard between repeated UI taps.
+            if (MobileMountState.LocalObjectId == user.ObjectID &&
+                MobileMountState.MountType == user.MountType &&
+                MobileMountState.RidingMount == user.RidingMount)
+                return;
+
+            MobileMountState.SetLocalSnapshot(user.ObjectID, user.MountType, user.RidingMount);
+        }
+
+        internal bool TryEquipMobileMountAccessory(ulong uniqueId, int mountSlot)
+        {
+            UserObject user = User;
+            if (user == null || uniqueId == 0 || mountSlot < 0)
+                return false;
+
+            UserItem mount = user.Equipment != null && user.Equipment.Length > (int)EquipmentSlot.Mount
+                ? user.Equipment[(int)EquipmentSlot.Mount]
+                : null;
+            if (mount == null || mount.Slots == null || mountSlot >= mount.Slots.Length || mount.Slots[mountSlot] != null)
+                return false;
+
+            UserItem item = user.Inventory?.FirstOrDefault(e => e != null && e.UniqueID == uniqueId);
+            if (item == null || item.Info == null)
+                return false;
+
+            ItemType expected = mountSlot switch
+            {
+                (int)MountSlot.Reins => ItemType.Reins,
+                (int)MountSlot.Bells => ItemType.Bells,
+                (int)MountSlot.Saddle => ItemType.Saddle,
+                (int)MountSlot.Ribbon => ItemType.Ribbon,
+                (int)MountSlot.Mask => ItemType.Mask,
+                _ => ItemType.Nothing,
+            };
+            if (expected == ItemType.Nothing || item.Info.Type != expected)
+                return false;
+
+            Network.Enqueue(new C.EquipSlotItem
+            {
+                Grid = MirGridType.Inventory,
+                UniqueID = uniqueId,
+                To = mountSlot,
+                GridTo = MirGridType.Mount,
+                ToUniqueID = mount.UniqueID,
+            });
+            MonoShare.FairyGuiHost.MarkMobileMountDirty();
+            return true;
+        }
+
+        internal bool TryRemoveMobileMountAccessory(ulong uniqueId, int inventorySlot)
+        {
+            UserObject user = User;
+            if (user == null || uniqueId == 0 || inventorySlot < 0 || user.Inventory == null || inventorySlot >= user.Inventory.Length)
+                return false;
+
+            UserItem mount = user.Equipment != null && user.Equipment.Length > (int)EquipmentSlot.Mount
+                ? user.Equipment[(int)EquipmentSlot.Mount]
+                : null;
+            if (mount?.Slots == null || !mount.Slots.Any(e => e != null && e.UniqueID == uniqueId))
+                return false;
+
+            if (user.Inventory[inventorySlot] != null)
+                return false;
+
+            Network.Enqueue(new C.RemoveSlotItem
+            {
+                Grid = MirGridType.Mount,
+                GridTo = MirGridType.Inventory,
+                UniqueID = uniqueId,
+                To = inventorySlot,
+                FromUniqueID = mount.UniqueID,
+            });
+            MonoShare.FairyGuiHost.MarkMobileMountDirty();
+            return true;
+        }
+
         internal void RespondToMobileDivorceRequest(bool accepted)
         {
             if (!MobileMarriageState.ApplyDivorceReply(accepted))
@@ -763,6 +898,30 @@ namespace MonoShare.MirScenes
             }
 
             OutputMessage("当前 FairyGUI 关系窗口暂不可用，请检查 UI publish 或 Mir2Config.ini [FairyGUI] MobileWindow.Relationship 覆盖。");
+        }
+
+        public void ToggleMobileMountOverlay()
+        {
+            MapControl?.CancelMagicLocationSelection(showMessage: false);
+
+            if (Environment.OSVersion.Platform == PlatformID.Win32NT)
+                return;
+
+            if (MonoShare.FairyGuiHost.TryToggleMobileMountWindow(out bool nowVisible))
+            {
+                if (nowVisible)
+                {
+                    MonoShare.FairyGuiHost.HideAllMobileWindowsExcept("Mount");
+                    MonoShare.FairyGuiHost.MarkMobileMountDirty();
+                }
+                else
+                {
+                    MonoShare.FairyGuiHost.ResetMobileMountBindingsForHide();
+                }
+                return;
+            }
+
+            OutputMessage("当前 FairyGUI 坐骑窗口暂不可用，请检查 UI publish 或 Mir2Config.ini [FairyGUI] MobileWindow.Mount 覆盖。");
         }
 
         public void ToggleMobileMentorOverlay()
@@ -1729,6 +1888,12 @@ namespace MonoShare.MirScenes
                 MonoShare.FairyGuiHost.MarkMobileMarriageDirty();
             }
 
+            if (MobileMountState.Tick(CMain.Time) &&
+                Environment.OSVersion.Platform != PlatformID.Win32NT)
+            {
+                MonoShare.FairyGuiHost.MarkMobileMountDirty();
+            }
+
             if (MapControl == null || User == null)
                 return;
 
@@ -2621,9 +2786,13 @@ namespace MonoShare.MirScenes
         {
             User = new UserObject(p.ObjectID);
             User.Load(p);
+            SyncMobileMountSnapshot(User);
             //MainDialog.PModeLabel.Visible = User.Class == MirClass.Wizard || User.Class == MirClass.Taoist;
             Gold = p.Gold;
             Credit = p.Credit;
+
+            if (Environment.OSVersion.Platform != PlatformID.Win32NT)
+                MonoShare.FairyGuiHost.MarkMobileMountDirty();
 
             //InventoryDialog.RefreshInventory();
             //foreach (SkillBarDialog Bar in SkillBarDialogs)
@@ -2667,6 +2836,13 @@ namespace MonoShare.MirScenes
             {
                 if (Environment.OSVersion.Platform != PlatformID.Win32NT)
                     MonoShare.FairyGuiHost.MarkMobileMarriageDirty();
+            }
+
+            if (p != null && p.Type == ChatType.System &&
+                MobileMountState.ApplyServerSystemMessage(p.Message))
+            {
+                if (Environment.OSVersion.Platform != PlatformID.Win32NT)
+                    MonoShare.FairyGuiHost.MarkMobileMountDirty();
             }
 
             MobileReceiveChat(p.Message, p.Type);
@@ -2815,50 +2991,66 @@ namespace MonoShare.MirScenes
             toArray[p.To] = temp;
 
             user.RefreshStats();
+            if (p.To == (int)EquipmentSlot.Mount)
+            {
+                SyncMobileMountSnapshot(user);
+                if (Environment.OSVersion.Platform != PlatformID.Win32NT)
+                    MonoShare.FairyGuiHost.MarkMobileMountDirty();
+            }
         }
         private void EquipSlotItem(S.EquipSlotItem p)
         {
-            //MirItemCell fromCell;
-            //MirItemCell toCell;
+            if (p == null)
+                return;
 
-            //switch (p.GridTo)
-            //{
-            //    case MirGridType.Socket:
-            //        toCell = SocketDialog.Grid[p.To];
-            //        break;
-            //    case MirGridType.Mount:
-            //        toCell = MountDialog.Grid[p.To];
-            //        break;
-            //    case MirGridType.Fishing:
-            //        toCell = FishingDialog.Grid[p.To];
-            //        break;
-            //    default:
-            //        return;
-            //}
+            UserObject user = User;
+            if (user == null)
+                return;
 
-            //switch (p.Grid)
-            //{
-            //    case MirGridType.Inventory:
-            //        fromCell = InventoryDialog.GetCell(p.UniqueID) ?? BeltDialog.GetCell(p.UniqueID);
-            //        break;
-            //    case MirGridType.Storage:
-            //        fromCell = StorageDialog.GetCell(p.UniqueID) ?? BeltDialog.GetCell(p.UniqueID);
-            //        break;
-            //    default:
-            //        return;
-            //}
+            if (!p.Success)
+            {
+                if (Environment.OSVersion.Platform != PlatformID.Win32NT)
+                    MonoShare.FairyGuiHost.MarkMobileMountDirty();
+                return;
+            }
 
-            ////if (toCell == null || fromCell == null) return;
+            if (p.GridTo != MirGridType.Mount || p.To < 0)
+                return;
 
-            //toCell.Locked = false;
-            //fromCell.Locked = false;
+            UserItem mount = user.Equipment != null && user.Equipment.Length > (int)EquipmentSlot.Mount
+                ? user.Equipment[(int)EquipmentSlot.Mount]
+                : null;
+            if (mount?.Slots == null || p.To >= mount.Slots.Length || mount.Slots[p.To] != null)
+                return;
 
-            //if (!p.Success) return;
+            UserItem[] source = p.Grid switch
+            {
+                MirGridType.Inventory => user.Inventory,
+                MirGridType.Storage => Storage,
+                _ => null,
+            };
+            if (source == null)
+                return;
 
-            //UserItem i = fromCell.Item;
-            //fromCell.Item = null;
-            //toCell.Item = i;
-            //User.RefreshStats();
+            int sourceIndex = -1;
+            for (int i = 0; i < source.Length; i++)
+            {
+                if (source[i] == null || source[i].UniqueID != p.UniqueID)
+                    continue;
+
+                sourceIndex = i;
+                break;
+            }
+
+            if (sourceIndex < 0)
+                return;
+
+            mount.Slots[p.To] = source[sourceIndex];
+            source[sourceIndex] = null;
+            user.RefreshStats();
+
+            if (Environment.OSVersion.Platform != PlatformID.Win32NT)
+                MonoShare.FairyGuiHost.MarkMobileMountDirty();
         }
 
         private void CombineItem(S.CombineItem p)
@@ -3004,51 +3196,62 @@ namespace MonoShare.MirScenes
             toArray[p.To] = item;
 
             user.RefreshStats();
+            if (fromIndex == (int)EquipmentSlot.Mount)
+            {
+                SyncMobileMountSnapshot(user);
+                if (Environment.OSVersion.Platform != PlatformID.Win32NT)
+                    MonoShare.FairyGuiHost.MarkMobileMountDirty();
+            }
         }
         private void RemoveSlotItem(S.RemoveSlotItem p)
         {
-            //MirItemCell fromCell;
-            //MirItemCell toCell;
+            if (p == null || User == null)
+                return;
 
-            //int index = -1;
+            if (!p.Success)
+            {
+                if (Environment.OSVersion.Platform != PlatformID.Win32NT)
+                    MonoShare.FairyGuiHost.MarkMobileMountDirty();
+                return;
+            }
 
-            //switch (p.Grid)
-            //{
-            //    case MirGridType.Socket:
-            //        fromCell = SocketDialog.GetCell(p.UniqueID);
-            //        break;
-            //    case MirGridType.Mount:
-            //        fromCell = MountDialog.GetCell(p.UniqueID);
-            //        break;
-            //    case MirGridType.Fishing:
-            //        fromCell = FishingDialog.GetCell(p.UniqueID);
-            //        break;
-            //    default:
-            //        return;
-            //}
+            if (p.Grid != MirGridType.Mount || p.To < 0)
+                return;
 
-            //switch (p.GridTo)
-            //{
-            //    case MirGridType.Inventory:
-            //        toCell = p.To < User.BeltIdx ? BeltDialog.Grid[p.To] : InventoryDialog.Grid[p.To - User.BeltIdx];
-            //        break;
-            //    case MirGridType.Storage:
-            //        toCell = StorageDialog.Grid[p.To];
-            //        break;
-            //    default:
-            //        return;
-            //}
+            UserItem mount = User.Equipment != null && User.Equipment.Length > (int)EquipmentSlot.Mount
+                ? User.Equipment[(int)EquipmentSlot.Mount]
+                : null;
+            if (mount?.Slots == null)
+                return;
 
-            //if (toCell == null || fromCell == null) return;
+            UserItem[] destination = p.GridTo switch
+            {
+                MirGridType.Inventory => User.Inventory,
+                MirGridType.Storage => Storage,
+                _ => null,
+            };
+            if (destination == null || p.To >= destination.Length || destination[p.To] != null)
+                return;
 
-            //toCell.Locked = false;
-            //fromCell.Locked = false;
+            int slotIndex = -1;
+            for (int i = 0; i < mount.Slots.Length; i++)
+            {
+                if (mount.Slots[i] == null || mount.Slots[i].UniqueID != p.UniqueID)
+                    continue;
 
-            //if (!p.Success) return;
-            //toCell.Item = fromCell.Item;
-            //fromCell.Item = null;
-            //CharacterDuraPanel.GetCharacterDura();
-            //User.RefreshStats();
+                slotIndex = i;
+                break;
+            }
+
+            if (slotIndex < 0)
+                return;
+
+            destination[p.To] = mount.Slots[slotIndex];
+            mount.Slots[slotIndex] = null;
+            User.RefreshStats();
+
+            if (Environment.OSVersion.Platform != PlatformID.Win32NT)
+                MonoShare.FairyGuiHost.MarkMobileMountDirty();
         }
         private void TakeBackItem(S.TakeBackItem p)
         {
@@ -3371,6 +3574,9 @@ namespace MonoShare.MirScenes
 
         private void MountUpdate(S.MountUpdate p)
         {
+            if (p == null || MapControl == null)
+                return;
+
             for (int i = MapControl.Objects.Count - 1; i >= 0; i--)
             {
                 if (MapControl.Objects[i].ObjectID != p.ObjectID) continue;
@@ -3383,11 +3589,16 @@ namespace MonoShare.MirScenes
                 break;
             }
 
-            if (p.ObjectID != User.ObjectID) return;
+            if (User == null || p.ObjectID != User.ObjectID) return;
+
+            if (!MobileMountState.ApplyMountUpdate(p, User.ObjectID))
+                return;
 
             CanRun = false;
 
             User.RefreshStats();
+            if (Environment.OSVersion.Platform != PlatformID.Win32NT)
+                MonoShare.FairyGuiHost.MarkMobileMountDirty();
             //if (p.RidingMount)
 
             //    GameScene.Scene.MountDialog.RefreshDialog();
@@ -4362,6 +4573,13 @@ namespace MonoShare.MirScenes
 
             }
 
+            if (item.Info?.Type == ItemType.Mount &&
+                Environment.OSVersion.Platform != PlatformID.Win32NT)
+            {
+                SyncMobileMountSnapshot(User);
+                MonoShare.FairyGuiHost.MarkMobileMountDirty();
+            }
+
             if (HoverItem == item)
             {
                 DisposeItemLabel();
@@ -5048,6 +5266,16 @@ namespace MonoShare.MirScenes
         }
         private void ItemRepaired(S.ItemRepaired p)
         {
+            if (p == null || User == null)
+                return;
+
+            ulong equippedMountUniqueId = 0;
+            if (User.Equipment != null && User.Equipment.Length > (int)EquipmentSlot.Mount)
+                equippedMountUniqueId = User.Equipment[(int)EquipmentSlot.Mount]?.UniqueID ?? 0;
+
+            bool refreshMobileMount = MobileMountState.IsEquippedMountRepair(
+                p.UniqueID, equippedMountUniqueId);
+
             UserItem item = null;
             for (int i = 0; i < User.Inventory.Length; i++)
             {
@@ -5080,6 +5308,9 @@ namespace MonoShare.MirScenes
                 DisposeItemLabel();
                 CreateItemLabel(item);
             }
+
+            if (refreshMobileMount && Environment.OSVersion.Platform != PlatformID.Win32NT)
+                MonoShare.FairyGuiHost.MarkMobileMountDirty();
         }
 
         private void ItemSlotSizeChanged(S.ItemSlotSizeChanged p)

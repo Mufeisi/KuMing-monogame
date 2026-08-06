@@ -45,6 +45,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)MirObjects\SpellObject.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)MirObjects\UserObject.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)MirScenes\GameScene.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)MirScenes\MobileMountState.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)MirScenes\LoginScene.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)MirScenes\PreLoginUpdateScene.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)MirScenes\SelectScene.cs" />

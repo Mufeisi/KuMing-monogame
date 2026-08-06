@@ -76,6 +76,7 @@ namespace MonoShare
             allBound &= Bind(reader, usedTargets, "Hero", "英雄", new[] { "hero", "heromanage", "managehero", "英雄管理", "管理英雄", "英雄" }, () => GameScene.Scene?.ToggleMobileHeroOverlay());
             allBound &= Bind(reader, usedTargets, "Mentor", "师徒", new[] { "mentor", "mentee", "师徒", "拜师", "师傅", "徒弟" }, () => GameScene.Scene?.ToggleMobileMentorOverlay());
             allBound &= Bind(reader, usedTargets, "Relationship", "关系", new[] { "relationship", "marriage", "lover", "spouse", "夫妻", "婚姻", "关系" }, () => GameScene.Scene?.ToggleMobileRelationshipOverlay());
+            allBound &= Bind(reader, usedTargets, "Mount", "坐骑", new[] { "mount", "horse", "ride", "坐骑", "骑乘" }, () => GameScene.Scene?.ToggleMobileMountOverlay());
             allBound &= Bind(reader, usedTargets, "Chat", "聊天", new[] { "dbtnchat", "chat", "聊天", "聊" }, () => GameScene.Scene?.ToggleMobileChatOverlay());
             allBound &= Bind(reader, usedTargets, "Shop", "商店", new[] { "shop", "store", "mall", "商店", "商" }, () => GameScene.Scene?.ToggleMobileGameShopOverlay());
             allBound &= Bind(reader, usedTargets, "System", "系统", new[] { "system", "setting", "menu", "options", "help", "系统", "设置" }, () => GameScene.Scene?.ToggleMobileSystemMenuOverlay());
@@ -238,6 +239,17 @@ namespace MonoShare
                 }
             }
 
+            if (target == null &&
+                string.Equals(actionKey, "Mount", StringComparison.OrdinalIgnoreCase))
+            {
+                target = TryCreateMountHudFallbackButton();
+                if (target != null)
+                {
+                    selectedScore = Math.Max(selectedScore, 1000);
+                    error = null;
+                }
+            }
+
             if (target != null &&
                 string.Equals(actionKey, "Attack", StringComparison.OrdinalIgnoreCase))
             {
@@ -391,8 +403,10 @@ namespace MonoShare
 
             try
             {
-                const float width = 112F;
-                const float height = 48F;
+                MobileMainHudFallbackBounds bounds =
+                    MobileMainHudFallbackLayout.Mentor(_root.width, _root.height);
+                float width = bounds.Width;
+                float height = bounds.Height;
                 var button = new GButton
                 {
                     name = "__codex_mobile_mentor_hud_fallback",
@@ -404,9 +418,7 @@ namespace MonoShare
                     changeStateOnClick = false,
                 };
                 button.SetSize(width, height);
-                button.SetPosition(
-                    Math.Max(12F, _root.width - width - 16F),
-                    Math.Max(12F, _root.height - height - 16F));
+                button.SetPosition(bounds.X, bounds.Y);
 
                 var background = new GGraph
                 {
@@ -466,8 +478,10 @@ namespace MonoShare
 
             try
             {
-                const float width = 112F;
-                const float height = 48F;
+                MobileMainHudFallbackBounds bounds =
+                    MobileMainHudFallbackLayout.Relationship(_root.width, _root.height);
+                float width = bounds.Width;
+                float height = bounds.Height;
                 var button = new GButton
                 {
                     name = "__codex_mobile_marriage_hud_fallback",
@@ -479,9 +493,7 @@ namespace MonoShare
                     changeStateOnClick = false,
                 };
                 button.SetSize(width, height);
-                button.SetPosition(
-                    Math.Max(12F, _root.width - width - 16F),
-                    Math.Max(12F, _root.height - height - 74F));
+                button.SetPosition(bounds.X, bounds.Y);
 
                 var background = new GGraph
                 {
@@ -497,6 +509,81 @@ namespace MonoShare
                 {
                     name = "title",
                     text = "关系",
+                    touchable = false,
+                    align = AlignType.Center,
+                    verticalAlign = VertAlignType.Middle,
+                    autoSize = AutoSizeType.None,
+                };
+                label.SetSize(width, height);
+                try
+                {
+                    label.textFormat.size = 18;
+                    label.textFormat.color = Color.White;
+                    label.textFormat.bold = true;
+                }
+                catch
+                {
+                }
+                button.AddChild(label);
+
+                _root.AddChild(button);
+                try { _root.SetChildIndex(button, _root.numChildren - 1); } catch { }
+                return button;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        private GObject TryCreateMountHudFallbackButton()
+        {
+            if (_root == null || _root._disposed)
+                return null;
+
+            try
+            {
+                GObject existing = _root.GetChild("__codex_mobile_mount_hud_fallback");
+                if (existing != null && !existing._disposed)
+                    return existing;
+            }
+            catch
+            {
+            }
+
+            try
+            {
+                MobileMainHudFallbackBounds bounds =
+                    MobileMainHudFallbackLayout.Mount(_root.width, _root.height);
+                float width = bounds.Width;
+                float height = bounds.Height;
+                var button = new GButton
+                {
+                    name = "__codex_mobile_mount_hud_fallback",
+                    title = "坐骑",
+                    touchable = true,
+                    enabled = true,
+                    grayed = false,
+                    opaque = true,
+                    changeStateOnClick = false,
+                };
+                button.SetSize(width, height);
+                button.SetPosition(bounds.X, bounds.Y);
+
+                var background = new GGraph
+                {
+                    name = "__codex_mobile_mount_hud_fallback_bg",
+                    touchable = false,
+                };
+                background.DrawRect(width, height, 2,
+                    new Color(120, 150, 195, 255),
+                    new Color(40, 65, 100, 245));
+                button.AddChild(background);
+
+                var label = new GTextField
+                {
+                    name = "title",
+                    text = "坐骑",
                     touchable = false,
                     align = AlignType.Center,
                     verticalAlign = VertAlignType.Middle,
@@ -569,7 +656,7 @@ namespace MonoShare
                 builder.AppendLine("配置覆盖（可选）：Mir2Config.ini -> [FairyGUI]");
                 builder.AppendLine("  MobileMainHud.<ActionKey>=<Spec>");
                 builder.AppendLine("  Spec 支持：path:... / idx:... / name:... / item:... / url:... / title:... / 或者关键字列表(a|b|c)");
-                builder.AppendLine("  ActionKey: Pickup/Attack/AutoRun/AutoHit/AttackMode/Magic/Inventory/Chat/Shop/System/BigMap");
+                builder.AppendLine("  ActionKey: Pickup/Attack/AutoRun/AutoHit/AttackMode/Magic/Inventory/Hero/Mentor/Relationship/Mount/Chat/Shop/System/BigMap");
                 builder.AppendLine();
 
                 if (_results.Count == 0)
