@@ -109,16 +109,20 @@ GATE-P0 ──► GATE-P1 ──► GATE-P2 ──► GATE-P3 ──► GATE-P4 
 |---|---|---|---|
 | BASE-01 | Git/solution 清理：建立 `.git` 基线；移除 8 个幽灵工程引用 + 4 个缺失 Note；恢复/归档一次性工具；建 `.slnf` | — | 指定提交可复现签出 |
 | BASE-02 | **可复现构建（本机）**：`global.json` 锁定到可复现稳定 SDK；定义外部资源包/测试资源/地图/补丁资源的来源、版本、哈希、获取方式（README 声明资源在 QQ 群）与**获取脚本**；**建立 `source → acquired → final` 摘要清单**，记录本机资源安装后状态 | BASE-01 | 从指定提交 + 资源获取脚本，**本机**可复现构建；资源 Validate All 通过；摘要清单存在 |
-| BASE-02b | **CI 裸克隆可重建（独立后续项，进 backlog）**：需要资源镜像基建（CI 可访问的资源仓库/镜像）+ 干净的 agent 环境；不在本轮 P0 验收范围，不作为 GATE-P0 门禁 | — | 单独立项后：裸 clone + 资源镜像可重建 |
+| BASE-02b | **CI 裸克隆可重建（独立后续项，进 backlog）**：需要约 11GB 外部资源镜像基建（CI 可访问的资源仓库/镜像）+ 干净的 agent 环境；本次提交仅将 Micro 启动工件纳入仓库，不替代该资源镜像；不在本轮 P0 验收范围，不作为 GATE-P0 门禁 | — | 单独立项后：裸 clone + 资源镜像可重建 |
 | BASE-03 | **CI 骨架**：Windows 构建 + Android runner + 通用测试三段（§3） | BASE-02 | 三段 CI 骨架可跑 |
 | BASE-04 | 日志系统恢复：ILog 门面 + 有界异步队列（Debug/Info 满载丢弃并计数，Error/Fatal 走紧急通道）+ 按大小/日期轮转 + 保留天数 + 过滤 PII | BASE-01 | 崩溃现场有最近 N 分钟全量日志 |
 | BASE-05 | **最小测试集建立**（§4.1 T-01/T-04/T-06 先行，其余随阶段增量） | BASE-03 | §4.1 已启用项可跑 |
 | BASE-06 | **Android/移动共享 net11→net10 迁移**：TFM 改 net10.0-android/ios、MAUI 包降版、workload 锁定、`SupportedOSPlatformVersion` 21→**24**；Debug/Release/AOT+Trim/Trim-only 模拟器验证 | BASE-02 | x86_64 模拟器四态验证通过；真机 arm64 四态延期至 RELEASE-03 最终设备验收；net10 可构建 |
 | BASE-07 | **Server/PC/Shared net8→net10 迁移**：TFM 改 net10.0；明确过渡期限；四态验证 | BASE-02 | net10 可构建；无 net8 残留 |
-| BASE-08 | **CI 全绿门禁 = GATE-P0**：BASE-05 测试集 + BASE-06/07 构建全绿 | BASE-05/06/07 | CI 全绿；iOS 不阻塞 Windows/Android 构建 |
+| BASE-08 | **CI 全绿门禁 = GATE-P0**：BASE-05 测试集 + BASE-06/07 构建全绿 | BASE-05/06/07 | **已完成（GATE-P0）；证据见下方**；iOS 不阻塞 Windows/Android 构建 |
 | BASE-09 | **iOS 隔离**：隔离 iOS TFM，确保 Windows/Android restore/build 不被 iOS workload 阻塞；不承诺 iOS 可编译 | BASE-06 | **已实现并本机验证**：Shared 默认 `net10.0;net10.0-android`，显式 `EnableIosTarget=true` 时仅求值 `net10.0;net10.0-ios`；Windows/Android graph 不含 iOS，iOS restore 为非门禁 |
 
 **GATE-P0 退出条件**：指定提交 + 资源脚本**本机**可复现构建；CI 矩阵全绿；net10 迁移完成；日志可查；最小测试集绿。（CI 裸克隆可重建 = BASE-02b，独立后续项，不阻塞 GATE-P0。）**不满足不得进入 P1。**
+
+**GATE-P0 当前状态（2026-08-06）：已完成。** 在提交 [`4436426`](https://github.com/Mufeisi/KuMing-monogame/commit/443642644bc709a6059caaa94d84dc7a2eee15fd) 上，[GitHub Actions run 31081000003](https://github.com/Mufeisi/KuMing-monogame/actions/runs/31081000003) 的 `Windows build (solution filter)`、`General tests (discovered projects)`、`Android Release arm64 AOT publish` 三个 job 全绿，Android arm64 AOT 发布工件已上传。BASE-06 的 x86_64 模拟器 Debug/Release/AOT+Trim/Trim-only 四态仍为已验收；本次 arm64 AOT 发布不等同真机测试，arm64 真机四态仍延期至 RELEASE-03。约 11GB 的 BASE-02b CI 裸 clone 外部资源镜像仍在 backlog；本次提交已将 Micro 启动工件纳入仓库。
+
+**P1 入口：从 `ANDROID-01` 开始。** `ANDROID-01..07`、`PROTO-01`、`BASE-10` 与 `PERF-00` 按现有顺序继续，均未因 GATE-P0 完成而关闭。
 
 ### P1 Android 真机闭环 + 协议盘点（5~6 周）
 

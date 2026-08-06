@@ -35,7 +35,7 @@ pwsh -NoProfile -File Tools/ResourceBaseline.ps1 -Action Validate -Scope All
 pwsh -NoProfile -File Tools/ResourceBaseline.ps1 -Action Validate -Scope All
 ```
 
-BASE-06 的移动端代码迁移与本机构建已完成，模拟器 Debug/Release/AOT+Trim/Trim-only 四态已通过；真机 arm64 四态明确延期到 RELEASE-03 最终设备验收，不在本轮宣称通过。移动端当前为稳定 `net10.0-*`。BASE-07 的 Server/PC/Shared 迁移与本机构建已完成，BASE-08 已删除 Shared 的 net6 兼容目标。当前仅有本机等价矩阵证据；因仓库未配置远端，未宣称 GATE-P0 的远端 CI 全绿。在没有外部资源时可以构建不依赖资源的项目，例如：
+BASE-06 的移动端代码迁移与本机构建已完成，模拟器 Debug/Release/AOT+Trim/Trim-only 四态已通过；真机 arm64 四态明确延期到 RELEASE-03 最终设备验收，不在本轮宣称通过。移动端当前为稳定 `net10.0-*`。BASE-07 的 Server/PC/Shared 迁移与本机构建已完成，BASE-08 已删除 Shared 的 net6 兼容目标。BASE-08 = GATE-P0 已完成：提交 [`4436426`](https://github.com/Mufeisi/KuMing-monogame/commit/443642644bc709a6059caaa94d84dc7a2eee15fd) 的 [GitHub Actions run 31081000003](https://github.com/Mufeisi/KuMing-monogame/actions/runs/31081000003) 中 `Windows build (solution filter)`、`General tests (discovered projects)`、`Android Release arm64 AOT publish` 三个 job 全绿，Android arm64 AOT 发布工件已上传。该 arm64 AOT 发布不等同真机通过，真机四态仍延期至 RELEASE-03；约 11GB 的 BASE-02b CI 裸 clone 外部资源镜像仍在 backlog，本次提交已将 Micro 启动工件纳入仓库。下一阶段按 PRD 从 `ANDROID-01` 开始。在没有外部资源时可以构建不依赖资源的项目，例如：
 
 BASE-09 的 iOS TFM 已隔离：`Client_MonoGame.Shared` 默认只求值 `net10.0;net10.0-android`，iOS 工程通过 `EnableIosTarget=true` 显式求值 `net10.0;net10.0-ios`；Windows/Android restore/build 不再解析 iOS TFM。iOS 仍只做非门禁 restore，不承诺 iOS 编译或真机可玩。
 
