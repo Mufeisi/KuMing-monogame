@@ -1,0 +1,12 @@
+{
+  "Name": "maps-hy01-pmv-clothes",
+  "Kind": "map-samples",
+  "Description": "\u5730\u56FE\u6837\u672C\u7EC4\uFF1AHY01_pmv_clothes",
+  "AssetCount": 1,
+  "TotalBytes": 13554,
+  "ManifestPath": "",
+  "InstallRootHint": "",
+  "Assets": [
+    "Map/HY01_pmv_clothes.map"
+  ]
+}

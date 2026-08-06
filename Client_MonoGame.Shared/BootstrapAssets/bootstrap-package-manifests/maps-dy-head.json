@@ -1,0 +1,13 @@
+{
+  "Name": "maps-dy-head",
+  "Kind": "map-samples",
+  "Description": "\u5730\u56FE\u6837\u672C\u7EC4\uFF1ADY_Head",
+  "AssetCount": 2,
+  "TotalBytes": 19608,
+  "ManifestPath": "",
+  "InstallRootHint": "",
+  "Assets": [
+    "Map/DY_Head1.map",
+    "Map/DY_Head2.map"
+  ]
+}

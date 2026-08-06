@@ -1,0 +1,12 @@
+{
+  "Name": "maps-dy-wearhouse",
+  "Kind": "map-samples",
+  "Description": "\u5730\u56FE\u6837\u672C\u7EC4\uFF1ADY_Wearhouse",
+  "AssetCount": 1,
+  "TotalBytes": 10854,
+  "ManifestPath": "",
+  "InstallRootHint": "",
+  "Assets": [
+    "Map/DY_Wearhouse.map"
+  ]
+}

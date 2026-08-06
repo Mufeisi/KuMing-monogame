@@ -1,0 +1,25 @@
+{
+  "Name": "maps-g",
+  "Kind": "map-samples",
+  "Description": "\u5730\u56FE\u6837\u672C\u7EC4\uFF1AG",
+  "AssetCount": 14,
+  "TotalBytes": 1452756,
+  "ManifestPath": "",
+  "InstallRootHint": "",
+  "Assets": [
+    "Map/G001.map",
+    "Map/G002.map",
+    "Map/G003.map",
+    "Map/G004.map",
+    "Map/G005.map",
+    "Map/G006.map",
+    "Map/G007.map",
+    "Map/G008.map",
+    "Map/G009.map",
+    "Map/G010.map",
+    "Map/G011.map",
+    "Map/G012.map",
+    "Map/G013.map",
+    "Map/G014.map"
+  ]
+}

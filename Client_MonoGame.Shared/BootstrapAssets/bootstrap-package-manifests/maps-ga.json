@@ -1,0 +1,14 @@
+{
+  "Name": "maps-ga",
+  "Kind": "map-samples",
+  "Description": "\u5730\u56FE\u6837\u672C\u7EC4\uFF1AGA",
+  "AssetCount": 3,
+  "TotalBytes": 85662,
+  "ManifestPath": "",
+  "InstallRootHint": "",
+  "Assets": [
+    "Map/GA1.map",
+    "Map/GA2.map",
+    "Map/GA3.map"
+  ]
+}

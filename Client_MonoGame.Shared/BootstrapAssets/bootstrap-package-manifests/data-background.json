@@ -1,0 +1,12 @@
+{
+  "Name": "data-background",
+  "Kind": "data-library",
+  "Description": "Data/Background.Lib",
+  "AssetCount": 1,
+  "TotalBytes": 21248217,
+  "ManifestPath": "",
+  "InstallRootHint": "",
+  "Assets": [
+    "Data/Background.Lib"
+  ]
+}

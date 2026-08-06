@@ -1,0 +1,16 @@
+{
+  "Name": "maps-f",
+  "Kind": "map-samples",
+  "Description": "\u5730\u56FE\u6837\u672C\u7EC4\uFF1AF",
+  "AssetCount": 5,
+  "TotalBytes": 750270,
+  "ManifestPath": "",
+  "InstallRootHint": "",
+  "Assets": [
+    "Map/F001.map",
+    "Map/F002.map",
+    "Map/F003.map",
+    "Map/F004.map",
+    "Map/F005.map"
+  ]
+}

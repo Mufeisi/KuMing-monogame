@@ -1,0 +1,32 @@
+{
+  "Name": "maps-unknown-island",
+  "Kind": "map-samples",
+  "Description": "\u5730\u56FE\u6837\u672C\u7EC4\uFF1AUnknown_Island",
+  "AssetCount": 21,
+  "TotalBytes": 3151134,
+  "ManifestPath": "",
+  "InstallRootHint": "",
+  "Assets": [
+    "Map/Unknown_Island_01.map",
+    "Map/Unknown_Island_02.map",
+    "Map/Unknown_Island_03.map",
+    "Map/Unknown_Island_04.map",
+    "Map/Unknown_Island_05.map",
+    "Map/Unknown_Island_06.map",
+    "Map/Unknown_Island_07.map",
+    "Map/Unknown_Island_08.map",
+    "Map/Unknown_Island_09.map",
+    "Map/Unknown_Island_10.map",
+    "Map/Unknown_Island_11.map",
+    "Map/Unknown_Island_12.map",
+    "Map/Unknown_Island_13.map",
+    "Map/Unknown_Island_14.map",
+    "Map/Unknown_Island_15.map",
+    "Map/Unknown_Island_16.map",
+    "Map/Unknown_Island_17.map",
+    "Map/Unknown_Island_18.map",
+    "Map/Unknown_Island_19.map",
+    "Map/Unknown_Island_20.map",
+    "Map/Unknown_Island_21.map"
+  ]
+}

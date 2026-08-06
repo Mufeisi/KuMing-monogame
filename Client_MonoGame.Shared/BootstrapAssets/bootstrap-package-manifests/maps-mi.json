@@ -1,0 +1,31 @@
+{
+  "Name": "maps-mi",
+  "Kind": "map-samples",
+  "Description": "\u5730\u56FE\u6837\u672C\u7EC4\uFF1AMI",
+  "AssetCount": 20,
+  "TotalBytes": 541040,
+  "ManifestPath": "",
+  "InstallRootHint": "",
+  "Assets": [
+    "Map/MI000.map",
+    "Map/MI001.map",
+    "Map/MI002.map",
+    "Map/MI003.map",
+    "Map/MI004.map",
+    "Map/MI005.map",
+    "Map/MI006.map",
+    "Map/MI007.map",
+    "Map/MI008.map",
+    "Map/MI009.map",
+    "Map/MI100.map",
+    "Map/MI101.map",
+    "Map/MI102.map",
+    "Map/MI103.map",
+    "Map/MI104.map",
+    "Map/MI105.map",
+    "Map/MI106.map",
+    "Map/MI107.map",
+    "Map/MI108.map",
+    "Map/MI109.map"
+  ]
+}

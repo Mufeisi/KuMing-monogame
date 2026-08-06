@@ -1,0 +1,12 @@
+{
+  "Name": "maps-muhan-combat",
+  "Kind": "map-samples",
+  "Description": "\u5730\u56FE\u6837\u672C\u7EC4\uFF1AMUHAN_COMBAT",
+  "AssetCount": 1,
+  "TotalBytes": 15804,
+  "ManifestPath": "",
+  "InstallRootHint": "",
+  "Assets": [
+    "Map/MUHAN_COMBAT.map"
+  ]
+}

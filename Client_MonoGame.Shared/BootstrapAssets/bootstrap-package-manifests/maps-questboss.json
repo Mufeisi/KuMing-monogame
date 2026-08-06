@@ -1,0 +1,20 @@
+{
+  "Name": "maps-questboss",
+  "Kind": "map-samples",
+  "Description": "\u5730\u56FE\u6837\u672C\u7EC4\uFF1Aquestboss",
+  "AssetCount": 9,
+  "TotalBytes": 322986,
+  "ManifestPath": "",
+  "InstallRootHint": "",
+  "Assets": [
+    "Map/questboss_1.map",
+    "Map/questboss_10.map",
+    "Map/questboss_2.map",
+    "Map/questboss_3.map",
+    "Map/questboss_4.map",
+    "Map/questboss_5.map",
+    "Map/questboss_7.map",
+    "Map/questboss_8.map",
+    "Map/questboss_9.map"
+  ]
+}

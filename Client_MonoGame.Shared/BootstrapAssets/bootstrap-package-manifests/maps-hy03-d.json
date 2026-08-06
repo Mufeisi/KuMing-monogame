@@ -1,0 +1,17 @@
+{
+  "Name": "maps-hy03-d",
+  "Kind": "map-samples",
+  "Description": "\u5730\u56FE\u6837\u672C\u7EC4\uFF1AHY03_D",
+  "AssetCount": 6,
+  "TotalBytes": 270324,
+  "ManifestPath": "",
+  "InstallRootHint": "",
+  "Assets": [
+    "Map/HY03_D0234.map",
+    "Map/HY03_D5044.map",
+    "Map/HY03_D5045.map",
+    "Map/HY03_D5046.map",
+    "Map/HY03_D5047.map",
+    "Map/HY03_D5048.map"
+  ]
+}

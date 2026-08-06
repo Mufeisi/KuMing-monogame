@@ -1,0 +1,21 @@
+{
+  "Name": "maps-e",
+  "Kind": "map-samples",
+  "Description": "\u5730\u56FE\u6837\u672C\u7EC4\uFF1AE",
+  "AssetCount": 10,
+  "TotalBytes": 1532040,
+  "ManifestPath": "",
+  "InstallRootHint": "",
+  "Assets": [
+    "Map/E001.map",
+    "Map/E002.map",
+    "Map/E401.map",
+    "Map/E402.map",
+    "Map/E403.map",
+    "Map/E404.map",
+    "Map/E605.map",
+    "Map/E701.map",
+    "Map/E702.map",
+    "Map/E703.map"
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "Name": "maps-labybuy",
+  "Kind": "map-samples",
+  "Description": "\u5730\u56FE\u6837\u672C\u7EC4\uFF1ALABYBUY",
+  "AssetCount": 2,
+  "TotalBytes": 6858,
+  "ManifestPath": "",
+  "InstallRootHint": "",
+  "Assets": [
+    "Map/LABYBUY01.MAP",
+    "Map/LABYBUY02.MAP"
+  ]
+}

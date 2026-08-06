@@ -1,0 +1,14 @@
+{
+  "Name": "maps-dm",
+  "Kind": "map-samples",
+  "Description": "\u5730\u56FE\u6837\u672C\u7EC4\uFF1ADM",
+  "AssetCount": 3,
+  "TotalBytes": 21912,
+  "ManifestPath": "",
+  "InstallRootHint": "",
+  "Assets": [
+    "Map/DM001.map",
+    "Map/DM002.map",
+    "Map/DM011.map"
+  ]
+}

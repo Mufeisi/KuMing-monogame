@@ -1,0 +1,17 @@
+{
+  "Name": "maps-sp",
+  "Kind": "map-samples",
+  "Description": "\u5730\u56FE\u6837\u672C\u7EC4\uFF1ASP",
+  "AssetCount": 6,
+  "TotalBytes": 900324,
+  "ManifestPath": "",
+  "InstallRootHint": "",
+  "Assets": [
+    "Map/SP001.map",
+    "Map/SP002.map",
+    "Map/SP003.map",
+    "Map/SP004.map",
+    "Map/SP005.map",
+    "Map/SP006.map"
+  ]
+}

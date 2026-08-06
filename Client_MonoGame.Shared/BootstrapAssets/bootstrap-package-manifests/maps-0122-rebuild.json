@@ -1,0 +1,12 @@
+{
+  "Name": "maps-0122-rebuild",
+  "Kind": "map-samples",
+  "Description": "\u5730\u56FE\u6837\u672C\u7EC4\uFF1A0122_Rebuild",
+  "AssetCount": 1,
+  "TotalBytes": 42129,
+  "ManifestPath": "",
+  "InstallRootHint": "",
+  "Assets": [
+    "Map/0122_Rebuild.map"
+  ]
+}

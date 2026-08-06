@@ -1,0 +1,14 @@
+{
+  "Name": "maps-sur",
+  "Kind": "map-samples",
+  "Description": "\u5730\u56FE\u6837\u672C\u7EC4\uFF1ASUR",
+  "AssetCount": 3,
+  "TotalBytes": 230556,
+  "ManifestPath": "",
+  "InstallRootHint": "",
+  "Assets": [
+    "Map/SUR001.map",
+    "Map/SUR002.map",
+    "Map/SUR003.map"
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "Name": "data-bufficon",
+  "Kind": "data-library",
+  "Description": "Data/BuffIcon.Lib",
+  "AssetCount": 1,
+  "TotalBytes": 230222,
+  "ManifestPath": "",
+  "InstallRootHint": "",
+  "Assets": [
+    "Data/BuffIcon.Lib"
+  ]
+}

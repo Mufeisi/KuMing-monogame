@@ -1,0 +1,15 @@
+{
+  "Name": "maps-hy-indun-04boss",
+  "Kind": "map-samples",
+  "Description": "\u5730\u56FE\u6837\u672C\u7EC4\uFF1AHY_InDun_04boss",
+  "AssetCount": 4,
+  "TotalBytes": 367716,
+  "ManifestPath": "",
+  "InstallRootHint": "",
+  "Assets": [
+    "Map/HY_InDun_04boss1.map",
+    "Map/HY_InDun_04boss2.map",
+    "Map/HY_InDun_04boss3.map",
+    "Map/HY_InDun_04boss5.map"
+  ]
+}

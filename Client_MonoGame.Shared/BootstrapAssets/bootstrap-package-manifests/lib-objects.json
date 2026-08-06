@@ -1,0 +1,12 @@
+{
+  "Name": "lib-objects",
+  "Kind": "map-library",
+  "Description": "Data/Map/WemadeMir2/Objects.Lib",
+  "AssetCount": 1,
+  "TotalBytes": 44972450,
+  "ManifestPath": "",
+  "InstallRootHint": "",
+  "Assets": [
+    "Data/Map/WemadeMir2/Objects.Lib"
+  ]
+}

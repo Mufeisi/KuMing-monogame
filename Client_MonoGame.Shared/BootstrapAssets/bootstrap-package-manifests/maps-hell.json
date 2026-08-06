@@ -1,0 +1,13 @@
+{
+  "Name": "maps-hell",
+  "Kind": "map-samples",
+  "Description": "\u5730\u56FE\u6837\u672C\u7EC4\uFF1Ahell",
+  "AssetCount": 2,
+  "TotalBytes": 246108,
+  "ManifestPath": "",
+  "InstallRootHint": "",
+  "Assets": [
+    "Map/hell101.map",
+    "Map/hell304.map"
+  ]
+}

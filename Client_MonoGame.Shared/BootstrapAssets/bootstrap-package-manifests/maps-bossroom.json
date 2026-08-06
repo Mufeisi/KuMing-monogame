@@ -1,0 +1,23 @@
+{
+  "Name": "maps-bossroom",
+  "Kind": "map-samples",
+  "Description": "\u5730\u56FE\u6837\u672C\u7EC4\uFF1ABOSSROOM",
+  "AssetCount": 12,
+  "TotalBytes": 80028,
+  "ManifestPath": "",
+  "InstallRootHint": "",
+  "Assets": [
+    "Map/BOSSROOM01.map",
+    "Map/BOSSROOM02.map",
+    "Map/BOSSROOM03.map",
+    "Map/BOSSROOM04.map",
+    "Map/BOSSROOM05.map",
+    "Map/BOSSROOM06.map",
+    "Map/BOSSROOM07.map",
+    "Map/BOSSROOM08.map",
+    "Map/BOSSROOM09.map",
+    "Map/BOSSROOM10.map",
+    "Map/BOSSROOM11.map",
+    "Map/BOSSROOM12.map"
+  ]
+}

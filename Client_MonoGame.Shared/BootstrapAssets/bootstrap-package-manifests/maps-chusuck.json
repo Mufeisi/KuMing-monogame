@@ -1,0 +1,17 @@
+{
+  "Name": "maps-chusuck",
+  "Kind": "map-samples",
+  "Description": "\u5730\u56FE\u6837\u672C\u7EC4\uFF1Achusuck",
+  "AssetCount": 6,
+  "TotalBytes": 40014,
+  "ManifestPath": "",
+  "InstallRootHint": "",
+  "Assets": [
+    "Map/chusuck_1.map",
+    "Map/chusuck_2.map",
+    "Map/chusuck_3.map",
+    "Map/chusuck_4.map",
+    "Map/chusuck_5.map",
+    "Map/chusuck_6.map"
+  ]
+}

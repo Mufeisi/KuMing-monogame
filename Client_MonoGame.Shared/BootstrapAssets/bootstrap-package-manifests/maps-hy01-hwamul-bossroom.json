@@ -1,0 +1,12 @@
+{
+  "Name": "maps-hy01-hwamul-bossroom",
+  "Kind": "map-samples",
+  "Description": "\u5730\u56FE\u6837\u672C\u7EC4\uFF1AHY01_hwamul_bossroom",
+  "AssetCount": 1,
+  "TotalBytes": 24054,
+  "ManifestPath": "",
+  "InstallRootHint": "",
+  "Assets": [
+    "Map/HY01_hwamul_bossroom.map"
+  ]
+}

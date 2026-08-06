@@ -1,0 +1,12 @@
+{
+  "Name": "maps-hy01-whitevil-etc",
+  "Kind": "map-samples",
+  "Description": "\u5730\u56FE\u6837\u672C\u7EC4\uFF1AHY01_whitevil_etc",
+  "AssetCount": 1,
+  "TotalBytes": 37554,
+  "ManifestPath": "",
+  "InstallRootHint": "",
+  "Assets": [
+    "Map/HY01_whitevil_etc.map"
+  ]
+}

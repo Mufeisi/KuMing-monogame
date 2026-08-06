@@ -1,0 +1,14 @@
+{
+  "Name": "maps-10yearsfarm",
+  "Kind": "map-samples",
+  "Description": "\u5730\u56FE\u6837\u672C\u7EC4\uFF1A10yearsfarm",
+  "AssetCount": 3,
+  "TotalBytes": 450162,
+  "ManifestPath": "",
+  "InstallRootHint": "",
+  "Assets": [
+    "Map/10yearsfarm_01.map",
+    "Map/10yearsfarm_02.map",
+    "Map/10yearsfarm_03.map"
+  ]
+}

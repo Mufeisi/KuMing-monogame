@@ -1,0 +1,12 @@
+{
+  "Name": "lib-tiles4",
+  "Kind": "map-library",
+  "Description": "Data/Map/ShandaMir2/Tiles4.Lib",
+  "AssetCount": 1,
+  "TotalBytes": 70554031,
+  "ManifestPath": "",
+  "InstallRootHint": "",
+  "Assets": [
+    "Data/Map/ShandaMir2/Tiles4.Lib"
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "Name": "maps-me",
+  "Kind": "map-samples",
+  "Description": "\u5730\u56FE\u6837\u672C\u7EC4\uFF1Ame",
+  "AssetCount": 1,
+  "TotalBytes": 6054,
+  "ManifestPath": "",
+  "InstallRootHint": "",
+  "Assets": [
+    "Map/me0000.map"
+  ]
+}

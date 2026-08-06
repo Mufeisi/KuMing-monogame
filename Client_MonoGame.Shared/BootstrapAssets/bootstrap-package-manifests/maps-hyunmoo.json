@@ -1,0 +1,18 @@
+{
+  "Name": "maps-hyunmoo",
+  "Kind": "map-samples",
+  "Description": "\u5730\u56FE\u6837\u672C\u7EC4\uFF1AHYUNMOO",
+  "AssetCount": 7,
+  "TotalBytes": 46683,
+  "ManifestPath": "",
+  "InstallRootHint": "",
+  "Assets": [
+    "Map/HYUNMOO01.map",
+    "Map/HYUNMOO02.map",
+    "Map/HYUNMOO03.map",
+    "Map/HYUNMOO04.map",
+    "Map/HYUNMOO05.map",
+    "Map/HYUNMOO06.map",
+    "Map/HYUNMOO07.map"
+  ]
+}

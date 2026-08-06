@@ -1,0 +1,12 @@
+{
+  "Name": "maps-muhan-wait",
+  "Kind": "map-samples",
+  "Description": "\u5730\u56FE\u6837\u672C\u7EC4\uFF1AMUHAN_WAIT",
+  "AssetCount": 1,
+  "TotalBytes": 14904,
+  "ManifestPath": "",
+  "InstallRootHint": "",
+  "Assets": [
+    "Map/MUHAN_WAIT.map"
+  ]
+}

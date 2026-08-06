@@ -1,0 +1,14 @@
+{
+  "Name": "maps-surwait",
+  "Kind": "map-samples",
+  "Description": "\u5730\u56FE\u6837\u672C\u7EC4\uFF1ASURWAIT",
+  "AssetCount": 3,
+  "TotalBytes": 82956,
+  "ManifestPath": "",
+  "InstallRootHint": "",
+  "Assets": [
+    "Map/SURWAIT001.map",
+    "Map/SURWAIT002.map",
+    "Map/SURWAIT003.map"
+  ]
+}

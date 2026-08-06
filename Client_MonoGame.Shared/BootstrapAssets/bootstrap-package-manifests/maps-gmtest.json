@@ -1,0 +1,12 @@
+{
+  "Name": "maps-gmtest",
+  "Kind": "map-samples",
+  "Description": "\u5730\u56FE\u6837\u672C\u7EC4\uFF1AGMTEST",
+  "AssetCount": 1,
+  "TotalBytes": 37554,
+  "ManifestPath": "",
+  "InstallRootHint": "",
+  "Assets": [
+    "Map/GMTEST.map"
+  ]
+}

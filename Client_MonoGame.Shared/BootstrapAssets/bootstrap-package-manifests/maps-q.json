@@ -1,0 +1,19 @@
+{
+  "Name": "maps-q",
+  "Kind": "map-samples",
+  "Description": "\u5730\u56FE\u6837\u672C\u7EC4\uFF1AQ",
+  "AssetCount": 8,
+  "TotalBytes": 280797,
+  "ManifestPath": "",
+  "InstallRootHint": "",
+  "Assets": [
+    "Map/Q001.map",
+    "Map/Q002.map",
+    "Map/Q003.map",
+    "Map/Q004.map",
+    "Map/Q012.map",
+    "Map/Q013.map",
+    "Map/Q014.map",
+    "Map/Q016.map"
+  ]
+}

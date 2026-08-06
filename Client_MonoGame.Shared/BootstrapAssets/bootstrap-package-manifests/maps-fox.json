@@ -1,0 +1,12 @@
+{
+  "Name": "maps-fox",
+  "Kind": "map-samples",
+  "Description": "\u5730\u56FE\u6837\u672C\u7EC4\uFF1AFOX",
+  "AssetCount": 1,
+  "TotalBytes": 73554,
+  "ManifestPath": "",
+  "InstallRootHint": "",
+  "Assets": [
+    "Map/FOX03.map"
+  ]
+}

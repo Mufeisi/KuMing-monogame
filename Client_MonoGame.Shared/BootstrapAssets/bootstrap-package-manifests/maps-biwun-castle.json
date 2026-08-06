@@ -1,0 +1,12 @@
+{
+  "Name": "maps-biwun-castle",
+  "Kind": "map-samples",
+  "Description": "\u5730\u56FE\u6837\u672C\u7EC4\uFF1Abiwun_castle",
+  "AssetCount": 1,
+  "TotalBytes": 42129,
+  "ManifestPath": "",
+  "InstallRootHint": "",
+  "Assets": [
+    "Map/biwun_castle.map"
+  ]
+}

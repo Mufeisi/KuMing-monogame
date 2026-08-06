@@ -1,0 +1,13 @@
+{
+  "Name": "maps-t109-21th-ev",
+  "Kind": "map-samples",
+  "Description": "\u5730\u56FE\u6837\u672C\u7EC4\uFF1AT109_21th_ev",
+  "AssetCount": 2,
+  "TotalBytes": 300108,
+  "ManifestPath": "",
+  "InstallRootHint": "",
+  "Assets": [
+    "Map/T109_21th_ev_1.map",
+    "Map/T109_21th_ev_2.map"
+  ]
+}

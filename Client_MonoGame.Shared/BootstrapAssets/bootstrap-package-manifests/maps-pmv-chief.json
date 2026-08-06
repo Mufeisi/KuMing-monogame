@@ -1,0 +1,12 @@
+{
+  "Name": "maps-pmv-chief",
+  "Kind": "map-samples",
+  "Description": "\u5730\u56FE\u6837\u672C\u7EC4\uFF1Apmv_chief",
+  "AssetCount": 1,
+  "TotalBytes": 13554,
+  "ManifestPath": "",
+  "InstallRootHint": "",
+  "Assets": [
+    "Map/pmv_chief.map"
+  ]
+}

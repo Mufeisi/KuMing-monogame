@@ -1,0 +1,13 @@
+{
+  "Name": "maps-dy-craft",
+  "Kind": "map-samples",
+  "Description": "\u5730\u56FE\u6837\u672C\u7EC4\uFF1ADY_Craft",
+  "AssetCount": 2,
+  "TotalBytes": 20628,
+  "ManifestPath": "",
+  "InstallRootHint": "",
+  "Assets": [
+    "Map/DY_Craft1.map",
+    "Map/DY_Craft2.map"
+  ]
+}

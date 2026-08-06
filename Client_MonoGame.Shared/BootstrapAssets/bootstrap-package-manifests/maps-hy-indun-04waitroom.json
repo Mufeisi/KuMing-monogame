@@ -1,0 +1,12 @@
+{
+  "Name": "maps-hy-indun-04waitroom",
+  "Kind": "map-samples",
+  "Description": "\u5730\u56FE\u6837\u672C\u7EC4\uFF1AHY_InDun_04waitroom",
+  "AssetCount": 1,
+  "TotalBytes": 150054,
+  "ManifestPath": "",
+  "InstallRootHint": "",
+  "Assets": [
+    "Map/HY_InDun_04waitroom.map"
+  ]
+}

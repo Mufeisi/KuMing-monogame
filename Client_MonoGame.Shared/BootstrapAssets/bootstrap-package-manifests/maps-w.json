@@ -1,0 +1,16 @@
+{
+  "Name": "maps-w",
+  "Kind": "map-samples",
+  "Description": "\u5730\u56FE\u6837\u672C\u7EC4\uFF1AW",
+  "AssetCount": 5,
+  "TotalBytes": 92145,
+  "ManifestPath": "",
+  "InstallRootHint": "",
+  "Assets": [
+    "Map/W0.map",
+    "Map/W1.map",
+    "Map/W2.map",
+    "Map/W3.map",
+    "Map/W4.map"
+  ]
+}

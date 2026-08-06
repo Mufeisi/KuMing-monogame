@@ -1,0 +1,12 @@
+{
+  "Name": "maps-fight",
+  "Kind": "map-samples",
+  "Description": "\u5730\u56FE\u6837\u672C\u7EC4\uFF1AFIGHT",
+  "AssetCount": 1,
+  "TotalBytes": 30052,
+  "ManifestPath": "",
+  "InstallRootHint": "",
+  "Assets": [
+    "Map/FIGHT.map"
+  ]
+}

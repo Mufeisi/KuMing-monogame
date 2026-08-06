@@ -1,0 +1,12 @@
+{
+  "Name": "maps-indun-01mainhall",
+  "Kind": "map-samples",
+  "Description": "\u5730\u56FE\u6837\u672C\u7EC4\uFF1AIndun_01MainHall",
+  "AssetCount": 1,
+  "TotalBytes": 128304,
+  "ManifestPath": "",
+  "InstallRootHint": "",
+  "Assets": [
+    "Map/Indun_01MainHall.map"
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "Name": "maps-ec",
+  "Kind": "map-samples",
+  "Description": "\u5730\u56FE\u6837\u672C\u7EC4\uFF1AEC",
+  "AssetCount": 4,
+  "TotalBytes": 307408,
+  "ManifestPath": "",
+  "InstallRootHint": "",
+  "Assets": [
+    "Map/EC011.map",
+    "Map/EC012.map",
+    "Map/EC013.map",
+    "Map/EC014.map"
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "Name": "maps-indun4-event",
+  "Kind": "map-samples",
+  "Description": "\u5730\u56FE\u6837\u672C\u7EC4\uFF1AInDun4_EVENT",
+  "AssetCount": 5,
+  "TotalBytes": 480270,
+  "ManifestPath": "",
+  "InstallRootHint": "",
+  "Assets": [
+    "Map/InDun4_EVENT1.map",
+    "Map/InDun4_EVENT2.map",
+    "Map/InDun4_EVENT3.map",
+    "Map/InDun4_EVENT4.map",
+    "Map/InDun4_EVENT5.map"
+  ]
+}

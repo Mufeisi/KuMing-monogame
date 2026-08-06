@@ -1,0 +1,15 @@
+{
+  "Name": "maps-ea",
+  "Kind": "map-samples",
+  "Description": "\u5730\u56FE\u6837\u672C\u7EC4\uFF1AEA",
+  "AssetCount": 4,
+  "TotalBytes": 307408,
+  "ManifestPath": "",
+  "InstallRootHint": "",
+  "Assets": [
+    "Map/EA011.map",
+    "Map/EA012.map",
+    "Map/EA013.map",
+    "Map/EA014.map"
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "Name": "maps-indun-02dogyoarena",
+  "Kind": "map-samples",
+  "Description": "\u5730\u56FE\u6837\u672C\u7EC4\uFF1AInDun_02DogYoArena",
+  "AssetCount": 1,
+  "TotalBytes": 216054,
+  "ManifestPath": "",
+  "InstallRootHint": "",
+  "Assets": [
+    "Map/InDun_02DogYoArena.map"
+  ]
+}

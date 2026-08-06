@@ -1,0 +1,12 @@
+{
+  "Name": "maps-2017e-tueroom",
+  "Kind": "map-samples",
+  "Description": "\u5730\u56FE\u6837\u672C\u7EC4\uFF1A2017E_TueRoom",
+  "AssetCount": 1,
+  "TotalBytes": 7314,
+  "ManifestPath": "",
+  "InstallRootHint": "",
+  "Assets": [
+    "Map/2017E_TueRoom.map"
+  ]
+}

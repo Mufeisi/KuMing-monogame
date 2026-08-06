@@ -1,0 +1,18 @@
+{
+  "Name": "maps-event",
+  "Kind": "map-samples",
+  "Description": "\u5730\u56FE\u6837\u672C\u7EC4\uFF1AEVENT",
+  "AssetCount": 7,
+  "TotalBytes": 54328,
+  "ManifestPath": "",
+  "InstallRootHint": "",
+  "Assets": [
+    "Map/EVENT.map",
+    "Map/EVENT01.map",
+    "Map/EVENT02.map",
+    "Map/EVENT03.map",
+    "Map/EVENT04.map",
+    "Map/EVENT05.map",
+    "Map/EVENT06.map"
+  ]
+}

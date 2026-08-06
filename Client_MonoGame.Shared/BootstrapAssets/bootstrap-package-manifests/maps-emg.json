@@ -1,0 +1,17 @@
+{
+  "Name": "maps-emg",
+  "Kind": "map-samples",
+  "Description": "\u5730\u56FE\u6837\u672C\u7EC4\uFF1AEMG",
+  "AssetCount": 6,
+  "TotalBytes": 259512,
+  "ManifestPath": "",
+  "InstallRootHint": "",
+  "Assets": [
+    "Map/EMG001.map",
+    "Map/EMG002.map",
+    "Map/EMG003.map",
+    "Map/EMG004.map",
+    "Map/EMG005.map",
+    "Map/EMG006.map"
+  ]
+}

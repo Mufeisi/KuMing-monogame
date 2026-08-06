@@ -1,0 +1,17 @@
+{
+  "Name": "maps-14chusuk-moon",
+  "Kind": "map-samples",
+  "Description": "\u5730\u56FE\u6837\u672C\u7EC4\uFF1A14chusuk_moon",
+  "AssetCount": 6,
+  "TotalBytes": 900324,
+  "ManifestPath": "",
+  "InstallRootHint": "",
+  "Assets": [
+    "Map/14chusuk_moon1.map",
+    "Map/14chusuk_moon2.map",
+    "Map/14chusuk_moon3.map",
+    "Map/14chusuk_moon4.map",
+    "Map/14chusuk_moon5.map",
+    "Map/14chusuk_moon6.map"
+  ]
+}

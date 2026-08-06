@@ -1,0 +1,12 @@
+{
+  "Name": "maps-point-fishery-pa",
+  "Kind": "map-samples",
+  "Description": "\u5730\u56FE\u6837\u672C\u7EC4\uFF1APoint_Fishery_Pa",
+  "AssetCount": 1,
+  "TotalBytes": 150054,
+  "ManifestPath": "",
+  "InstallRootHint": "",
+  "Assets": [
+    "Map/Point_Fishery_Pa.map"
+  ]
+}

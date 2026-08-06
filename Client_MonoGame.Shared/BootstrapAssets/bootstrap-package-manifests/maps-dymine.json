@@ -1,0 +1,29 @@
+{
+  "Name": "maps-dymine",
+  "Kind": "map-samples",
+  "Description": "\u5730\u56FE\u6837\u672C\u7EC4\uFF1ADYMine",
+  "AssetCount": 18,
+  "TotalBytes": 3888972,
+  "ManifestPath": "",
+  "InstallRootHint": "",
+  "Assets": [
+    "Map/DYMine11.map",
+    "Map/DYMine12.map",
+    "Map/DYMine13.map",
+    "Map/DYMine14.map",
+    "Map/DYMine21.map",
+    "Map/DYMine22.map",
+    "Map/DYMine23.map",
+    "Map/DYMine24.map",
+    "Map/DYMine31.map",
+    "Map/DYMine32.map",
+    "Map/DYMine33.map",
+    "Map/DYMine34.map",
+    "Map/DYMine35.map",
+    "Map/DYMine41.map",
+    "Map/DYMine42.map",
+    "Map/DYMine43.map",
+    "Map/DYMine44.map",
+    "Map/DYMine45.map"
+  ]
+}

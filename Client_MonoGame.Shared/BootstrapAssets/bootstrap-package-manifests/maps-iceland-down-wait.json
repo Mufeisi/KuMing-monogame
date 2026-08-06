@@ -1,0 +1,12 @@
+{
+  "Name": "maps-iceland-down-wait",
+  "Kind": "map-samples",
+  "Description": "\u5730\u56FE\u6837\u672C\u7EC4\uFF1Aiceland_DOWN_WAIT",
+  "AssetCount": 1,
+  "TotalBytes": 216054,
+  "ManifestPath": "",
+  "InstallRootHint": "",
+  "Assets": [
+    "Map/iceland_DOWN_WAIT.map"
+  ]
+}

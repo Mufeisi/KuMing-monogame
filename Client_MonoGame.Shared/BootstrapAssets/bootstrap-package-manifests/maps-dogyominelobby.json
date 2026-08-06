@@ -1,0 +1,16 @@
+{
+  "Name": "maps-dogyominelobby",
+  "Kind": "map-samples",
+  "Description": "\u5730\u56FE\u6837\u672C\u7EC4\uFF1ADogYoMineLobby",
+  "AssetCount": 5,
+  "TotalBytes": 312270,
+  "ManifestPath": "",
+  "InstallRootHint": "",
+  "Assets": [
+    "Map/DogYoMineLobby.map",
+    "Map/DogYoMineLobby1.map",
+    "Map/DogYoMineLobby2.map",
+    "Map/DogYoMineLobby3.map",
+    "Map/DogYoMineLobby4.map"
+  ]
+}

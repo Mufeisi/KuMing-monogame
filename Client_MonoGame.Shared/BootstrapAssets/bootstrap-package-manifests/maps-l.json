@@ -1,0 +1,15 @@
+{
+  "Name": "maps-l",
+  "Kind": "map-samples",
+  "Description": "\u5730\u56FE\u6837\u672C\u7EC4\uFF1AL",
+  "AssetCount": 4,
+  "TotalBytes": 150216,
+  "ManifestPath": "",
+  "InstallRootHint": "",
+  "Assets": [
+    "Map/L001.map",
+    "Map/L002.map",
+    "Map/L003.map",
+    "Map/L004.map"
+  ]
+}

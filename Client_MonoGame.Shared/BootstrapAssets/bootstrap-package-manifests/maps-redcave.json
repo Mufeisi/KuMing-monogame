@@ -1,0 +1,21 @@
+{
+  "Name": "maps-redcave",
+  "Kind": "map-samples",
+  "Description": "\u5730\u56FE\u6837\u672C\u7EC4\uFF1AREDCAVE",
+  "AssetCount": 10,
+  "TotalBytes": 1500540,
+  "ManifestPath": "",
+  "InstallRootHint": "",
+  "Assets": [
+    "Map/REDCAVE03.map",
+    "Map/REDCAVE04.map",
+    "Map/REDCAVE05.map",
+    "Map/REDCAVE06.map",
+    "Map/REDCAVE07.map",
+    "Map/REDCAVE08.map",
+    "Map/REDCAVE09.map",
+    "Map/REDCAVE10.map",
+    "Map/REDCAVE11.map",
+    "Map/REDCAVE12.map"
+  ]
+}

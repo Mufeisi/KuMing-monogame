@@ -1,0 +1,20 @@
+{
+  "Name": "core-startup",
+  "Kind": "core",
+  "Description": "\u542F\u52A8\u6838\u5FC3\u8D44\u6E90\u4E0E\u57FA\u7840\u56FE\u5E93",
+  "AssetCount": 9,
+  "TotalBytes": 55821483,
+  "ManifestPath": "",
+  "InstallRootHint": "",
+  "Assets": [
+    "Data/ChrSel.Lib",
+    "Data/Prguse.Lib",
+    "Data/Title.Lib",
+    "Language.ini",
+    "Mir2Config.ini",
+    "Sound/100.wav",
+    "Sound/Log-in-long2.wav",
+    "Sound/sellect-loop2.wav",
+    "Sound/SoundList.lst"
+  ]
+}

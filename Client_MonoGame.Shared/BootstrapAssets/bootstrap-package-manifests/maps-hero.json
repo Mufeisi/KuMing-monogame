@@ -1,0 +1,23 @@
+{
+  "Name": "maps-hero",
+  "Kind": "map-samples",
+  "Description": "\u5730\u56FE\u6837\u672C\u7EC4\uFF1AHERO",
+  "AssetCount": 12,
+  "TotalBytes": 1035648,
+  "ManifestPath": "",
+  "InstallRootHint": "",
+  "Assets": [
+    "Map/HERO00.map",
+    "Map/HERO05.map",
+    "Map/HERO10.map",
+    "Map/HERO15.map",
+    "Map/HERO20.map",
+    "Map/HERO30.map",
+    "Map/HERO40.map",
+    "Map/HERO50.map",
+    "Map/HERO60.map",
+    "Map/HERO70.map",
+    "Map/HERO80.map",
+    "Map/HERO90.map"
+  ]
+}

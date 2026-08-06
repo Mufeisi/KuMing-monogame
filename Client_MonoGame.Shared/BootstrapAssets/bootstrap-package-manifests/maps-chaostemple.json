@@ -1,0 +1,14 @@
+{
+  "Name": "maps-chaostemple",
+  "Kind": "map-samples",
+  "Description": "\u5730\u56FE\u6837\u672C\u7EC4\uFF1Achaostemple",
+  "AssetCount": 3,
+  "TotalBytes": 220662,
+  "ManifestPath": "",
+  "InstallRootHint": "",
+  "Assets": [
+    "Map/chaostemple_3.map",
+    "Map/chaostemple_4.map",
+    "Map/chaostemple_5.map"
+  ]
+}

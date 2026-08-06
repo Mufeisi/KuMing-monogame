@@ -1,0 +1,12 @@
+{
+  "Name": "maps-ev",
+  "Kind": "map-samples",
+  "Description": "\u5730\u56FE\u6837\u672C\u7EC4\uFF1AEV",
+  "AssetCount": 1,
+  "TotalBytes": 34554,
+  "ManifestPath": "",
+  "InstallRootHint": "",
+  "Assets": [
+    "Map/EV002.map"
+  ]
+}

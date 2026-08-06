@@ -1,0 +1,13 @@
+{
+  "Name": "maps-hy01-hell",
+  "Kind": "map-samples",
+  "Description": "\u5730\u56FE\u6837\u672C\u7EC4\uFF1AHY01_hell",
+  "AssetCount": 2,
+  "TotalBytes": 246108,
+  "ManifestPath": "",
+  "InstallRootHint": "",
+  "Assets": [
+    "Map/HY01_hell101.map",
+    "Map/HY01_hell304.map"
+  ]
+}

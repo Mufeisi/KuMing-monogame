@@ -1,0 +1,15 @@
+{
+  "Name": "maps-eb",
+  "Kind": "map-samples",
+  "Description": "\u5730\u56FE\u6837\u672C\u7EC4\uFF1AEB",
+  "AssetCount": 4,
+  "TotalBytes": 307408,
+  "ManifestPath": "",
+  "InstallRootHint": "",
+  "Assets": [
+    "Map/EB011.map",
+    "Map/EB012.map",
+    "Map/EB013.map",
+    "Map/EB014.map"
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "Name": "lib-smtiles",
+  "Kind": "map-library",
+  "Description": "Data/Map/WemadeMir2/SmTiles.Lib",
+  "AssetCount": 1,
+  "TotalBytes": 660631,
+  "ManifestPath": "",
+  "InstallRootHint": "",
+  "Assets": [
+    "Data/Map/WemadeMir2/SmTiles.Lib"
+  ]
+}

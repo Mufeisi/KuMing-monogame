@@ -1,0 +1,12 @@
+{
+  "Name": "maps-hell302e",
+  "Kind": "map-samples",
+  "Description": "\u5730\u56FE\u6837\u672C\u7EC4\uFF1Ahell302e",
+  "AssetCount": 1,
+  "TotalBytes": 150054,
+  "ManifestPath": "",
+  "InstallRootHint": "",
+  "Assets": [
+    "Map/hell302e.map"
+  ]
+}

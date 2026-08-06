@@ -1,0 +1,12 @@
+{
+  "Name": "maps-sabuk-castle",
+  "Kind": "map-samples",
+  "Description": "\u5730\u56FE\u6837\u672C\u7EC4\uFF1ASABUK_CASTLE",
+  "AssetCount": 1,
+  "TotalBytes": 9369,
+  "ManifestPath": "",
+  "InstallRootHint": "",
+  "Assets": [
+    "Map/SABUK_CASTLE2.map"
+  ]
+}

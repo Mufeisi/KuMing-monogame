@@ -1,0 +1,29 @@
+{
+  "Name": "maps-ev09r",
+  "Kind": "map-samples",
+  "Description": "\u5730\u56FE\u6837\u672C\u7EC4\uFF1AEV09R",
+  "AssetCount": 18,
+  "TotalBytes": 1671366,
+  "ManifestPath": "",
+  "InstallRootHint": "",
+  "Assets": [
+    "Map/EV09R1.map",
+    "Map/EV09R11.map",
+    "Map/EV09R12.map",
+    "Map/EV09R13.map",
+    "Map/EV09R2.map",
+    "Map/EV09R21.map",
+    "Map/EV09R22.map",
+    "Map/EV09R23.map",
+    "Map/EV09R3.map",
+    "Map/EV09R31.map",
+    "Map/EV09R32.map",
+    "Map/EV09R33.map",
+    "Map/EV09R41.map",
+    "Map/EV09R42.map",
+    "Map/EV09R43.map",
+    "Map/EV09R51.map",
+    "Map/EV09R52.map",
+    "Map/EV09R53.map"
+  ]
+}

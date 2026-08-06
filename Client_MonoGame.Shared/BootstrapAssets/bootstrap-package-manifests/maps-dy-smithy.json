@@ -1,0 +1,12 @@
+{
+  "Name": "maps-dy-smithy",
+  "Kind": "map-samples",
+  "Description": "\u5730\u56FE\u6837\u672C\u7EC4\uFF1ADY_Smithy",
+  "AssetCount": 1,
+  "TotalBytes": 15354,
+  "ManifestPath": "",
+  "InstallRootHint": "",
+  "Assets": [
+    "Map/DY_Smithy.map"
+  ]
+}

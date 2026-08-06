@@ -1,0 +1,12 @@
+{
+  "Name": "maps-dy-pharmacy",
+  "Kind": "map-samples",
+  "Description": "\u5730\u56FE\u6837\u672C\u7EC4\uFF1ADY_Pharmacy",
+  "AssetCount": 1,
+  "TotalBytes": 7254,
+  "ManifestPath": "",
+  "InstallRootHint": "",
+  "Assets": [
+    "Map/DY_Pharmacy.map"
+  ]
+}

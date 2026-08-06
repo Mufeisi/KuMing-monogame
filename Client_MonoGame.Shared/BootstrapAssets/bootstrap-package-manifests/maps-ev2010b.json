@@ -1,0 +1,21 @@
+{
+  "Name": "maps-ev2010b",
+  "Kind": "map-samples",
+  "Description": "\u5730\u56FE\u6837\u672C\u7EC4\uFF1AEV2010B",
+  "AssetCount": 10,
+  "TotalBytes": 60540,
+  "ManifestPath": "",
+  "InstallRootHint": "",
+  "Assets": [
+    "Map/EV2010B01.map",
+    "Map/EV2010B02.map",
+    "Map/EV2010B03.map",
+    "Map/EV2010B04.map",
+    "Map/EV2010B05.map",
+    "Map/EV2010B06.map",
+    "Map/EV2010B07.map",
+    "Map/EV2010B08.map",
+    "Map/EV2010B09.map",
+    "Map/EV2010B10.map"
+  ]
+}

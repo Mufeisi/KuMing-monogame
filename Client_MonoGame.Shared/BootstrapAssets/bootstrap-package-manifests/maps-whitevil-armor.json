@@ -1,0 +1,12 @@
+{
+  "Name": "maps-whitevil-armor",
+  "Kind": "map-samples",
+  "Description": "\u5730\u56FE\u6837\u672C\u7EC4\uFF1Awhitevil_armor",
+  "AssetCount": 1,
+  "TotalBytes": 37554,
+  "ManifestPath": "",
+  "InstallRootHint": "",
+  "Assets": [
+    "Map/whitevil_armor.map"
+  ]
+}

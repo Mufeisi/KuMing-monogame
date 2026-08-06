@@ -1,0 +1,21 @@
+{
+  "Name": "maps-bb",
+  "Kind": "map-samples",
+  "Description": "\u5730\u56FE\u6837\u672C\u7EC4\uFF1ABB",
+  "AssetCount": 10,
+  "TotalBytes": 375540,
+  "ManifestPath": "",
+  "InstallRootHint": "",
+  "Assets": [
+    "Map/BB01.map",
+    "Map/BB02.map",
+    "Map/BB03.map",
+    "Map/BB04.map",
+    "Map/BB05.map",
+    "Map/BB06.map",
+    "Map/BB07.map",
+    "Map/BB08.map",
+    "Map/BB09.map",
+    "Map/BB10.map"
+  ]
+}

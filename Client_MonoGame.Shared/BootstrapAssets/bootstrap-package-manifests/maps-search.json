@@ -1,0 +1,16 @@
+{
+  "Name": "maps-search",
+  "Kind": "map-samples",
+  "Description": "\u5730\u56FE\u6837\u672C\u7EC4\uFF1ASEARCH",
+  "AssetCount": 5,
+  "TotalBytes": 225270,
+  "ManifestPath": "",
+  "InstallRootHint": "",
+  "Assets": [
+    "Map/SEARCH01.map",
+    "Map/SEARCH02.map",
+    "Map/SEARCH03.map",
+    "Map/SEARCH04.map",
+    "Map/SEARCH05.map"
+  ]
+}

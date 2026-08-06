@@ -1,0 +1,12 @@
+{
+  "Name": "data-magicon",
+  "Kind": "data-library",
+  "Description": "Data/MagIcon.Lib",
+  "AssetCount": 1,
+  "TotalBytes": 243540,
+  "ManifestPath": "",
+  "InstallRootHint": "",
+  "Assets": [
+    "Data/MagIcon.Lib"
+  ]
+}

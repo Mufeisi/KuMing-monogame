@@ -1,0 +1,13 @@
+{
+  "Name": "maps-indun-sd-destroy",
+  "Kind": "map-samples",
+  "Description": "\u5730\u56FE\u6837\u672C\u7EC4\uFF1AInDun_SD_Destroy",
+  "AssetCount": 2,
+  "TotalBytes": 192108,
+  "ManifestPath": "",
+  "InstallRootHint": "",
+  "Assets": [
+    "Map/InDun_SD_Destroy30.map",
+    "Map/InDun_SD_Destroy70.map"
+  ]
+}

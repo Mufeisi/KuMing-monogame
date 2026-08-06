@@ -1,0 +1,19 @@
+{
+  "Name": "maps-anny2nd",
+  "Kind": "map-samples",
+  "Description": "\u5730\u56FE\u6837\u672C\u7EC4\uFF1AAnny2nd",
+  "AssetCount": 8,
+  "TotalBytes": 42752,
+  "ManifestPath": "",
+  "InstallRootHint": "",
+  "Assets": [
+    "Map/Anny2nd01.map",
+    "Map/Anny2nd02.map",
+    "Map/Anny2nd03.map",
+    "Map/Anny2nd04.map",
+    "Map/Anny2nd05.map",
+    "Map/Anny2nd06.map",
+    "Map/Anny2nd07.map",
+    "Map/Anny2nd08.map"
+  ]
+}

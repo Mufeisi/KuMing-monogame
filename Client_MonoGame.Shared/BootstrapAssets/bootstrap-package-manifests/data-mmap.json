@@ -1,0 +1,12 @@
+{
+  "Name": "data-mmap",
+  "Kind": "data-library",
+  "Description": "Data/MMap.Lib",
+  "AssetCount": 1,
+  "TotalBytes": 28096973,
+  "ManifestPath": "",
+  "InstallRootHint": "",
+  "Assets": [
+    "Data/MMap.Lib"
+  ]
+}

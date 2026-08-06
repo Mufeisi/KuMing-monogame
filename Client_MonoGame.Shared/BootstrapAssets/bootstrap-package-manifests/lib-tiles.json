@@ -1,0 +1,12 @@
+{
+  "Name": "lib-tiles",
+  "Kind": "map-library",
+  "Description": "Data/Map/WemadeMir2/Tiles.Lib",
+  "AssetCount": 1,
+  "TotalBytes": 450359772,
+  "ManifestPath": "",
+  "InstallRootHint": "",
+  "Assets": [
+    "Data/Map/WemadeMir2/Tiles.Lib"
+  ]
+}

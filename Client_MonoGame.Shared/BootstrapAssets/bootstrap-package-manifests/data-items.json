@@ -1,0 +1,12 @@
+{
+  "Name": "data-items",
+  "Kind": "data-library",
+  "Description": "Data/Items.Lib",
+  "AssetCount": 1,
+  "TotalBytes": 4039217,
+  "ManifestPath": "",
+  "InstallRootHint": "",
+  "Assets": [
+    "Data/Items.Lib"
+  ]
+}

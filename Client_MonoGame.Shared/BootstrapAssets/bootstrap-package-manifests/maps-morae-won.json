@@ -1,0 +1,12 @@
+{
+  "Name": "maps-morae-won",
+  "Kind": "map-samples",
+  "Description": "\u5730\u56FE\u6837\u672C\u7EC4\uFF1Amorae_won",
+  "AssetCount": 1,
+  "TotalBytes": 54054,
+  "ManifestPath": "",
+  "InstallRootHint": "",
+  "Assets": [
+    "Map/morae_won.map"
+  ]
+}

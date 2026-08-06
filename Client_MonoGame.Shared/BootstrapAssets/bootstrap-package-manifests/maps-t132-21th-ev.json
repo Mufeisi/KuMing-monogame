@@ -1,0 +1,13 @@
+{
+  "Name": "maps-t132-21th-ev",
+  "Kind": "map-samples",
+  "Description": "\u5730\u56FE\u6837\u672C\u7EC4\uFF1AT132_21th_ev",
+  "AssetCount": 2,
+  "TotalBytes": 75108,
+  "ManifestPath": "",
+  "InstallRootHint": "",
+  "Assets": [
+    "Map/T132_21th_ev_1.map",
+    "Map/T132_21th_ev_2.map"
+  ]
+}
