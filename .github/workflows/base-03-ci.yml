@@ -32,6 +32,9 @@ jobs:
         with:
           global-json-file: global.json
 
+      - name: Bootstrap locked workload set
+        run: dotnet workload restore Shared/Shared.csproj --verbosity minimal
+
       - name: Cache NuGet packages
         uses: actions/cache@v4
         with:
@@ -57,7 +60,7 @@ jobs:
 
   android-release:
     name: Android Release arm64 AOT publish
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     timeout-minutes: 60
     steps:
       - name: Checkout
@@ -86,12 +89,15 @@ jobs:
             android-nuget-${{ runner.os }}-
 
       - name: Install Android workload
+        shell: pwsh
         run: dotnet workload install maui-android
 
       - name: Show SDK and workload state
+        shell: pwsh
         run: dotnet --info
 
       - name: Publish Android Release arm64 AOT package
+        shell: pwsh
         run: >-
           dotnet publish Client_MonoGame.Android/Client_MonoGame.Android.csproj
           -f net10.0-android
@@ -125,6 +131,9 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           global-json-file: global.json
+
+      - name: Bootstrap locked workload set
+        run: dotnet workload restore Shared/Shared.csproj --verbosity minimal
 
       - name: Cache NuGet packages
         uses: actions/cache@v4
