@@ -180,6 +180,7 @@ namespace MonoShare.MirScenes
         public static readonly GameShopState MobileGameShopState = new GameShopState();
         public static IReadOnlyList<GameShopItem> GameShopInfoList => MobileGameShopState.Items;
         public static readonly MobileHeroState MobileHeroState = new MobileHeroState();
+        public static readonly MobileMentorState MobileMentorState = new MobileMentorState();
         public static List<ClientRecipeInfo> RecipeInfoList = new List<ClientRecipeInfo>();
 
         public List<ClientBuff> Buffs = new List<ClientBuff>();
@@ -226,7 +227,9 @@ namespace MonoShare.MirScenes
         {
             MobileGameShopState.ResetForSession();
             MobileHeroState.ResetForSession();
+            MobileMentorState.ResetForSession();
             MonoShare.FairyGuiHost.MarkMobileShopDirty();
+            MonoShare.FairyGuiHost.MarkMobileMentorDirty();
 
             if (Settings.LogErrors && Environment.OSVersion.Platform != PlatformID.Win32NT)
                 CMain.SaveLog("进入地图：GameScene 构造开始（v20260328-asynclog）。");
@@ -501,6 +504,64 @@ namespace MonoShare.MirScenes
             }
         }
 
+        internal bool TryBeginMobileMentorRequest(string name)
+        {
+            if (!MobileMentorState.BeginMentorRequest(name))
+            {
+                MobileReceiveChat(MobileMentorState.Error ?? "师徒请求无效。", ChatType.System);
+                return false;
+            }
+
+            Network.Enqueue(new C.AddMentor { Name = name.Trim() });
+            MonoShare.FairyGuiHost.MarkMobileMentorDirty();
+            return true;
+        }
+
+        internal void RespondToMobileMentorRequest(bool accepted)
+        {
+            if (!MobileMentorState.ApplyMentorRequestReply(accepted))
+                return;
+
+            Network.Enqueue(new C.MentorReply { AcceptInvite = accepted });
+            MonoShare.FairyGuiHost.MarkMobileMentorDirty();
+        }
+
+        internal void ToggleMobileMentorRequests()
+        {
+            Network.Enqueue(new C.AllowMentor());
+            MobileReceiveChat("已切换拜师请求开关。", ChatType.System);
+        }
+
+        internal bool BeginMobileMentorCancellation()
+        {
+            if (!MobileMentorState.BeginCancelConfirmation())
+            {
+                MobileReceiveChat(MobileMentorState.Error ?? "当前没有师徒关系。", ChatType.System);
+                return false;
+            }
+
+            MonoShare.FairyGuiHost.MarkMobileMentorDirty();
+            return true;
+        }
+
+        internal bool ConfirmMobileMentorCancellation()
+        {
+            if (!MobileMentorState.ConfirmCancelMentorship())
+                return false;
+
+            Network.Enqueue(new C.CancelMentor());
+            MobileReceiveChat("已发送解除师徒关系请求。", ChatType.System);
+            return true;
+        }
+
+        internal bool RejectMobileMentorCancellation()
+        {
+            if (!MobileMentorState.RejectCancelMentorship())
+                return false;
+
+            return true;
+        }
+
         public void ToggleMobileMagicOverlay()
         {
             MapControl?.CancelMagicLocationSelection(showMessage: false);
@@ -637,14 +698,25 @@ namespace MonoShare.MirScenes
             if (Environment.OSVersion.Platform == PlatformID.Win32NT)
                 return;
 
-            if (MonoShare.FairyGuiHost.TryToggleMobileWindowByOverrideSpecOnly("Mentor", out bool nowVisible))
+            if (MonoShare.FairyGuiHost.TryToggleMobileWindowByKeywords(
+                    "Mentor",
+                    new[] { "师徒", "Mentor", "Mentee", "拜师", "师傅", "徒弟" },
+                    out bool nowVisible))
             {
                 if (nowVisible)
+                {
                     MonoShare.FairyGuiHost.HideAllMobileWindowsExcept("Mentor");
+                    MobileMentorState.SetLocalLevel(User?.Level ?? 0);
+                    MonoShare.FairyGuiHost.MarkMobileMentorDirty();
+                }
+                else
+                {
+                    MonoShare.FairyGuiHost.ResetMobileMentorForHide();
+                }
                 return;
             }
 
-            OutputMessage("当前 FairyGUI publish 未包含【师徒】窗口，请在 UI 工程补做后重新发布，或在 Mir2Config.ini [FairyGUI] MobileWindow.Mentor=UI/组件名 覆盖指定。");
+            OutputMessage("当前 FairyGUI publish 未包含【师徒】窗口，请在 UI 工程补做后重新发布，或在 Mir2Config.ini [FairyGUI] MobileWindow.Mentor=UI/组件名 覆盖指定组件。");
         }
  
         internal void ShowMobileGroupOverlay()
@@ -6446,13 +6518,20 @@ namespace MonoShare.MirScenes
             if (p == null)
                 return;
 
+            MobileMentorState.SetLocalLevel(User?.Level ?? 0);
+            if (!MobileMentorState.ApplyMentorRequest(p))
+                return;
+
+            if (Environment.OSVersion.Platform != PlatformID.Win32NT)
+                MonoShare.FairyGuiHost.MarkMobileMentorDirty();
+
             string name = (p.Name ?? string.Empty).Trim();
             if (name.Length <= 0)
                 name = "对方";
 
             MirMessageBox messageBox = new MirMessageBox($"{name} (等级 {p.Level}) 向你拜师，是否同意？", MirMessageBoxButtons.YesNo);
-            messageBox.YesButton.Click += (o, e) => Network.Enqueue(new C.MentorReply { AcceptInvite = true });
-            messageBox.NoButton.Click += (o, e) => Network.Enqueue(new C.MentorReply { AcceptInvite = false });
+            messageBox.YesButton.Click += (o, e) => RespondToMobileMentorRequest(accepted: true);
+            messageBox.NoButton.Click += (o, e) => RespondToMobileMentorRequest(accepted: false);
             messageBox.Show();
         }
 
@@ -6989,7 +7068,12 @@ namespace MonoShare.MirScenes
 
         private void MentorUpdate(S.MentorUpdate p)
         {
-            // TODO: 将师徒更新绑定到 FairyGUI 师徒窗口
+            MobileMentorState.SetLocalLevel(User?.Level ?? 0);
+            if (!MobileMentorState.ApplyMentorUpdate(p, User?.Level ?? 0))
+                return;
+
+            if (Environment.OSVersion.Platform != PlatformID.Win32NT)
+                MonoShare.FairyGuiHost.MarkMobileMentorDirty();
         }
 
         private void GameShopUpdate(S.GameShopInfo p)

@@ -1278,6 +1278,8 @@ namespace MonoShare
                 if (component == null || component._disposed)
                     continue;
 
+                if (string.Equals(key, "Mentor", StringComparison.OrdinalIgnoreCase))
+                    ResetMobileMentorBindings();
                 component.visible = false;
             }
         }
@@ -1290,6 +1292,8 @@ namespace MonoShare
                 if (component == null || component._disposed)
                     continue;
 
+                if (string.Equals(pair.Key, "Mentor", StringComparison.OrdinalIgnoreCase))
+                    ResetMobileMentorBindings();
                 component.visible = false;
             }
         }
@@ -1305,6 +1309,8 @@ namespace MonoShare
             if (component == null || component._disposed)
                 return false;
 
+            if (string.Equals(windowKey, "Mentor", StringComparison.OrdinalIgnoreCase))
+                ResetMobileMentorBindings();
             component.visible = false;
             return true;
         }
@@ -1371,6 +1377,8 @@ namespace MonoShare
 
             try
             {
+                if (string.Equals(topKey, "Mentor", StringComparison.OrdinalIgnoreCase))
+                    ResetMobileMentorBindings();
                 topWindow.visible = false;
 
                 if (Settings.DebugMode && !string.IsNullOrWhiteSpace(topKey))
@@ -1405,6 +1413,7 @@ namespace MonoShare
             ResetMobileGuildBindings();
             ResetMobileGroupBindings();
             ResetMobileHeroBindings();
+            ResetMobileMentorBindings();
 
             foreach (KeyValuePair<string, GComponent> pair in MobileWindows)
             {
@@ -1588,6 +1597,11 @@ namespace MonoShare
                         if (!TryCreateMobileNpcFallbackWindow(out component, out resolveInfo))
                             return false;
                     }
+                    else if (string.Equals(windowKey, "Mentor", StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (!TryCreateMobileMentorFallbackWindow(out component, out resolveInfo))
+                            return false;
+                    }
                     else
                     {
                         return false;
@@ -1665,7 +1679,11 @@ namespace MonoShare
                 }
 
                 if (!TryCreateMobileWindowComponent(windowKey, keywords, out GComponent component, out string resolveInfo))
-                    return false;
+                {
+                    if (!string.Equals(windowKey, "Mentor", StringComparison.OrdinalIgnoreCase) ||
+                        !TryCreateMobileMentorFallbackWindow(out component, out resolveInfo))
+                        return false;
+                }
 
                 GComponent layer = _mobileOverlaySafeAreaRoot != null && !_mobileOverlaySafeAreaRoot._disposed
                     ? _mobileOverlaySafeAreaRoot
@@ -1923,6 +1941,11 @@ namespace MonoShare
             {
                 TryBindMobileHeroWindowIfDue(windowKey, window, resolveInfo);
                 TryRefreshMobileHeroIfDue(force: true);
+            }
+            else if (string.Equals(windowKey, "Mentor", StringComparison.OrdinalIgnoreCase))
+            {
+                TryBindMobileMentorWindowIfDue(windowKey, window, resolveInfo);
+                TryRefreshMobileMentorIfDue(force: true);
             }
             else if (string.Equals(windowKey, "Npc", StringComparison.OrdinalIgnoreCase))
             {
@@ -10979,6 +11002,7 @@ namespace MonoShare
                   TryAutoClearMobileMailItemLocksIfDue();
                   TryRefreshMobileMagicIfDue(force: false);
                   TryRefreshMobileHeroIfDue(force: false);
+                  TryRefreshMobileMentorIfDue(force: false);
                   TryRefreshMobileStorageIfDue(force: false);
                   TryApplyMobileInventoryStorageSideBySideLayoutIfDue(force: false);
                  TryRefreshMobileSystemIfDue(force: false);

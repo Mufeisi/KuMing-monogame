@@ -43,12 +43,14 @@
 | 功能 | 客户端请求 | 服务端响应 | Android 处理 | UI 绑定 | 真机 | 优先级 |
 |---|---|---|---|---|---|---|
 | 商城（GameShop） | 有 | 有 | 部分 | 部分 | 待验收 | ANDROID-01 |
-| 师徒（Hero/ManageHeroes） | 有 | 有 | 部分 | 缺失 | 未通过 | ANDROID-02 |
+| 师徒（Mentor/Mentee） | 有 | 有 | 部分 | 部分 | 待验收 | ANDROID-02 |
 | 关系（Marriage 系） | 有 | 有 | 部分 | 缺失 | 未通过 | ANDROID-03 |
 | 坐骑（Mount） | 有 | 有 | 部分 | 缺失 | 未通过 | ANDROID-04 |
 | 物品封印/租赁 | 有 | 有 | 部分 | 缺失 | 未通过 | ANDROID-05 |
 | 钓鱼 | 有 | 有 | 部分 | 缺失 | 未通过 | ANDROID-06 |
 | 活动/赏金 | 有 | 有 | 部分 | 缺失 | 未通过 | ANDROID-07 |
+
+> 注：Hero/ManageHeroes 已另行补齐；ANDROID-02 的师徒验收仅指 Mentor/Mentee，不能与英雄管理混称。
 
 **门禁**：上述目标功能**无未知包**（`ServerPacketIds` 差集 = 275 − 246 = 29，逐个确认归属），请求→响应→状态→UI→真机全链路通过。**不以"所有枚举都有 case"为门禁。**
 
