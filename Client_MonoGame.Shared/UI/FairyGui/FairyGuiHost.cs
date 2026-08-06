@@ -1287,12 +1287,15 @@ namespace MonoShare
                     ResetMobileMarriagePromptForHide();
                     continue;
                 }
+                else if (string.Equals(key, "SealRental", StringComparison.OrdinalIgnoreCase))
+                    ResetMobileSealRentalBindings();
                 component.visible = false;
             }
         }
 
         public static void HideAllMobileWindows()
         {
+            TryCancelMobileSealRentalBeforeUserClose();
             foreach (KeyValuePair<string, GComponent> pair in MobileWindows)
             {
                 GComponent component = pair.Value;
@@ -1308,6 +1311,8 @@ namespace MonoShare
                     ResetMobileMarriagePromptForHide();
                     continue;
                 }
+                else if (string.Equals(pair.Key, "SealRental", StringComparison.OrdinalIgnoreCase))
+                    ResetMobileSealRentalBindings();
                 component.visible = false;
             }
         }
@@ -1323,6 +1328,9 @@ namespace MonoShare
             if (component == null || component._disposed)
                 return false;
 
+            if (string.Equals(windowKey, "SealRental", StringComparison.OrdinalIgnoreCase))
+                TryCancelMobileSealRentalBeforeUserClose();
+
             if (string.Equals(windowKey, "Mentor", StringComparison.OrdinalIgnoreCase))
                 ResetMobileMentorBindings();
             else if (string.Equals(windowKey, "Mount", StringComparison.OrdinalIgnoreCase))
@@ -1332,6 +1340,8 @@ namespace MonoShare
                 ResetMobileMarriagePromptForHide();
                 return true;
             }
+            else if (string.Equals(windowKey, "SealRental", StringComparison.OrdinalIgnoreCase))
+                ResetMobileSealRentalBindings();
             component.visible = false;
             return true;
         }
@@ -1407,6 +1417,11 @@ namespace MonoShare
                     ResetMobileMarriagePromptForHide();
                     return true;
                 }
+                else if (string.Equals(topKey, "SealRental", StringComparison.OrdinalIgnoreCase))
+                {
+                    TryCancelMobileSealRentalBeforeUserClose();
+                    ResetMobileSealRentalBindings();
+                }
                 topWindow.visible = false;
 
                 if (Settings.DebugMode && !string.IsNullOrWhiteSpace(topKey))
@@ -1422,6 +1437,7 @@ namespace MonoShare
         public static void CloseAllMobileWindows()
         {
             TryCancelMobileTextPrompt(invokeCancel: true);
+            TryCancelMobileSealRentalBeforeUserClose();
 
             ResetMobileChatBindings();
             ResetMobileInventoryBindings();
@@ -1445,6 +1461,7 @@ namespace MonoShare
             ResetMobileMountBindings();
             ResetMobileMarriageBindings();
             ResetMobileMarriagePromptForHide();
+            ResetMobileSealRentalBindings();
 
             foreach (KeyValuePair<string, GComponent> pair in MobileWindows)
             {
@@ -1459,6 +1476,20 @@ namespace MonoShare
             }
 
             MobileWindows.Clear();
+        }
+
+        private static void TryCancelMobileSealRentalBeforeUserClose()
+        {
+            try
+            {
+                if (GameScene.MobileSealRentalState.RentalSessionActive)
+                    GameScene.Scene?.TryCancelMobileRental();
+            }
+            catch (Exception ex)
+            {
+                if (Settings.LogErrors)
+                    CMain.SaveError("FairyGUI: 关闭封印/租赁窗口时取消租赁失败：" + ex.Message);
+            }
         }
 
         private static bool TryCreateMobileWindowComponent(string windowKey, string[] keywords, out GComponent component, out string resolveInfo)

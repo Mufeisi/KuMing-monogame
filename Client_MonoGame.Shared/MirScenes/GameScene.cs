@@ -183,6 +183,7 @@ namespace MonoShare.MirScenes
         public static readonly MobileMentorState MobileMentorState = new MobileMentorState();
         public static readonly MobileMarriageState MobileMarriageState = new MobileMarriageState();
         public static readonly MobileMountState MobileMountState = new MobileMountState();
+        public static readonly MobileSealRentalState MobileSealRentalState = new MobileSealRentalState();
         public static List<ClientRecipeInfo> RecipeInfoList = new List<ClientRecipeInfo>();
 
         public List<ClientBuff> Buffs = new List<ClientBuff>();
@@ -232,10 +233,12 @@ namespace MonoShare.MirScenes
             MobileMentorState.ResetForSession();
             MobileMarriageState.ResetForSession();
             MobileMountState.ResetForSession();
+            MobileSealRentalState.ResetForSession();
             MonoShare.FairyGuiHost.MarkMobileShopDirty();
             MonoShare.FairyGuiHost.MarkMobileMentorDirty();
             MonoShare.FairyGuiHost.MarkMobileMarriageDirty();
             MonoShare.FairyGuiHost.MarkMobileMountDirty();
+            MonoShare.FairyGuiHost.MarkMobileSealRentalDirty();
 
             if (Settings.LogErrors && Environment.OSVersion.Platform != PlatformID.Win32NT)
                 CMain.SaveLog("进入地图：GameScene 构造开始（v20260328-asynclog）。");
@@ -922,6 +925,189 @@ namespace MonoShare.MirScenes
             }
 
             OutputMessage("当前 FairyGUI 坐骑窗口暂不可用，请检查 UI publish 或 Mir2Config.ini [FairyGUI] MobileWindow.Mount 覆盖。");
+        }
+
+        public void ToggleMobileSealRentalOverlay()
+        {
+            MapControl?.CancelMagicLocationSelection(showMessage: false);
+
+            if (Environment.OSVersion.Platform == PlatformID.Win32NT)
+                return;
+
+            if (MonoShare.FairyGuiHost.TryToggleMobileSealRentalWindow(out bool nowVisible))
+            {
+                if (nowVisible)
+                {
+                    MonoShare.FairyGuiHost.HideAllMobileWindowsExcept("SealRental");
+                    // The server only sends the rented-item summary after this
+                    // explicit request; refresh it each time the window opens.
+                    Network.Enqueue(new C.GetRentedItems());
+                    MonoShare.FairyGuiHost.MarkMobileSealRentalDirty();
+                }
+                return;
+            }
+
+            OutputMessage("当前 FairyGUI 未能打开物品封印/租赁窗口，请检查 UI publish。");
+        }
+
+        internal bool TrySelectMobileSealMaterial(ulong uniqueId)
+        {
+            bool selected = MobileSealRentalState.SelectSealMaterial(uniqueId);
+            if (!selected)
+                MobileReceiveChat(MobileSealRentalState.Error ?? "封印：材料选择无效。", ChatType.System);
+            MonoShare.FairyGuiHost.MarkMobileSealRentalDirty();
+            return selected;
+        }
+
+        internal bool TrySelectMobileSealTarget(ulong uniqueId)
+        {
+            bool selected = MobileSealRentalState.SelectSealTarget(uniqueId);
+            if (!selected)
+                MobileReceiveChat(MobileSealRentalState.Error ?? "封印：目标选择无效。", ChatType.System);
+            MonoShare.FairyGuiHost.MarkMobileSealRentalDirty();
+            return selected;
+        }
+
+        internal bool TryConfirmMobileSeal()
+        {
+            UserItem material = FindMobileInventoryItem(MobileSealRentalState.SealMaterialId);
+            UserItem target = FindMobileInventoryItem(MobileSealRentalState.SealTargetId);
+            if (!MobileSealRentalState.IsSealMaterial(material) ||
+                !MobileSealRentalState.IsSealTarget(target))
+            {
+                MobileReceiveChat("封印：材料或目标已变化，请重新选择。", ChatType.System);
+                MobileSealRentalState.ClearSealSelection();
+                MonoShare.FairyGuiHost.MarkMobileSealRentalDirty();
+                return false;
+            }
+
+            if (!MobileSealRentalState.BeginSealRequest(CMain.Time))
+            {
+                MobileReceiveChat(MobileSealRentalState.Error ?? "封印：请求无效。", ChatType.System);
+                return false;
+            }
+
+            Network.Enqueue(new C.CombineItem
+            {
+                Grid = MirGridType.Inventory,
+                IDFrom = MobileSealRentalState.SealMaterialId,
+                IDTo = MobileSealRentalState.SealTargetId,
+            });
+            MonoShare.FairyGuiHost.MarkMobileSealRentalDirty();
+            return true;
+        }
+
+        internal bool TryBeginMobileRentalRequest()
+        {
+            if (!MobileSealRentalState.BeginRentalRequest(CMain.Time))
+            {
+                MobileReceiveChat(MobileSealRentalState.Error ?? "租赁：请求无效。", ChatType.System);
+                return false;
+            }
+
+            Network.Enqueue(new C.ItemRentalRequest());
+            MonoShare.FairyGuiHost.MarkMobileSealRentalDirty();
+            return true;
+        }
+
+        internal bool TrySetMobileRentalFee(uint amount)
+        {
+            if (!MobileSealRentalState.BeginRentalFee(amount, Gold, CMain.Time))
+            {
+                MobileReceiveChat(MobileSealRentalState.Error ??
+                    "租赁：租金必须大于0、不超过当前金币，并且当前处于租入流程。", ChatType.System);
+                return false;
+            }
+
+            Network.Enqueue(new C.ItemRentalFee { Amount = amount });
+            MonoShare.FairyGuiHost.MarkMobileSealRentalDirty();
+            return true;
+        }
+
+        internal bool TrySetMobileRentalPeriod(uint days)
+        {
+            if (!MobileSealRentalState.BeginRentalPeriod(days, CMain.Time))
+            {
+                MobileReceiveChat("租赁：租期必须在1至30天之间。", ChatType.System);
+                return false;
+            }
+
+            Network.Enqueue(new C.ItemRentalPeriod { Days = days });
+            MonoShare.FairyGuiHost.MarkMobileSealRentalDirty();
+            return true;
+        }
+
+        internal bool TryDepositMobileRentalItem(int from, ulong expectedUniqueId)
+        {
+            if (!MobileSealRentalState.TryValidateRentalItemSelection(User?.Inventory, from, expectedUniqueId, out _))
+            {
+                MobileReceiveChat("租赁：物品已变化或不符合出租条件，请重新选择。", ChatType.System);
+                MonoShare.FairyGuiHost.MarkMobileSealRentalDirty();
+                return false;
+            }
+
+            if (!MobileSealRentalState.BeginDeposit(from, 0, User?.Inventory, CMain.Time))
+            {
+                MobileReceiveChat("租赁：当前不能押入租赁物品。", ChatType.System);
+                return false;
+            }
+
+            Network.Enqueue(new C.DepositRentalItem { From = from, To = 0 });
+            MonoShare.FairyGuiHost.MarkMobileSealRentalDirty();
+            return true;
+        }
+
+        internal bool TryRetrieveMobileRentalItem(int to)
+        {
+            if (!MobileSealRentalState.BeginRetrieve(0, to, User?.Inventory, CMain.Time))
+            {
+                MobileReceiveChat("租赁：当前不能取回租赁物品。", ChatType.System);
+                return false;
+            }
+
+            Network.Enqueue(new C.RetrieveRentalItem { From = 0, To = to });
+            MonoShare.FairyGuiHost.MarkMobileSealRentalDirty();
+            return true;
+        }
+
+        internal bool TryLockMobileRentalFee()
+        {
+            if (!MobileSealRentalState.BeginLockFee(CMain.Time))
+                return false;
+
+            Network.Enqueue(new C.ItemRentalLockFee());
+            MonoShare.FairyGuiHost.MarkMobileSealRentalDirty();
+            return true;
+        }
+
+        internal bool TryLockMobileRentalItem()
+        {
+            if (!MobileSealRentalState.BeginLockItem(CMain.Time))
+                return false;
+
+            Network.Enqueue(new C.ItemRentalLockItem());
+            MonoShare.FairyGuiHost.MarkMobileSealRentalDirty();
+            return true;
+        }
+
+        internal bool TryConfirmMobileRental()
+        {
+            if (!MobileSealRentalState.BeginConfirmRental(CMain.Time))
+                return false;
+
+            Network.Enqueue(new C.ConfirmItemRental());
+            MonoShare.FairyGuiHost.MarkMobileSealRentalDirty();
+            return true;
+        }
+
+        internal bool TryCancelMobileRental()
+        {
+            if (!MobileSealRentalState.BeginCancelRental(CMain.Time))
+                return false;
+
+            Network.Enqueue(new C.CancelItemRental());
+            MonoShare.FairyGuiHost.MarkMobileSealRentalDirty();
+            return true;
         }
 
         public void ToggleMobileMentorOverlay()
@@ -1894,6 +2080,12 @@ namespace MonoShare.MirScenes
                 MonoShare.FairyGuiHost.MarkMobileMountDirty();
             }
 
+            if (MobileSealRentalState.Tick(CMain.Time) &&
+                Environment.OSVersion.Platform != PlatformID.Win32NT)
+            {
+                MonoShare.FairyGuiHost.MarkMobileSealRentalDirty();
+            }
+
             if (MapControl == null || User == null)
                 return;
 
@@ -2575,6 +2767,9 @@ namespace MonoShare.MirScenes
                 case (short)ServerPacketIds.CombineItem:
                     CombineItem((S.CombineItem)p);
                     break;
+                case (short)ServerPacketIds.ItemSealChanged:
+                    ItemSealChanged((S.ItemSealChanged)p);
+                    break;
                 case (short)ServerPacketIds.ItemUpgraded:
                     ItemUpgraded((S.ItemUpgraded)p);
                     break;
@@ -2845,6 +3040,13 @@ namespace MonoShare.MirScenes
                     MonoShare.FairyGuiHost.MarkMobileMountDirty();
             }
 
+            if (p != null && p.Type == ChatType.System &&
+                MobileSealRentalState.ApplyServerSystemMessage(p.Message))
+            {
+                if (Environment.OSVersion.Platform != PlatformID.Win32NT)
+                    MonoShare.FairyGuiHost.MarkMobileSealRentalDirty();
+            }
+
             MobileReceiveChat(p.Message, p.Type);
         }
         private void ObjectPlayer(S.ObjectPlayer p)
@@ -3055,21 +3257,83 @@ namespace MonoShare.MirScenes
 
         private void CombineItem(S.CombineItem p)
         {
-            //MirItemCell fromCell = InventoryDialog.GetCell(p.IDFrom) ?? BeltDialog.GetCell(p.IDFrom);
-            //MirItemCell toCell = InventoryDialog.GetCell(p.IDTo) ?? BeltDialog.GetCell(p.IDTo);
+            if (p == null)
+                return;
 
-            //if (toCell == null || fromCell == null) return;
+            MobileSealRentalState.ApplyCombineResult(p);
 
-            //toCell.Locked = false;
-            //fromCell.Locked = false;
+            if (p.Success && p.Grid == MirGridType.Inventory && User?.Inventory != null)
+            {
+                UserItem source = null;
+                UserItem target = null;
+                int sourceIndex = -1;
+                int targetIndex = -1;
 
-            //if (p.Destroy) toCell.Item = null;
+                for (int i = 0; i < User.Inventory.Length; i++)
+                {
+                    UserItem item = User.Inventory[i];
+                    if (item == null)
+                        continue;
+                    if (item.UniqueID == p.IDFrom)
+                    {
+                        source = item;
+                        sourceIndex = i;
+                    }
+                    else if (item.UniqueID == p.IDTo)
+                    {
+                        target = item;
+                        targetIndex = i;
+                    }
+                }
 
-            //if (!p.Success) return;
+                if (source != null && sourceIndex >= 0)
+                {
+                    if (source.Count > 1)
+                        source.Count--;
+                    else
+                        User.Inventory[sourceIndex] = null;
+                }
 
-            //fromCell.Item = null;
+                if (p.Destroy && target != null && targetIndex >= 0)
+                    User.Inventory[targetIndex] = null;
 
-            //User.RefreshStats();
+                User.RefreshStats();
+            }
+
+            if (Environment.OSVersion.Platform != PlatformID.Win32NT)
+                MonoShare.FairyGuiHost.MarkMobileSealRentalDirty();
+        }
+
+        private void ItemSealChanged(S.ItemSealChanged p)
+        {
+            if (p == null)
+                return;
+
+            MobileSealRentalState.ApplyItemSealChanged(p);
+            UserItem item = FindMobileInventoryItem(p.UniqueID);
+            if (item != null)
+            {
+                item.SealedInfo ??= new SealedInfo();
+                item.SealedInfo.ExpiryDate = p.ExpiryDate;
+            }
+
+            if (Environment.OSVersion.Platform != PlatformID.Win32NT)
+                MonoShare.FairyGuiHost.MarkMobileSealRentalDirty();
+        }
+
+        private UserItem FindMobileInventoryItem(ulong uniqueId)
+        {
+            if (uniqueId == 0 || User?.Inventory == null)
+                return null;
+
+            for (int i = 0; i < User.Inventory.Length; i++)
+            {
+                UserItem item = User.Inventory[i];
+                if (item != null && item.UniqueID == uniqueId)
+                    return item;
+            }
+
+            return null;
         }
 
         private void MergeItem(S.MergeItem p)
@@ -4316,6 +4580,12 @@ namespace MonoShare.MirScenes
         {
             Gold -= p.Gold;
             SoundManager.PlaySound(SoundList.Gold);
+
+            if (Environment.OSVersion.Platform != PlatformID.Win32NT &&
+                MobileSealRentalState.ApplyLocalGoldLoss(p.Gold))
+            {
+                MonoShare.FairyGuiHost.MarkMobileSealRentalDirty();
+            }
         }
         private void GainedCredit(S.GainedCredit p)
         {
@@ -10450,131 +10720,114 @@ namespace MonoShare.MirScenes
 
         private void RentedItems(S.GetRentedItems p)
         {
-            //ItemRentalDialog.ReceiveRentedItems(p.RentedItems);
+            MobileSealRentalState.ApplyRentedItems(p);
+            if (Environment.OSVersion.Platform != PlatformID.Win32NT)
+                MonoShare.FairyGuiHost.MarkMobileSealRentalDirty();
         }
 
         private void ItemRentalRequest(S.ItemRentalRequest p)
         {
-            //if (!p.Renting)
-            //{
-            //    GuestItemRentDialog.SetGuestName(p.Name);
-            //    ItemRentingDialog.OpenItemRentalDialog();
-            //}
-            //else
-            //{
-            //    GuestItemRentingDialog.SetGuestName(p.Name);
-            //    ItemRentDialog.OpenItemRentDialog();
-            //}
-
-            //ItemRentalDialog.Visible = false;
+            if (MobileSealRentalState.ApplyRentalRequest(p))
+            {
+                if (Environment.OSVersion.Platform != PlatformID.Win32NT)
+                {
+                    MonoShare.FairyGuiHost.MarkMobileSealRentalDirty();
+                    MonoShare.FairyGuiHost.TryShowMobileSealRentalWindow();
+                    MonoShare.FairyGuiHost.HideAllMobileWindowsExcept("SealRental");
+                }
+            }
         }
 
         private void ItemRentalFee(S.ItemRentalFee p)
         {
-            //GuestItemRentDialog.SetGuestFee(p.Amount);
-            //ItemRentDialog.RefreshInterface();
+            MobileSealRentalState.ApplyRentalFee(p);
+            if (Environment.OSVersion.Platform != PlatformID.Win32NT)
+                MonoShare.FairyGuiHost.MarkMobileSealRentalDirty();
         }
 
         private void ItemRentalPeriod(S.ItemRentalPeriod p)
         {
-            //GuestItemRentingDialog.GuestRentalPeriod = p.Days;
-            //ItemRentingDialog.RefreshInterface();
+            MobileSealRentalState.ApplyRentalPeriod(p);
+            if (Environment.OSVersion.Platform != PlatformID.Win32NT)
+                MonoShare.FairyGuiHost.MarkMobileSealRentalDirty();
         }
 
         private void DepositRentalItem(S.DepositRentalItem p)
         {
-            //var fromCell = p.From < User.BeltIdx ? BeltDialog.Grid[p.From] : InventoryDialog.Grid[p.From - User.BeltIdx];
-            //var toCell = ItemRentingDialog.ItemCell;
-
-            //if (toCell == null || fromCell == null)
-            //    return;
-
-            //toCell.Locked = false;
-            //fromCell.Locked = false;
-
-            //if (!p.Success)
-            //    return;
-
-            //toCell.Item = fromCell.Item;
-            //fromCell.Item = null;
-            //User.RefreshStats();
-
-            //if (ItemRentingDialog.RentalPeriod == 0)
-            //    ItemRentingDialog.InputRentalPeroid();
+            bool accepted = MobileSealRentalState.ApplyDeposit(p, User?.Inventory);
+            if (accepted && p != null && p.Success)
+                User?.RefreshStats();
+            if (Environment.OSVersion.Platform != PlatformID.Win32NT)
+                MonoShare.FairyGuiHost.MarkMobileSealRentalDirty();
         }
 
         private void RetrieveRentalItem(S.RetrieveRentalItem p)
         {
-            //var fromCell = ItemRentingDialog.ItemCell;
-            //var toCell = p.To < User.BeltIdx ? BeltDialog.Grid[p.To] : InventoryDialog.Grid[p.To - User.BeltIdx];
-
-            //if (toCell == null || fromCell == null)
-            //    return;
-
-            //toCell.Locked = false;
-            //fromCell.Locked = false;
-
-            //if (!p.Success)
-            //    return;
-
-            //toCell.Item = fromCell.Item;
-            //fromCell.Item = null;
-            User.RefreshStats();
+            bool accepted = MobileSealRentalState.ApplyRetrieve(p, User?.Inventory);
+            if (accepted && p != null && p.Success)
+                User?.RefreshStats();
+            if (Environment.OSVersion.Platform != PlatformID.Win32NT)
+                MonoShare.FairyGuiHost.MarkMobileSealRentalDirty();
         }
 
         private void UpdateRentalItem(S.UpdateRentalItem p)
         {
-            //GuestItemRentingDialog.GuestLoanItem = p.LoanItem;
-            //ItemRentDialog.RefreshInterface();
+            MobileSealRentalState.ApplyRentalUpdate(p);
+            if (Environment.OSVersion.Platform != PlatformID.Win32NT)
+                MonoShare.FairyGuiHost.MarkMobileSealRentalDirty();
         }
 
         private void CancelItemRental(S.CancelItemRental p)
         {
-            User.RentalGoldLocked = false;
-            User.RentalItemLocked = false;
+            MobileSealRentalState.ApplyCancelRental();
+            if (User != null)
+            {
+                User.RentalGoldLocked = false;
+                User.RentalItemLocked = false;
+            }
 
-            //ItemRentingDialog.Reset();
-            //ItemRentDialog.Reset();
-
-            //var messageBox = new MirMessageBox("物品交易取消.\r\n" +
-            //                                   "要完成物品交易，请在整个交易过程中面对对方.");
-            //messageBox.Show();
+            if (Environment.OSVersion.Platform != PlatformID.Win32NT)
+                MonoShare.FairyGuiHost.MarkMobileSealRentalDirty();
         }
 
         private void ItemRentalLock(S.ItemRentalLock p)
         {
-            if (!p.Success)
-                return;
+            MobileSealRentalState.ApplyRentalLock(p);
+            if (p != null && p.Success && User != null)
+            {
+                User.RentalGoldLocked = p.GoldLocked;
+                User.RentalItemLocked = p.ItemLocked;
+            }
 
-            User.RentalGoldLocked = p.GoldLocked;
-            User.RentalItemLocked = p.ItemLocked;
-
-            //if (User.RentalGoldLocked)
-            //    ItemRentDialog.Lock();
-            //else if (User.RentalItemLocked)
-            //    ItemRentingDialog.Lock();
+            if (Environment.OSVersion.Platform != PlatformID.Win32NT)
+                MonoShare.FairyGuiHost.MarkMobileSealRentalDirty();
         }
 
         private void ItemRentalPartnerLock(S.ItemRentalPartnerLock p)
         {
-            //if (p.GoldLocked)
-            //    GuestItemRentDialog.Lock();
-            //else if (p.ItemLocked)
-            //    GuestItemRentingDialog.Lock();
+            MobileSealRentalState.ApplyRentalPartnerLock(p);
+            if (Environment.OSVersion.Platform != PlatformID.Win32NT)
+                MonoShare.FairyGuiHost.MarkMobileSealRentalDirty();
         }
 
         private void CanConfirmItemRental(S.CanConfirmItemRental p)
         {
-            //ItemRentingDialog.EnableConfirmButton();
+            MobileSealRentalState.ApplyCanConfirmRental();
+            if (Environment.OSVersion.Platform != PlatformID.Win32NT)
+                MonoShare.FairyGuiHost.MarkMobileSealRentalDirty();
         }
 
         private void ConfirmItemRental(S.ConfirmItemRental p)
         {
-            User.RentalGoldLocked = false;
-            User.RentalItemLocked = false;
+            MobileSealRentalState.ApplyConfirmRental();
+            if (User != null)
+            {
+                User.RentalGoldLocked = false;
+                User.RentalItemLocked = false;
+            }
 
-            //ItemRentingDialog.Reset();
-            //ItemRentDialog.Reset();
+            if (Environment.OSVersion.Platform != PlatformID.Win32NT)
+                MonoShare.FairyGuiHost.MarkMobileSealRentalDirty();
         }
 
         private void OpenBrowser(S.OpenBrowser p)

@@ -3,7 +3,7 @@ using System;
 namespace MonoShare;
 
 /// <summary>
-/// Bounds for the three Android HUD fallback actions that are created when a
+/// Bounds for Android HUD fallback actions that are created when a
 /// published package does not expose a matching target.  Keeping the offsets
 /// in one small seam makes the fallback layout reviewable without instantiating
 /// FairyGUI objects.
@@ -39,6 +39,12 @@ internal static class MobileMainHudFallbackLayout
     // existing bottom-right safe-area margin used by the other two buttons.
     internal static MobileMainHudFallbackBounds Mount(float rootWidth, float rootHeight) =>
         Create(rootWidth, rootHeight, bottomOffset: 130F);
+
+    // Keep the seal/rental entry below the mount fallback so each generated
+    // action remains independently touchable on packages without a matching
+    // published HUD button.
+    internal static MobileMainHudFallbackBounds SealRental(float rootWidth, float rootHeight) =>
+        Create(rootWidth, rootHeight, bottomOffset: 186F);
 
     private static MobileMainHudFallbackBounds Create(float rootWidth, float rootHeight, float bottomOffset)
     {

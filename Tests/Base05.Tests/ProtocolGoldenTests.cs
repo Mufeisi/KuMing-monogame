@@ -49,4 +49,32 @@ public sealed class ProtocolGoldenTests
             SharePacket.IsServer = previousShareIsServer;
         }
     }
+
+    [Fact]
+    public void Rental_slot_responses_round_trip_through_shared_wire_codec()
+    {
+        var deposit = new global::ServerPackets.DepositRentalItem { From = 12, To = 0, Success = true };
+        var retrieve = new global::ServerPackets.RetrieveRentalItem { From = 0, To = 7, Success = false };
+        bool previousIsServer = global::Packet.IsServer;
+        try
+        {
+            global::Packet.IsServer = false;
+            var parsedDeposit = Assert.IsType<global::ServerPackets.DepositRentalItem>(
+                global::Packet.ReceivePacket(deposit.GetPacketBytes().ToArray(), out byte[] depositExtra));
+            var parsedRetrieve = Assert.IsType<global::ServerPackets.RetrieveRentalItem>(
+                global::Packet.ReceivePacket(retrieve.GetPacketBytes().ToArray(), out byte[] retrieveExtra));
+            Assert.Equal(12, parsedDeposit.From);
+            Assert.Equal(0, parsedDeposit.To);
+            Assert.True(parsedDeposit.Success);
+            Assert.Equal(0, parsedRetrieve.From);
+            Assert.Equal(7, parsedRetrieve.To);
+            Assert.False(parsedRetrieve.Success);
+            Assert.Empty(depositExtra);
+            Assert.Empty(retrieveExtra);
+        }
+        finally
+        {
+            global::Packet.IsServer = previousIsServer;
+        }
+    }
 }

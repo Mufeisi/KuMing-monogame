@@ -15,14 +15,19 @@ public sealed class MobileMountHudRegressionTests
         MobileMainHudFallbackBounds mentor = MobileMainHudFallbackLayout.Mentor(rootWidth, rootHeight);
         MobileMainHudFallbackBounds relationship = MobileMainHudFallbackLayout.Relationship(rootWidth, rootHeight);
         MobileMainHudFallbackBounds mount = MobileMainHudFallbackLayout.Mount(rootWidth, rootHeight);
+        MobileMainHudFallbackBounds sealRental = MobileMainHudFallbackLayout.SealRental(rootWidth, rootHeight);
 
         AssertSafeArea(mentor, rootWidth, rootHeight);
         AssertSafeArea(relationship, rootWidth, rootHeight);
         AssertSafeArea(mount, rootWidth, rootHeight);
+        AssertSafeArea(sealRental, rootWidth, rootHeight);
 
         Assert.False(Overlaps(mentor, relationship));
         Assert.False(Overlaps(mentor, mount));
         Assert.False(Overlaps(relationship, mount));
+        Assert.False(Overlaps(sealRental, mentor));
+        Assert.False(Overlaps(sealRental, relationship));
+        Assert.False(Overlaps(sealRental, mount));
     }
 
     [Fact]
