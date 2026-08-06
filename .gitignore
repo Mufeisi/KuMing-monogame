@@ -64,6 +64,11 @@ CodeCoverage/
 [Tt]est[Rr]esult*/
 [Bb]uild[Ll]og.*
 
+# The server scripting debugger is source code, not a build output directory.
+!/Server/Scripting/Debug/
+/Server/Scripting/Debug/*
+!/Server/Scripting/Debug/*.cs
+
 # NUnit
 *.VisualState.xml
 TestResult.xml
