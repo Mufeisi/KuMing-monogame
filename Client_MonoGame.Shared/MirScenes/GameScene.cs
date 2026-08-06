@@ -181,6 +181,7 @@ namespace MonoShare.MirScenes
         public static IReadOnlyList<GameShopItem> GameShopInfoList => MobileGameShopState.Items;
         public static readonly MobileHeroState MobileHeroState = new MobileHeroState();
         public static readonly MobileMentorState MobileMentorState = new MobileMentorState();
+        public static readonly MobileMarriageState MobileMarriageState = new MobileMarriageState();
         public static List<ClientRecipeInfo> RecipeInfoList = new List<ClientRecipeInfo>();
 
         public List<ClientBuff> Buffs = new List<ClientBuff>();
@@ -228,8 +229,10 @@ namespace MonoShare.MirScenes
             MobileGameShopState.ResetForSession();
             MobileHeroState.ResetForSession();
             MobileMentorState.ResetForSession();
+            MobileMarriageState.ResetForSession();
             MonoShare.FairyGuiHost.MarkMobileShopDirty();
             MonoShare.FairyGuiHost.MarkMobileMentorDirty();
+            MonoShare.FairyGuiHost.MarkMobileMarriageDirty();
 
             if (Settings.LogErrors && Environment.OSVersion.Platform != PlatformID.Win32NT)
                 CMain.SaveLog("进入地图：GameScene 构造开始（v20260328-asynclog）。");
@@ -526,6 +529,77 @@ namespace MonoShare.MirScenes
             MonoShare.FairyGuiHost.MarkMobileMentorDirty();
         }
 
+        internal bool TryBeginMobileMarriageRequest()
+        {
+            if (!MobileMarriageState.BeginMarriageRequest(CMain.Time))
+            {
+                MobileReceiveChat(MobileMarriageState.Error ?? "求婚请求无效。", ChatType.System);
+                return false;
+            }
+
+            Network.Enqueue(new C.MarriageRequest());
+            MonoShare.FairyGuiHost.MarkMobileMarriageDirty();
+            return true;
+        }
+
+        internal void RespondToMobileMarriageRequest(bool accepted)
+        {
+            if (!MobileMarriageState.ApplyMarriageReply(accepted))
+                return;
+
+            Network.Enqueue(new C.MarriageReply { AcceptInvite = accepted });
+            MonoShare.FairyGuiHost.MarkMobileMarriageDirty();
+        }
+
+        internal bool BeginMobileDivorceConfirmation()
+        {
+            if (!MobileMarriageState.BeginDivorceConfirmation())
+            {
+                MobileReceiveChat(MobileMarriageState.Error ?? "当前没有婚姻关系。", ChatType.System);
+                return false;
+            }
+
+            MonoShare.FairyGuiHost.MarkMobileMarriageDirty();
+            return true;
+        }
+
+        internal bool ConfirmMobileDivorceRequest()
+        {
+            if (!MobileMarriageState.ConfirmDivorceRequest(CMain.Time))
+                return false;
+
+            Network.Enqueue(new C.DivorceRequest());
+            MobileReceiveChat("已发送离婚请求。", ChatType.System);
+            MonoShare.FairyGuiHost.MarkMobileMarriageDirty();
+            return true;
+        }
+
+        internal bool RejectMobileDivorceRequest()
+        {
+            if (!MobileMarriageState.RejectDivorceRequest())
+                return false;
+
+            MonoShare.FairyGuiHost.MarkMobileMarriageDirty();
+            return true;
+        }
+
+        internal void ToggleMobileMarriagePermission()
+        {
+            string resultMessage = MobileMarriageState.ChangeMarriageResultMessage;
+            Network.Enqueue(new C.ChangeMarriage());
+            MobileReceiveChat(resultMessage, ChatType.System);
+            MonoShare.FairyGuiHost.MarkMobileMarriageDirty();
+        }
+
+        internal void RespondToMobileDivorceRequest(bool accepted)
+        {
+            if (!MobileMarriageState.ApplyDivorceReply(accepted))
+                return;
+
+            Network.Enqueue(new C.DivorceReply { AcceptInvite = accepted });
+            MonoShare.FairyGuiHost.MarkMobileMarriageDirty();
+        }
+
         internal void ToggleMobileMentorRequests()
         {
             Network.Enqueue(new C.AllowMentor());
@@ -681,14 +755,14 @@ namespace MonoShare.MirScenes
             if (Environment.OSVersion.Platform == PlatformID.Win32NT)
                 return;
 
-            if (MonoShare.FairyGuiHost.TryToggleMobileWindowByOverrideSpecOnly("Relationship", out bool nowVisible))
+            if (MonoShare.FairyGuiHost.TryToggleMobileMarriageWindow(out bool nowVisible))
             {
                 if (nowVisible)
                     MonoShare.FairyGuiHost.HideAllMobileWindowsExcept("Relationship");
                 return;
             }
 
-            OutputMessage("当前 FairyGUI publish 未包含【关系】窗口，请在 UI 工程补做后重新发布，或在 Mir2Config.ini [FairyGUI] MobileWindow.Relationship=UI/组件名 覆盖指定。");
+            OutputMessage("当前 FairyGUI 关系窗口暂不可用，请检查 UI publish 或 Mir2Config.ini [FairyGUI] MobileWindow.Relationship 覆盖。");
         }
 
         public void ToggleMobileMentorOverlay()
@@ -1649,6 +1723,12 @@ namespace MonoShare.MirScenes
         }
         public override void Process()
         {
+            if (MobileMarriageState.Tick(CMain.Time) &&
+                Environment.OSVersion.Platform != PlatformID.Win32NT)
+            {
+                MonoShare.FairyGuiHost.MarkMobileMarriageDirty();
+            }
+
             if (MapControl == null || User == null)
                 return;
 
@@ -2582,6 +2662,13 @@ namespace MonoShare.MirScenes
         }
         private void ReceiveChat(S.Chat p)
         {
+            if (p != null && p.Type == ChatType.System &&
+                MobileMarriageState.ApplyServerSystemMessage(p.Message))
+            {
+                if (Environment.OSVersion.Platform != PlatformID.Win32NT)
+                    MonoShare.FairyGuiHost.MarkMobileMarriageDirty();
+            }
+
             MobileReceiveChat(p.Message, p.Type);
         }
         private void ObjectPlayer(S.ObjectPlayer p)
@@ -6485,31 +6572,49 @@ namespace MonoShare.MirScenes
 
         private void MarriageRequest(S.MarriageRequest p)
         {
-            if (p == null)
+            if (!MobileMarriageState.ApplyMarriageRequest(p))
                 return;
 
-            string name = (p.Name ?? string.Empty).Trim();
+            string name = MobileMarriageState.PendingMarriageRequestName;
             if (name.Length <= 0)
                 name = "对方";
 
+            if (Environment.OSVersion.Platform != PlatformID.Win32NT &&
+                MonoShare.FairyGuiHost.TryShowMobileMarriagePrompt(
+                    name,
+                    isDivorce: false,
+                    accepted => RespondToMobileMarriageRequest(accepted)))
+            {
+                return;
+            }
+
             MirMessageBox messageBox = new MirMessageBox($"{name} 向你求婚，是否同意？", MirMessageBoxButtons.YesNo);
-            messageBox.YesButton.Click += (o, e) => Network.Enqueue(new C.MarriageReply { AcceptInvite = true });
-            messageBox.NoButton.Click += (o, e) => Network.Enqueue(new C.MarriageReply { AcceptInvite = false });
+            messageBox.YesButton.Click += (o, e) => RespondToMobileMarriageRequest(accepted: true);
+            messageBox.NoButton.Click += (o, e) => RespondToMobileMarriageRequest(accepted: false);
             messageBox.Show();
         }
 
         private void DivorceRequest(S.DivorceRequest p)
         {
-            if (p == null)
+            if (!MobileMarriageState.ApplyDivorceRequest(p))
                 return;
 
-            string name = (p.Name ?? string.Empty).Trim();
+            string name = MobileMarriageState.PendingDivorceRequestName;
             if (name.Length <= 0)
                 name = "对方";
 
+            if (Environment.OSVersion.Platform != PlatformID.Win32NT &&
+                MonoShare.FairyGuiHost.TryShowMobileMarriagePrompt(
+                    name,
+                    isDivorce: true,
+                    accepted => RespondToMobileDivorceRequest(accepted)))
+            {
+                return;
+            }
+
             MirMessageBox messageBox = new MirMessageBox($"{name} 请求离婚，是否同意？", MirMessageBoxButtons.YesNo);
-            messageBox.YesButton.Click += (o, e) => Network.Enqueue(new C.DivorceReply { AcceptInvite = true });
-            messageBox.NoButton.Click += (o, e) => Network.Enqueue(new C.DivorceReply { AcceptInvite = false });
+            messageBox.YesButton.Click += (o, e) => RespondToMobileDivorceRequest(accepted: true);
+            messageBox.NoButton.Click += (o, e) => RespondToMobileDivorceRequest(accepted: false);
             messageBox.Show();
         }
 
@@ -7063,7 +7168,11 @@ namespace MonoShare.MirScenes
 
         private void LoverUpdate(S.LoverUpdate p)
         {
-            // TODO: 将恋人/关系更新绑定到 FairyGUI 关系窗口
+            if (!MobileMarriageState.ApplyLoverUpdate(p))
+                return;
+
+            if (Environment.OSVersion.Platform != PlatformID.Win32NT)
+                MonoShare.FairyGuiHost.MarkMobileMarriageDirty();
         }
 
         private void MentorUpdate(S.MentorUpdate p)

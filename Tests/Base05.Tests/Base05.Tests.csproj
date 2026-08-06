@@ -20,6 +20,7 @@
     <Compile Include="..\..\Client_MonoGame.Shared\MirScenes\GameShopState.cs" Link="Mobile\GameShopState.cs" />
     <Compile Include="..\..\Client_MonoGame.Shared\MirScenes\MobileHeroState.cs" Link="Mobile\MobileHeroState.cs" />
     <Compile Include="..\..\Client_MonoGame.Shared\MirScenes\MobileMentorState.cs" Link="Mobile\MobileMentorState.cs" />
+    <Compile Include="..\..\Client_MonoGame.Shared\MirScenes\MobileMarriageState.cs" Link="Mobile\MobileMarriageState.cs" />
     <ProjectReference Include="..\..\Shared\Shared.csproj" />
     <ProjectReference Include="..\..\Server\Server.Library.csproj" />
     <ProjectReference Include="..\ShareProtocolCompat\ShareProtocolCompat.csproj">

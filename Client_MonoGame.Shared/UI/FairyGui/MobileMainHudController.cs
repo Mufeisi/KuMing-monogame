@@ -75,6 +75,7 @@ namespace MonoShare
             allBound &= Bind(reader, usedTargets, "Inventory", "背包", new[] { "dbtnbag", "bag", "inventory", "背包", "包" }, () => GameScene.Scene?.ToggleMobileInventoryOverlay());
             allBound &= Bind(reader, usedTargets, "Hero", "英雄", new[] { "hero", "heromanage", "managehero", "英雄管理", "管理英雄", "英雄" }, () => GameScene.Scene?.ToggleMobileHeroOverlay());
             allBound &= Bind(reader, usedTargets, "Mentor", "师徒", new[] { "mentor", "mentee", "师徒", "拜师", "师傅", "徒弟" }, () => GameScene.Scene?.ToggleMobileMentorOverlay());
+            allBound &= Bind(reader, usedTargets, "Relationship", "关系", new[] { "relationship", "marriage", "lover", "spouse", "夫妻", "婚姻", "关系" }, () => GameScene.Scene?.ToggleMobileRelationshipOverlay());
             allBound &= Bind(reader, usedTargets, "Chat", "聊天", new[] { "dbtnchat", "chat", "聊天", "聊" }, () => GameScene.Scene?.ToggleMobileChatOverlay());
             allBound &= Bind(reader, usedTargets, "Shop", "商店", new[] { "shop", "store", "mall", "商店", "商" }, () => GameScene.Scene?.ToggleMobileGameShopOverlay());
             allBound &= Bind(reader, usedTargets, "System", "系统", new[] { "system", "setting", "menu", "options", "help", "系统", "设置" }, () => GameScene.Scene?.ToggleMobileSystemMenuOverlay());
@@ -219,6 +220,17 @@ namespace MonoShare
                 string.Equals(actionKey, "Mentor", StringComparison.OrdinalIgnoreCase))
             {
                 target = TryCreateMentorHudFallbackButton();
+                if (target != null)
+                {
+                    selectedScore = Math.Max(selectedScore, 1000);
+                    error = null;
+                }
+            }
+
+            if (target == null &&
+                string.Equals(actionKey, "Relationship", StringComparison.OrdinalIgnoreCase))
+            {
+                target = TryCreateMarriageHudFallbackButton();
                 if (target != null)
                 {
                     selectedScore = Math.Max(selectedScore, 1000);
@@ -410,6 +422,81 @@ namespace MonoShare
                 {
                     name = "title",
                     text = "师徒",
+                    touchable = false,
+                    align = AlignType.Center,
+                    verticalAlign = VertAlignType.Middle,
+                    autoSize = AutoSizeType.None,
+                };
+                label.SetSize(width, height);
+                try
+                {
+                    label.textFormat.size = 18;
+                    label.textFormat.color = Color.White;
+                    label.textFormat.bold = true;
+                }
+                catch
+                {
+                }
+                button.AddChild(label);
+
+                _root.AddChild(button);
+                try { _root.SetChildIndex(button, _root.numChildren - 1); } catch { }
+                return button;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        private GObject TryCreateMarriageHudFallbackButton()
+        {
+            if (_root == null || _root._disposed)
+                return null;
+
+            try
+            {
+                GObject existing = _root.GetChild("__codex_mobile_marriage_hud_fallback");
+                if (existing != null && !existing._disposed)
+                    return existing;
+            }
+            catch
+            {
+            }
+
+            try
+            {
+                const float width = 112F;
+                const float height = 48F;
+                var button = new GButton
+                {
+                    name = "__codex_mobile_marriage_hud_fallback",
+                    title = "关系",
+                    touchable = true,
+                    enabled = true,
+                    grayed = false,
+                    opaque = true,
+                    changeStateOnClick = false,
+                };
+                button.SetSize(width, height);
+                button.SetPosition(
+                    Math.Max(12F, _root.width - width - 16F),
+                    Math.Max(12F, _root.height - height - 74F));
+
+                var background = new GGraph
+                {
+                    name = "__codex_mobile_marriage_hud_fallback_bg",
+                    touchable = false,
+                };
+                background.DrawRect(width, height, 2,
+                    new Color(145, 110, 175, 255),
+                    new Color(70, 45, 95, 245));
+                button.AddChild(background);
+
+                var label = new GTextField
+                {
+                    name = "title",
+                    text = "关系",
                     touchable = false,
                     align = AlignType.Center,
                     verticalAlign = VertAlignType.Middle,

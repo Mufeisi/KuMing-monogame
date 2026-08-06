@@ -1280,6 +1280,11 @@ namespace MonoShare
 
                 if (string.Equals(key, "Mentor", StringComparison.OrdinalIgnoreCase))
                     ResetMobileMentorBindings();
+                else if (string.Equals(key, "MarriagePrompt", StringComparison.OrdinalIgnoreCase))
+                {
+                    ResetMobileMarriagePromptForHide();
+                    continue;
+                }
                 component.visible = false;
             }
         }
@@ -1294,6 +1299,11 @@ namespace MonoShare
 
                 if (string.Equals(pair.Key, "Mentor", StringComparison.OrdinalIgnoreCase))
                     ResetMobileMentorBindings();
+                else if (string.Equals(pair.Key, "MarriagePrompt", StringComparison.OrdinalIgnoreCase))
+                {
+                    ResetMobileMarriagePromptForHide();
+                    continue;
+                }
                 component.visible = false;
             }
         }
@@ -1311,6 +1321,11 @@ namespace MonoShare
 
             if (string.Equals(windowKey, "Mentor", StringComparison.OrdinalIgnoreCase))
                 ResetMobileMentorBindings();
+            else if (string.Equals(windowKey, "MarriagePrompt", StringComparison.OrdinalIgnoreCase))
+            {
+                ResetMobileMarriagePromptForHide();
+                return true;
+            }
             component.visible = false;
             return true;
         }
@@ -1379,6 +1394,11 @@ namespace MonoShare
             {
                 if (string.Equals(topKey, "Mentor", StringComparison.OrdinalIgnoreCase))
                     ResetMobileMentorBindings();
+                else if (string.Equals(topKey, "MarriagePrompt", StringComparison.OrdinalIgnoreCase))
+                {
+                    ResetMobileMarriagePromptForHide();
+                    return true;
+                }
                 topWindow.visible = false;
 
                 if (Settings.DebugMode && !string.IsNullOrWhiteSpace(topKey))
@@ -1414,6 +1434,8 @@ namespace MonoShare
             ResetMobileGroupBindings();
             ResetMobileHeroBindings();
             ResetMobileMentorBindings();
+            ResetMobileMarriageBindings();
+            ResetMobileMarriagePromptForHide();
 
             foreach (KeyValuePair<string, GComponent> pair in MobileWindows)
             {
