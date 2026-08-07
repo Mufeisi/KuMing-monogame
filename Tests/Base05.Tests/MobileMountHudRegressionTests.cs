@@ -17,12 +17,14 @@ public sealed class MobileMountHudRegressionTests
         MobileMainHudFallbackBounds mount = MobileMainHudFallbackLayout.Mount(rootWidth, rootHeight);
         MobileMainHudFallbackBounds sealRental = MobileMainHudFallbackLayout.SealRental(rootWidth, rootHeight);
         MobileMainHudFallbackBounds fishing = MobileMainHudFallbackLayout.Fishing(rootWidth, rootHeight);
+        MobileMainHudFallbackBounds activity = MobileMainHudFallbackLayout.Activity(rootWidth, rootHeight);
 
         AssertSafeArea(mentor, rootWidth, rootHeight);
         AssertSafeArea(relationship, rootWidth, rootHeight);
         AssertSafeArea(mount, rootWidth, rootHeight);
         AssertSafeArea(sealRental, rootWidth, rootHeight);
         AssertSafeArea(fishing, rootWidth, rootHeight);
+        AssertSafeArea(activity, rootWidth, rootHeight);
 
         Assert.False(Overlaps(mentor, relationship));
         Assert.False(Overlaps(mentor, mount));
@@ -34,6 +36,11 @@ public sealed class MobileMountHudRegressionTests
         Assert.False(Overlaps(fishing, relationship));
         Assert.False(Overlaps(fishing, mount));
         Assert.False(Overlaps(fishing, sealRental));
+        Assert.False(Overlaps(activity, mentor));
+        Assert.False(Overlaps(activity, relationship));
+        Assert.False(Overlaps(activity, mount));
+        Assert.False(Overlaps(activity, sealRental));
+        Assert.False(Overlaps(activity, fishing));
     }
 
     [Fact]

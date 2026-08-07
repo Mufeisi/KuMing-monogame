@@ -1294,6 +1294,8 @@ namespace MonoShare
                 }
                 else if (string.Equals(key, "SealRental", StringComparison.OrdinalIgnoreCase))
                     ResetMobileSealRentalBindings();
+                else if (string.Equals(key, "Quest", StringComparison.OrdinalIgnoreCase))
+                    ResetMobileQuestBindings();
                 component.visible = false;
             }
         }
@@ -1323,6 +1325,8 @@ namespace MonoShare
                 }
                 else if (string.Equals(pair.Key, "SealRental", StringComparison.OrdinalIgnoreCase))
                     ResetMobileSealRentalBindings();
+                else if (string.Equals(pair.Key, "Quest", StringComparison.OrdinalIgnoreCase))
+                    ResetMobileQuestBindings();
                 component.visible = false;
             }
         }
@@ -1357,6 +1361,8 @@ namespace MonoShare
             }
             else if (string.Equals(windowKey, "SealRental", StringComparison.OrdinalIgnoreCase))
                 ResetMobileSealRentalBindings();
+            else if (string.Equals(windowKey, "Quest", StringComparison.OrdinalIgnoreCase))
+                ResetMobileQuestBindings();
             component.visible = false;
             return true;
         }
@@ -1442,6 +1448,8 @@ namespace MonoShare
                     TryCancelMobileSealRentalBeforeUserClose();
                     ResetMobileSealRentalBindings();
                 }
+                else if (string.Equals(topKey, "Quest", StringComparison.OrdinalIgnoreCase))
+                    ResetMobileQuestBindings();
                 topWindow.visible = false;
 
                 if (Settings.DebugMode && !string.IsNullOrWhiteSpace(topKey))
@@ -1780,6 +1788,8 @@ namespace MonoShare
                         TryCancelMobileFishingBeforeUserClose();
                         ResetMobileFishingBindings();
                     }
+                    if (!nowVisible && string.Equals(windowKey, "Quest", StringComparison.OrdinalIgnoreCase))
+                        ResetMobileQuestBindings();
                     if (nowVisible)
                         TryApplyMobileWindowLayoutIfNeeded(windowKey, existing, existing.parent, resolveInfo: null);
                     if (Settings.LogErrors && string.Equals(windowKey, "State", StringComparison.OrdinalIgnoreCase))

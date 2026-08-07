@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
 using C = ClientPackets;
 using FairyGUI;
+using Microsoft.Xna.Framework;
 using MonoShare.MirNetwork;
 using MonoShare.MirObjects;
 using MonoShare.MirScenes;
@@ -18,14 +20,16 @@ namespace MonoShare
         private const string MobileQuestAcceptConfigKey = "MobileQuest.Accept";
         private const string MobileQuestFinishConfigKey = "MobileQuest.Finish";
         private const string MobileQuestAbandonConfigKey = "MobileQuest.Abandon";
+        private const string MobileQuestShareConfigKey = "MobileQuest.Share";
         private const string MobileQuestTrackConfigKey = "MobileQuest.Track";
 
-        private static readonly string[] DefaultQuestListKeywords = { "任务_DA2EWindow1UI", "任务", "quest", "diary", "log", "list" };
+        private static readonly string[] DefaultQuestListKeywords = { "DA2EGrid3", "任务_DA2EWindow1UI", "任务", "quest", "diary", "log", "list" };
         private static readonly string[] DefaultQuestTitleKeywords = { "任务", "quest", "title", "name", "标题", "名称" };
-        private static readonly string[] DefaultQuestContentKeywords = { "任务", "quest", "content", "desc", "detail", "text", "内容", "说明", "目标", "进度" };
+        private static readonly string[] DefaultQuestContentKeywords = { "DMissionDesc", "任务", "quest", "content", "desc", "detail", "text", "内容", "说明", "目标", "进度" };
         private static readonly string[] DefaultQuestAcceptKeywords = { "accept", "take", "接取", "接受", "领取" };
         private static readonly string[] DefaultQuestFinishKeywords = { "finish", "complete", "交付", "提交", "完成", "领奖" };
         private static readonly string[] DefaultQuestAbandonKeywords = { "abandon", "giveup", "drop", "放弃", "取消" };
+        private static readonly string[] DefaultQuestShareKeywords = { "share", "共享", "分享" };
         private static readonly string[] DefaultQuestTrackKeywords = { "track", "pin", "追踪", "标记" };
 
         private sealed class MobileQuestItemView
@@ -77,11 +81,23 @@ namespace MonoShare
             public string[] AbandonOverrideKeywords;
             public EventCallback0 AbandonClick;
 
+            public GButton Share;
+            public string ShareResolveInfo;
+            public string ShareOverrideSpec;
+            public string[] ShareOverrideKeywords;
+            public EventCallback0 ShareClick;
+
             public GButton Track;
             public string TrackResolveInfo;
             public string TrackOverrideSpec;
             public string[] TrackOverrideKeywords;
             public EventCallback0 TrackClick;
+
+            public GComponent FallbackActionBar;
+            public readonly List<GButton> FallbackActionButtons = new List<GButton>();
+            public GComponent RewardSelectionBar;
+            public readonly List<GButton> RewardSelectionButtons = new List<GButton>();
+            public readonly List<EventCallback0> RewardSelectionClicks = new List<EventCallback0>();
         }
 
         private static MobileQuestWindowBinding _mobileQuestBinding;
@@ -90,14 +106,22 @@ namespace MonoShare
         private static bool _mobileQuestDirty;
         private static bool _mobileQuestWindowWasVisible;
 
-        private static uint _mobileQuestNpcObjectId;
-        private static string _mobileQuestNpcName = string.Empty;
-        private static int _mobileQuestSelectedQuestIndex;
+        private static readonly MobileQuestContextState _mobileQuestContext = new MobileQuestContextState();
 
         public static void UpdateMobileQuestContext(uint npcObjectId, string npcName)
         {
-            _mobileQuestNpcObjectId = npcObjectId;
-            _mobileQuestNpcName = npcName ?? string.Empty;
+            _mobileQuestContext.EnterNpc(npcObjectId, npcName);
+            MarkMobileQuestDirty();
+        }
+
+        public static void UpdateMobileActivityContext()
+        {
+            _mobileQuestContext.EnterActivity();
+            MarkMobileActivityDirty();
+        }
+
+        public static void MarkMobileActivityDirty()
+        {
             MarkMobileQuestDirty();
         }
 
@@ -106,8 +130,7 @@ namespace MonoShare
             int questIndex = 0;
             try { questIndex = quest?.QuestInfo?.Index ?? quest?.Id ?? 0; } catch { questIndex = 0; }
 
-            if (questIndex > 0)
-                _mobileQuestSelectedQuestIndex = questIndex;
+            _mobileQuestContext.Select(questIndex);
 
             MarkMobileQuestDirty();
         }
@@ -120,6 +143,11 @@ namespace MonoShare
 
         private static void ResetMobileQuestBindings()
         {
+            ResetMobileQuestBindings(clearContext: true);
+        }
+
+        private static void ResetMobileQuestBindings(bool clearContext)
+        {
             try
             {
                 MobileQuestWindowBinding binding = _mobileQuestBinding;
@@ -128,8 +156,40 @@ namespace MonoShare
                     try { if (binding.Accept != null && binding.AcceptClick != null) binding.Accept.onClick.Remove(binding.AcceptClick); } catch { }
                     try { if (binding.Finish != null && binding.FinishClick != null) binding.Finish.onClick.Remove(binding.FinishClick); } catch { }
                     try { if (binding.Abandon != null && binding.AbandonClick != null) binding.Abandon.onClick.Remove(binding.AbandonClick); } catch { }
+                    try { if (binding.Share != null && binding.ShareClick != null) binding.Share.onClick.Remove(binding.ShareClick); } catch { }
                     try { if (binding.Track != null && binding.TrackClick != null) binding.Track.onClick.Remove(binding.TrackClick); } catch { }
                     try { if (binding.List != null && !binding.List._disposed) binding.List.itemRenderer = null; } catch { }
+                    try
+                    {
+                        for (int i = 0; i < binding.RewardSelectionButtons.Count; i++)
+                        {
+                            GButton button = binding.RewardSelectionButtons[i];
+                            EventCallback0 click = i < binding.RewardSelectionClicks.Count ? binding.RewardSelectionClicks[i] : null;
+                            if (button != null && click != null)
+                                button.onClick.Remove(click);
+                        }
+                    }
+                    catch { }
+
+                    try
+                    {
+                        if (binding.RewardSelectionBar != null && binding.RewardSelectionBar.parent != null)
+                            binding.RewardSelectionBar.parent.RemoveChild(binding.RewardSelectionBar, dispose: true);
+                        else
+                            binding.RewardSelectionBar?.Dispose();
+                    }
+                    catch { }
+                    try
+                    {
+                        if (binding.FallbackActionBar != null && binding.FallbackActionBar.parent != null)
+                            binding.FallbackActionBar.parent.RemoveChild(binding.FallbackActionBar, dispose: true);
+                        else
+                            binding.FallbackActionBar?.Dispose();
+                    }
+                    catch { }
+                    binding.RewardSelectionButtons.Clear();
+                    binding.RewardSelectionClicks.Clear();
+                    binding.FallbackActionButtons.Clear();
                 }
             }
             catch
@@ -141,7 +201,13 @@ namespace MonoShare
             _mobileQuestBindingsDumped = false;
             _mobileQuestDirty = true;
             _mobileQuestWindowWasVisible = false;
-            _mobileQuestSelectedQuestIndex = 0;
+            if (clearContext)
+            {
+                _mobileQuestContext.ResetForClose();
+                GameScene.MobileActivityRewardSelection.Clear();
+            }
+            else
+                _mobileQuestContext.ResetForRebind();
         }
 
         private static void TryBindMobileQuestWindowIfDue(string windowKey, GComponent window, string resolveInfo)
@@ -150,11 +216,11 @@ namespace MonoShare
                 return;
 
             if (_mobileQuestBinding != null && _mobileQuestBinding.Window != null && _mobileQuestBinding.Window._disposed)
-                ResetMobileQuestBindings();
+                ResetMobileQuestBindings(clearContext: false);
 
             if (_mobileQuestBinding == null || _mobileQuestBinding.Window == null || _mobileQuestBinding.Window._disposed || !ReferenceEquals(_mobileQuestBinding.Window, window))
             {
-                ResetMobileQuestBindings();
+                ResetMobileQuestBindings(clearContext: false);
                 _mobileQuestBinding = new MobileQuestWindowBinding
                 {
                     WindowKey = windowKey,
@@ -182,6 +248,7 @@ namespace MonoShare
             string acceptSpec = string.Empty;
             string finishSpec = string.Empty;
             string abandonSpec = string.Empty;
+            string shareSpec = string.Empty;
             string trackSpec = string.Empty;
 
             try
@@ -195,6 +262,7 @@ namespace MonoShare
                     acceptSpec = reader.ReadString(FairyGuiConfigSectionName, MobileQuestAcceptConfigKey, string.Empty, writeWhenNull: false);
                     finishSpec = reader.ReadString(FairyGuiConfigSectionName, MobileQuestFinishConfigKey, string.Empty, writeWhenNull: false);
                     abandonSpec = reader.ReadString(FairyGuiConfigSectionName, MobileQuestAbandonConfigKey, string.Empty, writeWhenNull: false);
+                    shareSpec = reader.ReadString(FairyGuiConfigSectionName, MobileQuestShareConfigKey, string.Empty, writeWhenNull: false);
                     trackSpec = reader.ReadString(FairyGuiConfigSectionName, MobileQuestTrackConfigKey, string.Empty, writeWhenNull: false);
                 }
             }
@@ -206,6 +274,7 @@ namespace MonoShare
                 acceptSpec = string.Empty;
                 finishSpec = string.Empty;
                 abandonSpec = string.Empty;
+                shareSpec = string.Empty;
                 trackSpec = string.Empty;
             }
 
@@ -215,6 +284,7 @@ namespace MonoShare
             acceptSpec = acceptSpec?.Trim() ?? string.Empty;
             finishSpec = finishSpec?.Trim() ?? string.Empty;
             abandonSpec = abandonSpec?.Trim() ?? string.Empty;
+            shareSpec = shareSpec?.Trim() ?? string.Empty;
             trackSpec = trackSpec?.Trim() ?? string.Empty;
 
             binding.ListOverrideSpec = listSpec;
@@ -223,7 +293,10 @@ namespace MonoShare
             binding.AcceptOverrideSpec = acceptSpec;
             binding.FinishOverrideSpec = finishSpec;
             binding.AbandonOverrideSpec = abandonSpec;
+            binding.ShareOverrideSpec = shareSpec;
             binding.TrackOverrideSpec = trackSpec;
+
+            var usedButtonTargets = new HashSet<GObject>();
 
             // List
             if (binding.List == null || binding.List._disposed)
@@ -264,12 +337,219 @@ namespace MonoShare
             BindMailText(window, ref binding.Content, ref binding.ContentResolveInfo, contentSpec, DefaultQuestContentKeywords, out binding.ContentOverrideKeywords);
 
             // Buttons
-            BindMailButton(window, ref binding.Accept, ref binding.AcceptResolveInfo, acceptSpec, DefaultQuestAcceptKeywords, out binding.AcceptOverrideKeywords);
-            BindMailButton(window, ref binding.Finish, ref binding.FinishResolveInfo, finishSpec, DefaultQuestFinishKeywords, out binding.FinishOverrideKeywords);
-            BindMailButton(window, ref binding.Abandon, ref binding.AbandonResolveInfo, abandonSpec, DefaultQuestAbandonKeywords, out binding.AbandonOverrideKeywords);
-            BindMailButton(window, ref binding.Track, ref binding.TrackResolveInfo, trackSpec, DefaultQuestTrackKeywords, out binding.TrackOverrideKeywords);
+            BindQuestButton(window, ref binding.Accept, ref binding.AcceptResolveInfo, acceptSpec, DefaultQuestAcceptKeywords, out binding.AcceptOverrideKeywords, usedButtonTargets);
+            BindQuestButton(window, ref binding.Finish, ref binding.FinishResolveInfo, finishSpec, DefaultQuestFinishKeywords, out binding.FinishOverrideKeywords, usedButtonTargets);
+            BindQuestButton(window, ref binding.Abandon, ref binding.AbandonResolveInfo, abandonSpec, DefaultQuestAbandonKeywords, out binding.AbandonOverrideKeywords, usedButtonTargets);
+            BindQuestButton(window, ref binding.Share, ref binding.ShareResolveInfo, shareSpec, DefaultQuestShareKeywords, out binding.ShareOverrideKeywords, usedButtonTargets);
+            BindQuestButton(window, ref binding.Track, ref binding.TrackResolveInfo, trackSpec, DefaultQuestTrackKeywords, out binding.TrackOverrideKeywords, usedButtonTargets);
+            EnsureMobileQuestActionFallback(binding);
 
             // Callbacks
+            AttachMobileQuestActionCallbacks(binding);
+
+            TryDumpMobileQuestBindingsIfDue(binding);
+        }
+
+        private static void BindQuestButton(
+            GComponent window,
+            ref GButton target,
+            ref string resolveInfo,
+            string overrideSpec,
+            string[] defaultKeywords,
+            out string[] usedKeywords,
+            HashSet<GObject> usedTargets)
+        {
+            usedKeywords = defaultKeywords;
+
+            if (target != null && !target._disposed && (usedTargets == null || usedTargets.Add(target)))
+                return;
+
+            target = null;
+            GButton button = null;
+
+            if (!string.IsNullOrWhiteSpace(overrideSpec) &&
+                TryResolveMobileMainHudObjectBySpec(window, overrideSpec, out GObject resolved, out string[] overrideKeywords))
+            {
+                if (resolved is GButton resolvedButton && !resolvedButton._disposed &&
+                    (usedTargets == null || !usedTargets.Contains(resolvedButton)))
+                {
+                    button = resolvedButton;
+                    resolveInfo = "override " + DescribeObject(window, resolved);
+                }
+                else if (overrideKeywords != null && overrideKeywords.Length > 0)
+                {
+                    usedKeywords = overrideKeywords;
+                    resolveInfo = "override keywords=" + string.Join("|", usedKeywords);
+                }
+            }
+
+            if (button == null)
+            {
+                string[] candidateKeywords = usedKeywords;
+                List<(int Score, GObject Target)> candidates = CollectMobileChatCandidates(
+                    window,
+                    obj => obj is GButton buttonCandidate && buttonCandidate.touchable && HasQuestButtonKeyword(buttonCandidate, candidateKeywords),
+                    candidateKeywords,
+                    ScoreMobileQuestButtonCandidate);
+
+                for (int i = 0; i < candidates.Count; i++)
+                {
+                    if (candidates[i].Score < 25)
+                        break;
+
+                    if (candidates[i].Target is GButton candidate &&
+                        (usedTargets == null || !usedTargets.Contains(candidate)))
+                    {
+                        button = candidate;
+                        break;
+                    }
+                }
+
+                resolveInfo = button != null ? "auto " + DescribeObject(window, button) : "auto (miss: no reliable keyword target)";
+            }
+
+            if (button != null && (usedTargets == null || usedTargets.Add(button)))
+                target = button;
+        }
+
+        private static bool HasQuestButtonKeyword(GButton button, string[] keywords)
+        {
+            if (button == null)
+                return false;
+
+            return MobileQuestBindingPolicy.HasKeyword(button.name, button.title, keywords);
+        }
+
+        private static int ScoreMobileQuestButtonCandidate(GObject obj, string[] keywords)
+        {
+            if (obj is not GButton button || !HasQuestButtonKeyword(button, keywords))
+                return 0;
+
+            return ScoreMobileShopButtonCandidate(obj, keywords);
+        }
+
+        /// <summary>
+        /// 任务包的真实窗口只有分类/关闭/列表控件时，不能把这些控件误当成操作按钮。
+        /// 缺少可靠目标时在任务窗口内部创建明确的操作栏，并沿用同一组回调。
+        /// </summary>
+        private static void EnsureMobileQuestActionFallback(MobileQuestWindowBinding binding)
+        {
+            if (binding == null || binding.Window == null || binding.Window._disposed)
+                return;
+
+            // 普通 NPC 任务保留原有真实 FUI 语义；ANDROID-07 动态栏只服务活动/赏金上下文。
+            if (!_mobileQuestContext.IsActivityMode)
+                return;
+
+            int reliableOperationCount = 0;
+            if (binding.Accept != null && !binding.Accept._disposed) reliableOperationCount++;
+            if (binding.Finish != null && !binding.Finish._disposed) reliableOperationCount++;
+            if (binding.Abandon != null && !binding.Abandon._disposed) reliableOperationCount++;
+            if (binding.Share != null && !binding.Share._disposed) reliableOperationCount++;
+
+            if (!MobileQuestBindingPolicy.ShouldCreateFallback(_mobileQuestContext.IsActivityMode, reliableOperationCount))
+                return;
+
+            if (binding.FallbackActionBar != null && !binding.FallbackActionBar._disposed)
+                return;
+
+            binding.FallbackActionButtons.Clear();
+            var bar = new GComponent
+            {
+                name = "__codex_mobile_quest_action_bar",
+                // 父容器必须参与命中测试才能继续命中子按钮；透明父层不拦截空白区域。
+                touchable = MobileQuestDynamicBarPolicy.ParentTouchable,
+                opaque = MobileQuestDynamicBarPolicy.ParentOpaque,
+            };
+            binding.Window.AddChild(bar);
+            binding.FallbackActionBar = bar;
+
+            if (binding.Accept == null || binding.Accept._disposed)
+            {
+                binding.Accept = CreateMobileQuestActionButton(bar, "__codex_mobile_quest_action_accept", "接取");
+                if (binding.Accept != null) binding.FallbackActionButtons.Add(binding.Accept);
+            }
+            if (binding.Finish == null || binding.Finish._disposed)
+            {
+                binding.Finish = CreateMobileQuestActionButton(bar, "__codex_mobile_quest_action_finish", "交付");
+                if (binding.Finish != null) binding.FallbackActionButtons.Add(binding.Finish);
+            }
+            if (binding.Abandon == null || binding.Abandon._disposed)
+            {
+                binding.Abandon = CreateMobileQuestActionButton(bar, "__codex_mobile_quest_action_abandon", "放弃");
+                if (binding.Abandon != null) binding.FallbackActionButtons.Add(binding.Abandon);
+            }
+            if (binding.Share == null || binding.Share._disposed)
+            {
+                binding.Share = CreateMobileQuestActionButton(bar, "__codex_mobile_quest_action_share", "分享");
+                if (binding.Share != null) binding.FallbackActionButtons.Add(binding.Share);
+            }
+            if (binding.Track == null || binding.Track._disposed)
+            {
+                binding.Track = CreateMobileQuestActionButton(bar, "__codex_mobile_quest_action_track", "追踪");
+                if (binding.Track != null) binding.FallbackActionButtons.Add(binding.Track);
+            }
+        }
+
+        private static GButton CreateMobileQuestActionButton(GComponent bar, string name, string title)
+        {
+            if (bar == null || bar._disposed)
+                return null;
+
+            try
+            {
+                var button = new GButton
+                {
+                    name = name,
+                    title = title,
+                    touchable = true,
+                    enabled = true,
+                    grayed = false,
+                    opaque = true,
+                    changeStateOnClick = false,
+                };
+
+                var background = new GGraph
+                {
+                    name = "background",
+                    touchable = false,
+                };
+                background.DrawRect(1F, 1F, 2, new Color(120, 150, 195, 255), new Color(40, 65, 100, 245));
+                button.AddChild(background);
+
+                var label = new GTextField
+                {
+                    name = "title",
+                    text = title,
+                    touchable = false,
+                    align = AlignType.Center,
+                    verticalAlign = VertAlignType.Middle,
+                    autoSize = AutoSizeType.None,
+                };
+                try
+                {
+                    label.textFormat.size = 16;
+                    label.textFormat.color = Color.White;
+                    label.textFormat.bold = true;
+                }
+                catch
+                {
+                }
+                button.AddChild(label);
+                bar.AddChild(button);
+                return button;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        private static void AttachMobileQuestActionCallbacks(MobileQuestWindowBinding binding)
+        {
+            if (binding == null)
+                return;
+
             try
             {
                 if (binding.Accept != null && !binding.Accept._disposed && binding.AcceptClick == null)
@@ -290,6 +570,12 @@ namespace MonoShare
                     binding.Abandon.onClick.Add(binding.AbandonClick);
                 }
 
+                if (binding.Share != null && !binding.Share._disposed && binding.ShareClick == null)
+                {
+                    binding.ShareClick = OnMobileQuestShareClicked;
+                    binding.Share.onClick.Add(binding.ShareClick);
+                }
+
                 if (binding.Track != null && !binding.Track._disposed && binding.TrackClick == null)
                 {
                     binding.TrackClick = OnMobileQuestTrackClicked;
@@ -299,8 +585,63 @@ namespace MonoShare
             catch
             {
             }
+        }
 
-            TryDumpMobileQuestBindingsIfDue(binding);
+        private static void RemoveMobileQuestActionFallback(MobileQuestWindowBinding binding)
+        {
+            if (binding == null || binding.FallbackActionBar == null)
+                return;
+
+            try
+            {
+                if (binding.Accept != null && binding.FallbackActionButtons.Contains(binding.Accept))
+                {
+                    if (binding.AcceptClick != null) binding.Accept.onClick.Remove(binding.AcceptClick);
+                    binding.Accept = null;
+                    binding.AcceptClick = null;
+                }
+                if (binding.Finish != null && binding.FallbackActionButtons.Contains(binding.Finish))
+                {
+                    if (binding.FinishClick != null) binding.Finish.onClick.Remove(binding.FinishClick);
+                    binding.Finish = null;
+                    binding.FinishClick = null;
+                }
+                if (binding.Abandon != null && binding.FallbackActionButtons.Contains(binding.Abandon))
+                {
+                    if (binding.AbandonClick != null) binding.Abandon.onClick.Remove(binding.AbandonClick);
+                    binding.Abandon = null;
+                    binding.AbandonClick = null;
+                }
+                if (binding.Share != null && binding.FallbackActionButtons.Contains(binding.Share))
+                {
+                    if (binding.ShareClick != null) binding.Share.onClick.Remove(binding.ShareClick);
+                    binding.Share = null;
+                    binding.ShareClick = null;
+                }
+                if (binding.Track != null && binding.FallbackActionButtons.Contains(binding.Track))
+                {
+                    if (binding.TrackClick != null) binding.Track.onClick.Remove(binding.TrackClick);
+                    binding.Track = null;
+                    binding.TrackClick = null;
+                }
+            }
+            catch
+            {
+            }
+
+            try
+            {
+                if (binding.FallbackActionBar.parent != null)
+                    binding.FallbackActionBar.parent.RemoveChild(binding.FallbackActionBar, dispose: true);
+                else
+                    binding.FallbackActionBar.Dispose();
+            }
+            catch
+            {
+            }
+
+            binding.FallbackActionBar = null;
+            binding.FallbackActionButtons.Clear();
         }
 
         private static void TryRefreshMobileQuestIfDue(bool force)
@@ -311,7 +652,7 @@ namespace MonoShare
 
             if (binding.Window == null || binding.Window._disposed)
             {
-                ResetMobileQuestBindings();
+                ResetMobileQuestBindings(clearContext: false);
                 return;
             }
 
@@ -327,15 +668,28 @@ namespace MonoShare
 
             _mobileQuestWindowWasVisible = true;
 
+            if (_mobileQuestContext.IsActivityMode)
+            {
+                EnsureMobileQuestActionFallback(binding);
+                AttachMobileQuestActionCallbacks(binding);
+            }
+            else
+            {
+                RemoveMobileQuestActionFallback(binding);
+            }
+
+            // 控件尺寸可能被真实窗口重新布局；每次刷新都重新放置动态栏，避免盖住关闭/描述区域。
+            TryLayoutMobileQuestControls(binding);
+
             if (!force && !_mobileQuestDirty)
                 return;
 
             _mobileQuestDirty = false;
 
-            List<ClientQuestProgress> quests = BuildMobileQuestList(_mobileQuestNpcObjectId);
+            List<ClientQuestProgress> quests = BuildMobileQuestList(_mobileQuestContext.NpcObjectId);
 
             ClientQuestProgress selected = null;
-            int selectedIndex = _mobileQuestSelectedQuestIndex;
+            int selectedIndex = _mobileQuestContext.SelectedQuestIndex;
 
             if (quests != null && quests.Count > 0)
             {
@@ -361,16 +715,18 @@ namespace MonoShare
                     selectedIndex = GetQuestIndex(selected);
                 }
 
-                _mobileQuestSelectedQuestIndex = selectedIndex;
+                _mobileQuestContext.Select(selectedIndex);
             }
             else
             {
-                _mobileQuestSelectedQuestIndex = 0;
+                _mobileQuestContext.ResetForRebind();
             }
 
-            TryRefreshQuestList(binding, quests, _mobileQuestSelectedQuestIndex);
+            TryRefreshQuestList(binding, quests, _mobileQuestContext.SelectedQuestIndex);
             TryRefreshQuestDetails(binding, selected);
+            TryRefreshMobileQuestRewardControls(binding, selected);
             TryRefreshQuestButtons(binding, selected);
+            TryLayoutMobileQuestControls(binding);
         }
 
         private static List<ClientQuestProgress> BuildMobileQuestList(uint npcObjectId)
@@ -378,6 +734,12 @@ namespace MonoShare
             var user = GameScene.User;
             if (user == null)
                 return new List<ClientQuestProgress>();
+
+            if (_mobileQuestContext.IsActivityMode)
+            {
+                IReadOnlyList<ClientQuestProgress> activities = GameScene.MobileActivityState.Activities;
+                return activities == null ? new List<ClientQuestProgress>() : activities.ToList();
+            }
 
             if (npcObjectId == 0)
             {
@@ -497,11 +859,11 @@ namespace MonoShare
 
         private static ClientQuestProgress TryGetSelectedQuest()
         {
-            int questIndex = _mobileQuestSelectedQuestIndex;
+            int questIndex = _mobileQuestContext.SelectedQuestIndex;
             if (questIndex < 1)
                 return null;
 
-            List<ClientQuestProgress> quests = BuildMobileQuestList(_mobileQuestNpcObjectId);
+            List<ClientQuestProgress> quests = BuildMobileQuestList(_mobileQuestContext.NpcObjectId);
             if (quests == null || quests.Count == 0)
                 return null;
 
@@ -599,6 +961,8 @@ namespace MonoShare
 
             string name = GetQuestName(quest);
             string prefix = quest.Completed ? "【可交】" : (quest.Taken ? "【进行中】" : "【可接】");
+            if (_mobileQuestContext.IsActivityMode)
+                prefix = "[" + MobileActivityState.TypeLabel(quest.QuestInfo) + "]" + prefix;
             try
             {
                 if (view.Label != null && !view.Label._disposed)
@@ -642,7 +1006,7 @@ namespace MonoShare
             if (questIndex < 1)
                 return;
 
-            _mobileQuestSelectedQuestIndex = questIndex;
+            _mobileQuestContext.Select(questIndex);
             MarkMobileQuestDirty();
         }
 
@@ -670,14 +1034,24 @@ namespace MonoShare
 
             try
             {
-                if (!string.IsNullOrWhiteSpace(_mobileQuestNpcName))
-                    builder.Append("NPC：").AppendLine(_mobileQuestNpcName.Trim());
+                if (!string.IsNullOrWhiteSpace(_mobileQuestContext.NpcName))
+                    builder.Append("NPC：").AppendLine(_mobileQuestContext.NpcName.Trim());
             }
             catch
             {
             }
 
             builder.Append("状态：").AppendLine(quest.Completed ? "可交付" : (quest.Taken ? "进行中" : "可接取"));
+            if (_mobileQuestContext.IsActivityMode && !string.IsNullOrWhiteSpace(GameScene.MobileActivityState.Error))
+                builder.Append("提示：").AppendLine(GameScene.MobileActivityState.Error);
+            if (_mobileQuestContext.IsActivityMode && info != null)
+            {
+                builder.Append("类型：").AppendLine(MobileActivityState.TypeLabel(info));
+                if (info.TimeLimitInSeconds > 0)
+                    builder.Append("限时：").AppendLine(FormatActivityDuration(info.TimeLimitInSeconds));
+                if (info.NPCIndex > 0)
+                    builder.Append("接取 NPC：").AppendLine(info.NPCIndex.ToString());
+            }
             builder.AppendLine();
 
             if (info != null)
@@ -718,18 +1092,54 @@ namespace MonoShare
                     if (info.RewardsSelectItem != null && info.RewardsSelectItem.Count > 0)
                     {
                         builder.AppendLine("  - 可选：");
+                        IReadOnlyList<int> visibleIndices = null;
+                        if (_mobileQuestContext.IsActivityMode)
+                        {
+                            visibleIndices = GameScene.MobileActivityRewardSelection.Refresh(
+                                quest,
+                                GameScene.User?.Class ?? MirClass.Warrior,
+                                GameScene.User?.Gender ?? MirGender.Male);
+                        }
+
                         for (int i = 0; i < info.RewardsSelectItem.Count; i++)
                         {
+                            if (visibleIndices != null && !visibleIndices.Contains(i))
+                                continue;
+
                             QuestItemReward reward = info.RewardsSelectItem[i];
                             string name = reward?.Item?.Name ?? "物品";
                             ushort count = reward?.Count ?? 1;
-                            builder.AppendLine($"    - {name} x{count}");
+                            bool selected = visibleIndices != null &&
+                                            GameScene.MobileActivityRewardSelection.SelectedOriginalIndex == i;
+                            builder.AppendLine($"    {(selected ? "【已选】" : "- ")}{name} x{count}");
+                        }
+
+                        if (visibleIndices != null && visibleIndices.Count == 0)
+                        {
+                            builder.AppendLine("    - 当前职业/性别没有可选奖励");
+                        }
+                        else if (visibleIndices != null && visibleIndices.Count > 1)
+                        {
+                            builder.AppendLine("    - 请在下方奖励栏选择一项");
                         }
                     }
                 }
             }
 
             return builder.ToString().Trim();
+        }
+
+        private static string FormatActivityDuration(int seconds)
+        {
+            if (seconds <= 0)
+                return string.Empty;
+
+            TimeSpan duration = TimeSpan.FromSeconds(seconds);
+            if (duration.TotalHours >= 1)
+                return $"{(int)duration.TotalHours}小时{duration.Minutes}分";
+            if (duration.TotalMinutes >= 1)
+                return $"{duration.Minutes}分{duration.Seconds}秒";
+            return duration.Seconds + "秒";
         }
 
         private static void AppendLines(StringBuilder builder, string header, IList<string> lines)
@@ -759,11 +1169,404 @@ namespace MonoShare
             bool canAccept = selected != null && !selected.Taken && !selected.Completed;
             bool canFinish = selected != null && selected.Taken && selected.Completed;
             bool canAbandon = selected != null && selected.Taken && !selected.Completed;
+            bool canShare = selected != null && selected.Taken && !selected.Completed;
+            if (_mobileQuestContext.IsActivityMode && GameScene.MobileActivityState.RequestPending)
+                canAccept = canFinish = canAbandon = canShare = false;
 
             try { if (binding.Accept != null && !binding.Accept._disposed) { binding.Accept.grayed = !canAccept; binding.Accept.touchable = canAccept; } } catch { }
             try { if (binding.Finish != null && !binding.Finish._disposed) { binding.Finish.grayed = !canFinish; binding.Finish.touchable = canFinish; } } catch { }
             try { if (binding.Abandon != null && !binding.Abandon._disposed) { binding.Abandon.grayed = !canAbandon; binding.Abandon.touchable = canAbandon; } } catch { }
+            try { if (binding.Share != null && !binding.Share._disposed) { binding.Share.grayed = !canShare; binding.Share.touchable = canShare; } } catch { }
             try { if (binding.Track != null && !binding.Track._disposed) { binding.Track.grayed = selected == null; binding.Track.touchable = selected != null; } } catch { }
+            UpdateMobileQuestTrackButton(binding, selected);
+        }
+
+        private static void UpdateMobileQuestTrackButton(MobileQuestWindowBinding binding, ClientQuestProgress selected)
+        {
+            if (binding?.Track == null || binding.Track._disposed)
+                return;
+
+            bool tracked = IsMobileQuestTracked(selected);
+            string title = tracked ? "取消追踪" : "追踪";
+            try { binding.Track.title = title; } catch { }
+            try
+            {
+                if (binding.Track.GetChild("title") is GTextField label && !label._disposed)
+                    label.text = title;
+            }
+            catch
+            {
+            }
+        }
+
+        private static bool IsMobileQuestTracked(ClientQuestProgress quest)
+        {
+            int questIndex = GetQuestIndex(quest);
+            int[] tracked = Settings.TrackedQuests;
+            if (questIndex <= 0 || tracked == null)
+                return false;
+
+            for (int i = 0; i < tracked.Length; i++)
+            {
+                if (tracked[i] == questIndex)
+                    return true;
+            }
+
+            return false;
+        }
+
+        private static void TryRefreshMobileQuestRewardControls(MobileQuestWindowBinding binding, ClientQuestProgress selected)
+        {
+            if (binding == null)
+                return;
+
+            if (!_mobileQuestContext.IsActivityMode || selected == null || selected.QuestInfo == null)
+            {
+                GameScene.MobileActivityRewardSelection.Clear();
+                RemoveMobileQuestRewardControls(binding);
+                return;
+            }
+
+            IReadOnlyList<int> visibleIndices = GameScene.MobileActivityRewardSelection.Refresh(
+                selected,
+                GameScene.User?.Class ?? MirClass.Warrior,
+                GameScene.User?.Gender ?? MirGender.Male);
+
+            if (!MobileQuestBindingPolicy.ShouldCreateRewardBar(_mobileQuestContext.IsActivityMode, visibleIndices?.Count ?? 0))
+            {
+                RemoveMobileQuestRewardControls(binding);
+                return;
+            }
+
+            bool sameCandidates = binding.RewardSelectionBar != null && !binding.RewardSelectionBar._disposed &&
+                                  binding.RewardSelectionButtons.Count == visibleIndices.Count;
+            if (sameCandidates)
+            {
+                for (int i = 0; i < visibleIndices.Count; i++)
+                {
+                    if (binding.RewardSelectionButtons[i] == null || binding.RewardSelectionButtons[i]._disposed ||
+                        !(binding.RewardSelectionButtons[i].data is int rawIndex) || rawIndex != visibleIndices[i])
+                    {
+                        sameCandidates = false;
+                        break;
+                    }
+                }
+            }
+
+            if (!sameCandidates)
+            {
+                RemoveMobileQuestRewardControls(binding);
+                try
+                {
+                    var bar = new GComponent
+                    {
+                        name = "__codex_mobile_quest_reward_selection_bar",
+                        // 与操作栏相同：允许子按钮命中，但不把整块透明区域当作遮挡层。
+                        touchable = MobileQuestDynamicBarPolicy.ParentTouchable,
+                        opaque = MobileQuestDynamicBarPolicy.ParentOpaque,
+                    };
+                    binding.Window.AddChild(bar);
+                    binding.RewardSelectionBar = bar;
+
+                    for (int i = 0; i < visibleIndices.Count; i++)
+                    {
+                        int rawIndex = visibleIndices[i];
+                        QuestItemReward reward = selected.QuestInfo.RewardsSelectItem[rawIndex];
+                        string title = GetMobileQuestRewardTitle(reward, rawIndex, i + 1);
+                        GButton button = CreateMobileQuestRewardButton(bar, rawIndex, title);
+                        if (button == null)
+                            continue;
+
+                        EventCallback0 click = () => OnMobileQuestRewardSelected(rawIndex);
+                        button.onClick.Add(click);
+                        button.data = rawIndex;
+                        binding.RewardSelectionButtons.Add(button);
+                        binding.RewardSelectionClicks.Add(click);
+                    }
+
+                    if (binding.RewardSelectionButtons.Count != visibleIndices.Count)
+                    {
+                        RemoveMobileQuestRewardControls(binding);
+                        return;
+                    }
+                }
+                catch
+                {
+                    RemoveMobileQuestRewardControls(binding);
+                }
+            }
+
+            UpdateMobileQuestRewardButtonStates(binding, selected);
+        }
+
+        private static string GetMobileQuestRewardTitle(QuestItemReward reward, int rawIndex, int ordinal)
+        {
+            string name = reward?.Item?.Name;
+            if (string.IsNullOrWhiteSpace(name))
+                name = "物品";
+
+            ushort count = reward?.Count ?? 1;
+            return $"{ordinal}. {name} x{count}";
+        }
+
+        private static GButton CreateMobileQuestRewardButton(GComponent bar, int rawIndex, string title)
+        {
+            if (bar == null || bar._disposed)
+                return null;
+
+            try
+            {
+                var button = new GButton
+                {
+                    name = "__codex_mobile_quest_reward_" + rawIndex,
+                    title = title,
+                    touchable = true,
+                    enabled = true,
+                    grayed = false,
+                    opaque = true,
+                    changeStateOnClick = false,
+                    data = rawIndex,
+                };
+
+                var background = new GGraph
+                {
+                    name = "background",
+                    touchable = false,
+                };
+                background.DrawRect(1F, 1F, 2, new Color(105, 125, 155, 255), new Color(30, 45, 65, 245));
+                button.AddChild(background);
+
+                var label = new GTextField
+                {
+                    name = "title",
+                    text = title,
+                    touchable = false,
+                    align = AlignType.Center,
+                    verticalAlign = VertAlignType.Middle,
+                    autoSize = AutoSizeType.None,
+                    singleLine = true,
+                };
+                try
+                {
+                    label.textFormat.size = 13;
+                    label.textFormat.color = Color.White;
+                }
+                catch
+                {
+                }
+                button.AddChild(label);
+                bar.AddChild(button);
+                return button;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        private static void UpdateMobileQuestRewardButtonStates(MobileQuestWindowBinding binding, ClientQuestProgress selected)
+        {
+            if (binding == null || selected == null)
+                return;
+
+            int selectedRawIndex = GameScene.MobileActivityRewardSelection.SelectedOriginalIndex;
+            for (int i = 0; i < binding.RewardSelectionButtons.Count; i++)
+            {
+                GButton button = binding.RewardSelectionButtons[i];
+                if (button == null || button._disposed)
+                    continue;
+
+                int rawIndex = button.data is int value ? value : -1;
+                bool isSelected = rawIndex >= 0 && rawIndex == selectedRawIndex;
+                try { button.grayed = false; button.touchable = true; button.alpha = isSelected ? 1F : 0.82F; } catch { }
+                try
+                {
+                    if (button.GetChild("title") is GTextField label && !label._disposed)
+                    {
+                        QuestItemReward reward = selected.QuestInfo?.RewardsSelectItem != null &&
+                                                 rawIndex >= 0 && rawIndex < selected.QuestInfo.RewardsSelectItem.Count
+                            ? selected.QuestInfo.RewardsSelectItem[rawIndex]
+                            : null;
+                        string name = GetMobileQuestRewardTitle(reward, rawIndex, i + 1);
+                        label.text = isSelected ? "✓ " + name : name;
+                    }
+                }
+                catch
+                {
+                }
+            }
+        }
+
+        private static void OnMobileQuestRewardSelected(int rawIndex)
+        {
+            try
+            {
+                ClientQuestProgress selected = TryGetSelectedQuest();
+                if (selected == null)
+                    return;
+
+                bool changed = GameScene.MobileActivityRewardSelection.Select(
+                    selected,
+                    rawIndex,
+                    GameScene.User?.Class ?? MirClass.Warrior,
+                    GameScene.User?.Gender ?? MirGender.Male);
+                if (changed)
+                    MarkMobileQuestDirty();
+            }
+            catch (Exception ex)
+            {
+                CMain.SaveError("FairyGUI: 选择活动奖励失败：" + ex.Message);
+            }
+        }
+
+        private static void RemoveMobileQuestRewardControls(MobileQuestWindowBinding binding)
+        {
+            if (binding == null)
+                return;
+
+            try
+            {
+                for (int i = 0; i < binding.RewardSelectionButtons.Count; i++)
+                {
+                    GButton button = binding.RewardSelectionButtons[i];
+                    EventCallback0 click = i < binding.RewardSelectionClicks.Count ? binding.RewardSelectionClicks[i] : null;
+                    if (button != null && click != null)
+                        button.onClick.Remove(click);
+                }
+            }
+            catch
+            {
+            }
+
+            try
+            {
+                if (binding.RewardSelectionBar != null && binding.RewardSelectionBar.parent != null)
+                    binding.RewardSelectionBar.parent.RemoveChild(binding.RewardSelectionBar, dispose: true);
+                else
+                    binding.RewardSelectionBar?.Dispose();
+            }
+            catch
+            {
+            }
+
+            binding.RewardSelectionBar = null;
+            binding.RewardSelectionButtons.Clear();
+            binding.RewardSelectionClicks.Clear();
+        }
+
+        private static void TryLayoutMobileQuestControls(MobileQuestWindowBinding binding)
+        {
+            if (binding == null || binding.Window == null || binding.Window._disposed)
+                return;
+
+            float width;
+            float height;
+            try
+            {
+                width = Math.Max(1F, binding.Window.width);
+                height = Math.Max(1F, binding.Window.height);
+            }
+            catch
+            {
+                return;
+            }
+
+            bool hasActionBar = binding.FallbackActionBar != null && !binding.FallbackActionBar._disposed;
+            bool hasRewardBar = binding.RewardSelectionBar != null && !binding.RewardSelectionBar._disposed &&
+                                binding.RewardSelectionButtons.Count > 1;
+            const float sideMargin = 12F;
+            const float gap = 8F;
+            const float actionHeight = 62F;
+            const float rewardHeight = 58F;
+
+            float actionY = height - sideMargin - (hasActionBar ? actionHeight : 0F);
+            float rewardY = actionY - (hasActionBar ? gap : 0F) - (hasRewardBar ? rewardHeight : 0F);
+            if (hasActionBar)
+            {
+                actionY = Math.Max(sideMargin, actionY);
+                try
+                {
+                    GComponent bar = binding.FallbackActionBar;
+                    bar.visible = true;
+                    bar.SetPosition(sideMargin, actionY);
+                    bar.SetSize(Math.Max(1F, width - sideMargin * 2F), actionHeight);
+
+                    int count = binding.FallbackActionButtons.Count;
+                    float buttonGap = 6F;
+                    float buttonWidth = count > 0
+                        ? Math.Max(1F, (bar.width - buttonGap * Math.Max(0, count - 1)) / count)
+                        : 1F;
+                    for (int i = 0; i < count; i++)
+                    {
+                        GButton button = binding.FallbackActionButtons[i];
+                        if (button == null || button._disposed)
+                            continue;
+
+                        button.SetPosition(i * (buttonWidth + buttonGap), 10F);
+                        button.SetSize(buttonWidth, 42F);
+                        if (button.GetChild("background") is GGraph background)
+                            background.SetSize(buttonWidth, 42F);
+                        if (button.GetChild("title") is GTextField label)
+                            label.SetSize(buttonWidth, 42F);
+                    }
+                }
+                catch
+                {
+                }
+            }
+
+            if (hasRewardBar)
+            {
+                rewardY = Math.Max(sideMargin, rewardY);
+                try
+                {
+                    GComponent bar = binding.RewardSelectionBar;
+                    bar.visible = true;
+                    bar.SetPosition(sideMargin, rewardY);
+                    bar.SetSize(Math.Max(1F, width - sideMargin * 2F), rewardHeight);
+
+                    int count = binding.RewardSelectionButtons.Count;
+                    float buttonGap = 6F;
+                    float buttonWidth = count > 0
+                        ? Math.Max(1F, (bar.width - buttonGap * Math.Max(0, count - 1)) / count)
+                        : 1F;
+                    for (int i = 0; i < count; i++)
+                    {
+                        GButton button = binding.RewardSelectionButtons[i];
+                        if (button == null || button._disposed)
+                            continue;
+
+                        button.SetPosition(i * (buttonWidth + buttonGap), 8F);
+                        button.SetSize(buttonWidth, 42F);
+                        if (button.GetChild("background") is GGraph background)
+                            background.SetSize(buttonWidth, 42F);
+                        if (button.GetChild("title") is GTextField label)
+                            label.SetSize(buttonWidth, 42F);
+                    }
+                }
+                catch
+                {
+                }
+            }
+
+            // 若描述字段占满整个窗口，压缩其底部可用高度，确保动态栏不遮挡任务说明。
+            float reservedTop = Math.Min(actionY, rewardY);
+            if (!hasActionBar && !hasRewardBar)
+                return;
+
+            try
+            {
+                if (binding.Content != null && !binding.Content._disposed && binding.Content.height > 0F &&
+                    binding.Content.y < reservedTop && binding.Content.y + binding.Content.height > reservedTop)
+                {
+                    float newHeight = Math.Max(1F, reservedTop - binding.Content.y - 4F);
+                    if (newHeight < binding.Content.height)
+                        binding.Content.SetSize(binding.Content.width, newHeight);
+                }
+            }
+            catch
+            {
+            }
         }
 
         private static void OnMobileQuestAcceptClicked()
@@ -777,6 +1580,12 @@ namespace MonoShare
                 int questIndex = GetQuestIndex(selected);
                 if (questIndex < 1)
                     return;
+
+                if (_mobileQuestContext.IsActivityMode)
+                {
+                    GameScene.Scene?.TryAcceptMobileActivity(selected);
+                    return;
+                }
 
                 Network.Enqueue(new C.AcceptQuest { QuestIndex = questIndex });
             }
@@ -798,6 +1607,12 @@ namespace MonoShare
                 if (questIndex < 1)
                     return;
 
+                if (_mobileQuestContext.IsActivityMode)
+                {
+                    GameScene.Scene?.TryFinishMobileActivity(selected);
+                    return;
+                }
+
                 Network.Enqueue(new C.FinishQuest { QuestIndex = questIndex });
             }
             catch (Exception ex)
@@ -818,11 +1633,43 @@ namespace MonoShare
                 if (questIndex < 1)
                     return;
 
+                if (_mobileQuestContext.IsActivityMode)
+                {
+                    GameScene.Scene?.TryAbandonMobileActivity(selected);
+                    return;
+                }
+
                 Network.Enqueue(new C.AbandonQuest { QuestIndex = questIndex });
             }
             catch (Exception ex)
             {
                 CMain.SaveError("FairyGUI: 发送放弃任务失败：" + ex.Message);
+            }
+        }
+
+        private static void OnMobileQuestShareClicked()
+        {
+            try
+            {
+                ClientQuestProgress selected = TryGetSelectedQuest();
+                if (selected == null || !selected.Taken || selected.Completed)
+                    return;
+
+                int questIndex = GetQuestIndex(selected);
+                if (questIndex < 1)
+                    return;
+
+                if (_mobileQuestContext.IsActivityMode)
+                {
+                    GameScene.Scene?.TryShareMobileActivity(selected);
+                    return;
+                }
+
+                Network.Enqueue(new C.ShareQuest { QuestIndex = questIndex });
+            }
+            catch (Exception ex)
+            {
+                CMain.SaveError("FairyGUI: 分享任务失败：" + ex.Message);
             }
         }
 
@@ -914,6 +1761,7 @@ namespace MonoShare
                 builder.AppendLine($"Accept={DescribeObject(binding.Window, binding.Accept)}");
                 builder.AppendLine($"Finish={DescribeObject(binding.Window, binding.Finish)}");
                 builder.AppendLine($"Abandon={DescribeObject(binding.Window, binding.Abandon)}");
+                builder.AppendLine($"Share={DescribeObject(binding.Window, binding.Share)}");
                 builder.AppendLine($"Track={DescribeObject(binding.Window, binding.Track)}");
                 builder.AppendLine();
 
@@ -924,6 +1772,7 @@ namespace MonoShare
                 builder.AppendLine($"  {MobileQuestAcceptConfigKey}={binding.AcceptOverrideSpec}");
                 builder.AppendLine($"  {MobileQuestFinishConfigKey}={binding.FinishOverrideSpec}");
                 builder.AppendLine($"  {MobileQuestAbandonConfigKey}={binding.AbandonOverrideSpec}");
+                builder.AppendLine($"  {MobileQuestShareConfigKey}={binding.ShareOverrideSpec}");
                 builder.AppendLine($"  {MobileQuestTrackConfigKey}={binding.TrackOverrideSpec}");
                 builder.AppendLine();
 
@@ -934,6 +1783,7 @@ namespace MonoShare
                 builder.AppendLine($"  Accept={binding.AcceptResolveInfo}");
                 builder.AppendLine($"  Finish={binding.FinishResolveInfo}");
                 builder.AppendLine($"  Abandon={binding.AbandonResolveInfo}");
+                builder.AppendLine($"  Share={binding.ShareResolveInfo}");
                 builder.AppendLine($"  Track={binding.TrackResolveInfo}");
                 builder.AppendLine();
 

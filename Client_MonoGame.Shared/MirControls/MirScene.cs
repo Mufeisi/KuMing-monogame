@@ -211,7 +211,21 @@ namespace MonoShare.MirControls
 
         private void NewQuestInfo(S.NewQuestInfo info)
         {
+            if (info?.Info == null)
+                return;
+
+            for (int i = 0; i < GameScene.QuestInfoList.Count; i++)
+            {
+                if (GameScene.QuestInfoList[i]?.Index != info.Info.Index)
+                    continue;
+
+                GameScene.QuestInfoList[i] = info.Info;
+                GameScene.Scene?.SyncMobileActivitySnapshot();
+                return;
+            }
+
             GameScene.QuestInfoList.Add(info.Info);
+            GameScene.Scene?.SyncMobileActivitySnapshot();
         }
 
         private void NewRecipeInfo(S.NewRecipeInfo info)

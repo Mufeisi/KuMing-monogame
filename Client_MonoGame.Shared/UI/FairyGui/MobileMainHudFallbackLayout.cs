@@ -49,6 +49,10 @@ internal static class MobileMainHudFallbackLayout
     internal static MobileMainHudFallbackBounds Fishing(float rootWidth, float rootHeight) =>
         Create(rootWidth, rootHeight, bottomOffset: 242F);
 
+    // 活动/赏金入口位于钓鱼入口下方，保持同样的间距和安全区边距。
+    internal static MobileMainHudFallbackBounds Activity(float rootWidth, float rootHeight) =>
+        Create(rootWidth, rootHeight, bottomOffset: 298F);
+
     private static MobileMainHudFallbackBounds Create(float rootWidth, float rootHeight, float bottomOffset)
     {
         float x = Math.Max(12F, rootWidth - ButtonWidth - 16F);

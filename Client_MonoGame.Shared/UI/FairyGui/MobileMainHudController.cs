@@ -79,6 +79,7 @@ namespace MonoShare
             allBound &= Bind(reader, usedTargets, "Mount", "坐骑", new[] { "mount", "horse", "ride", "坐骑", "骑乘" }, () => GameScene.Scene?.ToggleMobileMountOverlay());
             allBound &= Bind(reader, usedTargets, "Fishing", "钓鱼", new[] { "fishing", "fish", "rod", "钓鱼", "鱼竿" }, () => GameScene.Scene?.ToggleMobileFishingOverlay());
             allBound &= Bind(reader, usedTargets, "SealRental", "封印/租赁", new[] { "seal", "sealed", "rental", "rent", "封印", "上锁", "租赁", "出租", "租借" }, () => GameScene.Scene?.ToggleMobileSealRentalOverlay());
+            allBound &= Bind(reader, usedTargets, "Activity", "活动/赏金", new[] { "activity", "activities", "bounty", "event", "questactivity", "活动", "赏金", "悬赏" }, () => GameScene.Scene?.ToggleMobileActivityOverlay());
             allBound &= Bind(reader, usedTargets, "Chat", "聊天", new[] { "dbtnchat", "chat", "聊天", "聊" }, () => GameScene.Scene?.ToggleMobileChatOverlay());
             allBound &= Bind(reader, usedTargets, "Shop", "商店", new[] { "shop", "store", "mall", "商店", "商" }, () => GameScene.Scene?.ToggleMobileGameShopOverlay());
             allBound &= Bind(reader, usedTargets, "System", "系统", new[] { "system", "setting", "menu", "options", "help", "系统", "设置" }, () => GameScene.Scene?.ToggleMobileSystemMenuOverlay());
@@ -267,6 +268,17 @@ namespace MonoShare
                 string.Equals(actionKey, "SealRental", StringComparison.OrdinalIgnoreCase))
             {
                 target = TryCreateSealRentalHudFallbackButton();
+                if (target != null)
+                {
+                    selectedScore = Math.Max(selectedScore, 1000);
+                    error = null;
+                }
+            }
+
+            if (target == null &&
+                string.Equals(actionKey, "Activity", StringComparison.OrdinalIgnoreCase))
+            {
+                target = TryCreateActivityHudFallbackButton();
                 if (target != null)
                 {
                     selectedScore = Math.Max(selectedScore, 1000);
@@ -784,6 +796,80 @@ namespace MonoShare
             }
         }
 
+        private GObject TryCreateActivityHudFallbackButton()
+        {
+            if (_root == null || _root._disposed)
+                return null;
+
+            try
+            {
+                GObject existing = _root.GetChild("__codex_mobile_activity_hud_fallback");
+                if (existing != null && !existing._disposed)
+                    return existing;
+            }
+            catch
+            {
+            }
+
+            try
+            {
+                MobileMainHudFallbackBounds bounds =
+                    MobileMainHudFallbackLayout.Activity(_root.width, _root.height);
+                float width = bounds.Width;
+                float height = bounds.Height;
+                var button = new GButton
+                {
+                    name = "__codex_mobile_activity_hud_fallback",
+                    title = "活动/赏金",
+                    touchable = true,
+                    enabled = true,
+                    grayed = false,
+                    opaque = true,
+                    changeStateOnClick = false,
+                };
+                button.SetSize(width, height);
+                button.SetPosition(bounds.X, bounds.Y);
+
+                var background = new GGraph
+                {
+                    name = "__codex_mobile_activity_hud_fallback_bg",
+                    touchable = false,
+                };
+                background.DrawRect(width, height, 2,
+                    new Color(170, 125, 70, 255), new Color(90, 58, 28, 245));
+                button.AddChild(background);
+
+                var label = new GTextField
+                {
+                    name = "title",
+                    text = "活动/赏金",
+                    touchable = false,
+                    align = AlignType.Center,
+                    verticalAlign = VertAlignType.Middle,
+                    autoSize = AutoSizeType.None,
+                };
+                label.SetSize(width, height);
+                try
+                {
+                    label.textFormat.size = 16;
+                    label.textFormat.color = Color.White;
+                    label.textFormat.bold = true;
+                }
+                catch
+                {
+                }
+                button.AddChild(label);
+
+                _root.AddChild(button);
+                try { _root.SetChildIndex(button, _root.numChildren - 1); } catch { }
+                return button;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
         private static InIReader TryCreateReader()
         {
             try
@@ -829,7 +915,7 @@ namespace MonoShare
                 builder.AppendLine("配置覆盖（可选）：Mir2Config.ini -> [FairyGUI]");
                 builder.AppendLine("  MobileMainHud.<ActionKey>=<Spec>");
                 builder.AppendLine("  Spec 支持：path:... / idx:... / name:... / item:... / url:... / title:... / 或者关键字列表(a|b|c)");
-                builder.AppendLine("  ActionKey: Pickup/Attack/AutoRun/AutoHit/AttackMode/Magic/Inventory/Hero/Mentor/Relationship/Mount/Fishing/SealRental/Chat/Shop/System/BigMap");
+                builder.AppendLine("  ActionKey: Pickup/Attack/AutoRun/AutoHit/AttackMode/Magic/Inventory/Hero/Mentor/Relationship/Mount/Fishing/SealRental/Activity/Chat/Shop/System/BigMap");
                 builder.AppendLine();
 
                 if (_results.Count == 0)

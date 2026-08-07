@@ -24,8 +24,11 @@
     <Compile Include="..\..\Client_MonoGame.Shared\MirScenes\MobileMountState.cs" Link="Mobile\MobileMountState.cs" />
     <Compile Include="..\..\Client_MonoGame.Shared\MirScenes\MobileFishingState.cs" Link="Mobile\MobileFishingState.cs" />
     <Compile Include="..\..\Client_MonoGame.Shared\MirScenes\MobileSealRentalState.cs" Link="Mobile\MobileSealRentalState.cs" />
+    <Compile Include="..\..\Client_MonoGame.Shared\MirScenes\MobileActivityState.cs" Link="Mobile\MobileActivityState.cs" />
+    <Compile Include="..\..\Client_MonoGame.Shared\MirScenes\MobileActivityRewardSelection.cs" Link="Mobile\MobileActivityRewardSelection.cs" />
     <Compile Include="..\..\Client_MonoGame.Shared\MirScenes\MobileSealRentalLayout.cs" Link="Mobile\MobileSealRentalLayout.cs" />
     <Compile Include="..\..\Client_MonoGame.Shared\UI\FairyGui\MobileMainHudFallbackLayout.cs" Link="Mobile\MobileMainHudFallbackLayout.cs" />
+    <Compile Include="..\..\Client_MonoGame.Shared\UI\FairyGui\MobileQuestContextState.cs" Link="Mobile\MobileQuestContextState.cs" />
     <Compile Include="..\..\Client_MonoGame.Shared\UI\FairyGui\MobileMountInventoryPolicy.cs" Link="Mobile\MobileMountInventoryPolicy.cs" />
     <Compile Include="..\..\Client_MonoGame.Shared\UI\FairyGui\MobileFishingInventoryPolicy.cs" Link="Mobile\MobileFishingInventoryPolicy.cs" />
     <ProjectReference Include="..\..\Shared\Shared.csproj" />

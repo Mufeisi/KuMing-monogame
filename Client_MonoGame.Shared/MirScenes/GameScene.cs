@@ -185,6 +185,8 @@ namespace MonoShare.MirScenes
         public static readonly MobileMountState MobileMountState = new MobileMountState();
         public static readonly MobileFishingState MobileFishingState = new MobileFishingState();
         public static readonly MobileSealRentalState MobileSealRentalState = new MobileSealRentalState();
+        public static readonly MobileActivityState MobileActivityState = new MobileActivityState();
+        public static readonly MobileActivityRewardSelection MobileActivityRewardSelection = new MobileActivityRewardSelection();
         public static List<ClientRecipeInfo> RecipeInfoList = new List<ClientRecipeInfo>();
 
         public List<ClientBuff> Buffs = new List<ClientBuff>();
@@ -236,12 +238,15 @@ namespace MonoShare.MirScenes
             MobileMountState.ResetForSession();
             MobileFishingState.ResetForSession();
             MobileSealRentalState.ResetForSession();
+            MobileActivityState.ResetForSession();
+            MobileActivityRewardSelection.Clear();
             MonoShare.FairyGuiHost.MarkMobileShopDirty();
             MonoShare.FairyGuiHost.MarkMobileMentorDirty();
             MonoShare.FairyGuiHost.MarkMobileMarriageDirty();
             MonoShare.FairyGuiHost.MarkMobileMountDirty();
             MonoShare.FairyGuiHost.MarkMobileFishingDirty();
             MonoShare.FairyGuiHost.MarkMobileSealRentalDirty();
+            MonoShare.FairyGuiHost.MarkMobileActivityDirty();
 
             if (Settings.LogErrors && Environment.OSVersion.Platform != PlatformID.Win32NT)
                 CMain.SaveLog("进入地图：GameScene 构造开始（v20260328-asynclog）。");
@@ -447,6 +452,179 @@ namespace MonoShare.MirScenes
             MonoShare.FairyGuiHost.BeginMobileQuestDetail(quest);
             if (MonoShare.FairyGuiHost.TryShowMobileWindowByKeywords("Quest", new[] { "任务_DA2EWindow1UI", "任务", "Quest", "Diary" }))
                 MonoShare.FairyGuiHost.HideAllMobileWindowsExcept("Quest");
+        }
+
+        /// <summary>
+        /// 从主 HUD 打开每日/重复任务投影。活动页仍复用 Quest FUI 和原有
+        /// Accept/Finish/Abandon/Share 包，不伪造活动协议或 NPC 请求。
+        /// </summary>
+        public void ToggleMobileActivityOverlay()
+        {
+            if (Environment.OSVersion.Platform == PlatformID.Win32NT)
+                return;
+
+            MapControl?.CancelMagicLocationSelection(showMessage: false);
+            SyncMobileActivitySnapshot();
+            MonoShare.FairyGuiHost.UpdateMobileActivityContext();
+
+            if (MonoShare.FairyGuiHost.TryToggleMobileWindowByKeywords(
+                    "Quest", new[] { "任务_DA2EWindow1UI", "任务", "Quest", "Diary", "活动", "赏金" },
+                    out bool nowVisible))
+            {
+                if (nowVisible)
+                {
+                    MonoShare.FairyGuiHost.HideAllMobileWindowsExcept("Quest");
+                    MonoShare.FairyGuiHost.MarkMobileActivityDirty();
+                }
+                return;
+            }
+
+            MobileReceiveChat("当前活动/赏金窗口暂不可用，请检查 FairyGUI 任务页面资源。", ChatType.System);
+        }
+
+        internal void SyncMobileActivitySnapshot()
+        {
+            MobileActivityState.SyncSnapshot(QuestInfoList, User?.CurrentQuests, User?.CompletedQuests);
+            if (Environment.OSVersion.Platform != PlatformID.Win32NT)
+                MonoShare.FairyGuiHost.MarkMobileActivityDirty();
+        }
+
+        internal bool TryAcceptMobileActivity(ClientQuestProgress progress)
+        {
+            ClientQuestInfo info = progress?.QuestInfo;
+            int questIndex = progress?.Id ?? info?.Index ?? 0;
+            if (info == null || !MobileActivityState.IsActivity(info) || questIndex <= 0)
+                return false;
+
+            if (!TryFindNearbyMobileActivityNpc(info.NPCIndex, out _))
+            {
+                string message = "请前往活动/赏金任务 NPC 附近再接取。";
+                MobileActivityState.ReportLocalError(message);
+                MobileReceiveChat(message, ChatType.System);
+                MonoShare.FairyGuiHost.MarkMobileActivityDirty();
+                return false;
+            }
+
+            if (!MobileActivityState.BeginRequest(MobileActivityOperation.Accept, questIndex, CMain.Time))
+            {
+                MobileReceiveChat(MobileActivityState.Error ?? "活动/赏金接取请求无效。", ChatType.System);
+                MonoShare.FairyGuiHost.MarkMobileActivityDirty();
+                return false;
+            }
+
+            Network.Enqueue(new C.AcceptQuest
+            {
+                NPCIndex = info.NPCIndex,
+                QuestIndex = questIndex,
+            });
+            MonoShare.FairyGuiHost.MarkMobileActivityDirty();
+            return true;
+        }
+
+        internal bool TryFinishMobileActivity(ClientQuestProgress progress)
+        {
+            ClientQuestInfo info = progress?.QuestInfo;
+            int questIndex = progress?.Id ?? info?.Index ?? 0;
+            if (info == null || !MobileActivityState.IsActivity(info) || questIndex <= 0)
+                return false;
+
+            if (!TryFindNearbyMobileActivityNpc(info.FinishNPCIndex, out _))
+            {
+                const string message = "请前往活动/赏金任务交付 NPC 附近再提交。";
+                MobileActivityState.ReportLocalError(message);
+                MobileReceiveChat(message, ChatType.System);
+                MonoShare.FairyGuiHost.MarkMobileActivityDirty();
+                return false;
+            }
+
+            if (!MobileActivityRewardSelection.TryResolve(
+                    progress,
+                    User?.Class ?? MirClass.Warrior,
+                    User?.Gender ?? MirGender.Male,
+                    out int selectedItemIndex,
+                    out string rewardError))
+            {
+                string message = rewardError ?? "请先选择一个活动奖励。";
+                MobileActivityState.ReportLocalError(message);
+                MobileReceiveChat(message, ChatType.System);
+                MonoShare.FairyGuiHost.MarkMobileActivityDirty();
+                return false;
+            }
+
+            if (!MobileActivityState.BeginRequest(MobileActivityOperation.Finish, questIndex, CMain.Time))
+            {
+                MobileReceiveChat(MobileActivityState.Error ?? "活动/赏金提交请求无效。", ChatType.System);
+                MonoShare.FairyGuiHost.MarkMobileActivityDirty();
+                return false;
+            }
+
+            Network.Enqueue(new C.FinishQuest
+            {
+                QuestIndex = questIndex,
+                SelectedItemIndex = selectedItemIndex,
+            });
+            MonoShare.FairyGuiHost.MarkMobileActivityDirty();
+            return true;
+        }
+
+        internal bool TryAbandonMobileActivity(ClientQuestProgress progress)
+        {
+            ClientQuestInfo info = progress?.QuestInfo;
+            int questIndex = progress?.Id ?? info?.Index ?? 0;
+            if (info == null || !MobileActivityState.IsActivity(info) || questIndex <= 0)
+                return false;
+
+            if (!MobileActivityState.BeginRequest(MobileActivityOperation.Abandon, questIndex, CMain.Time))
+            {
+                MobileReceiveChat(MobileActivityState.Error ?? "活动/赏金放弃请求无效。", ChatType.System);
+                MonoShare.FairyGuiHost.MarkMobileActivityDirty();
+                return false;
+            }
+
+            Network.Enqueue(new C.AbandonQuest { QuestIndex = questIndex });
+            MonoShare.FairyGuiHost.MarkMobileActivityDirty();
+            return true;
+        }
+
+        internal bool TryShareMobileActivity(ClientQuestProgress progress)
+        {
+            ClientQuestInfo info = progress?.QuestInfo;
+            int questIndex = progress?.Id ?? info?.Index ?? 0;
+            if (info == null || !MobileActivityState.IsActivity(info) || questIndex <= 0)
+                return false;
+
+            if (!MobileActivityState.BeginRequest(MobileActivityOperation.Share, questIndex, CMain.Time))
+            {
+                MobileReceiveChat(MobileActivityState.Error ?? "活动/赏金分享请求无效。", ChatType.System);
+                MonoShare.FairyGuiHost.MarkMobileActivityDirty();
+                return false;
+            }
+
+            // ShareQuest 没有服务端确认包；请求门保持到超时，不显示虚假的成功结果。
+            Network.Enqueue(new C.ShareQuest { QuestIndex = questIndex });
+            MonoShare.FairyGuiHost.MarkMobileActivityDirty();
+            return true;
+        }
+
+        private bool TryFindNearbyMobileActivityNpc(uint npcIndex, out NPCObject npc)
+        {
+            npc = null;
+            if (npcIndex == 0 || MapControl.Objects == null || User == null)
+                return false;
+
+            for (int i = MapControl.Objects.Count - 1; i >= 0; i--)
+            {
+                if (MapControl.Objects[i] is not NPCObject candidate || candidate.ObjectID != npcIndex)
+                    continue;
+
+                if (!Functions.InRange(candidate.CurrentLocation, User.CurrentLocation, Globals.DataRange))
+                    continue;
+
+                npc = candidate;
+                return true;
+            }
+
+            return false;
         }
 
         internal void RefreshMobileQuestTrackingOverlay()
@@ -2440,6 +2618,12 @@ namespace MonoShare.MirScenes
                 MonoShare.FairyGuiHost.MarkMobileSealRentalDirty();
             }
 
+            if (MobileActivityState.Tick(CMain.Time) &&
+                Environment.OSVersion.Platform != PlatformID.Win32NT)
+            {
+                MonoShare.FairyGuiHost.MarkMobileActivityDirty();
+            }
+
             if (MapControl == null || User == null)
                 return;
 
@@ -3340,6 +3524,7 @@ namespace MonoShare.MirScenes
             User.Load(p);
             SyncMobileMountSnapshot(User);
             SyncMobileFishingSnapshot(User);
+            SyncMobileActivitySnapshot();
             //MainDialog.PModeLabel.Visible = User.Class == MirClass.Wizard || User.Class == MirClass.Taoist;
             Gold = p.Gold;
             Credit = p.Credit;
@@ -3348,6 +3533,7 @@ namespace MonoShare.MirScenes
             {
                 MonoShare.FairyGuiHost.MarkMobileMountDirty();
                 MonoShare.FairyGuiHost.MarkMobileFishingDirty();
+                MonoShare.FairyGuiHost.MarkMobileActivityDirty();
             }
 
             //InventoryDialog.RefreshInventory();
@@ -3402,6 +3588,13 @@ namespace MonoShare.MirScenes
         }
         private void ReceiveChat(S.Chat p)
         {
+            if (p != null && p.Type == ChatType.System &&
+                MobileActivityState.ApplyServerSystemMessage(p.Message))
+            {
+                if (Environment.OSVersion.Platform != PlatformID.Win32NT)
+                    MonoShare.FairyGuiHost.MarkMobileActivityDirty();
+            }
+
             if (p != null && p.Type == ChatType.System &&
                 MobileMarriageState.ApplyServerSystemMessage(p.Message))
             {
@@ -4399,34 +4592,53 @@ namespace MonoShare.MirScenes
 
         private void CompleteQuest(S.CompleteQuest p)
         {
-            User.CompletedQuests = p.CompletedQuests;
+            if (User == null || p == null)
+                return;
+
+            User.CompletedQuests = p.CompletedQuests ?? new List<int>();
+            MobileActivityState.ApplyCompleted(User.CompletedQuests);
 
             PruneMobileTrackedQuestsIfNeeded();
             RefreshMobileQuestTrackingOverlay();
             MonoShare.FairyGuiHost.MarkMobileQuestDirty();
+            MonoShare.FairyGuiHost.MarkMobileActivityDirty();
         }
 
         private void ShareQuest(S.ShareQuest p)
         {
-            ClientQuestInfo quest = GameScene.QuestInfoList.FirstOrDefault(e => e.Index == p.QuestIndex);
+            if (p == null)
+                return;
+
+            ClientQuestInfo quest = GameScene.QuestInfoList.FirstOrDefault(e => e != null && e.Index == p.QuestIndex);
 
             if (quest == null) return;
 
-            //MirMessageBox messageBox = new MirMessageBox(string.Format("{0},想和你分享一个任务。你接受吗?", p.SharerName), MirMessageBoxButtons.YesNo);
-
-            //messageBox.YesButton.Click += (o, e) => Network.Enqueue(new C.AcceptQuest { NPCIndex = 0, QuestIndex = quest.Index });
-
-            //messageBox.Show();
+            if (MobileActivityState.IsActivity(quest) && Environment.OSVersion.Platform != PlatformID.Win32NT)
+            {
+                string sharer = string.IsNullOrWhiteSpace(p.SharerName) ? "队友" : p.SharerName.Trim();
+                MobileReceiveChat($"{sharer} 分享了活动/赏金：{quest.Name}。请在附近 NPC 处接取。", ChatType.System);
+                SyncMobileActivitySnapshot();
+            }
         }
 
         private void ChangeQuest(S.ChangeQuest p)
         {
-            if (p?.Quest != null)
-                BindQuest(p.Quest);
+            if (p?.Quest == null || User == null)
+                return;
+
+            BindQuest(p.Quest);
 
             switch (p.QuestState)
             {
                 case QuestState.Add:
+                    for (int i = User.CurrentQuests.Count - 1; i >= 0; i--)
+                    {
+                        if (User.CurrentQuests[i]?.Id != p.Quest.Id)
+                            continue;
+
+                        User.CurrentQuests.RemoveAt(i);
+                    }
+
                     User.CurrentQuests.Add(p.Quest);
 
                     foreach (ClientQuestProgress quest in User.CurrentQuests)
@@ -4445,7 +4657,7 @@ namespace MonoShare.MirScenes
                 case QuestState.Update:
                     for (int i = 0; i < User.CurrentQuests.Count; i++)
                     {
-                        if (User.CurrentQuests[i].Id != p.Quest.Id) continue;
+                        if (User.CurrentQuests[i]?.Id != p.Quest.Id) continue;
 
                         User.CurrentQuests[i] = p.Quest;
                     }
@@ -4456,21 +4668,26 @@ namespace MonoShare.MirScenes
                     break;
                 case QuestState.Remove:
 
-                    for (int i = User.CurrentQuests.Count - 1; i >= 0; i--)
-                    {
-                        if (User.CurrentQuests[i].Id != p.Quest.Id) continue;
+                for (int i = User.CurrentQuests.Count - 1; i >= 0; i--)
+                {
+                        if (User.CurrentQuests[i]?.Id != p.Quest.Id) continue;
 
                         User.CurrentQuests.RemoveAt(i);
-                    }
+                }
 
                     //GameScene.Scene.QuestTrackingDialog.RemoveQuest(p.Quest);
 
                     break;
             }
 
+            if (p.TrackQuest)
+                ApplyAuthoritativeMobileQuestTracking(p.Quest);
+
             PruneMobileTrackedQuestsIfNeeded();
             RefreshMobileQuestTrackingOverlay();
             MonoShare.FairyGuiHost.MarkMobileQuestDirty();
+            MobileActivityState.ApplyQuestChange(p.Quest, p.QuestState);
+            MonoShare.FairyGuiHost.MarkMobileActivityDirty();
 
             ClientQuestInfo info = p?.Quest?.QuestInfo;
             if (info != null)
@@ -4570,6 +4787,43 @@ namespace MonoShare.MirScenes
             }
             catch
             {
+            }
+        }
+
+        private void ApplyAuthoritativeMobileQuestTracking(ClientQuestProgress quest)
+        {
+            if (Environment.OSVersion.Platform == PlatformID.Win32NT || quest == null)
+                return;
+
+            int questIndex = quest.Id > 0 ? quest.Id : quest.QuestInfo?.Index ?? 0;
+            int[] tracked = Settings.TrackedQuests;
+            if (questIndex <= 0 || tracked == null || tracked.Length == 0)
+                return;
+
+            for (int i = 0; i < tracked.Length; i++)
+            {
+                if (tracked[i] == questIndex)
+                    return;
+            }
+
+            int slot = -1;
+            for (int i = 0; i < tracked.Length; i++)
+            {
+                if (tracked[i] <= 0)
+                {
+                    slot = i;
+                    break;
+                }
+            }
+
+            if (slot < 0)
+                slot = tracked.Length - 1;
+
+            tracked[slot] = questIndex;
+            string name = User?.Name;
+            if (!string.IsNullOrWhiteSpace(name))
+            {
+                try { Settings.SaveTrackedQuests(name); } catch { }
             }
         }
 
