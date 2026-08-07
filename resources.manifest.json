@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "manifestVersion": "2026-08-05",
-  "repositoryResourceSourceRevision": "caller-supplied-git-revision",
+  "manifestVersion": "2026-08-07",
+  "repositoryResourceSourceRevision": "3e96959ff0cdbf2618144746423ad7aeb0fdafbf",
   "sdk": {
     "version": "10.0.200",
     "rollForward": "disable",
@@ -11,6 +11,23 @@
     "algorithm": "SHA256",
     "treeCanonicalization": "UTF-8 lines '<NFC repo-relative-path>|<bytes>|<file-sha256>\\n', lines sorted with StringComparer.Ordinal"
   },
+  "contract": {
+    "acquire": {
+      "script": "Tools/ResourceBaseline.ps1",
+      "action": "Acquire",
+      "scope": "All",
+      "externalRootRequired": true,
+      "sourceVersionAndHashRequired": true,
+      "readOnlySource": true
+    },
+    "validate": {
+      "script": "Tools/ResourceBaseline.ps1",
+      "action": "Validate",
+      "scope": "Repository|All",
+      "phase": "final",
+      "algorithm": "SHA256"
+    }
+  },
   "resources": [
     {
       "id": "mobile-ui-retro",
@@ -19,12 +36,38 @@
       "path": "Client_MonoGame.Shared/Assets/UI/复古",
       "source": {
         "type": "repository",
-        "description": "仓库追踪的 FairyGUI 复古 UI 资源"
+        "id": "git:Client_MonoGame.Shared/Assets/UI/复古",
+        "locator": "git-tree:Client_MonoGame.Shared/Assets/UI/复古",
+        "version": "git:3e96959ff0cdbf2618144746423ad7aeb0fdafbf",
+        "versionSha256": "a2f62be2bff769cf13929430bc1f53485e935e73c9164b19302f901610958093",
+        "description": "仓库追踪的 FairyGUI 复古 UI 资源",
+        "acquisition": {
+          "method": "repository-tracked",
+          "script": "git checkout"
+        },
+        "validation": {
+          "algorithm": "SHA256",
+          "scope": "directory-tree",
+          "phase": "final"
+        },
+        "fileCount": 32,
+        "bytes": 77437699,
+        "sha256": "e795d309cc33f7b70971d689850ceaab6474aef9b24fa5ca1ffe0ed201825fda",
+        "expected": {
+          "files": [],
+          "globs": ["*"]
+        }
       },
-      "version": "tracked-at-repository-resource-source-revision",
-      "fileCount": 32,
-      "bytes": 77437699,
-      "sha256": "e795d309cc33f7b70971d689850ceaab6474aef9b24fa5ca1ffe0ed201825fda"
+      "version": "git:3e96959ff0cdbf2618144746423ad7aeb0fdafbf",
+      "final": {
+        "fileCount": 32,
+        "bytes": 77437699,
+        "sha256": "e795d309cc33f7b70971d689850ceaab6474aef9b24fa5ca1ffe0ed201825fda",
+        "expected": {
+          "files": [],
+          "globs": ["*"]
+        }
+      }
     },
     {
       "id": "mobile-ui-micro-variant",
@@ -33,12 +76,38 @@
       "path": "Client_MonoGame.Shared/Assets/UI/微变",
       "source": {
         "type": "repository",
-        "description": "仓库追踪的 FairyGUI 微变 UI 资源"
+        "id": "git:Client_MonoGame.Shared/Assets/UI/微变",
+        "locator": "git-tree:Client_MonoGame.Shared/Assets/UI/微变",
+        "version": "git:3e96959ff0cdbf2618144746423ad7aeb0fdafbf",
+        "versionSha256": "a2f62be2bff769cf13929430bc1f53485e935e73c9164b19302f901610958093",
+        "description": "仓库追踪的 FairyGUI 微变 UI 资源",
+        "acquisition": {
+          "method": "repository-tracked",
+          "script": "git checkout"
+        },
+        "validation": {
+          "algorithm": "SHA256",
+          "scope": "directory-tree",
+          "phase": "final"
+        },
+        "fileCount": 31,
+        "bytes": 77932526,
+        "sha256": "7438d5138b65b3c227236e3fda4a73c2f2e4036713bb5ad41f6f618386e419ca",
+        "expected": {
+          "files": [],
+          "globs": ["*"]
+        }
       },
-      "version": "tracked-at-repository-resource-source-revision",
-      "fileCount": 31,
-      "bytes": 77932526,
-      "sha256": "7438d5138b65b3c227236e3fda4a73c2f2e4036713bb5ad41f6f618386e419ca"
+      "version": "git:3e96959ff0cdbf2618144746423ad7aeb0fdafbf",
+      "final": {
+        "fileCount": 31,
+        "bytes": 77932526,
+        "sha256": "7438d5138b65b3c227236e3fda4a73c2f2e4036713bb5ad41f6f618386e419ca",
+        "expected": {
+          "files": [],
+          "globs": ["*"]
+        }
+      }
     },
     {
       "id": "mobile-content",
@@ -47,12 +116,38 @@
       "path": "Client_MonoGame.Shared/Content",
       "source": {
         "type": "repository",
-        "description": "仓库追踪的 MonoGame 内容描述与 hm.ttf 字体"
+        "id": "git:Client_MonoGame.Shared/Content",
+        "locator": "git-tree:Client_MonoGame.Shared/Content",
+        "version": "git:3e96959ff0cdbf2618144746423ad7aeb0fdafbf",
+        "versionSha256": "a2f62be2bff769cf13929430bc1f53485e935e73c9164b19302f901610958093",
+        "description": "仓库追踪的 MonoGame 内容描述与 hm.ttf 字体",
+        "acquisition": {
+          "method": "repository-tracked",
+          "script": "git checkout"
+        },
+        "validation": {
+          "algorithm": "SHA256",
+          "scope": "directory-tree",
+          "phase": "final"
+        },
+        "fileCount": 2,
+        "bytes": 8227740,
+        "sha256": "877020e652b9a42b7a21f2af24dd1d36816205fbb1d42168f3c18e067ba89ea3",
+        "expected": {
+          "files": [],
+          "globs": ["*"]
+        }
       },
-      "version": "tracked-at-repository-resource-source-revision",
-      "fileCount": 2,
-      "bytes": 8227740,
-      "sha256": "877020e652b9a42b7a21f2af24dd1d36816205fbb1d42168f3c18e067ba89ea3"
+      "version": "git:3e96959ff0cdbf2618144746423ad7aeb0fdafbf",
+      "final": {
+        "fileCount": 2,
+        "bytes": 8227740,
+        "sha256": "877020e652b9a42b7a21f2af24dd1d36816205fbb1d42168f3c18e067ba89ea3",
+        "expected": {
+          "files": [],
+          "globs": ["*"]
+        }
+      }
     },
     {
       "id": "mobile-bootstrap-assets",
@@ -62,7 +157,24 @@
       "sourcePath": "monogame",
       "source": {
         "type": "local-authorized",
+        "id": "authorized-local:monogame",
+        "locator": "monogame",
+        "version": "monogame|mtime-2026-08-05T03:22:46Z|source-tree-68ef95d004131e06d10feb6fd19cd4b44988d8a8de074427bb90f0db213bb202|final-sha256-04ca878e3142e2fedc68063693c08e6180dd46641a371b1e54fc467f4a54d448",
+        "versionSha256": "9b99662631b22b57904fefe990e28926796f0bf218c6431ff48db32670b657b7",
         "description": "用户授权的 D:/ChuanQi/客户端/monogame 资源源；不修改源目录",
+        "acquisition": {
+          "method": "copy-tree-with-overlay",
+          "script": "Tools/ResourceBaseline.ps1",
+          "action": "Acquire",
+          "scope": "All",
+          "externalRootRelativePath": "monogame",
+          "readOnlySource": true
+        },
+        "validation": {
+          "algorithm": "SHA256",
+          "scope": "directory-tree",
+          "phase": "source"
+        },
         "fileCount": 1644,
         "bytes": 1268703048,
         "sha256": "68ef95d004131e06d10feb6fd19cd4b44988d8a8de074427bb90f0db213bb202",
@@ -89,7 +201,7 @@
           ]
         }
       },
-      "version": "monogame|mtime-2026-08-05T03:22:46Z|source-tree-68ef95d0|deterministic-content-63ef7940",
+        "version": "monogame|mtime-2026-08-05T03:22:46Z|source-tree-68ef95d004131e06d10feb6fd19cd4b44988d8a8de074427bb90f0db213bb202|final-sha256-04ca878e3142e2fedc68063693c08e6180dd46641a371b1e54fc467f4a54d448",
       "acquired": {
         "fileCount": 1644,
         "bytes": 1268703048,
@@ -119,8 +231,8 @@
       },
       "final": {
         "fileCount": 1644,
-        "bytes": 1268678547,
-        "sha256": "74ae7886b7fbbbfc3b90cfb9097baf76b5becad5b145f7e98f67943eda0f4f44",
+        "bytes": 1268678421,
+        "sha256": "04ca878e3142e2fedc68063693c08e6180dd46641a371b1e54fc467f4a54d448",
         "expected": {
           "files": [
           "bootstrap-packages.json",
@@ -144,6 +256,11 @@
           ]
         }
       },
+      "repositoryOverlay": {
+        "fileCount": 273,
+        "bytes": 56144911,
+        "sha256": "79261d13ab19b9d1a41dacf20da74f2ad79966846e764e89f440e36f13e3c19b"
+      },
       "notes": "目录由授权源获取；导出器会规范化 bootstrap-package-index.json 并生成分包补丁。"
     },
     {
@@ -154,7 +271,24 @@
       "sourcePath": "Client_VorticeDX11",
       "source": {
         "type": "local-authorized",
+        "id": "authorized-local:Client_VorticeDX11",
+        "locator": "Client_VorticeDX11",
+        "version": "Client_VorticeDX11|mtime-2026-08-05T03:18:01Z|source-tree-d2edd0b0ac39a85ff46e670a745dc3fc47122ddd3268c14ae3869b7a07739c74|final-sha256-4ed7b9f9daa97df937e0ae5dfa8e4410f6e0c24b1f7568afaa460dfc6c8f0d23|overlay-4a5197e7",
+        "versionSha256": "9e252512e59167a93d1b23eb4a9adfadac260e5b5f954fe563f15ae4540efd7a",
         "description": "用户授权的 D:/ChuanQi/客户端/Client_VorticeDX11 资源源；不修改源目录",
+        "acquisition": {
+          "method": "copy-tree-with-overlay",
+          "script": "Tools/ResourceBaseline.ps1",
+          "action": "Acquire",
+          "scope": "All",
+          "externalRootRelativePath": "Client_VorticeDX11",
+          "readOnlySource": true
+        },
+        "validation": {
+          "algorithm": "SHA256",
+          "scope": "directory-tree",
+          "phase": "source"
+        },
         "fileCount": 6671,
         "bytes": 8613613916,
         "sha256": "d2edd0b0ac39a85ff46e670a745dc3fc47122ddd3268c14ae3869b7a07739c74",
@@ -163,7 +297,7 @@
           "globs": ["Data/*.Lib", "Map/*.map", "Sound/*.wav"]
         }
       },
-      "version": "Client_VorticeDX11|mtime-2026-08-05T03:18:01Z|tree-d2edd0b0+monogame/Mir2Config.ini|overlay-4a5197e7",
+      "version": "Client_VorticeDX11|mtime-2026-08-05T03:18:01Z|source-tree-d2edd0b0ac39a85ff46e670a745dc3fc47122ddd3268c14ae3869b7a07739c74|final-sha256-4ed7b9f9daa97df937e0ae5dfa8e4410f6e0c24b1f7568afaa460dfc6c8f0d23|overlay-4a5197e7",
       "acquired": {
         "fileCount": 6672,
         "bytes": 8613615619,
@@ -199,13 +333,31 @@
       "path": "Build/Mobile/BootstrapRepo",
       "source": {
         "type": "generated",
-        "description": "由现有 Mobile-BootstrapPackageRepoExport.ps1 从已校验 BootstrapAssets 生成"
+        "id": "generated:Mobile-BootstrapPackageRepoExport",
+        "locator": "Tools/Mobile-BootstrapPackageRepoExport.ps1",
+        "version": "generated-deterministic-content-63ef7940|tree-87a5d2ebda2d34dde42f5a5ae24a31e28533adb3cb029d6dab2fd334fed0c96d",
+        "versionSha256": "46cdb5e3278d1cffdc92f521de1a0c973f0df30be9a4280ccc361538f095f8ad",
+        "description": "由现有 Mobile-BootstrapPackageRepoExport.ps1 从已校验 BootstrapAssets 生成",
+        "acquisition": {
+          "method": "deterministic-export",
+          "script": "Tools/Mobile-BootstrapPackageRepoExport.ps1",
+          "action": "Export",
+          "scope": "Repository"
+        },
+        "validation": {
+          "algorithm": "SHA256",
+          "scope": "directory-tree",
+          "phase": "final"
+        },
+        "fileCount": 523,
+        "bytes": 1235336844,
+        "sha256": "87a5d2ebda2d34dde42f5a5ae24a31e28533adb3cb029d6dab2fd334fed0c96d"
       },
-      "version": "generated-deterministic-content-63ef7940|tree-a8086121",
+      "version": "generated-deterministic-content-63ef7940|tree-87a5d2ebda2d34dde42f5a5ae24a31e28533adb3cb029d6dab2fd334fed0c96d",
       "final": {
         "fileCount": 523,
-        "bytes": 1235336854,
-        "sha256": "a8086121335b491cb9384c43a7945222876c94587cde6fb871e7d3bf2c6fc70d",
+        "bytes": 1235336844,
+        "sha256": "87a5d2ebda2d34dde42f5a5ae24a31e28533adb3cb029d6dab2fd334fed0c96d",
         "expected": {
           "files": [
           "Packages/bootstrap-package-index.json"
@@ -214,7 +366,20 @@
             "Packages/*.zip",
             "Packages/*.zip.sha256"
           ]
-        }
+        },
+        "artifacts": [
+          {
+            "path": "Packages/core-startup.zip",
+            "bytes": 54555646,
+            "sha256": "efaabc7a65f5ce77f1a5da7b58cbc47b4060f80786603956c5b62af9be9b09e3",
+            "sidecar": "Packages/core-startup.zip.sha256"
+          },
+          {
+            "path": "Packages/bootstrap-package-index.json",
+            "bytes": 40562,
+            "sha256": "09d28504acc896cc32004c62df49843e1d67a97d83e985289ad1a8331cb6e6a8"
+          }
+        ]
       },
       "notes": "由现有导出器生成；清单固定导出目录真实文件计数、大小与 SHA256。"
     },
@@ -225,9 +390,22 @@
       "path": "Tests/Resources",
       "source": {
         "type": "none",
+        "id": "none:Tests/Resources",
+        "locator": "not-present",
+        "version": "absent",
+        "versionSha256": "5ad38304b535c2987dbd24657c1a11b884984ff600d9f389deb0d4e634fee792",
+        "acquisition": {
+          "method": "not-present"
+        },
+        "validation": {
+          "algorithm": "SHA256",
+          "scope": "target-absent",
+          "phase": "final",
+          "method": "assert-absent"
+        },
         "description": "当前基线没有测试工程或测试资源目录（BASE-05 后补齐）"
       },
-      "version": null,
+      "version": "absent",
       "sha256": null,
       "expected": {
         "files": [],

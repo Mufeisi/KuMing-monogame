@@ -14,7 +14,11 @@ pwsh -NoProfile -File Tools/ResourceBaseline.ps1 -Action Validate -Scope Reposit
 
 资源版本、目录树 SHA256、来源和三阶段摘要记录在 [`resources.manifest.json`](resources.manifest.json)。外部资源条目显式区分 `source`（授权源）、`acquired`（获取/overlay 后）和 `final`（导出器处理后）；脚本不会猜测或生成未知哈希。`.gitattributes` 将纳入哈希的文本资源固定为 LF，避免 Windows `core.autocrlf` 造成 fresh checkout 漂移。
 
-当前授权镜像根为 `D:\ChuanQi\客户端`：移动资源位于 `monogame`，PC 资源位于 `Client_VorticeDX11`。不修改该源目录。BASE-02 的唯一可复现链是：先获取并校验 `acquired`，再运行现有分包导出器，最后校验 `final`。
+清单中的每个非空来源都必须有稳定 `source.id`、`source.locator`、版本和 `versionSha256`，并声明 `source.acquisition`（获取入口）与 `source.validation`（SHA256 目录摘要契约）。`resource.version` 严格等于 `source.version`，`source.versionSha256` 是规范化 version 文本的 SHA256；`source.validation.phase` 必须绑定同阶段目录摘要（`repository/generated` 绑定 `final`，授权本地源绑定 `source`）。摘要覆盖实际复制的全部文件；PC 运行资源的 fresh 源为 6671 个文件，加入 `Mir2Config.ini` overlay 后为 6672 个。构建链接或其它生成物出现在该目录会被摘要计入并导致漂移，fresh Acquire 后应在构建前先验证基线。文件或来源哈希、阶段计数/大小发生漂移时，`ResourceBaseline.ps1` 以非零退出。补丁仓库另校验 `core-startup.zip`、包索引及其 `.sha256` sidecar，防止包文件和清单脱节。
+
+当前授权镜像根为 `D:\ChuanQi\客户端`：移动资源位于 `monogame`，PC 资源位于 `Client_VorticeDX11`。不修改该源目录。BASE-02 的唯一可复现链是：先获取并校验 `acquired`，移动资源再运行现有分包导出器，最后校验 `final`；PC 资源没有隐藏的 finalize 步骤，清单明确 `acquired=final`，因此 Acquire 后即可进入最终校验。
+
+首次从 Git fresh clone 执行 Acquire 时，`Client_MonoGame.Shared/BootstrapAssets` 已包含 273 个仓库追踪文件。脚本只在该目录当前内容与清单 `repositoryOverlay` 摘要精确一致时允许 overlay；任何漂移或额外文件都拒绝。没有 `repositoryOverlay` 的其它目标必须不存在或为空。BASE-02b 的 CI 裸克隆资源镜像仍是独立 backlog，本 README 不将本机 QQ 群资源声明为 BASE-02b 完成。
 
 ```powershell
 pwsh -NoProfile -File Tools/ResourceBaseline.ps1 `
@@ -27,7 +31,7 @@ pwsh -NoProfile -File Tools/Mobile-BootstrapPackageRepoExport.ps1 `
 pwsh -NoProfile -File Tools/ResourceBaseline.ps1 -Action Validate -Scope All
 ```
 
-`Acquire` 会先验证 `source`，把资源和声明的 overlay 复制到仓库内临时目录，验证 `acquired` 后再原子替换空目标；移动资源的导出器会规范化 `bootstrap-package-index.json` 并生成补丁仓库，随后 `Validate All` 只验证 `final`。源与仓库重叠、reparse point、目标非空或摘要不匹配时命令都会以非零退出。
+`Acquire` 会先验证 `source`，把资源和声明的 overlay 复制到仓库内临时目录，验证 `acquired` 后再替换空目标或精确匹配的 repository overlay；overlay 目标必须在获取前已存在，缺失即拒绝。替换阶段保留旧目标备份；在所有新目标替换且替换后验证成功时到达唯一提交点，提交点前任一移动、注入故障或验证失败都会按逆序删除新目标并恢复旧目录。提交点后的备份清理属于 post-commit cleanup，清理失败不会回滚新目标，而是保留备份目录并报告人工恢复路径；提交前回滚自身失败也会保留暂存目录和备份路径。移动资源的导出器会规范化 `bootstrap-package-index.json` 并生成补丁仓库，随后 `Validate All` 验证所有 `final` 摘要并逐包交叉校验 ZIP、索引和 SHA256 sidecar。`source.type=none` 仅用于可选缺口，必须声明 `version=absent`、`versionSha256` 和 `validation.method=assert-absent`、`validation.scope=target-absent`，目标一旦出现文件或目录即失败；不支持 `skip`。源与仓库重叠、reparse point、非 overlay 目标非空、overlay 漂移或任一摘要不匹配时命令都会以非零退出。
 
 只需复核当前仓库目标时，可单独执行：
 

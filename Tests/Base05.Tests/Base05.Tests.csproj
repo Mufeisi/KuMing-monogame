@@ -20,6 +20,9 @@
     <None Include="..\..\Docs\protocol-wire-manifest.json" Link="protocol-wire-manifest.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Include="..\..\resources.manifest.json" Link="resources.manifest.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <Compile Include="..\..\Client_MonoGame.Shared\MirScenes\GameShopState.cs" Link="Mobile\GameShopState.cs" />
     <Compile Include="..\..\Client_MonoGame.Shared\MirScenes\MobileHeroState.cs" Link="Mobile\MobileHeroState.cs" />
     <Compile Include="..\..\Client_MonoGame.Shared\MirScenes\MobileMentorState.cs" Link="Mobile\MobileMentorState.cs" />
