@@ -46,6 +46,9 @@ internal static class MobileMainHudFallbackLayout
     internal static MobileMainHudFallbackBounds SealRental(float rootWidth, float rootHeight) =>
         Create(rootWidth, rootHeight, bottomOffset: 186F);
 
+    internal static MobileMainHudFallbackBounds Fishing(float rootWidth, float rootHeight) =>
+        Create(rootWidth, rootHeight, bottomOffset: 242F);
+
     private static MobileMainHudFallbackBounds Create(float rootWidth, float rootHeight, float bottomOffset)
     {
         float x = Math.Max(12F, rootWidth - ButtonWidth - 16F);

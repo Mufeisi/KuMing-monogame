@@ -1282,6 +1282,11 @@ namespace MonoShare
                     ResetMobileMentorBindings();
                 else if (string.Equals(key, "Mount", StringComparison.OrdinalIgnoreCase))
                     ResetMobileMountBindings();
+                else if (string.Equals(key, "Fishing", StringComparison.OrdinalIgnoreCase))
+                {
+                    TryCancelMobileFishingBeforeUserClose();
+                    ResetMobileFishingBindings();
+                }
                 else if (string.Equals(key, "MarriagePrompt", StringComparison.OrdinalIgnoreCase))
                 {
                     ResetMobileMarriagePromptForHide();
@@ -1306,6 +1311,11 @@ namespace MonoShare
                     ResetMobileMentorBindings();
                 else if (string.Equals(pair.Key, "Mount", StringComparison.OrdinalIgnoreCase))
                     ResetMobileMountBindings();
+                else if (string.Equals(pair.Key, "Fishing", StringComparison.OrdinalIgnoreCase))
+                {
+                    TryCancelMobileFishingBeforeUserClose();
+                    ResetMobileFishingBindings();
+                }
                 else if (string.Equals(pair.Key, "MarriagePrompt", StringComparison.OrdinalIgnoreCase))
                 {
                     ResetMobileMarriagePromptForHide();
@@ -1335,6 +1345,11 @@ namespace MonoShare
                 ResetMobileMentorBindings();
             else if (string.Equals(windowKey, "Mount", StringComparison.OrdinalIgnoreCase))
                 ResetMobileMountBindings();
+            else if (string.Equals(windowKey, "Fishing", StringComparison.OrdinalIgnoreCase))
+            {
+                TryCancelMobileFishingBeforeUserClose();
+                ResetMobileFishingBindings();
+            }
             else if (string.Equals(windowKey, "MarriagePrompt", StringComparison.OrdinalIgnoreCase))
             {
                 ResetMobileMarriagePromptForHide();
@@ -1412,6 +1427,11 @@ namespace MonoShare
                     ResetMobileMentorBindings();
                 else if (string.Equals(topKey, "Mount", StringComparison.OrdinalIgnoreCase))
                     ResetMobileMountBindings();
+                else if (string.Equals(topKey, "Fishing", StringComparison.OrdinalIgnoreCase))
+                {
+                    TryCancelMobileFishingBeforeUserClose();
+                    ResetMobileFishingBindings();
+                }
                 else if (string.Equals(topKey, "MarriagePrompt", StringComparison.OrdinalIgnoreCase))
                 {
                     ResetMobileMarriagePromptForHide();
@@ -1459,6 +1479,8 @@ namespace MonoShare
             ResetMobileHeroBindings();
             ResetMobileMentorBindings();
             ResetMobileMountBindings();
+            TryCancelMobileFishingBeforeUserClose();
+            ResetMobileFishingBindings();
             ResetMobileMarriageBindings();
             ResetMobileMarriagePromptForHide();
             ResetMobileSealRentalBindings();
@@ -1476,6 +1498,29 @@ namespace MonoShare
             }
 
             MobileWindows.Clear();
+        }
+
+        private static void TryCancelMobileFishingBeforeUserClose()
+        {
+            try
+            {
+                if (GameScene.User?.Dead == true)
+                {
+                    GameScene.Scene?.ResetMobileFishingActivity();
+                    return;
+                }
+
+                if (GameScene.MobileFishingState.Fishing ||
+                    GameScene.MobileFishingState.CastRequestPending)
+                {
+                    GameScene.Scene?.TryCastMobileFishing(false);
+                }
+            }
+            catch (Exception ex)
+            {
+                if (Settings.LogErrors)
+                    CMain.SaveError("FairyGUI: 关闭钓鱼窗口时收线失败：" + ex.Message);
+            }
         }
 
         private static void TryCancelMobileSealRentalBeforeUserClose()
@@ -1669,6 +1714,11 @@ namespace MonoShare
                         if (!TryCreateMobileMountFallbackWindow(out component, out resolveInfo))
                             return false;
                     }
+                    else if (string.Equals(windowKey, "Fishing", StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (!TryCreateMobileFishingFallbackWindow(out component, out resolveInfo))
+                            return false;
+                    }
                     else
                     {
                         return false;
@@ -1725,6 +1775,11 @@ namespace MonoShare
                         TryBindMobileWindowCloseButton(windowKey, existing);
                     if (nowVisible)
                         TryBindMobileWindowIfDue(windowKey, existing, resolveInfo: null);
+                    if (!nowVisible && string.Equals(windowKey, "Fishing", StringComparison.OrdinalIgnoreCase))
+                    {
+                        TryCancelMobileFishingBeforeUserClose();
+                        ResetMobileFishingBindings();
+                    }
                     if (nowVisible)
                         TryApplyMobileWindowLayoutIfNeeded(windowKey, existing, existing.parent, resolveInfo: null);
                     if (Settings.LogErrors && string.Equals(windowKey, "State", StringComparison.OrdinalIgnoreCase))
@@ -1752,6 +1807,8 @@ namespace MonoShare
                         createdFallback = TryCreateMobileMentorFallbackWindow(out component, out resolveInfo);
                     else if (string.Equals(windowKey, "Mount", StringComparison.OrdinalIgnoreCase))
                         createdFallback = TryCreateMobileMountFallbackWindow(out component, out resolveInfo);
+                    else if (string.Equals(windowKey, "Fishing", StringComparison.OrdinalIgnoreCase))
+                        createdFallback = TryCreateMobileFishingFallbackWindow(out component, out resolveInfo);
 
                     if (!createdFallback)
                         return false;
@@ -2023,6 +2080,11 @@ namespace MonoShare
             {
                 TryBindMobileMountWindowIfDue(windowKey, window, resolveInfo);
                 TryRefreshMobileMountIfDue(force: true);
+            }
+            else if (string.Equals(windowKey, "Fishing", StringComparison.OrdinalIgnoreCase))
+            {
+                TryBindMobileFishingWindowIfDue(windowKey, window, resolveInfo);
+                TryRefreshMobileFishingIfDue(force: true);
             }
             else if (string.Equals(windowKey, "Npc", StringComparison.OrdinalIgnoreCase))
             {
@@ -8885,6 +8947,7 @@ namespace MonoShare
 
             try
             {
+                GameScene.Scene?.PrepareMobileFishingAutocastDisableForEquipmentChange(toSlot);
                 MonoShare.MirNetwork.Network.Enqueue(new C.EquipItem
                 {
                     Grid = MirGridType.Inventory,
@@ -11081,6 +11144,7 @@ namespace MonoShare
                   TryRefreshMobileHeroIfDue(force: false);
                   TryRefreshMobileMentorIfDue(force: false);
                   TryRefreshMobileMountIfDue(force: false);
+                  TryRefreshMobileFishingIfDue(force: false);
                   TryRefreshMobileStorageIfDue(force: false);
                   TryApplyMobileInventoryStorageSideBySideLayoutIfDue(force: false);
                  TryRefreshMobileSystemIfDue(force: false);

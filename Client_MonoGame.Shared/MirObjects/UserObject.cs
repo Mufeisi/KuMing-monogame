@@ -165,6 +165,20 @@ namespace MonoShare.MirObjects
             //GameScene.Scene.Redraw();控件
         }
 
+        public void SetSlots(S.UserSlotsRefresh info)
+        {
+            if (info == null)
+                return;
+
+            if (info.Inventory != null)
+                Inventory = info.Inventory;
+            if (info.Equipment != null)
+                Equipment = info.Equipment;
+
+            BindAllItems();
+            RefreshStats();
+        }
+
         private void RefreshLevelStats()
         {
             Light = 0;
@@ -833,4 +847,3 @@ namespace MonoShare.MirObjects
         }
     }
 }
-

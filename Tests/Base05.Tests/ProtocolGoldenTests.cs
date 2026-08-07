@@ -1,11 +1,15 @@
 extern alias ShareProtocol;
 
 using Xunit;
+using ShareFishingCast = ShareProtocol::ClientPackets.FishingCast;
+using ShareFishingChangeAutocast = ShareProtocol::ClientPackets.FishingChangeAutocast;
 using ShareLogin = ShareProtocol::ClientPackets.Login;
 using SharePacket = ShareProtocol::Packet;
+using ShareFishingUpdate = ShareProtocol::ServerPackets.FishingUpdate;
 
 namespace Base05.Tests;
 
+[Collection("ProtocolWireCodec")]
 public sealed class ProtocolGoldenTests
 {
     [Fact]
@@ -77,4 +81,90 @@ public sealed class ProtocolGoldenTests
             global::Packet.IsServer = previousIsServer;
         }
     }
+
+    [Fact]
+    public void Fishing_packets_keep_fixed_ids_and_field_order_on_wire()
+    {
+        Assert.Equal(99, (int)ClientPacketIds.FishingCast);
+        Assert.Equal(100, (int)ClientPacketIds.FishingChangeAutocast);
+        Assert.Equal(198, (int)ServerPacketIds.FishingUpdate);
+
+        var castGolden = new byte[] { 0x05, 0x00, 0x63, 0x00, 0x01 };
+        var autoGolden = new byte[] { 0x05, 0x00, 0x64, 0x00, 0x00 };
+        var updateGolden = new byte[]
+        {
+            0x1E, 0x00, 0xC6, 0x00,
+            0x2A, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x01,
+            0x7B, 0x00, 0x00, 0x00,
+            0x2D, 0x00, 0x00, 0x00,
+            0xFE, 0xFF, 0xFF, 0xFF,
+            0x03, 0x00, 0x00, 0x00,
+            0x01,
+        };
+
+        bool previousSharedIsServer = global::Packet.IsServer;
+        bool previousShareIsServer = SharePacket.IsServer;
+        try
+        {
+            global::Packet.IsServer = true;
+            SharePacket.IsServer = true;
+
+            var sharedCast = Assert.IsType<global::ClientPackets.FishingCast>(
+                global::Packet.ReceivePacket(castGolden, out byte[] sharedCastExtra));
+            var shareCast = Assert.IsType<ShareFishingCast>(
+                SharePacket.ReceivePacket(castGolden, out byte[] shareCastExtra));
+            Assert.True(sharedCast.CastOut);
+            Assert.True(shareCast.CastOut);
+            Assert.Equal(castGolden, sharedCast.GetPacketBytes().ToArray());
+            Assert.Equal(castGolden, shareCast.GetPacketBytes().ToArray());
+            Assert.Empty(sharedCastExtra);
+            Assert.Empty(shareCastExtra);
+
+            var sharedAuto = Assert.IsType<global::ClientPackets.FishingChangeAutocast>(
+                global::Packet.ReceivePacket(autoGolden, out byte[] sharedAutoExtra));
+            var shareAuto = Assert.IsType<ShareFishingChangeAutocast>(
+                SharePacket.ReceivePacket(autoGolden, out byte[] shareAutoExtra));
+            Assert.False(sharedAuto.AutoCast);
+            Assert.False(shareAuto.AutoCast);
+            Assert.Equal(autoGolden, sharedAuto.GetPacketBytes().ToArray());
+            Assert.Equal(autoGolden, shareAuto.GetPacketBytes().ToArray());
+            Assert.Empty(sharedAutoExtra);
+            Assert.Empty(shareAutoExtra);
+
+            global::Packet.IsServer = false;
+            SharePacket.IsServer = false;
+
+            var sharedUpdate = Assert.IsType<global::ServerPackets.FishingUpdate>(
+                global::Packet.ReceivePacket(updateGolden, out byte[] sharedUpdateExtra));
+            var shareUpdate = Assert.IsType<ShareFishingUpdate>(
+                SharePacket.ReceivePacket(updateGolden, out byte[] shareUpdateExtra));
+            Assert.Equal(42, sharedUpdate.ObjectID);
+            Assert.Equal(42, shareUpdate.ObjectID);
+            Assert.True(sharedUpdate.Fishing);
+            Assert.True(shareUpdate.Fishing);
+            Assert.Equal(123, sharedUpdate.ProgressPercent);
+            Assert.Equal(123, shareUpdate.ProgressPercent);
+            Assert.Equal(45, sharedUpdate.ChancePercent);
+            Assert.Equal(45, shareUpdate.ChancePercent);
+            Assert.Equal(new System.Drawing.Point(-2, 3), sharedUpdate.FishingPoint);
+            Assert.Equal(new System.Drawing.Point(-2, 3), shareUpdate.FishingPoint);
+            Assert.True(sharedUpdate.FoundFish);
+            Assert.True(shareUpdate.FoundFish);
+            Assert.Equal(updateGolden, sharedUpdate.GetPacketBytes().ToArray());
+            Assert.Equal(updateGolden, shareUpdate.GetPacketBytes().ToArray());
+            Assert.Empty(sharedUpdateExtra);
+            Assert.Empty(shareUpdateExtra);
+        }
+        finally
+        {
+            global::Packet.IsServer = previousSharedIsServer;
+            SharePacket.IsServer = previousShareIsServer;
+        }
+    }
+}
+
+[CollectionDefinition("ProtocolWireCodec", DisableParallelization = true)]
+public sealed class ProtocolWireCodecCollection
+{
 }

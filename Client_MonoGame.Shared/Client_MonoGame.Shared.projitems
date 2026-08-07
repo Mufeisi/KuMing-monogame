@@ -46,6 +46,8 @@
     <Compile Include="$(MSBuildThisFileDirectory)MirObjects\UserObject.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)MirScenes\GameScene.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)MirScenes\MobileMountState.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)MirScenes\MobileFishingState.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)UI\FairyGui\MobileFishingInventoryPolicy.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)MirScenes\LoginScene.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)MirScenes\PreLoginUpdateScene.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)MirScenes\SelectScene.cs" />

@@ -399,6 +399,7 @@ namespace MonoShare
 
             try
             {
+                GameScene.Scene?.PrepareMobileFishingAutocastDisableForEquipmentChange(toSlot);
                 MonoShare.MirNetwork.Network.Enqueue(new C.EquipItem
                 {
                     Grid = MirGridType.Inventory,

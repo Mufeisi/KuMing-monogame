@@ -22,10 +22,12 @@
     <Compile Include="..\..\Client_MonoGame.Shared\MirScenes\MobileMentorState.cs" Link="Mobile\MobileMentorState.cs" />
     <Compile Include="..\..\Client_MonoGame.Shared\MirScenes\MobileMarriageState.cs" Link="Mobile\MobileMarriageState.cs" />
     <Compile Include="..\..\Client_MonoGame.Shared\MirScenes\MobileMountState.cs" Link="Mobile\MobileMountState.cs" />
+    <Compile Include="..\..\Client_MonoGame.Shared\MirScenes\MobileFishingState.cs" Link="Mobile\MobileFishingState.cs" />
     <Compile Include="..\..\Client_MonoGame.Shared\MirScenes\MobileSealRentalState.cs" Link="Mobile\MobileSealRentalState.cs" />
     <Compile Include="..\..\Client_MonoGame.Shared\MirScenes\MobileSealRentalLayout.cs" Link="Mobile\MobileSealRentalLayout.cs" />
     <Compile Include="..\..\Client_MonoGame.Shared\UI\FairyGui\MobileMainHudFallbackLayout.cs" Link="Mobile\MobileMainHudFallbackLayout.cs" />
     <Compile Include="..\..\Client_MonoGame.Shared\UI\FairyGui\MobileMountInventoryPolicy.cs" Link="Mobile\MobileMountInventoryPolicy.cs" />
+    <Compile Include="..\..\Client_MonoGame.Shared\UI\FairyGui\MobileFishingInventoryPolicy.cs" Link="Mobile\MobileFishingInventoryPolicy.cs" />
     <ProjectReference Include="..\..\Shared\Shared.csproj" />
     <ProjectReference Include="..\..\Server\Server.Library.csproj" />
     <ProjectReference Include="..\ShareProtocolCompat\ShareProtocolCompat.csproj">

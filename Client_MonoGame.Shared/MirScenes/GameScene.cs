@@ -183,6 +183,7 @@ namespace MonoShare.MirScenes
         public static readonly MobileMentorState MobileMentorState = new MobileMentorState();
         public static readonly MobileMarriageState MobileMarriageState = new MobileMarriageState();
         public static readonly MobileMountState MobileMountState = new MobileMountState();
+        public static readonly MobileFishingState MobileFishingState = new MobileFishingState();
         public static readonly MobileSealRentalState MobileSealRentalState = new MobileSealRentalState();
         public static List<ClientRecipeInfo> RecipeInfoList = new List<ClientRecipeInfo>();
 
@@ -233,11 +234,13 @@ namespace MonoShare.MirScenes
             MobileMentorState.ResetForSession();
             MobileMarriageState.ResetForSession();
             MobileMountState.ResetForSession();
+            MobileFishingState.ResetForSession();
             MobileSealRentalState.ResetForSession();
             MonoShare.FairyGuiHost.MarkMobileShopDirty();
             MonoShare.FairyGuiHost.MarkMobileMentorDirty();
             MonoShare.FairyGuiHost.MarkMobileMarriageDirty();
             MonoShare.FairyGuiHost.MarkMobileMountDirty();
+            MonoShare.FairyGuiHost.MarkMobileFishingDirty();
             MonoShare.FairyGuiHost.MarkMobileSealRentalDirty();
 
             if (Settings.LogErrors && Environment.OSVersion.Platform != PlatformID.Win32NT)
@@ -729,6 +732,327 @@ namespace MonoShare.MirScenes
             return true;
         }
 
+        internal bool TryCastMobileFishing(bool castOut)
+        {
+            UserObject user = User;
+            if (user == null)
+                return false;
+
+            if (user.Dead)
+            {
+                MobileFishingState.ReportLocalError("死亡状态无法进行钓鱼。");
+                MobileReceiveChat("死亡状态无法进行钓鱼。", ChatType.System);
+                MonoShare.FairyGuiHost.MarkMobileFishingDirty();
+                return false;
+            }
+
+            SyncMobileFishingSnapshot(user);
+            UserItem rod = FindMobileFishingRod(user);
+            if (castOut && (rod == null || rod.CurrentDura <= 0))
+            {
+                MobileReceiveChat("没有可用的鱼竿。", ChatType.System);
+                MobileFishingState.ReportLocalError("没有可用的鱼竿。");
+                MonoShare.FairyGuiHost.MarkMobileFishingDirty();
+                return false;
+            }
+
+            if (castOut)
+            {
+                bool mapAllowsFishing = MapControl != null && MapControl.CanFish(user.Direction);
+                if (!MobileFishingState.CanRequestCastOutAt(
+                        CMain.Time,
+                        user.FishingTime,
+                        user.Dead,
+                        user.RidingMount,
+                        user.CurrentAction,
+                        mapAllowsFishing))
+                {
+                    string message = user.RidingMount ? "乘骑状态无法抛竿。" :
+                        user.CurrentAction != MirAction.Standing ? "当前动作无法抛竿。" :
+                        CMain.Time < user.FishingTime + 1000 ? "抛竿冷却中，请稍后再试。" :
+                        "前方不是有效的钓鱼点。";
+                    MobileFishingState.ReportLocalError(message);
+                    MobileReceiveChat(message, ChatType.System);
+                    MonoShare.FairyGuiHost.MarkMobileFishingDirty();
+                    return false;
+                }
+
+                UserItem hook = GetFishingSlotItem(rod, FishingSlot.Hook);
+                UserItem bait = GetFishingSlotItem(rod, FishingSlot.Bait);
+                if (hook == null)
+                {
+                    MobileReceiveChat("需要鱼钩。", ChatType.System);
+                    MobileFishingState.ReportLocalError("需要鱼钩。");
+                    MonoShare.FairyGuiHost.MarkMobileFishingDirty();
+                    return false;
+                }
+
+                if (bait == null || bait.Count == 0)
+                {
+                    MobileReceiveChat("需要鱼饵。", ChatType.System);
+                    MobileFishingState.ReportLocalError("需要鱼饵。");
+                    MonoShare.FairyGuiHost.MarkMobileFishingDirty();
+                    return false;
+                }
+            }
+
+            if (!MobileFishingState.BeginCastRequest(castOut, CMain.Time))
+            {
+                MobileReceiveChat(MobileFishingState.Error ?? "钓鱼请求无效。", ChatType.System);
+                MonoShare.FairyGuiHost.MarkMobileFishingDirty();
+                return false;
+            }
+
+            if (castOut)
+                user.FishingTime = CMain.Time;
+            Network.Enqueue(new C.FishingCast { CastOut = castOut });
+            MonoShare.FairyGuiHost.MarkMobileFishingDirty();
+            return true;
+        }
+
+        internal bool TryToggleMobileFishingAutocast(bool enabled)
+        {
+            UserObject user = User;
+            if (user == null)
+                return false;
+
+            if (user.Dead)
+            {
+                MobileFishingState.ReportLocalError("死亡状态无法切换自动抛竿。");
+                MobileReceiveChat("死亡状态无法切换自动抛竿。", ChatType.System);
+                MonoShare.FairyGuiHost.MarkMobileFishingDirty();
+                return false;
+            }
+
+            SyncMobileFishingSnapshot(user);
+            if (!MobileFishingState.BeginAutoCastRequest(enabled, CMain.Time))
+            {
+                MobileReceiveChat(MobileFishingState.Error ?? "自动抛竿请求无效。", ChatType.System);
+                MonoShare.FairyGuiHost.MarkMobileFishingDirty();
+                return false;
+            }
+
+            Network.Enqueue(new C.FishingChangeAutocast { AutoCast = enabled });
+            MonoShare.FairyGuiHost.MarkMobileFishingDirty();
+            return true;
+        }
+
+        internal bool TryEquipMobileFishingAccessory(ulong uniqueId, int fishingSlot)
+        {
+            UserObject user = User;
+            if (user == null || uniqueId == 0 || fishingSlot < 0 || fishingSlot >= 5)
+                return false;
+
+            SyncMobileFishingSnapshot(user);
+            UserItem rod = FindMobileFishingRod(user);
+            if (rod?.Slots == null || fishingSlot >= rod.Slots.Length || rod.Slots[fishingSlot] != null)
+                return false;
+
+            UserItem item = user.Inventory?.FirstOrDefault(e => e != null && e.UniqueID == uniqueId);
+            if (!MobileFishingInventoryPolicy.IsValidCandidate(item, fishingSlot))
+                return false;
+
+            ItemType expected = FishingAccessoryType(fishingSlot);
+            if (expected == ItemType.Nothing || item.Info.Type != expected)
+                return false;
+
+            if (!MobileFishingState.BeginSlotRequest(fishingSlot, uniqueId, CMain.Time))
+            {
+                MonoShare.FairyGuiHost.MarkMobileFishingDirty();
+                return false;
+            }
+
+            Network.Enqueue(new C.EquipSlotItem
+            {
+                Grid = MirGridType.Inventory,
+                UniqueID = uniqueId,
+                To = fishingSlot,
+                GridTo = MirGridType.Fishing,
+                ToUniqueID = rod.UniqueID,
+            });
+            MonoShare.FairyGuiHost.MarkMobileFishingDirty();
+            return true;
+        }
+
+        internal bool TryRemoveMobileFishingAccessory(ulong uniqueId, int inventorySlot)
+        {
+            UserObject user = User;
+            if (user == null || uniqueId == 0 || inventorySlot < 0 || user.Inventory == null ||
+                inventorySlot >= user.Inventory.Length || user.Inventory[inventorySlot] != null)
+                return false;
+
+            UserItem rod = FindMobileFishingRod(user);
+            if (rod?.Slots == null)
+                return false;
+
+            int fishingSlot = -1;
+            for (int i = 0; i < rod.Slots.Length; i++)
+            {
+                if (rod.Slots[i]?.UniqueID == uniqueId)
+                {
+                    fishingSlot = i;
+                    break;
+                }
+            }
+
+            if (fishingSlot < 0)
+                return false;
+
+            if (fishingSlot == (int)FishingSlot.Reel && !MobileFishingState.SlotRequestPending)
+                DisableMobileFishingAutocastIfNeeded();
+
+            if (!MobileFishingState.BeginSlotRequest(fishingSlot, uniqueId, CMain.Time))
+                return false;
+
+            Network.Enqueue(new C.RemoveSlotItem
+            {
+                Grid = MirGridType.Fishing,
+                GridTo = MirGridType.Inventory,
+                UniqueID = uniqueId,
+                To = inventorySlot,
+                FromUniqueID = rod.UniqueID,
+            });
+            MonoShare.FairyGuiHost.MarkMobileFishingDirty();
+            return true;
+        }
+
+        internal bool TryMergeMobileFishingBait(ulong sourceUniqueId, ulong targetUniqueId)
+        {
+            UserObject user = User;
+            if (user == null || sourceUniqueId == 0 || targetUniqueId == 0)
+                return false;
+
+            UserItem source = user.Inventory?.FirstOrDefault(e => e != null && e.UniqueID == sourceUniqueId);
+            UserItem rod = FindMobileFishingRod(user);
+            UserItem target = rod?.Slots?.FirstOrDefault(e => e != null && e.UniqueID == targetUniqueId);
+            if (source?.Info == null || target?.Info == null || source.Info.Type != ItemType.鱼饵 ||
+                target.Info.Type != ItemType.鱼饵 || target.Count >= target.Info.StackSize || source.Count == 0 ||
+                !MobileFishingInventoryPolicy.IsSameItemInfo(source, target))
+                return false;
+
+            int fishingSlot = -1;
+            if (rod.Slots != null)
+            {
+                for (int i = 0; i < rod.Slots.Length; i++)
+                {
+                    if (rod.Slots[i]?.UniqueID == targetUniqueId)
+                    {
+                        fishingSlot = i;
+                        break;
+                    }
+                }
+            }
+
+            if (fishingSlot < 0 || !MobileFishingState.BeginSlotRequest(fishingSlot, sourceUniqueId, CMain.Time))
+                return false;
+
+            Network.Enqueue(new C.MergeItem
+            {
+                GridFrom = MirGridType.Inventory,
+                GridTo = MirGridType.Fishing,
+                IDFrom = sourceUniqueId,
+                IDTo = targetUniqueId,
+            });
+            MonoShare.FairyGuiHost.MarkMobileFishingDirty();
+            return true;
+        }
+
+        private static UserItem FindMobileFishingRod(UserObject user)
+        {
+            if (user?.Equipment == null || user.Equipment.Length <= (int)EquipmentSlot.Weapon)
+                return null;
+
+            UserItem rod = user.Equipment[(int)EquipmentSlot.Weapon];
+            return rod?.Info?.IsFishingRod == true ? rod : null;
+        }
+
+        private static UserItem GetFishingSlotItem(UserItem rod, FishingSlot slot)
+        {
+            int index = (int)slot;
+            return rod?.Slots != null && index >= 0 && index < rod.Slots.Length ? rod.Slots[index] : null;
+        }
+
+        private static ItemType FishingAccessoryType(int slot)
+        {
+            return slot switch
+            {
+                (int)FishingSlot.Hook => ItemType.鱼钩,
+                (int)FishingSlot.Float => ItemType.鱼漂,
+                (int)FishingSlot.Bait => ItemType.鱼饵,
+                (int)FishingSlot.Finder => ItemType.探鱼器,
+                (int)FishingSlot.Reel => ItemType.摇轮,
+                _ => ItemType.Nothing,
+            };
+        }
+
+        private static void SyncMobileFishingSnapshot(UserObject user)
+        {
+            if (user == null)
+                return;
+
+            UserItem rod = FindMobileFishingRod(user);
+            bool hasReel = GetFishingSlotItem(rod, FishingSlot.Reel) != null;
+            bool hasRod = rod != null;
+            ulong rodUniqueId = rod?.UniqueID ?? 0;
+
+            // A server-driven reel/rod loss can happen without a local picker
+            // action. Keep the no-rod case untouched because the server
+            // ignores FishingChangeAutocast while no rod is equipped. For a
+            // present rod, adopt the authoritative snapshot first, then send
+            // one explicit false packet; repeated snapshots remain one-shot.
+            bool disableAutoCastAfterSnapshot = MobileFishingState.NeedsAutoCastDisableForEquipment(
+                hasRod, hasReel, rodUniqueId);
+
+            if (MobileFishingState.LocalObjectId == user.ObjectID &&
+                MobileFishingState.HasFishingRod == hasRod &&
+                MobileFishingState.HasReel == hasReel &&
+                MobileFishingState.FishingRodUniqueId == rodUniqueId)
+                return;
+
+            MobileFishingState.SetEquipmentSnapshot(user.ObjectID, hasRod, hasReel, rodUniqueId);
+            if (disableAutoCastAfterSnapshot)
+                DisableMobileFishingAutocastIfNeeded();
+        }
+
+        private static void DisableMobileFishingAutocastIfNeeded()
+        {
+            if (!MobileFishingState.DisableAutoCastIntent())
+                return;
+
+            Network.Enqueue(new C.FishingChangeAutocast { AutoCast = false });
+            if (Environment.OSVersion.Platform != PlatformID.Win32NT)
+                MonoShare.FairyGuiHost.MarkMobileFishingDirty();
+        }
+
+        internal void PrepareMobileFishingAutocastDisableForEquipmentChange(int targetSlot)
+        {
+            if (targetSlot != (int)EquipmentSlot.Weapon)
+                return;
+
+            // If the current weapon is not a fishing rod (including an empty
+            // slot), the server would ignore FishingChangeAutocast(false).
+            // Leave the intent intact and let the authoritative post-equip
+            // snapshot decide once a rod exists.
+            if (MobileFishingState.ShouldDisableAutoCastBeforeEquipmentChange(
+                    FindMobileFishingRod(User) != null))
+                DisableMobileFishingAutocastIfNeeded();
+        }
+
+        internal void ResetMobileFishingActivity()
+        {
+            MobileFishingState.ResetActivityForTransition();
+            if (User != null)
+            {
+                User.Fishing = false;
+                User.FoundFish = false;
+                User.FishingPoint = Point.Empty;
+                User.QueuedAction = null;
+            }
+
+            if (Environment.OSVersion.Platform != PlatformID.Win32NT)
+                MonoShare.FairyGuiHost.MarkMobileFishingDirty();
+        }
+
         internal void RespondToMobileDivorceRequest(bool accepted)
         {
             if (!MobileMarriageState.ApplyDivorceReply(accepted))
@@ -925,6 +1249,30 @@ namespace MonoShare.MirScenes
             }
 
             OutputMessage("当前 FairyGUI 坐骑窗口暂不可用，请检查 UI publish 或 Mir2Config.ini [FairyGUI] MobileWindow.Mount 覆盖。");
+        }
+
+        public void ToggleMobileFishingOverlay()
+        {
+            MapControl?.CancelMagicLocationSelection(showMessage: false);
+
+            if (Environment.OSVersion.Platform == PlatformID.Win32NT)
+                return;
+
+            if (MonoShare.FairyGuiHost.TryToggleMobileFishingWindow(out bool nowVisible))
+            {
+                if (nowVisible)
+                {
+                    MonoShare.FairyGuiHost.HideAllMobileWindowsExcept("Fishing");
+                    MonoShare.FairyGuiHost.MarkMobileFishingDirty();
+                }
+                else
+                {
+                    MonoShare.FairyGuiHost.ResetMobileFishingBindingsForHide();
+                }
+                return;
+            }
+
+            OutputMessage("当前 FairyGUI 钓鱼窗口暂不可用，请检查 UI publish 或 Mir2Config.ini [FairyGUI] MobileWindow.Fishing 覆盖。");
         }
 
         public void ToggleMobileSealRentalOverlay()
@@ -2080,6 +2428,12 @@ namespace MonoShare.MirScenes
                 MonoShare.FairyGuiHost.MarkMobileMountDirty();
             }
 
+            if (MobileFishingState.Tick(CMain.Time) &&
+                Environment.OSVersion.Platform != PlatformID.Win32NT)
+            {
+                MonoShare.FairyGuiHost.MarkMobileFishingDirty();
+            }
+
             if (MobileSealRentalState.Tick(CMain.Time) &&
                 Environment.OSVersion.Platform != PlatformID.Win32NT)
             {
@@ -2251,6 +2605,9 @@ namespace MonoShare.MirScenes
                     break;
                 case (short)ServerPacketIds.UserInformation:
                     UserInformation((S.UserInformation)p);
+                    break;
+                case (short)ServerPacketIds.UserSlotsRefresh:
+                    UserSlotsRefresh((S.UserSlotsRefresh)p);
                     break;
                 case (short)ServerPacketIds.UserLocation:
                     UserLocation((S.UserLocation)p);
@@ -2982,16 +3339,35 @@ namespace MonoShare.MirScenes
             User = new UserObject(p.ObjectID);
             User.Load(p);
             SyncMobileMountSnapshot(User);
+            SyncMobileFishingSnapshot(User);
             //MainDialog.PModeLabel.Visible = User.Class == MirClass.Wizard || User.Class == MirClass.Taoist;
             Gold = p.Gold;
             Credit = p.Credit;
 
             if (Environment.OSVersion.Platform != PlatformID.Win32NT)
+            {
                 MonoShare.FairyGuiHost.MarkMobileMountDirty();
+                MonoShare.FairyGuiHost.MarkMobileFishingDirty();
+            }
 
             //InventoryDialog.RefreshInventory();
             //foreach (SkillBarDialog Bar in SkillBarDialogs)
             //    Bar.Update();
+        }
+
+        private void UserSlotsRefresh(S.UserSlotsRefresh p)
+        {
+            if (User == null || p == null)
+                return;
+
+            User.SetSlots(p);
+            SyncMobileMountSnapshot(User);
+            SyncMobileFishingSnapshot(User);
+            if (Environment.OSVersion.Platform != PlatformID.Win32NT)
+            {
+                MonoShare.FairyGuiHost.MarkMobileMountDirty();
+                MonoShare.FairyGuiHost.MarkMobileFishingDirty();
+            }
         }
         private void UserLocation(S.UserLocation p)
         {
@@ -3038,6 +3414,13 @@ namespace MonoShare.MirScenes
             {
                 if (Environment.OSVersion.Platform != PlatformID.Win32NT)
                     MonoShare.FairyGuiHost.MarkMobileMountDirty();
+            }
+
+            if (p != null && p.Type == ChatType.System &&
+                MobileFishingState.ApplyServerSystemMessage(p.Message))
+            {
+                if (Environment.OSVersion.Platform != PlatformID.Win32NT)
+                    MonoShare.FairyGuiHost.MarkMobileFishingDirty();
             }
 
             if (p != null && p.Type == ChatType.System &&
@@ -3199,11 +3582,20 @@ namespace MonoShare.MirScenes
                 if (Environment.OSVersion.Platform != PlatformID.Win32NT)
                     MonoShare.FairyGuiHost.MarkMobileMountDirty();
             }
+            if (p.To == (int)EquipmentSlot.Weapon)
+            {
+                SyncMobileFishingSnapshot(user);
+                if (Environment.OSVersion.Platform != PlatformID.Win32NT)
+                    MonoShare.FairyGuiHost.MarkMobileFishingDirty();
+            }
         }
         private void EquipSlotItem(S.EquipSlotItem p)
         {
             if (p == null)
                 return;
+
+            if (p.GridTo == MirGridType.Fishing)
+                MobileFishingState.CompleteSlotRequest();
 
             UserObject user = User;
             if (user == null)
@@ -3212,17 +3604,24 @@ namespace MonoShare.MirScenes
             if (!p.Success)
             {
                 if (Environment.OSVersion.Platform != PlatformID.Win32NT)
+                {
                     MonoShare.FairyGuiHost.MarkMobileMountDirty();
+                    MonoShare.FairyGuiHost.MarkMobileFishingDirty();
+                }
                 return;
             }
 
-            if (p.GridTo != MirGridType.Mount || p.To < 0)
+            bool mountTarget = p.GridTo == MirGridType.Mount;
+            bool fishingTarget = p.GridTo == MirGridType.Fishing;
+            if ((!mountTarget && !fishingTarget) || p.To < 0)
                 return;
 
-            UserItem mount = user.Equipment != null && user.Equipment.Length > (int)EquipmentSlot.Mount
+            UserItem mount = mountTarget && user.Equipment != null && user.Equipment.Length > (int)EquipmentSlot.Mount
                 ? user.Equipment[(int)EquipmentSlot.Mount]
                 : null;
-            if (mount?.Slots == null || p.To >= mount.Slots.Length || mount.Slots[p.To] != null)
+            UserItem fishingRod = fishingTarget ? FindMobileFishingRod(user) : null;
+            UserItem host = mountTarget ? mount : fishingRod;
+            if (host?.Slots == null || p.To >= host.Slots.Length || host.Slots[p.To] != null)
                 return;
 
             UserItem[] source = p.Grid switch
@@ -3247,12 +3646,20 @@ namespace MonoShare.MirScenes
             if (sourceIndex < 0)
                 return;
 
-            mount.Slots[p.To] = source[sourceIndex];
+            host.Slots[p.To] = source[sourceIndex];
             source[sourceIndex] = null;
             user.RefreshStats();
 
             if (Environment.OSVersion.Platform != PlatformID.Win32NT)
-                MonoShare.FairyGuiHost.MarkMobileMountDirty();
+            {
+                if (mountTarget)
+                    MonoShare.FairyGuiHost.MarkMobileMountDirty();
+                if (fishingTarget)
+                {
+                    SyncMobileFishingSnapshot(user);
+                    MonoShare.FairyGuiHost.MarkMobileFishingDirty();
+                }
+            }
         }
 
         private void CombineItem(S.CombineItem p)
@@ -3338,12 +3745,34 @@ namespace MonoShare.MirScenes
 
         private void MergeItem(S.MergeItem p)
         {
-            if (p == null || !p.Success)
+            if (p == null)
                 return;
+
+            bool fishingResponse = p.GridTo == MirGridType.Fishing;
+            if (fishingResponse)
+                MobileFishingState.CompleteSlotRequest();
+
+            if (!p.Success)
+            {
+                if (fishingResponse)
+                    MarkMobileFishingResponseDirty();
+                return;
+            }
 
             UserObject user = User;
             if (user == null)
+            {
+                if (fishingResponse)
+                    MarkMobileFishingResponseDirty();
                 return;
+            }
+
+            if (fishingResponse)
+            {
+                ApplyMobileFishingMerge(user, p);
+                MarkMobileFishingResponseDirty();
+                return;
+            }
 
             UserItem[] fromArray = ResolveClientItemArray(p.GridFrom, user);
             UserItem[] toArray = ResolveClientItemArray(p.GridTo, user);
@@ -3374,6 +3803,25 @@ namespace MonoShare.MirScenes
                 fromItem.Count -= (ushort)remaining;
                 toItem.Count = toItem.Info.StackSize;
             }
+
+            user.RefreshStats();
+        }
+
+        private static void MarkMobileFishingResponseDirty()
+        {
+            if (Environment.OSVersion.Platform != PlatformID.Win32NT)
+                MonoShare.FairyGuiHost.MarkMobileFishingDirty();
+        }
+
+        private static void ApplyMobileFishingMerge(UserObject user, S.MergeItem packet)
+        {
+            if (user?.Inventory == null || packet == null || packet.GridFrom != MirGridType.Inventory)
+                return;
+
+            UserItem rod = FindMobileFishingRod(user);
+            if (!MobileFishingInventoryPolicy.TryApplyBaitMerge(
+                    user.Inventory, rod?.Slots, packet.IDFrom, packet.IDTo))
+                return;
 
             user.RefreshStats();
         }
@@ -3466,26 +3914,42 @@ namespace MonoShare.MirScenes
                 if (Environment.OSVersion.Platform != PlatformID.Win32NT)
                     MonoShare.FairyGuiHost.MarkMobileMountDirty();
             }
+            if (fromIndex == (int)EquipmentSlot.Weapon)
+            {
+                SyncMobileFishingSnapshot(user);
+                if (Environment.OSVersion.Platform != PlatformID.Win32NT)
+                    MonoShare.FairyGuiHost.MarkMobileFishingDirty();
+            }
         }
         private void RemoveSlotItem(S.RemoveSlotItem p)
         {
             if (p == null || User == null)
                 return;
 
+            if (p.Grid == MirGridType.Fishing)
+                MobileFishingState.CompleteSlotRequest();
+
             if (!p.Success)
             {
                 if (Environment.OSVersion.Platform != PlatformID.Win32NT)
+                {
                     MonoShare.FairyGuiHost.MarkMobileMountDirty();
+                    MonoShare.FairyGuiHost.MarkMobileFishingDirty();
+                }
                 return;
             }
 
-            if (p.Grid != MirGridType.Mount || p.To < 0)
+            bool mountSource = p.Grid == MirGridType.Mount;
+            bool fishingSource = p.Grid == MirGridType.Fishing;
+            if ((!mountSource && !fishingSource) || p.To < 0)
                 return;
 
-            UserItem mount = User.Equipment != null && User.Equipment.Length > (int)EquipmentSlot.Mount
+            UserItem mount = mountSource && User.Equipment != null && User.Equipment.Length > (int)EquipmentSlot.Mount
                 ? User.Equipment[(int)EquipmentSlot.Mount]
                 : null;
-            if (mount?.Slots == null)
+            UserItem fishingRod = fishingSource ? FindMobileFishingRod(User) : null;
+            UserItem host = mountSource ? mount : fishingRod;
+            if (host?.Slots == null)
                 return;
 
             UserItem[] destination = p.GridTo switch
@@ -3498,9 +3962,9 @@ namespace MonoShare.MirScenes
                 return;
 
             int slotIndex = -1;
-            for (int i = 0; i < mount.Slots.Length; i++)
+            for (int i = 0; i < host.Slots.Length; i++)
             {
-                if (mount.Slots[i] == null || mount.Slots[i].UniqueID != p.UniqueID)
+                if (host.Slots[i] == null || host.Slots[i].UniqueID != p.UniqueID)
                     continue;
 
                 slotIndex = i;
@@ -3510,12 +3974,20 @@ namespace MonoShare.MirScenes
             if (slotIndex < 0)
                 return;
 
-            destination[p.To] = mount.Slots[slotIndex];
-            mount.Slots[slotIndex] = null;
+            destination[p.To] = host.Slots[slotIndex];
+            host.Slots[slotIndex] = null;
             User.RefreshStats();
 
             if (Environment.OSVersion.Platform != PlatformID.Win32NT)
-                MonoShare.FairyGuiHost.MarkMobileMountDirty();
+            {
+                if (mountSource)
+                    MonoShare.FairyGuiHost.MarkMobileMountDirty();
+                if (fishingSource)
+                {
+                    SyncMobileFishingSnapshot(User);
+                    MonoShare.FairyGuiHost.MarkMobileFishingDirty();
+                }
+            }
         }
         private void TakeBackItem(S.TakeBackItem p)
         {
@@ -3888,6 +4360,9 @@ namespace MonoShare.MirScenes
 
         private void FishingUpdate(S.FishingUpdate p)
         {
+            if (p == null)
+                return;
+
             for (int i = MapControl.Objects.Count - 1; i >= 0; i--)
             {
                 if (MapControl.Objects[i].ObjectID != p.ObjectID) continue;
@@ -3901,7 +4376,13 @@ namespace MonoShare.MirScenes
                 break;
             }
 
-            if (p.ObjectID != User.ObjectID) return;
+            if (User == null || p.ObjectID != User.ObjectID) return;
+
+            if (MobileFishingState.ApplyFishingUpdate(p, User.ObjectID) &&
+                Environment.OSVersion.Platform != PlatformID.Win32NT)
+            {
+                MonoShare.FairyGuiHost.MarkMobileFishingDirty();
+            }
 
             //GameScene.Scene.FishingStatusDialog.ProgressPercent = p.ProgressPercent;
             //GameScene.Scene.FishingStatusDialog.ChancePercent = p.ChancePercent;
@@ -4124,6 +4605,7 @@ namespace MonoShare.MirScenes
             for (int i = 0; i <= 3; i++)//Fix for orbs sound
                 SoundManager.StopSound(20000 + 126 * 10 + 5 + i);
 
+            MobileFishingState.ResetForSession();
             User = null;
             if (Settings.Resolution != 800)
             {
@@ -4850,6 +5332,15 @@ namespace MonoShare.MirScenes
                 MonoShare.FairyGuiHost.MarkMobileMountDirty();
             }
 
+            if (Environment.OSVersion.Platform != PlatformID.Win32NT &&
+                (item.Info?.IsFishingRod == true || item.Info?.Type == ItemType.鱼钩 ||
+                 item.Info?.Type == ItemType.鱼漂 || item.Info?.Type == ItemType.鱼饵 ||
+                 item.Info?.Type == ItemType.探鱼器 || item.Info?.Type == ItemType.摇轮))
+            {
+                SyncMobileFishingSnapshot(User);
+                MonoShare.FairyGuiHost.MarkMobileFishingDirty();
+            }
+
             if (HoverItem == item)
             {
                 DisposeItemLabel();
@@ -4901,7 +5392,7 @@ namespace MonoShare.MirScenes
             {
                 UserItem item = User.Equipment[i];
 
-                if (item != null && item.Slots.Length > 0)
+                if (item?.Slots != null && item.Slots.Length > 0)
                 {
                     for (int j = 0; j < item.Slots.Length; j++)
                     {
@@ -4937,9 +5428,13 @@ namespace MonoShare.MirScenes
                 break;
             }
             User.RefreshStats();
+            SyncMobileFishingSnapshot(User);
+            if (Environment.OSVersion.Platform != PlatformID.Win32NT)
+                MonoShare.FairyGuiHost.MarkMobileFishingDirty();
         }
         private void Death(S.Death p)
         {
+            ResetMobileFishingActivity();
             User.Dead = true;
 
             User.ActionFeed.Add(new QueuedAction { Action = MirAction.Die, Direction = p.Direction, Location = p.Location });
@@ -5157,6 +5652,7 @@ namespace MonoShare.MirScenes
         }
         private void MapChanged(S.MapChanged p)
         {
+            ResetMobileFishingActivity();
             MapControl.FileName = Settings.ResolveMapFile(p.FileName + ".map");
             MapControl.Title = p.Title;
             MapControl.MiniMap = p.MiniMap;
@@ -5565,6 +6061,22 @@ namespace MonoShare.MirScenes
                         item = User.Equipment[i];
                         break;
                     }
+
+                    UserItem host = User.Equipment[i];
+                    if (host?.Slots == null)
+                        continue;
+
+                    for (int j = 0; j < host.Slots.Length; j++)
+                    {
+                        if (host.Slots[j] == null || host.Slots[j].UniqueID != p.UniqueID)
+                            continue;
+
+                        item = host.Slots[j];
+                        break;
+                    }
+
+                    if (item != null)
+                        break;
                 }
             }
 
@@ -5581,6 +6093,12 @@ namespace MonoShare.MirScenes
 
             if (refreshMobileMount && Environment.OSVersion.Platform != PlatformID.Win32NT)
                 MonoShare.FairyGuiHost.MarkMobileMountDirty();
+
+            if (Environment.OSVersion.Platform != PlatformID.Win32NT)
+            {
+                SyncMobileFishingSnapshot(User);
+                MonoShare.FairyGuiHost.MarkMobileFishingDirty();
+            }
         }
 
         private void ItemSlotSizeChanged(S.ItemSlotSizeChanged p)
@@ -6380,6 +6898,26 @@ namespace MonoShare.MirScenes
                 {
                     User.Equipment[i] = p.Item;
                     User.RefreshStats();
+                    SyncMobileFishingSnapshot(User);
+                    if (Environment.OSVersion.Platform != PlatformID.Win32NT)
+                        MonoShare.FairyGuiHost.MarkMobileFishingDirty();
+                    return;
+                }
+
+                UserItem host = User.Equipment[i];
+                if (host?.Slots == null)
+                    continue;
+
+                for (int j = 0; j < host.Slots.Length; j++)
+                {
+                    if (host.Slots[j] == null || host.Slots[j].UniqueID != p.Item.UniqueID)
+                        continue;
+
+                    host.Slots[j] = p.Item;
+                    User.RefreshStats();
+                    SyncMobileFishingSnapshot(User);
+                    if (Environment.OSVersion.Platform != PlatformID.Win32NT)
+                        MonoShare.FairyGuiHost.MarkMobileFishingDirty();
                     return;
                 }
             }
