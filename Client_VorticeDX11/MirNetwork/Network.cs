@@ -42,9 +42,8 @@ namespace Client.MirNetwork
         private static int _packetTraceQueueCount;
         private static long _nextPacketTraceFlushTime;
 
+        private static readonly object _connectionGate = new object();
         static byte[] _rawData = new byte[0];
-        static readonly byte[] _rawBytes = new byte[8 * 1024];
-
         public static void Connect()
         {
             if (_client != null)
@@ -127,22 +126,25 @@ namespace Client.MirNetwork
                     await ssl.AuthenticateAsClientAsync(TlsClientPolicy.CreateOptions(state.ServerName), timeout.Token);
                     stream = ssl;
                 }
-                if (state.Generation != Volatile.Read(ref _connectionGeneration) || !ReferenceEquals(_client, state.Client)) return;
-                _stream = stream;
-                adopted = true;
+                lock (_connectionGate)
+                {
+                    if (state.Generation != Volatile.Read(ref _connectionGeneration) || !ReferenceEquals(_client, state.Client)) return;
+                    _stream = stream;
+                    adopted = true;
 
-                _receiveList = new ConcurrentQueue<Packet>();
-                _sendList = new ConcurrentQueue<Packet>();
-                _receiveQueueMetrics = new PerformanceQueueTracker();
-                _sendQueueMetrics = new PerformanceQueueTracker();
-                _networkQueueMetrics = new PerformanceQueueTracker();
-                _rawData = new byte[0];
+                    _receiveList = new ConcurrentQueue<Packet>();
+                    _sendList = new ConcurrentQueue<Packet>();
+                    _receiveQueueMetrics = new PerformanceQueueTracker();
+                    _sendQueueMetrics = new PerformanceQueueTracker();
+                    _networkQueueMetrics = new PerformanceQueueTracker();
+                    _rawData = new byte[0];
 
-                TimeOutTime = CMain.Time + Settings.TimeOut;
-                TimeConnected = CMain.Time;
+                    TimeOutTime = CMain.Time + Settings.TimeOut;
+                    TimeConnected = CMain.Time;
+                }
 
                 EnqueuePacketTraceLine($"[{CMain.Now:yyyy-MM-dd HH:mm:ss.fff}] CONNECTED Host={state.Host}:{state.Port}");
-                BeginReceive();
+                BeginReceive(state.Client, state.Generation, stream);
             }
             catch (SocketException)
             {
@@ -174,42 +176,56 @@ namespace Client.MirNetwork
             }
         }
 
-        private static void BeginReceive()
+        private static bool IsCurrent(int generation, TcpClient client, Stream stream) =>
+            generation == Volatile.Read(ref _connectionGeneration) && ReferenceEquals(_client, client) && ReferenceEquals(_stream, stream);
+
+        private static void DisconnectIfCurrent(int generation, TcpClient client, Stream stream)
         {
-            if (_stream == null || _client == null || !_client.Connected) return;
+            lock (_connectionGate) { if (IsCurrent(generation, client, stream)) Disconnect(); }
+        }
+
+        private static void BeginReceive(TcpClient client, int generation, Stream stream)
+        {
+            if (!IsCurrent(generation, client, stream) || !client.Connected) return;
 
             try
             {
-                _stream.BeginRead(_rawBytes, 0, _rawBytes.Length, ReceiveData, _rawBytes);
+                var buffer = new byte[8 * 1024];
+                stream.BeginRead(buffer, 0, buffer.Length, ReceiveData, (Client: client, Generation: generation, Stream: stream, Buffer: buffer));
             }
             catch
             {
-                Disconnect();
+                DisconnectIfCurrent(generation, client, stream);
             }
         }
         private static void ReceiveData(IAsyncResult result)
         {
-            if (_stream == null || _client == null || !_client.Connected) return;
+            var state = ((TcpClient Client, int Generation, Stream Stream, byte[] Buffer))result.AsyncState;
+            if (!IsCurrent(state.Generation, state.Client, state.Stream) || !state.Client.Connected) return;
 
             int dataRead;
 
             try
             {
-                dataRead = _stream.EndRead(result);
+                dataRead = state.Stream.EndRead(result);
             }
             catch
             {
-                Disconnect();
+                DisconnectIfCurrent(state.Generation, state.Client, state.Stream);
                 return;
             }
 
+            if (!IsCurrent(state.Generation, state.Client, state.Stream)) return;
             if (dataRead == 0)
             {
-                Disconnect();
+                DisconnectIfCurrent(state.Generation, state.Client, state.Stream);
                 return;
             }
 
-            byte[] rawBytes = result.AsyncState as byte[];
+            lock (_connectionGate)
+            {
+            if (!IsCurrent(state.Generation, state.Client, state.Stream)) return;
+            byte[] rawBytes = state.Buffer;
 
             byte[] temp = _rawData;
             _rawData = new byte[dataRead + temp.Length];
@@ -231,8 +247,9 @@ namespace Client.MirNetwork
             }
 
             CMain.BytesReceived += data.Count;
+            }
 
-            BeginReceive();
+            BeginReceive(state.Client, state.Generation, state.Stream);
         }
 
         private static bool BeginSend(List<byte> data, bool gateHeld = false)
@@ -277,6 +294,8 @@ namespace Client.MirNetwork
 
         public static void Disconnect()
         {
+            lock (_connectionGate)
+            {
             Interlocked.Increment(ref _connectionGeneration);
             if (_client == null && _receiveList == null && _sendList == null) return;
 
@@ -299,6 +318,7 @@ namespace Client.MirNetwork
 
             EnqueuePacketTraceLine($"[{CMain.Now:yyyy-MM-dd HH:mm:ss.fff}] DISCONNECT");
             FlushPacketTraceIfDue(force: true);
+            }
         }
 
         public static void Process()

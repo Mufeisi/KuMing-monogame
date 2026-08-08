@@ -4459,9 +4459,20 @@ namespace Server.MirEnvir
         private void CancelTlsGeneration()
         {
             Interlocked.Increment(ref _networkGeneration);
+            Interlocked.Exchange(ref _pendingTlsHandshakes, 0);
             var cancellation = Interlocked.Exchange(ref _tlsHandshakeCancellation, null);
             cancellation?.Cancel();
             cancellation?.Dispose();
+        }
+
+        private void ReleasePendingTlsHandshake(int generation)
+        {
+            if (generation != Volatile.Read(ref _networkGeneration)) return;
+            while (true)
+            {
+                var count = Volatile.Read(ref _pendingTlsHandshakes);
+                if (count <= 0 || Interlocked.CompareExchange(ref _pendingTlsHandshakes, count - 1, count) == count) return;
+            }
         }
 
         private static TcpListener CreateStartedListener(IPAddress address, int port, string label)
@@ -4614,21 +4625,26 @@ namespace Server.MirEnvir
         {
             var generation = result.AsyncState is int value ? value : -1;
             TcpClient client = null;
+            var pending = false;
+            var handedOff = false;
             try
             {
                 var listener = _tlsListener;
                 if (!Running || generation != Volatile.Read(ref _networkGeneration) || listener?.Server?.IsBound != true) return;
                 client = listener.EndAcceptTcpClient(result);
                 QueueTlsAccept(generation);
+                var cancellation = _tlsHandshakeCancellation;
+                var certificate = _tlsCertificate;
+                if (cancellation == null || certificate == null || generation != Volatile.Read(ref _networkGeneration)) return;
                 if (Interlocked.Increment(ref _pendingTlsHandshakes) > MaxPendingTlsHandshakes)
                 {
-                    Interlocked.Decrement(ref _pendingTlsHandshakes);
-                    client.Close();
-                    client = null;
+                    ReleasePendingTlsHandshake(generation);
                     return;
                 }
-                var cancellation = _tlsHandshakeCancellation;
-                _ = ProcessTlsClientAsync(client, generation, _tlsCertificate, cancellation?.Token ?? default);
+                pending = true;
+                if (generation != Volatile.Read(ref _networkGeneration)) return;
+                _ = ProcessTlsClientAsync(client, generation, certificate, cancellation.Token);
+                handedOff = true;
                 client = null;
             }
             catch (Exception ex)
@@ -4636,6 +4652,10 @@ namespace Server.MirEnvir
                 if (Running && generation == Volatile.Read(ref _networkGeneration))
                     MessageQueue.Enqueue("TLS连接接受失败：" + ex.GetType().Name);
                 QueueTlsAccept(generation);
+            }
+            finally
+            {
+                if (pending && !handedOff) ReleasePendingTlsHandshake(generation);
                 client?.Close();
             }
         }
@@ -4658,7 +4678,7 @@ namespace Server.MirEnvir
             }
             finally
             {
-                Interlocked.Decrement(ref _pendingTlsHandshakes);
+                ReleasePendingTlsHandshake(generation);
                 if (!connected)
                 {
                     try { ssl?.Dispose(); } catch { }

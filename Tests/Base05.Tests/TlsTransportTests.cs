@@ -190,6 +190,8 @@ public sealed class TlsTransportTests
         var cancellation = new CancellationTokenSource();
         typeof(Envir).GetField("_tlsHandshakeCancellation", BindingFlags.Instance | BindingFlags.NonPublic)
             ?.SetValue(environment, cancellation);
+        FieldInfo pending = typeof(Envir).GetField("_pendingTlsHandshakes", BindingFlags.Instance | BindingFlags.NonPublic);
+        pending.SetValue(environment, 3);
         var limit = typeof(Envir).GetField("MaxPendingTlsHandshakes", BindingFlags.Static | BindingFlags.NonPublic)
             ?.GetRawConstantValue();
         var stop = typeof(Envir).GetMethod("StopNetwork", BindingFlags.Instance | BindingFlags.NonPublic);
@@ -198,6 +200,7 @@ public sealed class TlsTransportTests
 
         Assert.Equal(64, limit);
         Assert.True(cancellation.IsCancellationRequested);
+        Assert.Equal(0, pending.GetValue(environment));
     }
 
     [Fact]
