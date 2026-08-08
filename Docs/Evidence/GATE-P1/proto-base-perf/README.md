@@ -88,7 +88,7 @@ $doc.Dispose()
 输出：
 
 ```json
-{"schemaVersion":"PROTO-01.wire-manifest.v1","sourceCommit":"0f2a933","packets":420,"enums":61,"bytes":475371,"jsonDocument":"ok"}
+{"schemaVersion":"PROTO-01.wire-manifest.v1","sourceCommit":"0f2a933","packets":420,"enums":61,"bytes":475371}
 ```
 
 说明：Windows PowerShell 5.1 的 `ConvertFrom-Json` 对清单中仅大小写不同的枚举键（例如 `DemonWolf`/`Demonwolf`）不兼容并退出 1；该入口不是本次采用的机器读取器。`System.Text.Json.JsonDocument` 可正常读取，且专项测试中的清单覆盖/枚举声明校验通过。未修改清单或测试以规避该环境差异。
@@ -143,7 +143,7 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File Tools/ResourceBaseline.ps1 -Action
 资源基线通过。
 ```
 
-3 个外部资源按 `Repository` 范围契约跳过，不等同于资源已获取或 `All` 范围已验证；需要外部资源时必须另行执行 Acquire/All 与校验。
+`Repository` 输出的 3 条 `[SKIP]` 不是 3 个外部资源：其中 2 个是 `local-authorized` 外部资源（`mobile-bootstrap-assets`、`pc-runtime-assets`），1 个是 `generated`/`Export` 资源（`patch-repository`）。`Tools/ResourceBaseline.ps1` 的 `Get-ExternalResources` 明确排除 `generated`，所以 `patch-repository` 不属于 `ResourceBaseline.ps1 Acquire`；它必须由 `Tools/Mobile-BootstrapPackageRepoExport.ps1` 先导出。后续在两项外部资源按 `Acquire -Scope All` 准备好、补丁仓库完成 `Export` 后，再运行 `ResourceBaseline.ps1 -Action Validate -Scope All`，才能验证全部最终资源。
 
 ### 3. PERF-00 专项
 
@@ -177,7 +177,7 @@ dotnet test Tests/Base05.Tests/Base05.Tests.csproj --no-restore --nologo --logge
 
 1. 本证据只证明清单可读、资源契约/仓库范围校验可执行、性能采集代码自动验证通过。
 2. PERF-00 的 S1（1 连接/0 活跃）、S2（100/100）和 S3（300/100）尚未真实运行。当前仓库没有受控连接负载入口、测试账号、地图和服务器资源，严禁用单元测试、模拟连接或合成 JSON 代替。
-3. `ResourceBaseline.ps1 Validate Repository` 只校验仓库范围；3 个外部资源明确跳过，不能据此宣称 `Validate All` 或发布资源已齐备。
+3. `ResourceBaseline.ps1 Validate Repository` 只校验仓库范围；当前跳过分类为 2 个 `local-authorized` 外部资源 + 1 个 `generated`/`Export` 补丁仓库，不能据此宣称 `Validate All` 或发布资源已齐备。`patch-repository` 不走 `Acquire`，必须先执行导出器，再执行 `Validate All`。
 4. 本任务不修改生产代码、测试代码、PRD、README、架构报告或现有清单；只新增本目录证据。
 
 ## 本任务结论
