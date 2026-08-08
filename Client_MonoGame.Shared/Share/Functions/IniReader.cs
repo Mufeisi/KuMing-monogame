@@ -3,12 +3,27 @@ using System.Collections.Generic;
 using DrawingPoint = System.Drawing.Point;
 using DrawingSize = System.Drawing.Size;
 using System.IO;
+using System.Text;
 
 public class InIReader
 {
     #region Fields
-    private readonly List<string> _contents;
+    private List<string> _contents;
     private readonly string _fileName;
+    private Exception _loadException;
+    private Encoding _encoding = new UTF8Encoding(false);
+    private bool _hasBom;
+    private string _newline = Environment.NewLine;
+    private bool _trailingNewline;
+
+    private sealed class FileSnapshot
+    {
+        public List<string> Lines { get; set; }
+        public Encoding Encoding { get; set; }
+        public bool HasBom { get; set; }
+        public string Newline { get; set; }
+        public bool TrailingNewline { get; set; }
+    }
     #endregion
 
     #region Constructor
@@ -24,11 +39,14 @@ public class InIReader
         _contents = new List<string>();
         try
         {
-            if (File.Exists(_fileName))
-                _contents.AddRange(File.ReadAllLines(_fileName));
+            var snapshot = ReadFileSnapshot();
+            _contents = snapshot.Lines;
+            ApplyFileFormat(snapshot);
         }
-        catch
+        catch (Exception exception)
         {
+            // 保留读取故障，避免把受锁定/损坏的文件永久当作空配置。
+            _loadException = exception;
         }
     }
     #endregion
@@ -91,11 +109,24 @@ public class InIReader
         if (string.IsNullOrEmpty(section) || keys == null || keys.Length == 0)
             return 0;
 
+        FileSnapshot snapshot;
+        try
+        {
+            // 清理必须以磁盘最新快照为准，构造阶段失败也可在解除锁后重试。
+            snapshot = ReadFileSnapshot();
+        }
+        catch (Exception exception)
+        {
+            _loadException = exception;
+            throw;
+        }
+
+        var updatedContents = new List<string>(snapshot.Lines);
         var removed = 0;
         string currentSection = null;
-        for (var i = 0; i < _contents.Count;)
+        for (var i = 0; i < updatedContents.Count;)
         {
-            string line = _contents[i] ?? string.Empty;
+            string line = updatedContents[i] ?? string.Empty;
             if (line.Length >= 2 && line[0] == '[' && line[^1] == ']')
             {
                 currentSection = line.Substring(1, line.Length - 2);
@@ -133,19 +164,206 @@ public class InIReader
                 continue;
             }
 
-            _contents.RemoveAt(i);
+            updatedContents.RemoveAt(i);
             removed++;
         }
 
-        if (removed > 0)
-            SaveSensitiveValues();
+        if (removed == 0)
+        {
+            _contents = updatedContents;
+            ApplyFileFormat(snapshot);
+            _loadException = null;
+            return 0;
+        }
+
+        string temporaryFile = null;
+        try
+        {
+            temporaryFile = WriteSensitiveSnapshot(snapshot, updatedContents);
+            ReplaceSensitiveFile(temporaryFile);
+            temporaryFile = null;
+            _contents = updatedContents;
+            ApplyFileFormat(snapshot);
+            _loadException = null;
+        }
+        finally
+        {
+            if (!string.IsNullOrEmpty(temporaryFile))
+            {
+                try
+                {
+                    File.Delete(temporaryFile);
+                }
+                catch
+                {
+                    // 保留原始替换异常；临时文件清理失败不吞掉清理主流程错误。
+                }
+            }
+        }
 
         return removed;
     }
 
-    private void SaveSensitiveValues()
+    private FileSnapshot ReadFileSnapshot()
     {
-        File.WriteAllLines(_fileName, _contents);
+        byte[] bytes;
+        try
+        {
+            using (var stream = new FileStream(
+                _fileName,
+                FileMode.Open,
+                FileAccess.Read,
+                FileShare.Read,
+                4096,
+                FileOptions.SequentialScan))
+            using (var buffer = new MemoryStream())
+            {
+                stream.CopyTo(buffer);
+                bytes = buffer.ToArray();
+            }
+        }
+        catch (FileNotFoundException)
+        {
+            return new FileSnapshot
+            {
+                Lines = new List<string>(),
+                Encoding = new UTF8Encoding(false),
+                HasBom = false,
+                Newline = Environment.NewLine,
+                TrailingNewline = false,
+            };
+        }
+        catch (DirectoryNotFoundException)
+        {
+            return new FileSnapshot
+            {
+                Lines = new List<string>(),
+                Encoding = new UTF8Encoding(false),
+                HasBom = false,
+                Newline = Environment.NewLine,
+                TrailingNewline = false,
+            };
+        }
+
+        Encoding encoding = new UTF8Encoding(false);
+        var hasBom = false;
+        var offset = 0;
+        if (bytes.Length >= 3 && bytes[0] == 0xEF && bytes[1] == 0xBB && bytes[2] == 0xBF)
+        {
+            encoding = new UTF8Encoding(true);
+            hasBom = true;
+            offset = 3;
+        }
+        else if (bytes.Length >= 2 && bytes[0] == 0xFF && bytes[1] == 0xFE)
+        {
+            encoding = new UnicodeEncoding(false, true);
+            hasBom = true;
+            offset = 2;
+        }
+        else if (bytes.Length >= 2 && bytes[0] == 0xFE && bytes[1] == 0xFF)
+        {
+            encoding = new UnicodeEncoding(true, true);
+            hasBom = true;
+            offset = 2;
+        }
+
+        var text = encoding.GetString(bytes, offset, bytes.Length - offset);
+        var newline = DetectNewline(text);
+        var trailingNewline = text.EndsWith("\r", StringComparison.Ordinal)
+            || text.EndsWith("\n", StringComparison.Ordinal);
+        var lines = new List<string>(text.Split(new[] { "\r\n", "\n", "\r" }, StringSplitOptions.None));
+        if (trailingNewline && lines.Count > 0 && lines[lines.Count - 1].Length == 0)
+            lines.RemoveAt(lines.Count - 1);
+
+        return new FileSnapshot
+        {
+            Lines = lines,
+            Encoding = encoding,
+            HasBom = hasBom,
+            Newline = newline,
+            TrailingNewline = trailingNewline,
+        };
+    }
+
+    private static string DetectNewline(string text)
+    {
+        var crlf = text.IndexOf("\r\n", StringComparison.Ordinal);
+        var lf = text.IndexOf('\n');
+        var cr = text.IndexOf('\r');
+        if (crlf >= 0 && (lf < 0 || crlf <= lf))
+            return "\r\n";
+        if (lf >= 0 && (cr < 0 || lf <= cr))
+            return "\n";
+        if (cr >= 0)
+            return "\r";
+        return Environment.NewLine;
+    }
+
+    private void ApplyFileFormat(FileSnapshot snapshot)
+    {
+        _encoding = snapshot.Encoding;
+        _hasBom = snapshot.HasBom;
+        _newline = snapshot.Newline;
+        _trailingNewline = snapshot.TrailingNewline;
+    }
+
+    private string WriteSensitiveSnapshot(FileSnapshot snapshot, List<string> contents)
+    {
+        var directory = Path.GetDirectoryName(_fileName);
+        if (string.IsNullOrEmpty(directory))
+            directory = Directory.GetCurrentDirectory();
+
+        string temporaryFile;
+        do
+        {
+            temporaryFile = Path.Combine(
+                directory,
+                "." + Path.GetFileName(_fileName) + "." + Guid.NewGuid().ToString("N") + ".tmp");
+        }
+        while (File.Exists(temporaryFile));
+
+        var text = string.Join(snapshot.Newline, contents);
+        if (snapshot.TrailingNewline)
+            text += snapshot.Newline;
+
+        using (var stream = new FileStream(
+            temporaryFile,
+            FileMode.CreateNew,
+            FileAccess.Write,
+            FileShare.None,
+            4096,
+            FileOptions.WriteThrough))
+        {
+            if (snapshot.HasBom)
+            {
+                var preamble = snapshot.Encoding.GetPreamble();
+                stream.Write(preamble, 0, preamble.Length);
+            }
+
+            var bytes = snapshot.Encoding.GetBytes(text);
+            stream.Write(bytes, 0, bytes.Length);
+            stream.Flush(true);
+        }
+
+        return temporaryFile;
+    }
+
+    private void ReplaceSensitiveFile(string temporaryFile)
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            try
+            {
+                File.Replace(temporaryFile, _fileName, null, true);
+                return;
+            }
+            catch (PlatformNotSupportedException)
+            {
+                // 极少数 Windows 兼容文件系统不提供 Replace，退回同卷覆盖移动。
+            }
+        }
+
+        File.Move(temporaryFile, _fileName, true);
     }
     #endregion
 

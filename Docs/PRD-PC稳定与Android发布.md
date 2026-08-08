@@ -152,7 +152,7 @@ GATE-P0 ──► GATE-P1 ──► GATE-P2 ──► GATE-P3 ──► GATE-P4 
 
 **SEC-01 P1 收口记录（2026-08-08）**：旧 PBKDF2 摘要的历史实现是 24 字节结果直接 `Encoding.UTF8.GetString`；兼容验证在 PBKDF2 派生和 `Encoding.GetBytes` 前限制不超过 24 个 UTF-16 单元并拒绝未配对代理项，转换仍在受控异常边界内，超长/非法输入不升级。PC 与移动两份 `InIReader` 增加密码专用 `ClearKeys`，遍历并删除 `Game`/`Launcher` 节内全部重复 `Password`、`RememberPassword` 键后一次写盘；该路径不吞写盘异常，交由现有启动/运行日志处理。两端 Settings 的 Load/Save 均调用该接缝，配置文件不再重建敏感键。PC 补丁源在 `NeedLogin=true` 时只从运行时环境读取 `LYOCRYSTAL_PATCH_PASSWORD`（用户名可由 `LYOCRYSTAL_PATCH_USER` 覆盖配置），凭据仅在内存组装 Basic Auth；缺少凭据时记录无秘密错误并提示，清空下载队列，不发送 `用户名:`。P1 专项证据见 `PasswordSecurityTests`、`PasswordStoragePolicyTests`。
 
-**SEC-01 后续（P2，待用户批准）**：HTTPLogin 的线程事务边界（工作线程进入主线程、认证/账户状态提交及失败回滚）与真实 PC/移动 Settings-登录集成测试仍未实现，单独立项后再做；不阻塞本次 P1 收口，也不在本次提交引入 Credential Manager、Keystore 或其它 SEC-02 代码。
+**SEC-01 后续（P2，已获用户批准）**：HTTPLogin 的线程事务边界（工作线程进入主线程、认证/账户状态提交及失败回滚）与真实 PC/移动 Settings-登录集成测试仍未实现，单独立项后再做；不阻塞本次 P1 收口，也不在本次提交引入 Credential Manager、Keystore 或其它 SEC-02 代码。
 
 **GATE-P2 退出条件**：公开测试前安全项全部完成；凭据不通过未加密网络传输；公网无 V1 明文登录。
 

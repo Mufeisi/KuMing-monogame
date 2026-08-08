@@ -1,4 +1,5 @@
 using Shared.Security;
+using System.Text;
 using Xunit;
 
 namespace Base05.Tests;
@@ -121,11 +122,14 @@ public sealed class PasswordStoragePolicyTests
         var path = Path.Combine(Path.GetTempPath(), $"base05-password-readonly-{Guid.NewGuid():N}.ini");
         try
         {
-            File.WriteAllText(path, "[Game]\r\nPassword=legacy\r\n");
+            File.WriteAllText(path, "[Game]\r\nPassword=legacy\r\nKeep=untouched\r\n");
+            var original = Convert.ToHexString(File.ReadAllBytes(path));
             File.SetAttributes(path, FileAttributes.ReadOnly);
             var reader = new InIReader(path);
 
             Assert.ThrowsAny<Exception>(() => PasswordStoragePolicy.ClearStoredCredentials(reader, "Game"));
+            Assert.Equal("legacy", reader.ReadString("Game", "Password", string.Empty, writeWhenNull: false));
+            Assert.Equal(original, Convert.ToHexString(File.ReadAllBytes(path)));
         }
         finally
         {
@@ -134,6 +138,110 @@ public sealed class PasswordStoragePolicyTests
                 File.SetAttributes(path, FileAttributes.Normal);
                 File.Delete(path);
             }
+        }
+    }
+
+    [Fact]
+    public void 构造读取锁解除后同一对象可重试密码清除()
+    {
+        if (!OperatingSystem.IsWindows())
+            return;
+
+        var path = Path.Combine(Path.GetTempPath(), $"base05-password-read-lock-{Guid.NewGuid():N}.ini");
+        var temporaryPattern = "." + Path.GetFileName(path) + ".*.tmp";
+        try
+        {
+            File.WriteAllText(path, "[Game]\r\nPassword=legacy\r\nKeep=untouched\r\n");
+            var original = Convert.ToHexString(File.ReadAllBytes(path));
+            var reader = default(InIReader);
+            using (var lockStream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.None))
+            {
+                reader = new InIReader(path);
+                Assert.ThrowsAny<Exception>(() => PasswordStoragePolicy.ClearStoredCredentials(reader, "Game"));
+                Assert.Empty(Directory.GetFiles(Path.GetDirectoryName(path)!, temporaryPattern));
+            }
+
+            Assert.Equal(original, Convert.ToHexString(File.ReadAllBytes(path)));
+            Assert.Equal(1, PasswordStoragePolicy.ClearStoredCredentials(reader!, "Game"));
+            var contents = File.ReadAllText(path);
+            Assert.DoesNotContain("Password=legacy", contents, StringComparison.Ordinal);
+            Assert.Contains("Keep=untouched", contents, StringComparison.Ordinal);
+            Assert.Empty(Directory.GetFiles(Path.GetDirectoryName(path)!, temporaryPattern));
+        }
+        finally
+        {
+            if (File.Exists(path)) File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public void 目标锁定时原子替换失败且解除后同一对象可重试()
+    {
+        if (!OperatingSystem.IsWindows())
+            return;
+
+        var path = Path.Combine(Path.GetTempPath(), $"base05-password-replace-lock-{Guid.NewGuid():N}.ini");
+        var temporaryPattern = "." + Path.GetFileName(path) + ".*.tmp";
+        try
+        {
+            File.WriteAllText(path, "[Game]\r\nPassword=legacy\r\nKeep=untouched\r\n");
+            var original = Convert.ToHexString(File.ReadAllBytes(path));
+            var reader = new InIReader(path);
+            using (var lockStream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read))
+            {
+                Assert.ThrowsAny<Exception>(() => PasswordStoragePolicy.ClearStoredCredentials(reader, "Game"));
+                Assert.Equal("legacy", reader.ReadString("Game", "Password", string.Empty, writeWhenNull: false));
+                Assert.Equal(original, Convert.ToHexString(File.ReadAllBytes(path)));
+                Assert.Empty(Directory.GetFiles(Path.GetDirectoryName(path)!, temporaryPattern));
+            }
+
+            Assert.Equal(1, PasswordStoragePolicy.ClearStoredCredentials(reader, "Game"));
+            Assert.DoesNotContain("Password=legacy", File.ReadAllText(path), StringComparison.Ordinal);
+            Assert.Contains("Keep=untouched", File.ReadAllText(path), StringComparison.Ordinal);
+            Assert.Empty(Directory.GetFiles(Path.GetDirectoryName(path)!, temporaryPattern));
+        }
+        finally
+        {
+            if (File.Exists(path)) File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public void 密码清除保留UTF8BOM与原始CRLF并清理重复节()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"base05-password-format-{Guid.NewGuid():N}.ini");
+        try
+        {
+            var text = "[Game]\r\n" +
+                "Password=legacy-one\r\n" +
+                "Keep=one\r\n" +
+                "[Game]\r\n" +
+                "RememberPassword=true\r\n" +
+                "Keep=two\r\n";
+            var body = new UTF8Encoding(false).GetBytes(text);
+            var bytes = new byte[3 + body.Length];
+            bytes[0] = 0xEF;
+            bytes[1] = 0xBB;
+            bytes[2] = 0xBF;
+            Buffer.BlockCopy(body, 0, bytes, 3, body.Length);
+            File.WriteAllBytes(path, bytes);
+
+            Assert.Equal(2, PasswordStoragePolicy.ClearStoredCredentials(new InIReader(path), "Game"));
+            var result = File.ReadAllBytes(path);
+            Assert.True(result.Length >= 3);
+            Assert.Equal(0xEF, result[0]);
+            Assert.Equal(0xBB, result[1]);
+            Assert.Equal(0xBF, result[2]);
+            var resultText = new UTF8Encoding(false).GetString(result, 3, result.Length - 3);
+            Assert.DoesNotContain("Password=legacy", resultText, StringComparison.Ordinal);
+            Assert.DoesNotContain("RememberPassword=", resultText, StringComparison.Ordinal);
+            Assert.Contains("Keep=one\r\n", resultText, StringComparison.Ordinal);
+            Assert.Contains("Keep=two\r\n", resultText, StringComparison.Ordinal);
+            Assert.DoesNotContain("\n", resultText.Replace("\r\n", string.Empty, StringComparison.Ordinal), StringComparison.Ordinal);
+        }
+        finally
+        {
+            if (File.Exists(path)) File.Delete(path);
         }
     }
 
