@@ -38,6 +38,7 @@ namespace Client
         private static long _cleanTime;
         private static long _drawTime;
         private static string _performanceGpuMemorySessionId;
+        private static long _performanceGpuMemoryNextSampleTime;
         public static int FPS;
         public static int DPS;
         public static int DPSCounter;
@@ -89,6 +90,7 @@ namespace Client
             this.Text = GameLanguage.GameName;
             try
             {
+                PerformanceMetrics.TryConfigureFromEnvironment(out _);
                 Client.Utils.ResolutionTrace.LogClientState("CMain.Load", "Before ApplyWindowMode");
                 ApplyWindowMode();
                 Client.Utils.ResolutionTrace.LogClientState("CMain.Load", "After ApplyWindowMode");
@@ -124,7 +126,9 @@ namespace Client
                 {
                     using var performanceCpuScope = PerformanceMetrics.Begin(PerformanceMetricKind.Cpu);
                     UpdateTime();
+                    RecordGpuMemoryForCurrentSession();
                     UpdateEnviroment();
+                    Network.RecordPerformanceQueueMetrics();
 
                     if (IsDrawTime())
                     {
@@ -149,10 +153,35 @@ namespace Client
             if (string.IsNullOrEmpty(sessionId) || string.Equals(sessionId, _performanceGpuMemorySessionId, StringComparison.Ordinal))
                 return;
 
-            PerformanceMetrics.MarkUnavailable(
-                PerformanceMetricKind.GpuMemory,
-                "PC 渲染后端当前未暴露稳定的显存预算 API");
             _performanceGpuMemorySessionId = sessionId;
+            _performanceGpuMemoryNextSampleTime = 0;
+            RecordGpuMemoryForCurrentSession();
+        }
+
+        private static void RecordGpuMemoryForCurrentSession()
+        {
+            if (!PerformanceMetrics.Enabled) return;
+
+            var sessionId = PerformanceMetrics.SessionId;
+            if (string.IsNullOrEmpty(sessionId)) return;
+            if (!string.Equals(sessionId, _performanceGpuMemorySessionId, StringComparison.Ordinal))
+            {
+                _performanceGpuMemorySessionId = sessionId;
+                _performanceGpuMemoryNextSampleTime = 0;
+            }
+
+            if (Time < _performanceGpuMemoryNextSampleTime) return;
+            _performanceGpuMemoryNextSampleTime = Time + 1000;
+
+            if (DXManager.TryGetGpuMemoryUsage(out var usageBytes, out var budgetBytes, out var reason))
+            {
+                PerformanceMetrics.SetGauge(PerformanceMetricKind.GpuMemory, usageBytes);
+                PerformanceMetrics.SetGauge(PerformanceMetricKind.GpuMemoryBudget, budgetBytes);
+                return;
+            }
+
+            PerformanceMetrics.MarkUnavailable(PerformanceMetricKind.GpuMemory, reason);
+            PerformanceMetrics.MarkUnavailable(PerformanceMetricKind.GpuMemoryBudget, reason);
         }
 
         private static void CMain_Deactivate(object sender, EventArgs e)

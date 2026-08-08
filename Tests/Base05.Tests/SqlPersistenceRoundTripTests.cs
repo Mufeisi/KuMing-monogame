@@ -123,6 +123,41 @@ public sealed class SqlPersistenceRoundTripTests
         }
     }
 
+    [Fact]
+    public void Sql_save_failure_records_full_call_and_failure_segment()
+    {
+        var databasePath = Path.Combine(Path.GetTempPath(), $"base05-save-failure-{Guid.NewGuid():N}.db");
+        try
+        {
+            PerformanceMetrics.Configure(enabled: true, scenario: "sql-save-failure");
+            var runner = new SqlDomainTransactionRunner(
+                DatabaseProviderKind.Sqlite,
+                new SqlDatabaseOptions { SqlitePath = databasePath },
+                maxAttempts: 2,
+                continueOnError: true);
+
+            var result = runner.RunWithSnapshot<int>(
+                SqlSaveDomain.Accounts,
+                () => throw new InvalidOperationException("测试快照失败"),
+                (session, snapshot) => { });
+
+            Assert.False(result.Success);
+            var metrics = PerformanceMetrics.CreateSnapshot().Metrics;
+            var save = metrics.Single(item => item.Name == nameof(PerformanceMetricKind.Save));
+            var snapshot = metrics.Single(item => item.Name == nameof(PerformanceMetricKind.SaveSnapshotCapture));
+            var failure = metrics.Single(item => item.Name == nameof(PerformanceMetricKind.SaveFailure));
+            Assert.Equal(1, save.Samples);
+            Assert.Equal(1, snapshot.Samples);
+            Assert.True(failure.TotalValue >= 1);
+            Assert.True(save.P95Milliseconds.HasValue);
+        }
+        finally
+        {
+            PerformanceMetrics.Configure(enabled: false);
+            TryDelete(databasePath);
+        }
+    }
+
     private static void TryDelete(string path)
     {
         try

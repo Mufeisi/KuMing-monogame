@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.IO;
+using System.Numerics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading;
@@ -20,6 +21,8 @@ namespace Shared.Diagnostics
             new ConcurrentDictionary<string, object>(StringComparer.OrdinalIgnoreCase);
         private static long _sessionSequence;
         private static PerformanceMetricsSession _current;
+        private static string _configuredOutputPath;
+        private static int _processExitHookRegistered;
 
         static PerformanceMetrics()
         {
@@ -68,6 +71,8 @@ namespace Shared.Diagnostics
             lock (SessionGate)
             {
                 _current?.Freeze();
+                if (!enabled)
+                    _configuredOutputPath = null;
                 _current = CreateSession(
                     scenario,
                     enabled ? PerformanceSessionState.Active : PerformanceSessionState.Disabled);
@@ -132,6 +137,77 @@ namespace Shared.Diagnostics
         public static PerformanceSnapshot CreateSnapshot()
         {
             return CurrentSession?.CreateSnapshot() ?? PerformanceSnapshot.Empty();
+        }
+
+        /// <summary>
+        /// 生产进程的最小启用入口：设置 LYOCRYSTAL_PERF00_ENABLED=true，
+        /// 可选 LYOCRYSTAL_PERF00_SCENARIO 与 LYOCRYSTAL_PERF00_OUTPUT。
+        /// 进程退出时自动冻结并导出；正常代码路径不创建额外压测工具。
+        /// </summary>
+        public static bool TryConfigureFromEnvironment(out string reason)
+        {
+            reason = string.Empty;
+            try
+            {
+                var enabledText = Environment.GetEnvironmentVariable("LYOCRYSTAL_PERF00_ENABLED");
+                if (!IsTruthy(enabledText))
+                {
+                    reason = "未设置 LYOCRYSTAL_PERF00_ENABLED=true。";
+                    return false;
+                }
+
+                var scenario = Environment.GetEnvironmentVariable("LYOCRYSTAL_PERF00_SCENARIO") ?? string.Empty;
+                var output = Environment.GetEnvironmentVariable("LYOCRYSTAL_PERF00_OUTPUT");
+                if (string.IsNullOrWhiteSpace(output))
+                {
+                    output = Path.Combine(AppContext.BaseDirectory, "perf00-session.json");
+                }
+
+                Configure(enabled: true, scenario: scenario);
+                _configuredOutputPath = output;
+                if (Interlocked.Exchange(ref _processExitHookRegistered, 1) == 0)
+                    AppDomain.CurrentDomain.ProcessExit += OnProcessExit;
+                return true;
+            }
+            catch (Exception ex)
+            {
+                reason = ex.Message;
+                return false;
+            }
+        }
+
+        /// <summary>停止环境变量启用的会话并导出 JSON；可由宿主的正常关闭路径显式调用。</summary>
+        public static bool TryStopAndWriteConfiguredSnapshot(out PerformanceSnapshot snapshot, out string error)
+        {
+            var output = _configuredOutputPath;
+            if (string.IsNullOrWhiteSpace(output))
+            {
+                snapshot = PerformanceSnapshot.Empty();
+                error = "未配置 LYOCRYSTAL_PERF00_OUTPUT，当前会话没有可导出的生产路径。";
+                return false;
+            }
+
+            return TryFreezeAndWriteSnapshot(output, out snapshot, out error);
+        }
+
+        private static bool IsTruthy(string value)
+        {
+            return string.Equals(value, "1", StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(value, "true", StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(value, "yes", StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(value, "on", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static void OnProcessExit(object sender, EventArgs args)
+        {
+            try
+            {
+                TryStopAndWriteConfiguredSnapshot(out _, out _);
+            }
+            catch
+            {
+                // 进程退出阶段不能再向业务路径抛出异常。
+            }
         }
 
         public static bool TryWriteSnapshot(string filePath, out string error)
@@ -257,8 +333,6 @@ namespace Shared.Diagnostics
 
     public sealed class PerformanceMetricsSession
     {
-        private const int DurationReservoirCapacity = 4096;
-        private const int ValueReservoirCapacity = 4096;
         private const int ActiveState = 1;
         private const int FrozenState = 2;
         private const int DisabledState = 0;
@@ -267,6 +341,9 @@ namespace Shared.Diagnostics
         private long _state;
         private long _writers;
         private long _lastGcPauseTicks = -1;
+        private long _lastGcGen0 = -1;
+        private long _lastGcGen1 = -1;
+        private long _lastGcGen2 = -1;
 
         internal PerformanceMetricsSession(string sessionId, string scenario, PerformanceSessionState state)
         {
@@ -318,8 +395,21 @@ namespace Shared.Diagnostics
             if (!TryEnterWrite(PerformanceMetricKind.Memory, out var accumulator)) return;
             try
             {
-                GetAccumulator(PerformanceMetricKind.Gc)?.RecordValue(
-                    GC.CollectionCount(0) + GC.CollectionCount(1) + GC.CollectionCount(2));
+                // CollectionCount 是进程累计值；会话内只记录从上次采样开始的增量，
+                // 防止长驻进程把会话开始前的 GC 误计入本次基线。
+                var gen0 = GC.CollectionCount(0);
+                var gen1 = GC.CollectionCount(1);
+                var gen2 = GC.CollectionCount(2);
+                var previousGen0 = Interlocked.Exchange(ref _lastGcGen0, gen0);
+                var previousGen1 = Interlocked.Exchange(ref _lastGcGen1, gen1);
+                var previousGen2 = Interlocked.Exchange(ref _lastGcGen2, gen2);
+                var gen0Delta = CollectionDelta(previousGen0, gen0);
+                var gen1Delta = CollectionDelta(previousGen1, gen1);
+                var gen2Delta = CollectionDelta(previousGen2, gen2);
+                GetAccumulator(PerformanceMetricKind.Gc)?.RecordValue(gen0Delta + gen1Delta + gen2Delta);
+                GetAccumulator(PerformanceMetricKind.GcGen0)?.RecordValue(gen0Delta);
+                GetAccumulator(PerformanceMetricKind.GcGen1)?.RecordValue(gen1Delta);
+                GetAccumulator(PerformanceMetricKind.GcGen2)?.RecordValue(gen2Delta);
                 accumulator.RecordValue(GC.GetTotalMemory(forceFullCollection: false));
 
                 try
@@ -350,6 +440,12 @@ namespace Shared.Diagnostics
             {
                 Interlocked.Decrement(ref _writers);
             }
+        }
+
+        private static long CollectionDelta(long previous, long current)
+        {
+            if (previous < 0 || current < previous) return 0;
+            return current - previous;
         }
 
         internal PerformanceSnapshot CreateSnapshot()
@@ -404,15 +500,18 @@ namespace Shared.Diagnostics
             var values = (PerformanceMetricKind[])Enum.GetValues(typeof(PerformanceMetricKind));
             var result = new PerformanceMetricAccumulator[values.Length];
             for (var i = 0; i < result.Length; i++)
-                result[i] = new PerformanceMetricAccumulator(DurationReservoirCapacity, ValueReservoirCapacity);
+                result[i] = new PerformanceMetricAccumulator();
             return result;
         }
     }
 
     internal sealed class PerformanceMetricAccumulator
     {
-        private readonly long[] _durationSamples;
-        private readonly long[] _valueSamples;
+        // 固定对数直方图覆盖整个会话，不会在 4096 个样本后悄悄退化为“最近样本”。
+        // 直方图只保存 128 个计数，写入是一次 Interlocked.Increment，适合热路径。
+        private const int HistogramBucketCount = 128;
+        private readonly long[] _durationHistogram = new long[HistogramBucketCount];
+        private readonly long[] _valueHistogram = new long[HistogramBucketCount];
         private readonly object _reasonGate = new object();
         private string _unavailableReason;
         private long _durationSampleCount;
@@ -425,19 +524,13 @@ namespace Shared.Diagnostics
         private long _lastValue;
         private long _lastUtcTicks;
 
-        public PerformanceMetricAccumulator(int durationReservoirCapacity, int valueReservoirCapacity)
-        {
-            _durationSamples = new long[durationReservoirCapacity];
-            _valueSamples = new long[valueReservoirCapacity];
-        }
-
         public void RecordDuration(long elapsedStopwatchTicks)
         {
             if (elapsedStopwatchTicks < 0) elapsedStopwatchTicks = 0;
 
             Interlocked.Increment(ref _samples);
             Interlocked.Increment(ref _durationSampleCount);
-            AddReservoirSample(_durationSamples, _durationSampleCount, elapsedStopwatchTicks);
+            Interlocked.Increment(ref _durationHistogram[HistogramBucket(elapsedStopwatchTicks)]);
             Interlocked.Add(ref _totalDurationTicks, elapsedStopwatchTicks);
             UpdateMaximum(ref _maxDurationTicks, elapsedStopwatchTicks);
             Interlocked.Exchange(ref _lastUtcTicks, DateTime.UtcNow.Ticks);
@@ -447,7 +540,7 @@ namespace Shared.Diagnostics
         {
             Interlocked.Increment(ref _samples);
             Interlocked.Increment(ref _valueSampleCount);
-            AddReservoirSample(_valueSamples, _valueSampleCount, value);
+            Interlocked.Increment(ref _valueHistogram[HistogramBucket(value)]);
             Interlocked.Add(ref _totalValue, value);
             UpdateMaximum(ref _maxValue, value);
             Interlocked.Exchange(ref _lastValue, value);
@@ -466,8 +559,8 @@ namespace Shared.Diagnostics
             var durationSamples = Interlocked.Read(ref _durationSampleCount);
             var valueSamples = Interlocked.Read(ref _valueSampleCount);
             var frequency = Stopwatch.Frequency <= 0 ? 1 : Stopwatch.Frequency;
-            var durationPercentiles = ComputePercentiles(_durationSamples, durationSamples);
-            var valuePercentiles = ComputePercentiles(_valueSamples, valueSamples);
+            var durationPercentiles = ComputePercentiles(_durationHistogram, durationSamples);
+            var valuePercentiles = ComputePercentiles(_valueHistogram, valueSamples);
             string unavailableReason;
             lock (_reasonGate) unavailableReason = _unavailableReason;
 
@@ -500,34 +593,69 @@ namespace Shared.Diagnostics
                 LastValue = valueSamples > 0 ? Interlocked.Read(ref _lastValue) : null,
                 P95Value = valuePercentiles.P95,
                 P99Value = valuePercentiles.P99,
+                PercentileMethod = samples > 0 ? "log2-histogram" : null,
+                PercentileSampleCount = durationSamples > 0 ? durationSamples : valueSamples,
+                DurationPercentileMethod = durationSamples > 0 ? "log2-histogram" : null,
+                DurationPercentileSampleCount = durationSamples > 0 ? durationSamples : (long?)null,
+                ValuePercentileMethod = valueSamples > 0 ? "log2-histogram" : null,
+                ValuePercentileSampleCount = valueSamples > 0 ? valueSamples : (long?)null,
                 LastUpdatedAtUtc = ToUtcDateTime(Interlocked.Read(ref _lastUtcTicks)),
             };
         }
 
-        private static void AddReservoirSample(long[] reservoir, long sequence, long value)
+        private static int HistogramBucket(long value)
         {
-            var index = (int)((sequence - 1) % reservoir.Length);
-            Volatile.Write(ref reservoir[index], value);
+            ulong magnitude;
+            if (value < 0)
+                magnitude = (ulong)(-(value + 1)) + 1UL;
+            else
+                magnitude = (ulong)value;
+
+            var magnitudeBucket = magnitude == 0
+                ? 0
+                : Math.Min(63, 63 - BitOperations.LeadingZeroCount(magnitude));
+            return value < 0 ? 64 + magnitudeBucket : magnitudeBucket;
         }
 
-        private static (long? P95, long? P99) ComputePercentiles(long[] reservoir, long sampleCount)
+        private static (long? P95, long? P99) ComputePercentiles(long[] histogram, long sampleCount)
         {
             if (sampleCount <= 0) return (null, null);
 
-            var count = (int)Math.Min(sampleCount, reservoir.Length);
-            var values = new long[count];
-            for (var i = 0; i < count; i++) values[i] = Volatile.Read(ref reservoir[i]);
-            Array.Sort(values);
-
-            return (Percentile(values, 0.95D), Percentile(values, 0.99D));
+            return (HistogramPercentile(histogram, sampleCount, 0.95D),
+                HistogramPercentile(histogram, sampleCount, 0.99D));
         }
 
-        private static long Percentile(long[] values, double percentile)
+        private static long HistogramPercentile(long[] histogram, long sampleCount, double percentile)
         {
-            if (values.Length == 1) return values[0];
-            var index = (int)Math.Ceiling(percentile * values.Length) - 1;
-            index = Math.Clamp(index, 0, values.Length - 1);
-            return values[index];
+            var rank = Math.Max(1L, (long)Math.Ceiling(percentile * sampleCount));
+            var seen = 0L;
+
+            // 负数按数值从小到大遍历：更大的绝对值更小。
+            for (var index = HistogramBucketCount - 1; index >= 64; index--)
+            {
+                seen += Interlocked.Read(ref histogram[index]);
+                if (seen >= rank) return BucketRepresentative(index);
+            }
+
+            for (var index = 0; index < 64; index++)
+            {
+                seen += Interlocked.Read(ref histogram[index]);
+                if (seen >= rank) return BucketRepresentative(index);
+            }
+
+            return 0;
+        }
+
+        private static long BucketRepresentative(int index)
+        {
+            var magnitudeBucket = index >= 64 ? index - 64 : index;
+            ulong magnitude = magnitudeBucket >= 63 ? 1UL << 63 : 1UL << magnitudeBucket;
+            if (index >= 64)
+            {
+                return magnitude >= (1UL << 63) ? long.MinValue : -(long)magnitude;
+            }
+
+            return magnitude >= (1UL << 63) ? long.MaxValue : (long)magnitude;
         }
 
         private static void UpdateMaximum(ref long target, long value)
@@ -555,9 +683,13 @@ namespace Shared.Diagnostics
         TextureSwitch,
         TextureCreate,
         Gc,
+        GcGen0,
+        GcGen1,
+        GcGen2,
         GcPause,
         Memory,
         GpuMemory,
+        GpuMemoryBudget,
         Save,
         SaveSnapshotCapture,
         SaveTransactionCommit,
@@ -565,9 +697,14 @@ namespace Shared.Diagnostics
         NetworkQueue,
         NetworkInQueue,
         NetworkOutQueue,
+        NetworkQueueHighWater,
+        NetworkInQueueHighWater,
+        NetworkOutQueueHighWater,
         Connections,
         ActiveConnections,
         Disconnects,
+        MobileSpriteBatchBegin,
+        MobileSpriteBatchStateChange,
     }
 
     public enum PerformanceSessionState
@@ -575,6 +712,46 @@ namespace Shared.Diagnostics
         Disabled = 0,
         Active = 1,
         Frozen = 2,
+    }
+
+    /// <summary>
+    /// 网络队列的低开销深度/高水位计数器。入队、出队路径各只做一次原子加减，
+    /// 采样方可在队列已排空后仍取得本采样窗口内的峰值。
+    /// </summary>
+    public sealed class PerformanceQueueTracker
+    {
+        private int _depth;
+        private int _highWater;
+
+        public int Depth => Math.Max(0, Volatile.Read(ref _depth));
+        public int HighWater => Math.Max(Depth, Volatile.Read(ref _highWater));
+
+        public void Enqueue()
+        {
+            var depth = Interlocked.Increment(ref _depth);
+            while (true)
+            {
+                var highWater = Volatile.Read(ref _highWater);
+                if (depth <= highWater) return;
+                if (Interlocked.CompareExchange(ref _highWater, depth, highWater) == highWater) return;
+            }
+        }
+
+        public void Dequeue()
+        {
+            while (true)
+            {
+                var depth = Volatile.Read(ref _depth);
+                if (depth <= 0) return;
+                if (Interlocked.CompareExchange(ref _depth, depth - 1, depth) == depth) return;
+            }
+        }
+
+        /// <summary>读取连接/会话生命周期内高水位；不重置，避免并发入队在采样瞬间丢峰值。</summary>
+        public int CaptureHighWater()
+        {
+            return HighWater;
+        }
     }
 
     public sealed class PerformanceSnapshot
@@ -616,6 +793,13 @@ namespace Shared.Diagnostics
         public long? LastValue { get; set; }
         public long? P95Value { get; set; }
         public long? P99Value { get; set; }
+        /// <summary>百分位算法；当前为覆盖全会话样本的固定对数直方图，结果是近似值。</summary>
+        public string PercentileMethod { get; set; }
+        public long? PercentileSampleCount { get; set; }
+        public string DurationPercentileMethod { get; set; }
+        public long? DurationPercentileSampleCount { get; set; }
+        public string ValuePercentileMethod { get; set; }
+        public long? ValuePercentileSampleCount { get; set; }
         public DateTime? LastUpdatedAtUtc { get; set; }
     }
 }

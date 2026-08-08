@@ -114,6 +114,7 @@ namespace MonoShare.MirGraphics
 
             EndSpriteBatch();
             FrameStateChanges++;
+            PerformanceMetrics.Increment(PerformanceMetricKind.MobileSpriteBatchStateChange);
             BeginSpriteBatch(desired);
             _activeSettings = desired;
         }
@@ -131,8 +132,7 @@ namespace MonoShare.MirGraphics
             {
                 _spriteBatch.Begin(desired.SortMode, desired.BlendState);
                 FrameBeginCalls++;
-                PerformanceMetrics.Increment(PerformanceMetricKind.DrawCall);
-                PerformanceMetrics.Increment(PerformanceMetricKind.TextureSwitch);
+                PerformanceMetrics.Increment(PerformanceMetricKind.MobileSpriteBatchBegin);
                 return;
             }
 
@@ -145,8 +145,7 @@ namespace MonoShare.MirGraphics
                 desired.Effect,
                 desired.TransformMatrix);
             FrameBeginCalls++;
-            PerformanceMetrics.Increment(PerformanceMetricKind.DrawCall);
-            PerformanceMetrics.Increment(PerformanceMetricKind.TextureSwitch);
+            PerformanceMetrics.Increment(PerformanceMetricKind.MobileSpriteBatchBegin);
         }
 
         private void EndSpriteBatch()

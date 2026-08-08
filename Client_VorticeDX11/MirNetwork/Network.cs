@@ -3,6 +3,7 @@ using System.Net.Sockets;
 using System.Text;
 using Client.MirControls;
 using C = ClientPackets;
+using Shared.Diagnostics;
 
 
 namespace Client.MirNetwork
@@ -25,6 +26,8 @@ namespace Client.MirNetwork
 
         private static ConcurrentQueue<Packet> _receiveList;
         private static ConcurrentQueue<Packet> _sendList;
+        private static PerformanceQueueTracker _receiveQueueMetrics = new PerformanceQueueTracker();
+        private static PerformanceQueueTracker _sendQueueMetrics = new PerformanceQueueTracker();
         private static readonly ConcurrentQueue<string> _packetTraceQueue = new ConcurrentQueue<string>();
         private static int _packetTraceQueueCount;
         private static long _nextPacketTraceFlushTime;
@@ -85,6 +88,8 @@ namespace Client.MirNetwork
 
                 _receiveList = new ConcurrentQueue<Packet>();
                 _sendList = new ConcurrentQueue<Packet>();
+                _receiveQueueMetrics = new PerformanceQueueTracker();
+                _sendQueueMetrics = new PerformanceQueueTracker();
                 _rawData = new byte[0];
 
                 TimeOutTime = CMain.Time + Settings.TimeOut;
@@ -153,6 +158,7 @@ namespace Client.MirNetwork
             while ((p = Packet.ReceivePacket(_rawData, out _rawData)) != null)
             {
                 _receiveList.Enqueue(p);
+                _receiveQueueMetrics.Enqueue();
                 IEnumerable<byte> packetBytesEnumerable = p.GetPacketBytes();
                 byte[] packetBytes = packetBytesEnumerable as byte[] ?? packetBytesEnumerable.ToArray();
                 data.AddRange(packetBytes);
@@ -214,7 +220,9 @@ namespace Client.MirNetwork
                 {
                     while (_receiveList != null && !_receiveList.IsEmpty)
                     {
-                        if (!_receiveList.TryDequeue(out Packet p) || p == null) continue;
+                        if (!_receiveList.TryDequeue(out Packet p)) continue;
+                        _receiveQueueMetrics.Dequeue();
+                        if (p == null) continue;
                         if (!(p is ServerPackets.Disconnect) && !(p is ServerPackets.ClientVersion)) continue;
 
                         MirScene.ActiveScene.ProcessPacket(p);
@@ -245,7 +253,9 @@ namespace Client.MirNetwork
 
             while (_receiveList != null && !_receiveList.IsEmpty)
             {
-                if (!_receiveList.TryDequeue(out Packet p) || p == null) continue;
+                if (!_receiveList.TryDequeue(out Packet p)) continue;
+                _receiveQueueMetrics.Dequeue();
+                if (p == null) continue;
                 if (MirScene.ActiveScene == null)
                 {
                     Client.Utils.ResolutionTrace.Log("Network.Process", $"ActiveScene=null, drop packet={p.GetType().Name}");
@@ -256,7 +266,10 @@ namespace Client.MirNetwork
 
 
             if (CMain.Time > TimeOutTime && _sendList != null && _sendList.IsEmpty)
+            {
                 _sendList.Enqueue(new C.KeepAlive());
+                _sendQueueMetrics.Enqueue();
+            }
 
             if (_sendList == null || _sendList.IsEmpty) return;
 
@@ -266,6 +279,7 @@ namespace Client.MirNetwork
             while (!_sendList.IsEmpty)
             {
                 if (!_sendList.TryDequeue(out Packet p)) continue;
+                _sendQueueMetrics.Dequeue();
                 IEnumerable<byte> packetBytesEnumerable = p.GetPacketBytes();
                 byte[] packetBytes = packetBytesEnumerable as byte[] ?? packetBytesEnumerable.ToArray();
                 data.AddRange(packetBytes);
@@ -280,7 +294,27 @@ namespace Client.MirNetwork
         public static void Enqueue(Packet p)
         {
             if (_sendList != null && p != null)
+            {
                 _sendList.Enqueue(p);
+                _sendQueueMetrics.Enqueue();
+            }
+        }
+
+        public static void RecordPerformanceQueueMetrics()
+        {
+            if (!PerformanceMetrics.Enabled) return;
+
+            var receive = _receiveQueueMetrics.Depth;
+            var send = _sendQueueMetrics.Depth;
+            PerformanceMetrics.SetGauge(PerformanceMetricKind.NetworkInQueue, receive);
+            PerformanceMetrics.SetGauge(PerformanceMetricKind.NetworkOutQueue, send);
+            PerformanceMetrics.SetGauge(PerformanceMetricKind.NetworkQueue, receive + send);
+
+            var receiveHighWater = _receiveQueueMetrics.CaptureHighWater();
+            var sendHighWater = _sendQueueMetrics.CaptureHighWater();
+            PerformanceMetrics.SetGauge(PerformanceMetricKind.NetworkInQueueHighWater, receiveHighWater);
+            PerformanceMetrics.SetGauge(PerformanceMetricKind.NetworkOutQueueHighWater, sendHighWater);
+            PerformanceMetrics.SetGauge(PerformanceMetricKind.NetworkQueueHighWater, receiveHighWater + sendHighWater);
         }
 
         private static void TracePacket(string direction, Packet packet, int byteLength)

@@ -63,6 +63,14 @@ namespace Server.Persistence.Sql
 
         public SqlDomainTransactionResult Run(SqlSaveDomain domain, Action<SqlSession> work)
         {
+            return RunCore(domain, work, recordFullSaveDuration: true);
+        }
+
+        private SqlDomainTransactionResult RunCore(
+            SqlSaveDomain domain,
+            Action<SqlSession> work,
+            bool recordFullSaveDuration)
+        {
             if (work == null) throw new ArgumentNullException(nameof(work));
 
             var swTotal = Stopwatch.StartNew();
@@ -81,7 +89,8 @@ namespace Server.Persistence.Sql
                         Stopwatch.GetTimestamp() - transactionStart);
 
                     swTotal.Stop();
-                    PerformanceMetrics.RecordDuration(PerformanceMetricKind.Save, swTotal.ElapsedTicks);
+                    if (recordFullSaveDuration)
+                        PerformanceMetrics.RecordDuration(PerformanceMetricKind.Save, swTotal.ElapsedTicks);
                     MessageQueue.Instance.EnqueueDebugging($"[SQL:{_provider}] {domain} 保存事务成功（attempt={attempt}, {swTotal.ElapsedMilliseconds}ms）");
                     SqlSaveResilience.ReportSuccess(_provider, domain);
                     return new SqlDomainTransactionResult(domain, success: true, attempts: attempt, durationMs: swTotal.ElapsedMilliseconds, exception: null);
@@ -108,7 +117,8 @@ namespace Server.Persistence.Sql
                             PerformanceMetricKind.SaveTransactionCommit,
                             Stopwatch.GetTimestamp() - transactionStart);
                     swTotal.Stop();
-                    PerformanceMetrics.RecordDuration(PerformanceMetricKind.Save, swTotal.ElapsedTicks);
+                    if (recordFullSaveDuration)
+                        PerformanceMetrics.RecordDuration(PerformanceMetricKind.Save, swTotal.ElapsedTicks);
                     MessageQueue.Instance.Enqueue($"[SQL:{_provider}] {domain} 保存事务失败（attempt={attempt}/{MaxAttempts}，{swTotal.ElapsedMilliseconds}ms）：{ex}");
                     SqlSaveResilience.ReportFailure(
                         _provider,
@@ -127,7 +137,8 @@ namespace Server.Persistence.Sql
             }
 
             swTotal.Stop();
-            PerformanceMetrics.RecordDuration(PerformanceMetricKind.Save, swTotal.ElapsedTicks);
+            if (recordFullSaveDuration)
+                PerformanceMetrics.RecordDuration(PerformanceMetricKind.Save, swTotal.ElapsedTicks);
             MessageQueue.Instance.Enqueue($"[SQL:{_provider}] {domain} 保存事务连续失败（{MaxAttempts} 次，{swTotal.ElapsedMilliseconds}ms）：{lastError}");
             if (lastError != null)
             {
@@ -154,6 +165,7 @@ namespace Server.Persistence.Sql
             if (snapshotFactory == null) throw new ArgumentNullException(nameof(snapshotFactory));
             if (work == null) throw new ArgumentNullException(nameof(work));
 
+            var saveStart = Stopwatch.GetTimestamp();
             TSnapshot snapshot;
             var snapshotStart = Stopwatch.GetTimestamp();
             try
@@ -169,6 +181,9 @@ namespace Server.Persistence.Sql
                     PerformanceMetricKind.SaveSnapshotCapture,
                     Stopwatch.GetTimestamp() - snapshotStart);
                 PerformanceMetrics.Increment(PerformanceMetricKind.SaveFailure);
+                PerformanceMetrics.RecordDuration(
+                    PerformanceMetricKind.Save,
+                    Stopwatch.GetTimestamp() - saveStart);
                 MessageQueue.Instance.Enqueue($"[SQL:{_provider}] {domain} 快照构建失败：{ex}");
                 SqlSaveResilience.ReportFailure(
                     _provider,
@@ -183,7 +198,17 @@ namespace Server.Persistence.Sql
                 return new SqlDomainTransactionResult(domain, success: false, attempts: 0, durationMs: 0, exception: ex);
             }
 
-            return Run(domain, session => work(session, snapshot));
+            try
+            {
+                return RunCore(domain, session => work(session, snapshot), recordFullSaveDuration: false);
+            }
+            finally
+            {
+                // Save 是完整调用耗时，覆盖快照、事务、重试和失败；快照/事务指标仍单独保留。
+                PerformanceMetrics.RecordDuration(
+                    PerformanceMetricKind.Save,
+                    Stopwatch.GetTimestamp() - saveStart);
+            }
         }
     }
 }

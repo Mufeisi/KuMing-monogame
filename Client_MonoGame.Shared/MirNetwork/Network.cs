@@ -39,6 +39,9 @@ namespace MonoShare.MirNetwork
         private static ConcurrentQueue<Packet> _receiveList;
         private static ConcurrentQueue<Packet> _sendList;
         private static readonly ConcurrentQueue<Packet> _preSendList = new ConcurrentQueue<Packet>();
+        private static PerformanceQueueTracker _receiveQueueMetrics = new PerformanceQueueTracker();
+        private static PerformanceQueueTracker _sendQueueMetrics = new PerformanceQueueTracker();
+        private static readonly PerformanceQueueTracker PreSendQueueMetrics = new PerformanceQueueTracker();
         private static readonly ConcurrentQueue<string> _packetTraceQueue = new ConcurrentQueue<string>();
         private static int _packetTraceQueueCount;
         private static long _nextPacketTraceFlushTime;
@@ -120,6 +123,8 @@ namespace MonoShare.MirNetwork
 
                 _receiveList = new ConcurrentQueue<Packet>();
                 _sendList = new ConcurrentQueue<Packet>();
+                _receiveQueueMetrics = new PerformanceQueueTracker();
+                _sendQueueMetrics = new PerformanceQueueTracker();
                 _rawData = new byte[0];
 
                 long runtimeTime = GetRuntimeTimeMs();
@@ -262,6 +267,7 @@ namespace MonoShare.MirNetwork
             while ((p = Packet.ReceivePacket(_rawData, out _rawData)) != null)
             {
                 _receiveList.Enqueue(p);
+                _receiveQueueMetrics.Enqueue();
                 IEnumerable<byte> packetBytesEnumerable = p.GetPacketBytes();
                 byte[] packetBytes = packetBytesEnumerable as byte[] ?? packetBytesEnumerable.ToArray();
                 data.AddRange(packetBytes);
@@ -380,7 +386,9 @@ namespace MonoShare.MirNetwork
                 {
                     while (_receiveList != null && !_receiveList.IsEmpty)
                     {
-                        if (!_receiveList.TryDequeue(out Packet p) || p == null) continue;
+                        if (!_receiveList.TryDequeue(out Packet p)) continue;
+                        _receiveQueueMetrics.Dequeue();
+                        if (p == null) continue;
                         if (!(p is ServerPackets.Disconnect) && !(p is ServerPackets.ClientVersion)) continue;
 
                         MirScene.ActiveScene.ProcessPacket(p);
@@ -410,7 +418,9 @@ namespace MonoShare.MirNetwork
 
             while (_receiveList != null && !_receiveList.IsEmpty)
             {
-                if (!_receiveList.TryDequeue(out Packet p) || p == null) continue;
+                if (!_receiveList.TryDequeue(out Packet p)) continue;
+                _receiveQueueMetrics.Dequeue();
+                if (p == null) continue;
 
                 // 移动端：在进入 GameScene 之前也缓存服务端聊天/系统消息（例如欢迎消息），
                 // 这样进入地图后 BottomUI/DChatWindow 仍能回显到 HUD。
@@ -441,7 +451,10 @@ namespace MonoShare.MirNetwork
             FlushPreSendPacketsIfConnected();
 
             if (CMain.Time > TimeOutTime && _sendList != null && _sendList.IsEmpty)
+            {
                 _sendList.Enqueue(new C.KeepAlive());
+                _sendQueueMetrics.Enqueue();
+            }
 
             if (_sendList != null && !_sendList.IsEmpty)
             {
@@ -451,6 +464,7 @@ namespace MonoShare.MirNetwork
                 while (!_sendList.IsEmpty)
                 {
                     if (!_sendList.TryDequeue(out Packet p)) continue;
+                    _sendQueueMetrics.Dequeue();
                     IEnumerable<byte> packetBytesEnumerable = p.GetPacketBytes();
                     byte[] packetBytes = packetBytesEnumerable as byte[] ?? packetBytesEnumerable.ToArray();
                     data.AddRange(packetBytes);
@@ -476,11 +490,18 @@ namespace MonoShare.MirNetwork
         {
             if (!PerformanceMetrics.Enabled) return;
 
-            var receive = _receiveList?.Count ?? 0;
-            var send = (_sendList?.Count ?? 0) + _preSendList.Count;
+            var receive = _receiveQueueMetrics.Depth;
+            var send = _sendQueueMetrics.Depth + PreSendQueueMetrics.Depth;
             PerformanceMetrics.SetGauge(PerformanceMetricKind.NetworkInQueue, receive);
             PerformanceMetrics.SetGauge(PerformanceMetricKind.NetworkOutQueue, send);
             PerformanceMetrics.SetGauge(PerformanceMetricKind.NetworkQueue, receive + send);
+            var receiveHighWater = _receiveQueueMetrics.CaptureHighWater();
+            var sendHighWater = Math.Max(
+                _sendQueueMetrics.CaptureHighWater(),
+                PreSendQueueMetrics.CaptureHighWater());
+            PerformanceMetrics.SetGauge(PerformanceMetricKind.NetworkInQueueHighWater, receiveHighWater);
+            PerformanceMetrics.SetGauge(PerformanceMetricKind.NetworkOutQueueHighWater, sendHighWater);
+            PerformanceMetrics.SetGauge(PerformanceMetricKind.NetworkQueueHighWater, receiveHighWater + sendHighWater);
         }
 
         private static bool ShouldReconnectHandshake()
@@ -520,10 +541,12 @@ namespace MonoShare.MirNetwork
             if (_sendList != null)
             {
                 _sendList.Enqueue(p);
+                _sendQueueMetrics.Enqueue();
                 return;
             }
 
             _preSendList.Enqueue(p);
+            PreSendQueueMetrics.Enqueue();
         }
 
         private static void FlushPreSendPacketsIfConnected()
@@ -538,10 +561,12 @@ namespace MonoShare.MirNetwork
             while (drained < 256 && _preSendList.TryDequeue(out Packet p))
             {
                 drained++;
+                PreSendQueueMetrics.Dequeue();
                 if (p == null)
                     continue;
 
                 _sendList.Enqueue(p);
+                _sendQueueMetrics.Enqueue();
             }
         }
 

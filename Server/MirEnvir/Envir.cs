@@ -740,6 +740,8 @@ namespace Server.MirEnvir
 
             var networkInQueue = 0;
             var networkOutQueue = 0;
+            var networkInQueueHighWater = 0;
+            var networkOutQueueHighWater = 0;
             var connectionCount = 0;
 
             lock (Connections)
@@ -751,6 +753,8 @@ namespace Server.MirEnvir
                     if (connection == null) continue;
                     networkInQueue += connection.ReceiveQueueDepth;
                     networkOutQueue += connection.SendQueueDepth;
+                    networkInQueueHighWater += connection.ReceiveQueueHighWater;
+                    networkOutQueueHighWater += connection.SendQueueHighWater;
                 }
             }
 
@@ -759,6 +763,9 @@ namespace Server.MirEnvir
             PerformanceMetrics.SetGauge(PerformanceMetricKind.NetworkInQueue, networkInQueue);
             PerformanceMetrics.SetGauge(PerformanceMetricKind.NetworkOutQueue, networkOutQueue);
             PerformanceMetrics.SetGauge(PerformanceMetricKind.NetworkQueue, networkInQueue + networkOutQueue);
+            PerformanceMetrics.SetGauge(PerformanceMetricKind.NetworkInQueueHighWater, networkInQueueHighWater);
+            PerformanceMetrics.SetGauge(PerformanceMetricKind.NetworkOutQueueHighWater, networkOutQueueHighWater);
+            PerformanceMetrics.SetGauge(PerformanceMetricKind.NetworkQueueHighWater, networkInQueueHighWater + networkOutQueueHighWater);
         }
 
         private void MarkStartupFailed(Exception failure)
@@ -772,6 +779,7 @@ namespace Server.MirEnvir
             var options = _startOptions ?? EnvirStartOptions.FromSettings();
             try
             {
+                PerformanceMetrics.TryConfigureFromEnvironment(out _);
                 Volatile.Write(ref _mainThreadId, Thread.CurrentThread.ManagedThreadId);
                 Time = Stopwatch.ElapsedMilliseconds;
 
@@ -785,6 +793,7 @@ namespace Server.MirEnvir
                 var processCount = 0;
                 var processRealCount = 0;
                 var metricsRuntimeSampleTime = Time;
+                var metricsNetworkSampleTime = Time;
 
                 LinkedListNode<MapObject> current = null;
 
@@ -847,6 +856,13 @@ namespace Server.MirEnvir
                             metricsRuntimeSampleTime = Time + 1000;
                             PerformanceMetrics.SampleRuntime();
                         }
+                        if (PerformanceMetrics.Enabled && Time >= metricsNetworkSampleTime)
+                        {
+                            // 队列深度/高水位每秒采样一次；不在每毫秒的连接处理分支中遍历全部连接，
+                            // 避免性能基线被 O(连接数) 的观测开销污染。
+                            metricsNetworkSampleTime = Time + 1000;
+                            RecordPerformanceNetworkSnapshot();
+                        }
                         ProcessMainThreadQueue();
 
                         if (Time >= processTime)
@@ -880,7 +896,6 @@ namespace Server.MirEnvir
                                 }
                             }
 
-                            RecordPerformanceNetworkSnapshot();
                         }
 
 

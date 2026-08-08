@@ -82,6 +82,35 @@ namespace Client.MirGraphics
         private static Matrix3x2 _presentInverseTransform = Matrix3x2.Identity;
         public static int RenderWidth { get; private set; } = Settings.ScreenWidth;
         public static int RenderHeight { get; private set; } = Settings.ScreenHeight;
+
+        public static bool TryGetGpuMemoryUsage(out long currentUsageBytes, out long budgetBytes, out string reason)
+        {
+            currentUsageBytes = 0;
+            budgetBytes = 0;
+            reason = string.Empty;
+
+            try
+            {
+                if (Device == null)
+                {
+                    reason = "D3D11 设备尚未创建。";
+                    return false;
+                }
+
+                using var dxgiDevice = Device.QueryInterface<IDXGIDevice>();
+                using var adapter = dxgiDevice.GetAdapter();
+                using var adapter3 = adapter.QueryInterface<IDXGIAdapter3>();
+                var info = adapter3.QueryVideoMemoryInfo(0, MemorySegmentGroup.Local);
+                currentUsageBytes = checked((long)info.CurrentUsage);
+                budgetBytes = checked((long)info.Budget);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                reason = "DXGI QueryVideoMemoryInfo 失败：" + ex.GetType().Name;
+                return false;
+            }
+        }
         private static bool _presentationLogInitialized;
         private static int _presentationLogTargetWidth;
         private static int _presentationLogTargetHeight;

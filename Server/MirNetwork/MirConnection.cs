@@ -34,6 +34,9 @@ namespace Server.MirNetwork
         private ConcurrentQueue<Packet> _receiveList;
         private ConcurrentQueue<Packet> _sendList; 
         private Queue<Packet> _retryList;
+        private readonly PerformanceQueueTracker _receiveQueueMetrics = new PerformanceQueueTracker();
+        private readonly PerformanceQueueTracker _sendQueueMetrics = new PerformanceQueueTracker();
+        private readonly PerformanceQueueTracker _retryQueueMetrics = new PerformanceQueueTracker();
 
         private bool _disconnecting;
         public bool Connected;
@@ -56,9 +59,12 @@ namespace Server.MirNetwork
         public AccountInfo Account;
         public PlayerObject Player;
 
-        public int ReceiveQueueDepth => (_receiveList?.Count ?? 0) + (_retryList?.Count ?? 0);
-        public int SendQueueDepth => _sendList?.Count ?? 0;
+        public int ReceiveQueueDepth => _receiveQueueMetrics.Depth + _retryQueueMetrics.Depth;
+        public int SendQueueDepth => _sendQueueMetrics.Depth;
         public int NetworkQueueDepth => ReceiveQueueDepth + SendQueueDepth;
+        public int ReceiveQueueHighWater => Math.Max(_receiveQueueMetrics.HighWater, _retryQueueMetrics.HighWater);
+        public int SendQueueHighWater => _sendQueueMetrics.HighWater;
+        public int NetworkQueueHighWater => ReceiveQueueHighWater + SendQueueHighWater;
 
         public List<MirConnection> Observers = new List<MirConnection>();
         public MirConnection Observing;
@@ -98,6 +104,7 @@ namespace Server.MirNetwork
             _receiveList = new ConcurrentQueue<Packet>();
             _sendList = new ConcurrentQueue<Packet>();
             _sendList.Enqueue(new S.Connected());
+            _sendQueueMetrics.Enqueue();
             _retryList = new Queue<Packet>();
 
             Connected = true;
@@ -171,7 +178,10 @@ namespace Server.MirNetwork
                 Packet p;
 
                 while ((p = Packet.ReceivePacket(_rawData, out _rawData)) != null)
+                {
                     _receiveList.Enqueue(p);
+                    _receiveQueueMetrics.Enqueue();
+                }
             }
             catch
             {
@@ -235,7 +245,10 @@ namespace Server.MirNetwork
         {
             if (p == null) return;
             if (_sendList != null && p != null)
+            {
                 _sendList.Enqueue(p);
+                _sendQueueMetrics.Enqueue();
+            }
 
             if (!p.Observable) return;
             foreach (MirConnection c in Observers)
@@ -254,6 +267,7 @@ namespace Server.MirNetwork
             {
                 Packet p;
                 if (!_receiveList.TryDequeue(out p)) continue;
+                _receiveQueueMetrics.Dequeue();
 
                 _lastPackets.Enqueue(p);
 
@@ -265,7 +279,12 @@ namespace Server.MirNetwork
             }
 
             while (_retryList.Count > 0)
-                _receiveList.Enqueue(_retryList.Dequeue());
+            {
+                var retry = _retryList.Dequeue();
+                _retryQueueMetrics.Dequeue();
+                _receiveList.Enqueue(retry);
+                _receiveQueueMetrics.Enqueue();
+            }
 
             if (Envir.Time > TimeOutTime)
             {
@@ -284,7 +303,9 @@ namespace Server.MirNetwork
             while (!_sendList.IsEmpty)
             {
                 Packet p;
-                if (!_sendList.TryDequeue(out p) || p == null) continue;
+                if (!_sendList.TryDequeue(out p)) continue;
+                _sendQueueMetrics.Dequeue();
+                if (p == null) continue;
                 byte[] packetBytes = p.GetPacketBytes() as byte[];
                 if (packetBytes == null)
                     packetBytes = new List<byte>(p.GetPacketBytes()).ToArray();
@@ -296,6 +317,14 @@ namespace Server.MirNetwork
             BeginSend(data);
             PacketTraceLogger.FlushIfDue();
         }
+
+        private void EnqueueRetry(Packet packet)
+        {
+            if (packet == null || _retryList == null) return;
+            _retryList.Enqueue(packet);
+            _retryQueueMetrics.Enqueue();
+        }
+
         private void ProcessPacket(Packet p)
         {
             if (p == null || Disconnecting) return;
@@ -1005,7 +1034,7 @@ namespace Server.MirNetwork
             if (Stage != GameStage.Game) return;
 
             if (Player.ActionTime > Envir.Time)
-                _retryList.Enqueue(p);
+                EnqueueRetry(p);
             else
                 Player.Turn(p.Direction);
         }
@@ -1014,7 +1043,7 @@ namespace Server.MirNetwork
             if (Stage != GameStage.Game) return;
 
             if (Player.ActionTime > Envir.Time)
-                _retryList.Enqueue(p);
+                EnqueueRetry(p);
             else
                 Player.Walk(p.Direction);
         }
@@ -1023,7 +1052,7 @@ namespace Server.MirNetwork
             if (Stage != GameStage.Game) return;
 
             if (Player.ActionTime > Envir.Time)
-                _retryList.Enqueue(p);
+                EnqueueRetry(p);
             else
                 Player.Run(p.Direction);
         }
@@ -1262,7 +1291,7 @@ namespace Server.MirNetwork
             if (Stage != GameStage.Game) return;
 
             if (!Player.Dead && (Player.ActionTime > Envir.Time || Player.AttackTime > Envir.Time))
-                _retryList.Enqueue(p);
+                EnqueueRetry(p);
             else
                 Player.Attack(p.Direction, p.Spell);
         }
@@ -1271,7 +1300,7 @@ namespace Server.MirNetwork
             if (Stage != GameStage.Game) return;
 
             if (!Player.Dead && (Player.ActionTime > Envir.Time || Player.AttackTime > Envir.Time))
-                _retryList.Enqueue(p);
+                EnqueueRetry(p);
             else
                 Player.RangeAttack(p.Direction, p.TargetLocation, p.TargetID);
         }
@@ -1280,7 +1309,7 @@ namespace Server.MirNetwork
             if (Stage != GameStage.Game) return;
 
             if (!Player.Dead && Player.ActionTime > Envir.Time)
-                _retryList.Enqueue(p);
+                EnqueueRetry(p);
             else
                 Player.Harvest(p.Direction);
         }
@@ -1381,7 +1410,7 @@ namespace Server.MirNetwork
             if (actor.Dead) return;
 
             if (!actor.Dead && (actor.ActionTime > Envir.Time || actor.SpellTime > Envir.Time))
-                _retryList.Enqueue(p);
+                EnqueueRetry(p);
             else
                 actor.BeginMagic(p.Spell, p.Direction, p.TargetID, p.Location, p.SpellTargetLock);
         }
