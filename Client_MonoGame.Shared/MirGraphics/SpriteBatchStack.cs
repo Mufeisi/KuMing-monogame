@@ -2,6 +2,7 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System;
 using System.Collections.Generic;
+using Shared.Diagnostics;
 
 namespace MonoShare.MirGraphics
 {
@@ -130,6 +131,8 @@ namespace MonoShare.MirGraphics
             {
                 _spriteBatch.Begin(desired.SortMode, desired.BlendState);
                 FrameBeginCalls++;
+                PerformanceMetrics.Increment(PerformanceMetricKind.DrawCall);
+                PerformanceMetrics.Increment(PerformanceMetricKind.TextureSwitch);
                 return;
             }
 
@@ -142,6 +145,8 @@ namespace MonoShare.MirGraphics
                 desired.Effect,
                 desired.TransformMatrix);
             FrameBeginCalls++;
+            PerformanceMetrics.Increment(PerformanceMetricKind.DrawCall);
+            PerformanceMetrics.Increment(PerformanceMetricKind.TextureSwitch);
         }
 
         private void EndSpriteBatch()

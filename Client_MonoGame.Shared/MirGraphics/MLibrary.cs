@@ -11,6 +11,7 @@ using Microsoft.Xna.Framework.Graphics;
 using System.Collections.Generic;
 using MonoShare.Share.Extensions;
 using System.Collections;
+using Shared.Diagnostics;
 
 namespace MonoShare.MirGraphics
 {
@@ -1850,6 +1851,7 @@ namespace MonoShare.MirGraphics
 
             var texture = new Texture2D(CMain.graphics.GraphicsDevice, width, height, false, SurfaceFormat.Color);
             texture.SetData(data);
+            PerformanceMetrics.Increment(PerformanceMetricKind.TextureCreate);
             return texture;
         }
 
@@ -1887,6 +1889,7 @@ namespace MonoShare.MirGraphics
 
             // 创建新的 Texture2D 并设置修改后的纹理数据
             Texture2D adjustedTexture = new Texture2D(graphicsDevice, originalTexture.Width, originalTexture.Height);
+            PerformanceMetrics.Increment(PerformanceMetricKind.TextureCreate);
             adjustedTexture.SetData(originalData);
 
             return adjustedTexture;

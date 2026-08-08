@@ -1,5 +1,6 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using Shared.Diagnostics;
 using Rectangle = System.Drawing.RectangleF;
 
 namespace FairyGUI
@@ -39,6 +40,7 @@ namespace FairyGUI
 		static Texture2D CreateEmptyTexture(GraphicsDevice graphics)
 		{
 			var texture = new Texture2D(graphics, 1, 1);
+			PerformanceMetrics.Increment(PerformanceMetricKind.TextureCreate);
 			texture.SetData(new byte[]
 			{
 				0xFF, 0xFF, 0xFF, 0xFF,

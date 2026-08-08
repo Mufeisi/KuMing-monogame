@@ -22,6 +22,7 @@ using Microsoft.Xna.Framework.Input;
 using Microsoft.Xna.Framework.Graphics;
 using MonoShare.Share.Extensions;
 using MonoShare.UI;
+using Shared.Diagnostics;
 //using MonoShare.Utils;
 
 namespace MonoShare.MirScenes
@@ -12370,6 +12371,7 @@ namespace MonoShare.MirScenes
             if (_overlayPixel == null && CMain.spriteBatch != null)
             {
                 _overlayPixel = new Texture2D(CMain.spriteBatch.GraphicsDevice, 1, 1);
+                PerformanceMetrics.Increment(PerformanceMetricKind.TextureCreate);
                 _overlayPixel.SetData(new[] { Microsoft.Xna.Framework.Color.White });
             }
 

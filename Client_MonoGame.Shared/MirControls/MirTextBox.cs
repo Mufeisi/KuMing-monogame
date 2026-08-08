@@ -3,6 +3,7 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoShare.Share.Extensions;
+using Shared.Diagnostics;
 using System;
 
 namespace MonoShare.MirControls
@@ -366,6 +367,7 @@ namespace MonoShare.MirControls
             if (_pixel == null)
             {
                 _pixel = new Texture2D(CMain.spriteBatch.GraphicsDevice, 1, 1);
+                PerformanceMetrics.Increment(PerformanceMetricKind.TextureCreate);
                 _pixel.SetData(new[] { Microsoft.Xna.Framework.Color.White });
             }
 

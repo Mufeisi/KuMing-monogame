@@ -3,6 +3,7 @@ using System.Data;
 using System.Diagnostics;
 using System.Threading;
 using Server;
+using Shared.Diagnostics;
 
 namespace Server.Persistence.Sql
 {
@@ -69,12 +70,18 @@ namespace Server.Persistence.Sql
 
             for (var attempt = 1; attempt <= MaxAttempts; attempt++)
             {
+                long transactionStart = 0;
                 try
                 {
                     using var session = SqlSession.Open(_provider, _databaseOptions, _sessionOptions);
+                    transactionStart = Stopwatch.GetTimestamp();
                     session.RunInTransaction(work, isolationLevel: IsolationLevel);
+                    PerformanceMetrics.RecordDuration(
+                        PerformanceMetricKind.SaveTransactionCommit,
+                        Stopwatch.GetTimestamp() - transactionStart);
 
                     swTotal.Stop();
+                    PerformanceMetrics.RecordDuration(PerformanceMetricKind.Save, swTotal.ElapsedTicks);
                     MessageQueue.Instance.EnqueueDebugging($"[SQL:{_provider}] {domain} 保存事务成功（attempt={attempt}, {swTotal.ElapsedMilliseconds}ms）");
                     SqlSaveResilience.ReportSuccess(_provider, domain);
                     return new SqlDomainTransactionResult(domain, success: true, attempts: attempt, durationMs: swTotal.ElapsedMilliseconds, exception: null);
@@ -82,6 +89,11 @@ namespace Server.Persistence.Sql
                 catch (Exception ex) when (attempt < MaxAttempts && SqlTransientDetector.IsTransient(_provider, ex))
                 {
                     lastError = ex;
+                    PerformanceMetrics.Increment(PerformanceMetricKind.SaveFailure);
+                    if (transactionStart > 0)
+                        PerformanceMetrics.RecordDuration(
+                            PerformanceMetricKind.SaveTransactionCommit,
+                            Stopwatch.GetTimestamp() - transactionStart);
 
                     var delayMs = Math.Min(5000, (_sessionOptions.BaseRetryDelayMs <= 0 ? 200 : _sessionOptions.BaseRetryDelayMs) * attempt);
                     MessageQueue.Instance.EnqueueDebugging($"[SQL:{_provider}] {domain} 保存事务失败（可重试，attempt={attempt}/{MaxAttempts}，{delayMs}ms 后重试）：{ex.GetType().Name}: {ex.Message}");
@@ -90,7 +102,13 @@ namespace Server.Persistence.Sql
                 catch (Exception ex)
                 {
                     lastError = ex;
+                    PerformanceMetrics.Increment(PerformanceMetricKind.SaveFailure);
+                    if (transactionStart > 0)
+                        PerformanceMetrics.RecordDuration(
+                            PerformanceMetricKind.SaveTransactionCommit,
+                            Stopwatch.GetTimestamp() - transactionStart);
                     swTotal.Stop();
+                    PerformanceMetrics.RecordDuration(PerformanceMetricKind.Save, swTotal.ElapsedTicks);
                     MessageQueue.Instance.Enqueue($"[SQL:{_provider}] {domain} 保存事务失败（attempt={attempt}/{MaxAttempts}，{swTotal.ElapsedMilliseconds}ms）：{ex}");
                     SqlSaveResilience.ReportFailure(
                         _provider,
@@ -109,6 +127,7 @@ namespace Server.Persistence.Sql
             }
 
             swTotal.Stop();
+            PerformanceMetrics.RecordDuration(PerformanceMetricKind.Save, swTotal.ElapsedTicks);
             MessageQueue.Instance.Enqueue($"[SQL:{_provider}] {domain} 保存事务连续失败（{MaxAttempts} 次，{swTotal.ElapsedMilliseconds}ms）：{lastError}");
             if (lastError != null)
             {
@@ -136,12 +155,20 @@ namespace Server.Persistence.Sql
             if (work == null) throw new ArgumentNullException(nameof(work));
 
             TSnapshot snapshot;
+            var snapshotStart = Stopwatch.GetTimestamp();
             try
             {
                 snapshot = snapshotFactory();
+                PerformanceMetrics.RecordDuration(
+                    PerformanceMetricKind.SaveSnapshotCapture,
+                    Stopwatch.GetTimestamp() - snapshotStart);
             }
             catch (Exception ex)
             {
+                PerformanceMetrics.RecordDuration(
+                    PerformanceMetricKind.SaveSnapshotCapture,
+                    Stopwatch.GetTimestamp() - snapshotStart);
+                PerformanceMetrics.Increment(PerformanceMetricKind.SaveFailure);
                 MessageQueue.Instance.Enqueue($"[SQL:{_provider}] {domain} 快照构建失败：{ex}");
                 SqlSaveResilience.ReportFailure(
                     _provider,

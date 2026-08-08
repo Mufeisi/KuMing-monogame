@@ -10,6 +10,7 @@ using MonoShare.MirScenes;
 using MonoShare.MirSounds;
 using MonoShare.Share.Extensions;
 using MonoShare.UI;
+using Shared.Diagnostics;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -496,6 +497,9 @@ namespace MonoShare
         {
             spriteBatch = new SpriteBatch(GraphicsDevice);
             SpriteBatchScope = new SpriteBatchStack(spriteBatch);
+            PerformanceMetrics.MarkUnavailable(
+                PerformanceMetricKind.GpuMemory,
+                "MonoGame 移动端当前未提供稳定的显存预算 API");
 
             // TODO: use this.Content to load your game content here
             // 创建 FontSystem 实例
@@ -545,6 +549,11 @@ namespace MonoShare
 
         protected override void Update(GameTime gameTime)
         {
+            using var performanceUpdateScope = PerformanceMetrics.Begin(PerformanceMetricKind.Update);
+            PerformanceMetrics.MarkUnavailable(
+                PerformanceMetricKind.GpuMemory,
+                "MonoGame 移动端当前未提供稳定的显存预算 API");
+
             bool backOrEscapeDown = false;
             try
             {
@@ -1429,14 +1438,21 @@ namespace MonoShare
 
         protected override void Draw(GameTime gameTime)
         {
+            using var performanceCpuScope = PerformanceMetrics.Begin(PerformanceMetricKind.Cpu);
+
             if (Settings.DebugMode)
                 SpriteBatchScope.ResetFrameMetrics();
 
             GraphicsDevice.Clear(Color.Black);
 
             UpdateTime();
-            UpdateEnviroment();
 
+            using (PerformanceMetrics.Begin(PerformanceMetricKind.Update))
+            {
+                UpdateEnviroment();
+            }
+
+            using var performanceDrawScope = PerformanceMetrics.Begin(PerformanceMetricKind.Draw);
             SpriteBatchScope.Begin();
             RenderEnvironment();
             SpriteBatchScope.End();
@@ -1559,6 +1575,7 @@ namespace MonoShare
                 FPS = _fps;
                 _fps = 0;
                 DXManager.Clean(); // Clean once a second.
+                PerformanceMetrics.SampleRuntime();
             }
             else
                 _fps++;
@@ -1569,6 +1586,7 @@ namespace MonoShare
                 {
                     _nextSuspendedNetworkProcessTime = Time + Settings.BackgroundNetworkTickMs;
                     Network.Process();
+                    Network.RecordPerformanceQueueMetrics();
                 }
 
                 return;
@@ -1576,6 +1594,7 @@ namespace MonoShare
 
             // 优先处理网络：避免首次启动/资源回填时 I/O 阻塞导致握手与 KeepAlive 延迟。
             Network.Process();
+            Network.RecordPerformanceQueueMetrics();
 
             int resourcePollIntervalMs = 0;
             if (Environment.OSVersion.Platform != PlatformID.Win32NT)

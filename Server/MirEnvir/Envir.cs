@@ -14,6 +14,7 @@ using System.Net.Sockets;
 using System.Numerics;
 using System.Text.RegularExpressions;
 using S = ServerPackets;
+using Shared.Diagnostics;
 
 namespace Server.MirEnvir
 {
@@ -733,6 +734,33 @@ namespace Server.MirEnvir
             }
         }
 
+        private void RecordPerformanceNetworkSnapshot()
+        {
+            if (!PerformanceMetrics.Enabled) return;
+
+            var networkInQueue = 0;
+            var networkOutQueue = 0;
+            var connectionCount = 0;
+
+            lock (Connections)
+            {
+                connectionCount = Connections.Count;
+                for (var i = 0; i < Connections.Count; i++)
+                {
+                    var connection = Connections[i];
+                    if (connection == null) continue;
+                    networkInQueue += connection.ReceiveQueueDepth;
+                    networkOutQueue += connection.SendQueueDepth;
+                }
+            }
+
+            PerformanceMetrics.SetGauge(PerformanceMetricKind.Connections, connectionCount);
+            PerformanceMetrics.SetGauge(PerformanceMetricKind.ActiveConnections, Players.Count);
+            PerformanceMetrics.SetGauge(PerformanceMetricKind.NetworkInQueue, networkInQueue);
+            PerformanceMetrics.SetGauge(PerformanceMetricKind.NetworkOutQueue, networkOutQueue);
+            PerformanceMetrics.SetGauge(PerformanceMetricKind.NetworkQueue, networkInQueue + networkOutQueue);
+        }
+
         private void MarkStartupFailed(Exception failure)
         {
             Volatile.Write(ref _startFailure, failure ?? new InvalidOperationException("服务器启动失败。"));
@@ -756,6 +784,7 @@ namespace Server.MirEnvir
 
                 var processCount = 0;
                 var processRealCount = 0;
+                var metricsRuntimeSampleTime = Time;
 
                 LinkedListNode<MapObject> current = null;
 
@@ -809,7 +838,15 @@ namespace Server.MirEnvir
                 {
                     while (Running)
                     {
+                        using var performanceCpuScope = PerformanceMetrics.Begin(PerformanceMetricKind.Cpu);
+                        using var performanceUpdateScope = PerformanceMetrics.Begin(PerformanceMetricKind.Update);
+
                         Time = Stopwatch.ElapsedMilliseconds;
+                        if (PerformanceMetrics.Enabled && Time >= metricsRuntimeSampleTime)
+                        {
+                            metricsRuntimeSampleTime = Time + 1000;
+                            PerformanceMetrics.SampleRuntime();
+                        }
                         ProcessMainThreadQueue();
 
                         if (Time >= processTime)
@@ -842,6 +879,8 @@ namespace Server.MirEnvir
                                     StatusConnections[i].Process();
                                 }
                             }
+
+                            RecordPerformanceNetworkSnapshot();
                         }
 
 

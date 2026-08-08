@@ -7,6 +7,7 @@ using C = ClientPackets;
 using S = ServerPackets;
 using System.Text.RegularExpressions;
 using Server.Utils;
+using Shared.Diagnostics;
 
 namespace Server.MirNetwork
 {
@@ -54,6 +55,10 @@ namespace Server.MirNetwork
 
         public AccountInfo Account;
         public PlayerObject Player;
+
+        public int ReceiveQueueDepth => (_receiveList?.Count ?? 0) + (_retryList?.Count ?? 0);
+        public int SendQueueDepth => _sendList?.Count ?? 0;
+        public int NetworkQueueDepth => ReceiveQueueDepth + SendQueueDepth;
 
         public List<MirConnection> Observers = new List<MirConnection>();
         public MirConnection Observing;
@@ -761,6 +766,7 @@ namespace Server.MirNetwork
             if (!Connected) return;
 
             Connected = false;
+            PerformanceMetrics.Increment(PerformanceMetricKind.Disconnects);
             Stage = GameStage.Disconnected;
             TimeDisconnected = Envir.Time;
 

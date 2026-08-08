@@ -15,6 +15,7 @@ using Vortice.Direct3D11;
 using Vortice.DirectWrite;
 using Vortice.DXGI;
 using Vortice.DXGI.Debug;
+using Shared.Diagnostics;
 
 namespace Client.MirGraphics
 {
@@ -58,6 +59,8 @@ namespace Client.MirGraphics
         private static bool _frameLatencyWaitableObjectSupported = true;
         private static nint _swapChainHwnd;
         private static long _nextResetAttemptTime;
+        private static nint _lastTextureMetricPointer;
+        private static string _lastTextureMetricSessionId;
         public static Vortice.Direct3D11.ID3D11PixelShader GrayScalePixelShader;
         public static Vortice.Direct3D11.ID3D11PixelShader NormalPixelShader;
         public static Vortice.Direct3D11.ID3D11PixelShader MagicPixelShader;
@@ -728,6 +731,7 @@ namespace Client.MirGraphics
                 MiscFlags = Vortice.Direct3D11.ResourceOptionFlags.None
             };
             DepthStencilTexture = Device.CreateTexture2D(depthStencilDesc);
+            PerformanceMetrics.Increment(PerformanceMetricKind.TextureCreate);
             DepthStencilView = Device.CreateDepthStencilView(
                 DepthStencilTexture,
                 new Vortice.Direct3D11.DepthStencilViewDescription(DepthStencilTexture, Vortice.Direct3D11.DepthStencilViewDimension.Texture2D));
@@ -752,6 +756,7 @@ namespace Client.MirGraphics
                     MiscFlags = ResourceOptionFlags.None
                 };
                 RadarTexture = Device.CreateTexture2D(radarDesc);
+                PerformanceMetrics.Increment(PerformanceMetricKind.TextureCreate);
                 var stream = DeviceContext.Map(RadarTexture, 0, Vortice.Direct3D11.MapMode.WriteDiscard, Vortice.Direct3D11.MapFlags.None);
                 using (System.Drawing.Bitmap image = new System.Drawing.Bitmap(2, 2, (int)stream.RowPitch, System.Drawing.Imaging.PixelFormat.Format32bppPArgb, stream.DataPointer))
                 using (Graphics graphics = Graphics.FromImage(image))
@@ -776,6 +781,7 @@ namespace Client.MirGraphics
                     MiscFlags = ResourceOptionFlags.None
                 };
                 PoisonDotBackground = Device.CreateTexture2D(PoisonDotBackgroundDesc);
+                PerformanceMetrics.Increment(PerformanceMetricKind.TextureCreate);
                 var stream = DeviceContext.Map(PoisonDotBackground,0,Vortice.Direct3D11.MapMode.WriteDiscard,Vortice.Direct3D11.MapFlags.None);
                 using (System.Drawing.Bitmap image = new System.Drawing.Bitmap(5,5,(int)stream.RowPitch,System.Drawing.Imaging.PixelFormat.Format32bppPArgb,stream.DataPointer))
                 using (Graphics graphics = Graphics.FromImage(image))
@@ -811,6 +817,7 @@ namespace Client.MirGraphics
                     MiscFlags = ResourceOptionFlags.None
                 };
                 Vortice.Direct3D11.ID3D11Texture2D light = Device.CreateTexture2D(lightDesc);
+                PerformanceMetrics.Increment(PerformanceMetricKind.TextureCreate);
                 var stream = DeviceContext.Map(light,0,Vortice.Direct3D11.MapMode.WriteDiscard,Vortice.Direct3D11.MapFlags.None);
                 using (System.Drawing.Bitmap image = new System.Drawing.Bitmap(
                     width,
@@ -1024,6 +1031,33 @@ namespace Client.MirGraphics
             Sprite_Flush();
         }
 
+        private static void RecordDrawCall(
+            ID3D11Texture2D texture,
+            ID3D11Texture2D secondaryTexture = null)
+        {
+            CMain.DPSCounter++;
+            PerformanceMetrics.Increment(PerformanceMetricKind.DrawCall);
+
+            var sessionId = PerformanceMetrics.SessionId;
+            if (!string.Equals(sessionId, _lastTextureMetricSessionId, StringComparison.Ordinal))
+            {
+                _lastTextureMetricSessionId = sessionId;
+                _lastTextureMetricPointer = nint.Zero;
+            }
+
+            RecordTextureBinding(texture);
+            RecordTextureBinding(secondaryTexture);
+        }
+
+        private static void RecordTextureBinding(ID3D11Texture2D texture)
+        {
+            var pointer = texture?.NativePointer ?? nint.Zero;
+            if (pointer == nint.Zero || pointer == _lastTextureMetricPointer) return;
+
+            _lastTextureMetricPointer = pointer;
+            PerformanceMetrics.Increment(PerformanceMetricKind.TextureSwitch);
+        }
+
         public static void DrawOpaque(Vortice.Direct3D11.ID3D11Texture2D textured, Rectangle? sourceRect, Vector3? position, System.Drawing.Color colord, float opacity)
         {
             if (textured == null || textured.NativePointer == nint.Zero)
@@ -1058,7 +1092,7 @@ namespace Client.MirGraphics
                 Direct2DTextureRenderer.DrawTexture(Sprite, d2dBitmap, sourceRect, position, color);
             }
 
-            CMain.DPSCounter++;
+            RecordDrawCall(textured);
         }
 
         public static void Draw(Vortice.Direct3D11.ID3D11Texture2D textured, Rectangle? sourceRect, Vector3? position, System.Drawing.Color colord)
@@ -1096,7 +1130,7 @@ namespace Client.MirGraphics
                 Direct2DTextureRenderer.DrawTexture(Sprite, d2dBitmap, sourceRect, position, finalColor);
             }
 
-            CMain.DPSCounter++;
+            RecordDrawCall(textured);
         }
 
         public static void Draw(Vortice.Direct3D11.ID3D11Texture2D textured, Rectangle? sourceRect, Rectangle destinationRect, System.Drawing.Color colord)
@@ -1136,7 +1170,7 @@ namespace Client.MirGraphics
                 Direct2DTextureRenderer.DrawTexture(Sprite, d2dBitmap, sourceRect, destinationRectF, finalColor);
             }
 
-            CMain.DPSCounter++;
+            RecordDrawCall(textured);
         }
 
         public static void DrawMultiply(ID3D11Texture2D baseTexture, ID3D11Texture2D multiplyTexture, System.Numerics.Vector2? offset = null)
@@ -1160,7 +1194,7 @@ namespace Client.MirGraphics
                 Vortice.Direct2D1.InterpolationMode.NearestNeighbor,
                 Vortice.Direct2D1.CompositeMode.SourceOver);
 
-            CMain.DPSCounter++;
+            RecordDrawCall(baseTexture, multiplyTexture);
         }
 
 
@@ -1576,8 +1610,9 @@ namespace Client.MirGraphics
             try
             {
                 Marshal.Copy(data, 0, initData.DataPointer, data.Length);
-
-                return DXManager.Device.CreateTexture2D(texDesc, new[] { initData });
+                var texture = DXManager.Device.CreateTexture2D(texDesc, new[] { initData });
+                PerformanceMetrics.Increment(PerformanceMetricKind.TextureCreate);
+                return texture;
             }
             finally
             {
@@ -1700,6 +1735,7 @@ namespace Client.MirGraphics
                     MiscFlags = Vortice.Direct3D11.ResourceOptionFlags.None,
                 };
                 var texture = Device.CreateTexture2D(textureDesc);
+                PerformanceMetrics.Increment(PerformanceMetricKind.TextureCreate);
                 return texture;
             }
             catch (Exception ex)

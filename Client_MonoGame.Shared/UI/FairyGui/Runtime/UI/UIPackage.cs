@@ -8,6 +8,7 @@ using FairyGUI.Utils;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Audio;
 using Microsoft.Xna.Framework.Graphics;
+using Shared.Diagnostics;
 
 using Log = FairyGUI.Utils.Log;
 using Rectangle = System.Drawing.RectangleF;
@@ -978,12 +979,14 @@ namespace FairyGUI
 					// Texture2D.FromStream 在 Android 上会引入 Bitmap 相关公开 API，导致缺少 Mono.Android 引用时报错。
 					// 真实 Android 构建（REAL_ANDROID）再启用 FromStream 解码。
 					tex = new Texture2D(Stage.game.GraphicsDevice, 1, 1);
+					PerformanceMetrics.Increment(PerformanceMetricKind.TextureCreate);
 					tex.SetData(new[] { Microsoft.Xna.Framework.Color.Transparent });
 #else
                     Stopwatch decodeSw = trace ? Stopwatch.StartNew() : null;
                     if (trace)
                         MonoShare.CMain.SaveLog($"FairyGUI: [LoadAtlas] Decode 开始 file={item?.file}");
 					tex = Texture2D.FromStream(Stage.game.GraphicsDevice, stream);
+					PerformanceMetrics.Increment(PerformanceMetricKind.TextureCreate);
                     if (trace && decodeSw != null)
                         MonoShare.CMain.SaveLog($"FairyGUI: [LoadAtlas] Decode 完成（{decodeSw.ElapsedMilliseconds}ms） file={item?.file} size={tex?.Width ?? 0}x{tex?.Height ?? 0}");
 #endif

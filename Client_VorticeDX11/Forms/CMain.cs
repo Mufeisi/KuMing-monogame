@@ -10,6 +10,7 @@ using Client.MirGraphics;
 using Client.MirNetwork;
 using Client.MirScenes;
 using Client.MirSounds;
+using Shared.Diagnostics;
 using Vortice.WinForms;
 using Vortice.Direct3D11;
 using Font = System.Drawing.Font;
@@ -36,6 +37,7 @@ namespace Client
         private static int _fps;
         private static long _cleanTime;
         private static long _drawTime;
+        private static string _performanceGpuMemorySessionId;
         public static int FPS;
         public static int DPS;
         public static int DPSCounter;
@@ -95,6 +97,7 @@ namespace Client
                 SetMouseCursor(MouseCursor.Default);
 
                 DXManager.Create();
+                MarkGpuMemoryUnavailableForCurrentSession();
                 Client.Utils.ResolutionTrace.LogClientState("CMain.Load", "After DXManager.Create");
                 SoundManager.Create();
 
@@ -119,11 +122,13 @@ namespace Client
             {
                 while (AppStillIdle)
                 {
+                    using var performanceCpuScope = PerformanceMetrics.Begin(PerformanceMetricKind.Cpu);
                     UpdateTime();
                     UpdateEnviroment();
 
                     if (IsDrawTime())
                     {
+                        using var performanceDrawScope = PerformanceMetrics.Begin(PerformanceMetricKind.Draw);
                         RenderEnvironment();
                         UpdateFrameTime();
                     }
@@ -134,6 +139,20 @@ namespace Client
             {
                 SaveError(ex.ToString());
             }
+        }
+
+        private static void MarkGpuMemoryUnavailableForCurrentSession()
+        {
+            if (!PerformanceMetrics.Enabled) return;
+
+            var sessionId = PerformanceMetrics.SessionId;
+            if (string.IsNullOrEmpty(sessionId) || string.Equals(sessionId, _performanceGpuMemorySessionId, StringComparison.Ordinal))
+                return;
+
+            PerformanceMetrics.MarkUnavailable(
+                PerformanceMetricKind.GpuMemory,
+                "PC 渲染后端当前未暴露稳定的显存预算 API");
+            _performanceGpuMemorySessionId = sessionId;
         }
 
         private static void CMain_Deactivate(object sender, EventArgs e)
@@ -391,11 +410,15 @@ namespace Client
 
         private static void UpdateEnviroment()
         {
+            using var performanceUpdateScope = PerformanceMetrics.Begin(PerformanceMetricKind.Update);
+            MarkGpuMemoryUnavailableForCurrentSession();
+
             if (Time >= _cleanTime)
             {
                 _cleanTime = Time + 1000;
 
                 DXManager.Clean(); // Clean once a second.
+                PerformanceMetrics.SampleRuntime();
             }
 
             Network.Process();
@@ -752,6 +775,7 @@ namespace Client
                 stagingDesc.SampleDescription = new Vortice.DXGI.SampleDescription(1, 0);
 
                 staging = DXManager.Device.CreateTexture2D(stagingDesc);
+                PerformanceMetrics.Increment(PerformanceMetricKind.TextureCreate);
                 DXManager.DeviceContext.CopyResource(staging, backbuffer);
 
                 var mapped = DXManager.DeviceContext.Map(staging, 0, MapMode.Read, MapFlags.None);

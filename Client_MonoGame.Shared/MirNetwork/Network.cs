@@ -10,6 +10,7 @@ using MonoShare.MirControls;
 using MonoShare.MirScenes;
 using C = ClientPackets;
 using S = ServerPackets;
+using Shared.Diagnostics;
 
 
 namespace MonoShare.MirNetwork
@@ -469,6 +470,17 @@ namespace MonoShare.MirNetwork
                 Disconnect();
                 Connect();
             }
+        }
+
+        public static void RecordPerformanceQueueMetrics()
+        {
+            if (!PerformanceMetrics.Enabled) return;
+
+            var receive = _receiveList?.Count ?? 0;
+            var send = (_sendList?.Count ?? 0) + _preSendList.Count;
+            PerformanceMetrics.SetGauge(PerformanceMetricKind.NetworkInQueue, receive);
+            PerformanceMetrics.SetGauge(PerformanceMetricKind.NetworkOutQueue, send);
+            PerformanceMetrics.SetGauge(PerformanceMetricKind.NetworkQueue, receive + send);
         }
 
         private static bool ShouldReconnectHandshake()

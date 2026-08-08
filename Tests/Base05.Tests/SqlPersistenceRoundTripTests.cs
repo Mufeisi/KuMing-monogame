@@ -3,10 +3,12 @@ using Server.MirDatabase;
 using Server.MirEnvir;
 using Server.Persistence;
 using Server.Persistence.Sql;
+using Shared.Diagnostics;
 using Xunit;
 
 namespace Base05.Tests;
 
+[Collection("PerformanceMetrics")]
 public sealed class SqlPersistenceRoundTripTests
 {
     [Fact]
@@ -18,6 +20,7 @@ public sealed class SqlPersistenceRoundTripTests
 
         try
         {
+            PerformanceMetrics.Configure(enabled: true, scenario: "sql-roundtrip");
             var source = new Envir();
             var account = new AccountInfo
             {
@@ -60,6 +63,19 @@ public sealed class SqlPersistenceRoundTripTests
 
             persistence.SaveAccounts(source);
 
+            var saveMetric = PerformanceMetrics.CreateSnapshot().Metrics
+                .Single(item => item.Name == nameof(PerformanceMetricKind.Save));
+            Assert.True(saveMetric.Samples > 0);
+            Assert.True(saveMetric.P95Milliseconds.HasValue);
+            var snapshotMetric = PerformanceMetrics.CreateSnapshot().Metrics
+                .Single(item => item.Name == nameof(PerformanceMetricKind.SaveSnapshotCapture));
+            Assert.True(snapshotMetric.Samples > 0);
+            Assert.True(snapshotMetric.P95Milliseconds.HasValue);
+            var transactionMetric = PerformanceMetrics.CreateSnapshot().Metrics
+                .Single(item => item.Name == nameof(PerformanceMetricKind.SaveTransactionCommit));
+            Assert.True(transactionMetric.Samples > 0);
+            Assert.True(transactionMetric.P95Milliseconds.HasValue);
+
             var restored = new Envir();
             restored.ItemInfoList.Add(new ItemInfo { Index = 303, Name = "base05-item", StackSize = 99 });
             persistence.LoadAccounts(restored);
@@ -100,6 +116,7 @@ public sealed class SqlPersistenceRoundTripTests
         }
         finally
         {
+            PerformanceMetrics.Configure(enabled: false);
             TryDelete(databasePath);
             TryDelete(databasePath + "-wal");
             TryDelete(databasePath + "-shm");
