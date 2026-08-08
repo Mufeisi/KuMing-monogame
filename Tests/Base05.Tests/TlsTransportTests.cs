@@ -7,6 +7,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Reflection;
 using Server.MirEnvir;
 using Server.MirNetwork;
+using Shared.Security;
 using Xunit;
 
 namespace Base05.Tests;
@@ -27,6 +28,26 @@ public sealed class TlsTransportTests
         Assert.Throws<InvalidOperationException>(() => TlsTransportPolicy.ValidateTlsPorts(7000, 0));
         Assert.Throws<InvalidOperationException>(() => TlsTransportPolicy.ValidateTlsPorts(7000, 7000));
         TlsTransportPolicy.ValidateTlsPorts(7000, 7001);
+    }
+
+    [Fact]
+    public void 客户端TLS策略要求目标主机并默认严格校验证书()
+    {
+        Assert.Throws<ArgumentException>(() => TlsClientPolicy.CreateOptions(string.Empty));
+        var options = TlsClientPolicy.CreateOptions("localhost");
+        Assert.Equal("localhost", options.TargetHost);
+        Assert.Equal(TlsTransportPolicy.MinimumProtocols, options.EnabledSslProtocols);
+        Assert.Null(options.RemoteCertificateValidationCallback);
+        Assert.Null(options.CertificateChainPolicy);
+        Assert.Null(options.ClientCertificates);
+    }
+
+    [Fact]
+    public void 非回环地址禁止V1且回环允许开发连接()
+    {
+        Assert.True(TlsClientPolicy.IsLoopbackHost("127.0.0.1"));
+        Assert.True(TlsClientPolicy.IsLoopbackHost("localhost"));
+        Assert.False(TlsClientPolicy.IsLoopbackHost("192.0.2.10"));
     }
 
     [Fact]
@@ -73,15 +94,11 @@ public sealed class TlsTransportTests
             using var client = new TcpClient();
             await client.ConnectAsync(IPAddress.Loopback, ((IPEndPoint)listener.LocalEndpoint).Port);
             using var ssl = new SslStream(client.GetStream(), false);
-            var options = new SslClientAuthenticationOptions
+            var options = TlsClientPolicy.CreateOptions("localhost");
+            options.CertificateChainPolicy = new X509ChainPolicy
             {
-                TargetHost = "localhost",
-                EnabledSslProtocols = TlsTransportPolicy.MinimumProtocols,
-                CertificateChainPolicy = new X509ChainPolicy
-                {
-                    TrustMode = X509ChainTrustMode.CustomRootTrust,
-                    RevocationMode = X509RevocationMode.NoCheck,
-                },
+                TrustMode = X509ChainTrustMode.CustomRootTrust,
+                RevocationMode = X509RevocationMode.NoCheck,
             };
             options.CertificateChainPolicy.CustomTrustStore.Add(certificate);
             await ssl.AuthenticateAsClientAsync(options);
@@ -177,8 +194,9 @@ public sealed class TlsTransportTests
 
             using var client = new TcpClient();
             await client.ConnectAsync(IPAddress.Loopback, ((IPEndPoint)listener.LocalEndpoint).Port);
-            using var sslClient = new SslStream(client.GetStream(), false, (_, _, _, _) => false);
-            var error = await Record.ExceptionAsync(() => sslClient.AuthenticateAsClientAsync("localhost"));
+            using var sslClient = new SslStream(client.GetStream(), false);
+            var error = await Record.ExceptionAsync(() => sslClient.AuthenticateAsClientAsync(
+                TlsClientPolicy.CreateOptions("localhost")));
             Assert.NotNull(error);
             await serverTask;
         }
@@ -186,6 +204,95 @@ public sealed class TlsTransportTests
         {
             Directory.Delete(directory, true);
         }
+    }
+
+    [Fact]
+    public async Task 客户端拒绝错误主机名()
+    {
+        string directory = CreateTempDirectory();
+        string path = Path.Combine(directory, "server.pfx");
+        try
+        {
+            using var source = CreateCertificate("localhost", DateTimeOffset.UtcNow.AddMinutes(-1), DateTimeOffset.UtcNow.AddHours(1));
+            File.WriteAllBytes(path, source.Export(X509ContentType.Pfx));
+            using var certificate = TlsTransportPolicy.LoadServerCertificate(path);
+            using var listener = new TcpListener(IPAddress.Loopback, 0);
+            listener.Start();
+            var serverTask = Task.Run(() =>
+            {
+                try
+                {
+                    using var serverClient = listener.AcceptTcpClient();
+                    using var ssl = TlsTransportPolicy.AuthenticateServer(serverClient.GetStream(), certificate);
+                    Thread.Sleep(100);
+                }
+                catch
+                {
+                }
+            });
+
+            using var client = new TcpClient();
+            await client.ConnectAsync(IPAddress.Loopback, ((IPEndPoint)listener.LocalEndpoint).Port);
+            using var sslClient = new SslStream(client.GetStream(), false);
+            var options = TlsClientPolicy.CreateOptions("not-localhost");
+            options.CertificateChainPolicy = CreateCustomRootPolicy(certificate);
+            var error = await Record.ExceptionAsync(() => sslClient.AuthenticateAsClientAsync(options));
+            Assert.NotNull(error);
+            await serverTask;
+        }
+        finally
+        {
+            Directory.Delete(directory, true);
+        }
+    }
+
+    [Fact]
+    public async Task 客户端拒绝过期证书()
+    {
+        string directory = CreateTempDirectory();
+        try
+        {
+            using var certificate = CreateCertificate("localhost", DateTimeOffset.UtcNow.AddDays(-2), DateTimeOffset.UtcNow.AddDays(-1));
+            using var listener = new TcpListener(IPAddress.Loopback, 0);
+            listener.Start();
+            var serverTask = Task.Run(() =>
+            {
+                try
+                {
+                    using var serverClient = listener.AcceptTcpClient();
+                    using var ssl = new SslStream(serverClient.GetStream(), false);
+                    ssl.AuthenticateAsServer(certificate, false, TlsTransportPolicy.MinimumProtocols, false);
+                    Thread.Sleep(100);
+                }
+                catch
+                {
+                }
+            });
+
+            using var client = new TcpClient();
+            await client.ConnectAsync(IPAddress.Loopback, ((IPEndPoint)listener.LocalEndpoint).Port);
+            using var sslClient = new SslStream(client.GetStream(), false);
+            var options = TlsClientPolicy.CreateOptions("localhost");
+            options.CertificateChainPolicy = CreateCustomRootPolicy(certificate);
+            var error = await Record.ExceptionAsync(() => sslClient.AuthenticateAsClientAsync(options));
+            Assert.NotNull(error);
+            await serverTask;
+        }
+        finally
+        {
+            Directory.Delete(directory, true);
+        }
+    }
+
+    private static X509ChainPolicy CreateCustomRootPolicy(X509Certificate2 certificate)
+    {
+        var policy = new X509ChainPolicy
+        {
+            TrustMode = X509ChainTrustMode.CustomRootTrust,
+            RevocationMode = X509RevocationMode.NoCheck,
+        };
+        policy.CustomTrustStore.Add(certificate);
+        return policy;
     }
 
     private static Packet ReceiveServerPacket(TcpListener listener, X509Certificate2 certificate)

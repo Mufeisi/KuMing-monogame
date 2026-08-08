@@ -136,6 +136,9 @@ namespace Client
         public static bool UseConfig = false;
         public static string IPAddress = "127.0.0.1";
         public static int Port = 7000;
+        public static bool UseTlsV2 = false;
+        public static int TlsPort = 7001;
+        public static string TlsServerName = "localhost";
         public const int TimeOut = 5000;
         public static string MicroBaseUrl = string.Empty;
         public static string MicroUser = string.Empty;
@@ -294,6 +297,9 @@ namespace Client
             {
                 IPAddress = Reader.ReadString("Network", "IPAddress", IPAddress);
                 Port = Reader.ReadInt32("Network", "Port", Port);
+                UseTlsV2 = Reader.ReadBoolean("Network", "UseTlsV2", UseTlsV2);
+                TlsPort = Reader.ReadInt32("Network", "TlsPort", TlsPort);
+                TlsServerName = Reader.ReadString("Network", "TlsServerName", TlsServerName);
             }
 
             MicroBaseUrl = Reader.ReadString("Micro", "BaseUrl", MicroBaseUrl)?.Trim() ?? string.Empty;
@@ -418,6 +424,11 @@ namespace Client
 
             //Interface / UI
             Reader.Write("Interface", "UIProfileId", UIProfileId);
+
+            //Network TLS V2
+            Reader.Write("Network", "UseTlsV2", UseTlsV2);
+            Reader.Write("Network", "TlsPort", TlsPort);
+            Reader.Write("Network", "TlsServerName", TlsServerName ?? string.Empty);
 
             //Sound
             Reader.Write("Sound", "Volume", Volume);

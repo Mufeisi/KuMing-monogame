@@ -1,9 +1,12 @@
 ﻿using System.Collections.Concurrent;
+using System.IO;
+using System.Net.Security;
 using System.Net.Sockets;
 using System.Text;
 using Client.MirControls;
 using C = ClientPackets;
 using Shared.Diagnostics;
+using Shared.Security;
 
 
 namespace Client.MirNetwork
@@ -18,6 +21,9 @@ namespace Client.MirNetwork
         private const long PacketTraceRotateBytes = 5 * 1024 * 1024;
 
         private static TcpClient _client;
+        private static Stream _stream;
+        private static bool _usingTls;
+        private static int _activePort;
         public static int ConnectAttempt = 0;
         public static int MaxAttempts = 20;
         public static bool ErrorShown;
@@ -41,6 +47,18 @@ namespace Client.MirNetwork
             if (_client != null)
                 Disconnect();
 
+            if (!Settings.UseTlsV2 && !TlsClientPolicy.IsLoopbackHost(Settings.IPAddress))
+            {
+                if (Settings.LogErrors) CMain.SaveError("已拒绝非回环V1明文连接");
+                return;
+            }
+
+            if (Settings.UseTlsV2 && (Settings.TlsPort < 1 || Settings.TlsPort > 65535))
+            {
+                if (Settings.LogErrors) CMain.SaveError("TLS端口配置无效");
+                return;
+            }
+
             if (ConnectAttempt >= MaxAttempts)
             {
                 if (ErrorShown)
@@ -62,9 +80,11 @@ namespace Client.MirNetwork
 
             try
             {
+                _usingTls = Settings.UseTlsV2;
+                _activePort = _usingTls ? Settings.TlsPort : Settings.Port;
                 _client = new TcpClient { NoDelay = true };
-                EnqueuePacketTraceLine($"[{CMain.Now:yyyy-MM-dd HH:mm:ss.fff}] CONNECT Attempt={ConnectAttempt} Host={Settings.IPAddress}:{Settings.Port}");
-                _client?.BeginConnect(Settings.IPAddress, Settings.Port, Connection, null);
+                EnqueuePacketTraceLine($"[{CMain.Now:yyyy-MM-dd HH:mm:ss.fff}] CONNECT Attempt={ConnectAttempt} Host={Settings.IPAddress}:{_activePort}");
+                _client?.BeginConnect(Settings.IPAddress, _activePort, Connection, null);
             }
             catch (ObjectDisposedException ex)
             {
@@ -87,6 +107,14 @@ namespace Client.MirNetwork
                     return;
                 }
 
+                _stream = _client.GetStream();
+                if (_usingTls)
+                {
+                    var ssl = new SslStream(_stream, leaveInnerStreamOpen: false);
+                    _stream = ssl;
+                    ssl.AuthenticateAsClient(TlsClientPolicy.CreateOptions(Settings.TlsServerName));
+                }
+
                 _receiveList = new ConcurrentQueue<Packet>();
                 _sendList = new ConcurrentQueue<Packet>();
                 _receiveQueueMetrics = new PerformanceQueueTracker();
@@ -97,7 +125,7 @@ namespace Client.MirNetwork
                 TimeOutTime = CMain.Time + Settings.TimeOut;
                 TimeConnected = CMain.Time;
 
-                EnqueuePacketTraceLine($"[{CMain.Now:yyyy-MM-dd HH:mm:ss.fff}] CONNECTED Host={Settings.IPAddress}:{Settings.Port}");
+                EnqueuePacketTraceLine($"[{CMain.Now:yyyy-MM-dd HH:mm:ss.fff}] CONNECTED Host={Settings.IPAddress}:{_activePort}");
                 BeginReceive();
             }
             catch (SocketException)
@@ -108,18 +136,21 @@ namespace Client.MirNetwork
             }
             catch (Exception ex)
             {
-                if (Settings.LogErrors) CMain.SaveError(ex.ToString());
+                if (Settings.LogErrors)
+                    CMain.SaveError(_usingTls
+                        ? $"TLS连接失败：{ex.GetType().Name} {_activePort}"
+                        : ex.ToString());
                 Disconnect();
             }
         }
 
         private static void BeginReceive()
         {
-            if (_client == null || !_client.Connected) return;
+            if (_stream == null || _client == null || !_client.Connected) return;
 
             try
             {
-                _client.Client.BeginReceive(_rawBytes, 0, _rawBytes.Length, SocketFlags.None, ReceiveData, _rawBytes);
+                _stream.BeginRead(_rawBytes, 0, _rawBytes.Length, ReceiveData, _rawBytes);
             }
             catch
             {
@@ -128,13 +159,13 @@ namespace Client.MirNetwork
         }
         private static void ReceiveData(IAsyncResult result)
         {
-            if (_client == null || !_client.Connected) return;
+            if (_stream == null || _client == null || !_client.Connected) return;
 
             int dataRead;
 
             try
             {
-                dataRead = _client.Client.EndReceive(result);
+                dataRead = _stream.EndRead(result);
             }
             catch
             {
@@ -145,6 +176,7 @@ namespace Client.MirNetwork
             if (dataRead == 0)
             {
                 Disconnect();
+                return;
             }
 
             byte[] rawBytes = result.AsyncState as byte[];
@@ -175,11 +207,11 @@ namespace Client.MirNetwork
 
         private static void BeginSend(List<byte> data)
         {
-            if (_client == null || !_client.Connected || data.Count == 0) return;
+            if (_stream == null || _client == null || !_client.Connected || data.Count == 0) return;
             
             try
             {
-                _client.Client.BeginSend(data.ToArray(), 0, data.Count, SocketFlags.None, SendData, null);
+                _stream.BeginWrite(data.ToArray(), 0, data.Count, SendData, null);
             }
             catch
             {
@@ -190,7 +222,7 @@ namespace Client.MirNetwork
         {
             try
             {
-                _client.Client.EndSend(result);
+                _stream?.EndWrite(result);
             }
             catch
             { }
@@ -203,12 +235,16 @@ namespace Client.MirNetwork
             _networkQueueMetrics.Dequeue(
                 Math.Max(0, _receiveQueueMetrics.Depth) + Math.Max(0, _sendQueueMetrics.Depth));
 
+            _stream?.Dispose();
+            _stream = null;
             _client?.Close();
 
             TimeConnected = 0;
             Connected = false;
             _sendList = null;
             _client = null;
+            _usingTls = false;
+            _activePort = 0;
 
             _receiveList = null;
 

@@ -154,6 +154,8 @@ GATE-P0 ──► GATE-P1 ──► GATE-P2 ──► GATE-P3 ──► GATE-P4 
 
 **SEC-02 阶段A实施记录（2026-08-08）**：服务端新增独立 TLS V2 端口与 `SslStream` 传输接缝，最低 TLS 1.2；证书路径来自正式配置，证书密码只从运行时环境变量 `LYOCRYSTAL_TLS_CERT_PASSWORD` 读取；非回环地址默认关闭 V1 明文监听，仅回环或显式开发开关允许。T-02 阶段A已用临时自签证书完成严格信任握手、现有 Packet 往返、过期/不受信任证书拒绝、端口冲突与双监听停止释放验证。PC/Mono/Android 客户端 TLS 接线、客户端域名/链校验和 ConfigForm 配置界面留待阶段B，当前不宣称完成。
 
+**SEC-02 阶段B1实施记录（2026-08-08）**：PC 客户端复用同一 Packet 解析/发送队列和 Stream 接缝，V1 使用 `NetworkStream`、V2 使用 `SslStream` 独立连接 `TlsPort`；`TlsClientPolicy` 强制非空 `TlsServerName`、TLS 1.2/1.3，默认系统信任链、域名、有效期严格校验，无回调绕过、客户端证书或密码落盘。PC `UseTlsV2=false` 时仅允许回环开发地址，非回环直接拒绝且 TLS 失败不降级 V1。T-02 B1 临时证书真实握手/Packet 往返、错误主机、不受信任/过期证书及非回环门禁专项已通过；Mono 客户端 TLS 接线（B2）、ConfigForm UI 与证书固定仍未完成。
+
 **SEC-01 后续（P2，待用户批准）**：HTTPLogin 的线程事务边界（工作线程进入主线程、认证/账户状态提交及失败回滚）与真实 PC/移动 Settings-登录集成测试仍未实现，单独立项后再做；不阻塞本次 P1 收口，也不在本次提交引入 Credential Manager、Keystore 或其它 SEC-02 代码。
 
 **GATE-P2 退出条件**：公开测试前安全项全部完成；凭据不通过未加密网络传输；公网无 V1 明文登录。
