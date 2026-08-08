@@ -1,27 +1,21 @@
-# 启动与日志结论（修正版）
+# 启动与日志结论（敏感信息清理版）
 
 ## 采集边界
 
-- 有效前后台流程的宿主时间边界：`2026-08-09T00:40:44.2895377+08:00`（清理全缓冲区日志前）至 `2026-08-09T00:40:53.2135194+08:00`（流程结束并导出日志前）。
-- 流程中没有执行 `force-stop`；步骤为 Activity 已前台 → `KEYCODE_HOME` →确认 Launcher→同一打包组件 `am start` 恢复。
-- 完整命令及 `mResumedActivity` 输出见 `foreground-home-flow.txt`。
-- 原始日志见 `raw-logcat-20260809-0041.txt`，由 `adb -s 127.0.0.1:21503 exec-out logcat -b all -d -v threadtime` 在流程结束后导出。
+- 新筛选窗口（宿主时间）：`2026-08-09T00:48:14.8361969+08:00` ～ `2026-08-09T00:48:22.7528490+08:00`。
+- 流程未执行 `force-stop`：Activity 已前台 → `KEYCODE_HOME` →确认 Launcher→同一打包组件 `am start` 恢复。
+- 采集前执行：`adb -s 127.0.0.1:21503 logcat -b all -c`。
+- 结束后实际执行：`adb -s 127.0.0.1:21503 exec-out logcat -b all -d -v threadtime`；内存中过滤后仅归档我方包生命周期/FATAL结果，未归档原始全量日志。
+- 过滤结果文件：`lifecycle-filtered-20260809-0048.txt`。
 
-## 窗口内观察
+## 过滤口径与结论
 
-- 状态0：`com.lommir.client.monogame.android/crc648e1c27e8d74093fe.MainActivity`。
-- 状态1：`com.microvirt.launcher2/com.microvirt.launcher.Launcher`。
-- 状态2：恢复为同一 `com.lommir.client.monogame.android/crc648e1c27e8d74093fe.MainActivity`。
-- 对该原始日志执行 `rg "FATAL EXCEPTION|AndroidRuntime.*FATAL"` 未匹配；结论限定为**该采集窗口内未见立即崩溃**，不泛化为整机或长期稳定性结论。
+- 仅保留包名 `com.lommir.client.monogame.android` 且匹配 `ActivityTaskManager|ActivityManager|am_(resume|pause|start|stop|set_resumed_activity)|Displayed|RESUME|PAUSE|FATAL EXCEPTION|AndroidRuntime` 的行。
+- 长类标识、记录标识及其他长标识统一写为 `[REDACTED]`；不保留第三方遥测。
+- 我方包生命周期筛选返回 5 行；我方包 `FATAL EXCEPTION|AndroidRuntime.*FATAL` 筛选返回 0 匹配。
+- 结论限定为：**该筛选采集窗口内未见立即崩溃**，不泛化为整机或长期稳定性。
 
-## 外部依赖阻塞（非本次 HOME 流程的通过项）
+## 外部依赖阻塞
 
-此前正确组件启动的日志曾明确报告：
-
-```text
-PreLoginUpdate 下载版本索引失败：Url=http://127.0.0.1:7777/api/file/Packages/bootstrap-package-index.json Error=Connection failure
-FairyGUI: 默认 FGUI 包尚未就绪，hydrated=0/30，缺少 BaseRes_fui.bytes、UIRes_fui.bytes、Font_fui.bytes 等探针
-```
-
-该缺口仍使 ANDROID-01～03 无法进入角色/游戏场景；本任务不补服务、不改配置、不猜账号。
+此前启动日志明确报告本地 Bootstrap 版本索引连接失败及 FGUI 包资源探针缺失；这仍阻塞 ANDROID-01～03 进入角色/游戏场景。本任务不补服务、不改配置、不猜账号。
 

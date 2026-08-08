@@ -1,0 +1,22 @@
+# 我方应用生命周期最小筛选输出
+
+- 设备：`127.0.0.1:21503`（Android 模拟器）
+- 我方已安装包名：`com.lommir.client.monogame.android`。
+- 宿主采集窗口：`2026-08-09T00:48:14.8361969+08:00` ～ `2026-08-09T00:48:22.7528490+08:00`。
+- 采集前清理命令：`adb -s 127.0.0.1:21503 logcat -b all -c`。
+- 流程：Activity 已前台 → `adb shell input keyevent KEYCODE_HOME` → `adb shell am start -n <我方包>/crc[REDACTED].MainActivity`。
+- 筛选命令：`adb -s 127.0.0.1:21503 exec-out logcat -b all -d -v threadtime`，随后仅保留包含我方包名且匹配 `ActivityTaskManager|ActivityManager|am_(resume|pause|start|stop|set_resumed_activity)|Displayed|RESUME|PAUSE|FATAL EXCEPTION|AndroidRuntime` 的行；长标识已脱敏。
+
+```text
+08-09 00:48:13.408   431   507 I am_pause_activity: [0,[REDACTED],com.lommir.client.monogame.android/crc[REDACTED].MainActivity,userLeaving=true]
+08-09 00:48:13.919   431   445 I am_stop_activity: [0,[REDACTED],com.lommir.client.monogame.android/crc[REDACTED].MainActivity]
+08-09 00:48:15.644   431  4429 I ActivityManager: START u0 {flg=0x10000000 cmp=com.lommir.client.monogame.android/crc[REDACTED].MainActivity} from uid 0
+08-09 00:48:15.649   431   441 I am_set_resumed_activity: [0,com.lommir.client.monogame.android/crc[REDACTED].MainActivity,resumeTopActivityInnerLocked]
+08-09 00:48:15.650   431   441 I am_resume_activity: [0,[REDACTED],9,com.lommir.client.monogame.android/crc[REDACTED].MainActivity]
+```
+
+- 我方包生命周期筛选行数：`5`。
+- 我方包 `FATAL EXCEPTION|AndroidRuntime.*FATAL` 筛选匹配数：`0`。
+- 结论仅为：上述采集窗口内，筛选结果未见我方包立即崩溃；不作全局稳定性结论。
+- 未保留原始全量 logcat，未保留第三方遥测或长标识。
+
