@@ -1065,6 +1065,9 @@ namespace Client.MirGraphics
             ID3D11Texture2D secondaryTexture = null)
         {
             CMain.DPSCounter++;
+            if (!PerformanceMetrics.Enabled)
+                return;
+
             PerformanceMetrics.Increment(PerformanceMetricKind.DrawCall);
 
             var sessionId = PerformanceMetrics.SessionId;

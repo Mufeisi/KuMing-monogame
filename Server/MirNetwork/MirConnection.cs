@@ -37,6 +37,7 @@ namespace Server.MirNetwork
         private readonly PerformanceQueueTracker _receiveQueueMetrics = new PerformanceQueueTracker();
         private readonly PerformanceQueueTracker _sendQueueMetrics = new PerformanceQueueTracker();
         private readonly PerformanceQueueTracker _retryQueueMetrics = new PerformanceQueueTracker();
+        private readonly PerformanceQueueTracker _networkQueueMetrics = new PerformanceQueueTracker();
 
         private bool _disconnecting;
         public bool Connected;
@@ -61,10 +62,10 @@ namespace Server.MirNetwork
 
         public int ReceiveQueueDepth => _receiveQueueMetrics.Depth + _retryQueueMetrics.Depth;
         public int SendQueueDepth => _sendQueueMetrics.Depth;
-        public int NetworkQueueDepth => ReceiveQueueDepth + SendQueueDepth;
+        public int NetworkQueueDepth => _networkQueueMetrics.Depth;
         public int ReceiveQueueHighWater => Math.Max(_receiveQueueMetrics.HighWater, _retryQueueMetrics.HighWater);
         public int SendQueueHighWater => _sendQueueMetrics.HighWater;
-        public int NetworkQueueHighWater => ReceiveQueueHighWater + SendQueueHighWater;
+        public int NetworkQueueHighWater => _networkQueueMetrics.HighWater;
 
         public List<MirConnection> Observers = new List<MirConnection>();
         public MirConnection Observing;
@@ -105,6 +106,8 @@ namespace Server.MirNetwork
             _sendList = new ConcurrentQueue<Packet>();
             _sendList.Enqueue(new S.Connected());
             _sendQueueMetrics.Enqueue();
+            _networkQueueMetrics.Enqueue();
+            Envir.RecordNetworkQueueEnqueued(incoming: false);
             _retryList = new Queue<Packet>();
 
             Connected = true;
@@ -181,6 +184,8 @@ namespace Server.MirNetwork
                 {
                     _receiveList.Enqueue(p);
                     _receiveQueueMetrics.Enqueue();
+                    _networkQueueMetrics.Enqueue();
+                    Envir.RecordNetworkQueueEnqueued(incoming: true);
                 }
             }
             catch
@@ -248,6 +253,8 @@ namespace Server.MirNetwork
             {
                 _sendList.Enqueue(p);
                 _sendQueueMetrics.Enqueue();
+                _networkQueueMetrics.Enqueue();
+                Envir.RecordNetworkQueueEnqueued(incoming: false);
             }
 
             if (!p.Observable) return;
@@ -268,6 +275,8 @@ namespace Server.MirNetwork
                 Packet p;
                 if (!_receiveList.TryDequeue(out p)) continue;
                 _receiveQueueMetrics.Dequeue();
+                _networkQueueMetrics.Dequeue();
+                Envir.RecordNetworkQueueDequeued(incoming: true);
 
                 _lastPackets.Enqueue(p);
 
@@ -305,6 +314,8 @@ namespace Server.MirNetwork
                 Packet p;
                 if (!_sendList.TryDequeue(out p)) continue;
                 _sendQueueMetrics.Dequeue();
+                _networkQueueMetrics.Dequeue();
+                Envir.RecordNetworkQueueDequeued(incoming: false);
                 if (p == null) continue;
                 byte[] packetBytes = p.GetPacketBytes() as byte[];
                 if (packetBytes == null)
@@ -323,6 +334,8 @@ namespace Server.MirNetwork
             if (packet == null || _retryList == null) return;
             _retryList.Enqueue(packet);
             _retryQueueMetrics.Enqueue();
+            _networkQueueMetrics.Enqueue();
+            Envir.RecordNetworkQueueEnqueued(incoming: true);
         }
 
         private void ProcessPacket(Packet p)
@@ -815,6 +828,10 @@ namespace Server.MirNetwork
                 Observing.Observers.Remove(this);            
 
             Account = null;
+
+            // 断开时丢弃尚未处理的逻辑队列项，避免服务器会话级深度永久偏高。
+            Envir.RecordNetworkQueueDequeued(incoming: true, count: ReceiveQueueDepth);
+            Envir.RecordNetworkQueueDequeued(incoming: false, count: SendQueueDepth);
 
             _sendList = null;
             _receiveList = null;

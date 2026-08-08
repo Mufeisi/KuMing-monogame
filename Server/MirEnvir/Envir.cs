@@ -312,6 +312,31 @@ namespace Server.MirEnvir
         private int _sessionID;
         public List<MirConnection> Connections = new List<MirConnection>();
 
+        // 服务器网络指标使用会话级逻辑队列，而不是把每个连接的历史峰值相加。
+        // MirConnection 在入队/出队处维护这些原子计数，采样只读取当前深度和高水位。
+        private readonly PerformanceQueueTracker _networkQueueMetrics = new PerformanceQueueTracker();
+        private readonly PerformanceQueueTracker _networkInQueueMetrics = new PerformanceQueueTracker();
+        private readonly PerformanceQueueTracker _networkOutQueueMetrics = new PerformanceQueueTracker();
+
+        internal void RecordNetworkQueueEnqueued(bool incoming)
+        {
+            _networkQueueMetrics.Enqueue();
+            (incoming ? _networkInQueueMetrics : _networkOutQueueMetrics).Enqueue();
+        }
+
+        internal void RecordNetworkQueueDequeued(bool incoming, int count = 1)
+        {
+            _networkQueueMetrics.Dequeue(count);
+            (incoming ? _networkInQueueMetrics : _networkOutQueueMetrics).Dequeue(count);
+        }
+
+        internal int NetworkQueueDepth => _networkQueueMetrics.Depth;
+        internal int NetworkInQueueDepth => _networkInQueueMetrics.Depth;
+        internal int NetworkOutQueueDepth => _networkOutQueueMetrics.Depth;
+        internal int NetworkQueueHighWater => _networkQueueMetrics.CaptureHighWater();
+        internal int NetworkInQueueHighWater => _networkInQueueMetrics.CaptureHighWater();
+        internal int NetworkOutQueueHighWater => _networkOutQueueMetrics.CaptureHighWater();
+
         //Server DB
         public int MapIndex, ItemIndex, MonsterIndex, NPCIndex, QuestIndex, GameshopIndex, ConquestIndex, RespawnIndex, ScriptIndex;
         public List<MapInfo> MapInfoList = new List<MapInfo>();
@@ -738,34 +763,25 @@ namespace Server.MirEnvir
         {
             if (!PerformanceMetrics.Enabled) return;
 
-            var networkInQueue = 0;
-            var networkOutQueue = 0;
-            var networkInQueueHighWater = 0;
-            var networkOutQueueHighWater = 0;
             var connectionCount = 0;
 
             lock (Connections)
             {
                 connectionCount = Connections.Count;
-                for (var i = 0; i < Connections.Count; i++)
-                {
-                    var connection = Connections[i];
-                    if (connection == null) continue;
-                    networkInQueue += connection.ReceiveQueueDepth;
-                    networkOutQueue += connection.SendQueueDepth;
-                    networkInQueueHighWater += connection.ReceiveQueueHighWater;
-                    networkOutQueueHighWater += connection.SendQueueHighWater;
-                }
             }
+
+            var networkInQueue = NetworkInQueueDepth;
+            var networkOutQueue = NetworkOutQueueDepth;
+            var networkQueue = NetworkQueueDepth;
 
             PerformanceMetrics.SetGauge(PerformanceMetricKind.Connections, connectionCount);
             PerformanceMetrics.SetGauge(PerformanceMetricKind.ActiveConnections, Players.Count);
             PerformanceMetrics.SetGauge(PerformanceMetricKind.NetworkInQueue, networkInQueue);
             PerformanceMetrics.SetGauge(PerformanceMetricKind.NetworkOutQueue, networkOutQueue);
-            PerformanceMetrics.SetGauge(PerformanceMetricKind.NetworkQueue, networkInQueue + networkOutQueue);
-            PerformanceMetrics.SetGauge(PerformanceMetricKind.NetworkInQueueHighWater, networkInQueueHighWater);
-            PerformanceMetrics.SetGauge(PerformanceMetricKind.NetworkOutQueueHighWater, networkOutQueueHighWater);
-            PerformanceMetrics.SetGauge(PerformanceMetricKind.NetworkQueueHighWater, networkInQueueHighWater + networkOutQueueHighWater);
+            PerformanceMetrics.SetGauge(PerformanceMetricKind.NetworkQueue, networkQueue);
+            PerformanceMetrics.SetGauge(PerformanceMetricKind.NetworkInQueueHighWater, NetworkInQueueHighWater);
+            PerformanceMetrics.SetGauge(PerformanceMetricKind.NetworkOutQueueHighWater, NetworkOutQueueHighWater);
+            PerformanceMetrics.SetGauge(PerformanceMetricKind.NetworkQueueHighWater, NetworkQueueHighWater);
         }
 
         private void MarkStartupFailed(Exception failure)
@@ -3654,6 +3670,27 @@ namespace Server.MirEnvir
 
             while (_thread != null)
                 Thread.Sleep(1);
+
+            FinalizePerformanceSession("服务器停止");
+        }
+
+        private void FinalizePerformanceSession(string phase)
+        {
+            if (!PerformanceMetrics.Enabled)
+                return;
+
+            if (PerformanceMetrics.TryStopAndWriteConfiguredSnapshot(out _, out var error))
+            {
+                MessageQueue.EnqueueDebugging($"[性能] {phase}：已冻结并导出 PERF-00 会话。");
+            }
+            else
+            {
+                PerformanceMetrics.FreezeSession();
+                MessageQueue.Enqueue($"[性能] {phase}：PERF-00 会话导出失败：{error}");
+            }
+
+            // 无论环境变量是否已被外部清除，都结束当前代次，避免下一次同进程启动串入旧样本。
+            PerformanceMetrics.Configure(enabled: false);
         }
 
         public void Reboot()

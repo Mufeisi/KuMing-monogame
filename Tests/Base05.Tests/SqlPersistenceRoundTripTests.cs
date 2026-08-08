@@ -158,6 +158,68 @@ public sealed class SqlPersistenceRoundTripTests
         }
     }
 
+    [Fact]
+    public void Sql_retry_success_counts_attempt_failure_without_final_failure()
+    {
+        var databasePath = Path.Combine(Path.GetTempPath(), $"base05-save-retry-success-{Guid.NewGuid():N}.db");
+        try
+        {
+            PerformanceMetrics.Configure(enabled: true, scenario: "sql-retry-success");
+            var runner = new SqlDomainTransactionRunner(
+                DatabaseProviderKind.Sqlite,
+                new SqlDatabaseOptions { SqlitePath = databasePath },
+                new SqlSessionOptions { BaseRetryDelayMs = 1 },
+                maxAttempts: 2,
+                continueOnError: true);
+            var invocation = 0;
+
+            var result = runner.Run(SqlSaveDomain.Accounts, _ =>
+            {
+                if (Interlocked.Increment(ref invocation) == 1)
+                    throw new IOException("测试瞬时失败");
+            });
+
+            Assert.True(result.Success);
+            var metrics = PerformanceMetrics.CreateSnapshot().Metrics;
+            Assert.Equal(1L, metrics.Single(item => item.Name == nameof(PerformanceMetricKind.SaveAttemptFailure)).TotalValue ?? 0L);
+            Assert.Equal(0L, metrics.Single(item => item.Name == nameof(PerformanceMetricKind.SaveFailure)).TotalValue ?? 0L);
+        }
+        finally
+        {
+            PerformanceMetrics.Configure(enabled: false);
+            TryDelete(databasePath);
+        }
+    }
+
+    [Fact]
+    public void Sql_retry_exhaustion_counts_one_final_failure_after_attempts()
+    {
+        var databasePath = Path.Combine(Path.GetTempPath(), $"base05-save-retry-failure-{Guid.NewGuid():N}.db");
+        try
+        {
+            PerformanceMetrics.Configure(enabled: true, scenario: "sql-retry-exhaustion");
+            var runner = new SqlDomainTransactionRunner(
+                DatabaseProviderKind.Sqlite,
+                new SqlDatabaseOptions { SqlitePath = databasePath },
+                new SqlSessionOptions { BaseRetryDelayMs = 1 },
+                maxAttempts: 2,
+                continueOnError: true);
+
+            var result = runner.Run(SqlSaveDomain.Accounts, _ =>
+                throw new IOException("测试持续瞬时失败"));
+
+            Assert.False(result.Success);
+            var metrics = PerformanceMetrics.CreateSnapshot().Metrics;
+            Assert.Equal(1L, metrics.Single(item => item.Name == nameof(PerformanceMetricKind.SaveAttemptFailure)).TotalValue ?? 0L);
+            Assert.Equal(1L, metrics.Single(item => item.Name == nameof(PerformanceMetricKind.SaveFailure)).TotalValue ?? 0L);
+        }
+        finally
+        {
+            PerformanceMetrics.Configure(enabled: false);
+            TryDelete(databasePath);
+        }
+    }
+
     private static void TryDelete(string path)
     {
         try

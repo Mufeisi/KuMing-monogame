@@ -18,7 +18,7 @@
 
 ## 指标字段
 
-`PerformanceMetricKind` 提供 CPU、Update、Draw、DrawCall、TextureSwitch、TextureCreate、Gc、GcGen0、GcGen1、GcGen2、GcPause、Memory、GpuMemory、GpuMemoryBudget、Save、SaveSnapshotCapture、SaveTransactionCommit、SaveFailure、NetworkQueue、NetworkInQueue、NetworkOutQueue、NetworkQueueHighWater、NetworkInQueueHighWater、NetworkOutQueueHighWater、Connections、ActiveConnections、Disconnects 以及移动端 `MobileSpriteBatchBegin`、`MobileSpriteBatchStateChange` 代理字段。耗时通过 `RecordDuration`/`Begin` 采集；队列深度、高水位、连接口径和托管内存通过 `SetGauge`/`SampleRuntime` 采集。`Gc` 与三个代次字段均为会话增量，`GcPause` 是会话内运行时累计暂停时间增量（先将运行时的 TimeSpan ticks 换算为 Stopwatch ticks；运行时不支持时写 `Available=false` 与原因），两者不互相替代。PC 通过现有 DXGI `QueryVideoMemoryInfo` 记录实际本地显存使用量和预算；移动端仍明确写 `Available=false`，不以 0 冒充。p95/p99 使用覆盖完整会话样本的固定 `log2-histogram`，平均值/总量仍覆盖完整会话，结果为可解释的对数桶近似值，JSON 同时记录算法名和样本数；不会在 4096 个样本后只保留最近窗口。调用方应在渲染接缝、主循环、保存事务和网络队列接缝调用，而不是在业务对象中跨线程写玩家状态。
+`PerformanceMetricKind` 提供 CPU、Update、Draw、DrawCall、TextureSwitch、TextureCreate、Gc、GcGen0、GcGen1、GcGen2、GcPause、Memory、GpuMemory、GpuMemoryBudget、Save、SaveSnapshotCapture、SaveTransactionCommit、SaveAttemptFailure、SaveFailure、NetworkQueue、NetworkInQueue、NetworkOutQueue、NetworkQueueHighWater、NetworkInQueueHighWater、NetworkOutQueueHighWater、Connections、ActiveConnections、Disconnects 以及移动端 `MobileSpriteBatchBegin`、`MobileSpriteBatchStateChange` 代理字段。耗时通过 `RecordDuration`/`Begin` 采集；队列深度、高水位、连接口径和托管内存通过 `SetGauge`/`SampleRuntime` 采集。`Gc` 与三个代次字段均为会话增量，基线在会话创建时捕获，因此会话开始到首次采样之间的 GC 不会丢失；`GcPause` 是会话内运行时累计暂停时间增量（先将运行时的 TimeSpan ticks 换算为 Stopwatch ticks；运行时不支持时写 `Available=false` 与原因），两者不互相替代。PC 通过现有 DXGI `QueryVideoMemoryInfo` 记录实际本地显存使用量和预算；移动端仍明确写 `Available=false`，不以 0 冒充。p95/p99 使用覆盖完整会话样本的固定四子桶 `log2-sub-bucket-upper-bound` 直方图，代表值取子桶保守上界，最大相对误差上界为 25%，平均值/总量仍覆盖完整会话，JSON 同时记录算法名、误差上界和样本数；不会在 4096 个样本后只保留最近窗口。调用方应在渲染接缝、主循环、保存事务和网络队列接缝调用，而不是在业务对象中跨线程写玩家状态。
 
 ## 采集入口与口径
 
@@ -29,8 +29,8 @@
 | TextureCreate | PC DX11 直接 `CreateTexture2D` 入口；移动端 `MLibrary`、FairyGUI、文本框/场景占位纹理等直接 `new Texture2D`/`FromStream` 入口 | 统计仓库可见的直接创建入口；`Content.Load<Texture2D>` 内部创建由框架管理，当前不宣称已覆盖。|
 | GC/Memory | PC/移动端主循环每秒 `SampleRuntime` | `Memory` 为 `GC.GetTotalMemory(false)`；`Gc`/`GcGen0`/`GcGen1`/`GcGen2` 为会话增量；`GcPause` 为两次采样间累计暂停增量。|
 | GpuMemory | PC `CMain` + `DXManager.TryGetGpuMemoryUsage`；移动端 `CMain` | PC 每秒通过 DXGI 查询本地段实际使用量与预算；移动端后端不可可靠查询时记录 `Available=false` 和原因，不写 0。|
-| Save* | `Server/Persistence/Sql/SqlDomainTransactionRunner.cs` | `Save` 覆盖完整调用（快照、事务、重试和失败）；`SaveSnapshotCapture` 只覆盖快照工厂；`SaveTransactionCommit` 按每次事务尝试记录；失败单独计数。|
-| Network*/Connections | 服务端 `Envir` + `MirConnection`；PC/移动端 `MirNetwork/Network` + 主循环 | 入队/出队路径维护深度和连接生命周期高水位，采样即使队列已排空仍保留峰值；服务端网络汇总每秒一次，避免每毫秒 O(连接数) 扫描；服务端连接数为 `Connections.Count`，活跃数为 `Players.Count`；断线在 `MirConnection.Disconnect` 计数。|
+| Save* | `Server/Persistence/Sql/SqlDomainTransactionRunner.cs` | `Save` 覆盖完整调用（快照、事务、重试和失败）；`SaveSnapshotCapture` 只覆盖快照工厂；`SaveTransactionCommit` 按每次事务尝试记录；瞬时重试失败计入 `SaveAttemptFailure`，仅重试耗尽或不可重试异常计入最终 `SaveFailure`。|
+| Network*/Connections | 服务端 `Envir` + `MirConnection`；PC/移动端 `MirNetwork/Network` + 主循环 | 入队/出队路径维护会话级逻辑总深度与高水位，方向字段分别维护，不把各连接或各队列的历史峰值相加；新会话首次访问时以当前深度重基线，采样即使队列已排空仍保留本会话峰值；服务端网络汇总每秒一次，避免每毫秒 O(连接数) 扫描；服务端连接数为 `Connections.Count`，活跃数为 `Players.Count`；断线在 `MirConnection.Disconnect` 计数。|
 
 性能会话只在环境变量或显式 `Configure(true, 场景名)`/`StartSession(场景名)` 后采样；发布默认关闭。环境变量入口示例：
 
@@ -59,7 +59,7 @@ PerformanceMetrics.TryFreezeAndWriteSnapshot(
 
 ```text
 dotnet test Tests/Base05.Tests/Base05.Tests.csproj --no-restore --nologo --filter "FullyQualifiedName~PerformanceMetricsTests|FullyQualifiedName~SqlPersistenceRoundTripTests"
-结果：11/11 通过（含全会话 >4096 百分位、环境变量启停导出、队列高水位、GC 代次增量与 SQL 保存失败耗时断言）。
+结果：17/17 通过（含全会话 >4096 百分位、子桶误差边界、环境变量启停/关闭导出、跨会话队列高水位、GC 首次采样与 SQL 保存重试计数断言）。
 ```
 
 测试会在系统临时目录生成并校验 JSON 后清理文件；这些样本用于验证采集接缝和格式，不包含真实网络连接，不能作为 S1/S2/S3 基线。完整测试和平台构建结果由任务提交记录保留。
@@ -68,7 +68,7 @@ dotnet test Tests/Base05.Tests/Base05.Tests.csproj --no-restore --nologo --filte
 
 ```text
 dotnet test Tests/Base05.Tests/Base05.Tests.csproj --no-restore --nologo
-结果：146/146 通过，0 失败，0 跳过。
+结果：152/152 通过，0 失败，0 跳过。
 ```
 
 同日平台构建：

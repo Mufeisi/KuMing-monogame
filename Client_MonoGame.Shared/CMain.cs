@@ -57,6 +57,7 @@ namespace MonoShare
         private static int _debugLastSpriteBatchBeginCalls;
         private static int _debugLastSpriteBatchEndCalls;
         private static int _debugLastSpriteBatchStateChanges;
+        private static string _mobileGraphicsUnavailableSessionId;
 
         private bool _mobileBackBufferScaleApplied;
         private bool _mobileBackPressedLastFrame;
@@ -498,15 +499,7 @@ namespace MonoShare
             PerformanceMetrics.TryConfigureFromEnvironment(out _);
             spriteBatch = new SpriteBatch(GraphicsDevice);
             SpriteBatchScope = new SpriteBatchStack(spriteBatch);
-            PerformanceMetrics.MarkUnavailable(
-                PerformanceMetricKind.GpuMemory,
-                "MonoGame 移动端当前未提供稳定的显存预算 API");
-            PerformanceMetrics.MarkUnavailable(
-                PerformanceMetricKind.DrawCall,
-                "移动端 SpriteBatch 接缝只能可靠统计 Begin 代理，无法将其冒充真实 DrawCall");
-            PerformanceMetrics.MarkUnavailable(
-                PerformanceMetricKind.TextureSwitch,
-                "移动端 SpriteBatch 接缝无法可靠读取底层纹理运行切换");
+            MarkMobileGraphicsMetricsUnavailable();
 
             // TODO: use this.Content to load your game content here
             // 创建 FontSystem 实例
@@ -556,15 +549,7 @@ namespace MonoShare
 
         protected override void Update(GameTime gameTime)
         {
-            PerformanceMetrics.MarkUnavailable(
-                PerformanceMetricKind.GpuMemory,
-                "MonoGame 移动端当前未提供稳定的显存预算 API");
-            PerformanceMetrics.MarkUnavailable(
-                PerformanceMetricKind.DrawCall,
-                "移动端 SpriteBatch 接缝只能可靠统计 Begin 代理，无法将其冒充真实 DrawCall");
-            PerformanceMetrics.MarkUnavailable(
-                PerformanceMetricKind.TextureSwitch,
-                "移动端 SpriteBatch 接缝无法可靠读取底层纹理运行切换");
+            MarkMobileGraphicsMetricsUnavailable();
 
             bool backOrEscapeDown = false;
             try
@@ -665,6 +650,27 @@ namespace MonoShare
             // TODO: Add your update logic here
 
             base.Update(gameTime);
+        }
+
+        private static void MarkMobileGraphicsMetricsUnavailable()
+        {
+            if (!PerformanceMetrics.Enabled)
+                return;
+
+            var sessionId = PerformanceMetrics.SessionId;
+            if (string.Equals(_mobileGraphicsUnavailableSessionId, sessionId, StringComparison.Ordinal))
+                return;
+
+            _mobileGraphicsUnavailableSessionId = sessionId;
+            PerformanceMetrics.MarkUnavailable(
+                PerformanceMetricKind.GpuMemory,
+                "MonoGame 移动端当前未提供稳定的显存预算 API");
+            PerformanceMetrics.MarkUnavailable(
+                PerformanceMetricKind.DrawCall,
+                "移动端 SpriteBatch 接缝只能可靠统计 Begin 代理，无法将其冒充真实 DrawCall");
+            PerformanceMetrics.MarkUnavailable(
+                PerformanceMetricKind.TextureSwitch,
+                "移动端 SpriteBatch 接缝无法可靠读取底层纹理运行切换");
         }
 
         private void TrySyncScreenSizeFromViewport()

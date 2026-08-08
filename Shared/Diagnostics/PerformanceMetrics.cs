@@ -152,6 +152,19 @@ namespace Shared.Diagnostics
                 var enabledText = Environment.GetEnvironmentVariable("LYOCRYSTAL_PERF00_ENABLED");
                 if (!IsTruthy(enabledText))
                 {
+                    if (Enabled)
+                    {
+                        // 宿主可能在同一进程内从“启用”切换为“关闭”。先结束旧代次，
+                        // 防止下一次启动把旧样本继续写入或在进程退出时丢失。
+                        if (!TryStopAndWriteConfiguredSnapshot(out _, out var exportError))
+                            FreezeSession();
+                        Configure(enabled: false);
+                        reason = string.IsNullOrWhiteSpace(exportError)
+                            ? "已结束上一性能会话。"
+                            : "已结束上一性能会话，但导出失败：" + exportError;
+                        return false;
+                    }
+
                     reason = "未设置 LYOCRYSTAL_PERF00_ENABLED=true。";
                     return false;
                 }
@@ -351,6 +364,20 @@ namespace Shared.Diagnostics
             Scenario = scenario;
             StartedAtUtc = DateTime.UtcNow;
             _state = (long)state;
+
+            // 在会话创建时捕获进程累计值，确保 Configure/StartSession 与首次采样之间
+            // 发生的 GC 也归属于当前会话，而不是被首次采样当作“基线”吞掉。
+            _lastGcGen0 = GC.CollectionCount(0);
+            _lastGcGen1 = GC.CollectionCount(1);
+            _lastGcGen2 = GC.CollectionCount(2);
+            try
+            {
+                _lastGcPauseTicks = GC.GetTotalPauseDuration().Ticks;
+            }
+            catch
+            {
+                _lastGcPauseTicks = -1;
+            }
         }
 
         public string SessionId { get; }
@@ -507,9 +534,14 @@ namespace Shared.Diagnostics
 
     internal sealed class PerformanceMetricAccumulator
     {
-        // 固定对数直方图覆盖整个会话，不会在 4096 个样本后悄悄退化为“最近样本”。
-        // 直方图只保存 128 个计数，写入是一次 Interlocked.Increment，适合热路径。
-        private const int HistogramBucketCount = 128;
+        // 固定子桶直方图覆盖整个会话，不会在 4096 个样本后悄悄退化为“最近样本”。
+        // 每个 2 的数量级划分为 4 个子桶；对于正值，百分位代表值取子桶上界，
+        // 结果最多高估约 25%（小数值桶为精确值）。写入仍是一次原子自增。
+        private const int MagnitudeBucketCount = 64;
+        private const int SubBucketCount = 4;
+        private const int PositiveBucketCount = MagnitudeBucketCount * SubBucketCount + 1; // 0 专用于精确的零值
+        private const int HistogramBucketCount = PositiveBucketCount * 2;
+        private const int NegativeBucketOffset = PositiveBucketCount;
         private readonly long[] _durationHistogram = new long[HistogramBucketCount];
         private readonly long[] _valueHistogram = new long[HistogramBucketCount];
         private readonly object _reasonGate = new object();
@@ -593,11 +625,12 @@ namespace Shared.Diagnostics
                 LastValue = valueSamples > 0 ? Interlocked.Read(ref _lastValue) : null,
                 P95Value = valuePercentiles.P95,
                 P99Value = valuePercentiles.P99,
-                PercentileMethod = samples > 0 ? "log2-histogram" : null,
+                PercentileMethod = samples > 0 ? "log2-sub-bucket-upper-bound" : null,
+                PercentileMaxRelativeError = samples > 0 ? 0.25D : null,
                 PercentileSampleCount = durationSamples > 0 ? durationSamples : valueSamples,
-                DurationPercentileMethod = durationSamples > 0 ? "log2-histogram" : null,
+                DurationPercentileMethod = durationSamples > 0 ? "log2-sub-bucket-upper-bound" : null,
                 DurationPercentileSampleCount = durationSamples > 0 ? durationSamples : (long?)null,
-                ValuePercentileMethod = valueSamples > 0 ? "log2-histogram" : null,
+                ValuePercentileMethod = valueSamples > 0 ? "log2-sub-bucket-upper-bound" : null,
                 ValuePercentileSampleCount = valueSamples > 0 ? valueSamples : (long?)null,
                 LastUpdatedAtUtc = ToUtcDateTime(Interlocked.Read(ref _lastUtcTicks)),
             };
@@ -611,10 +644,16 @@ namespace Shared.Diagnostics
             else
                 magnitude = (ulong)value;
 
-            var magnitudeBucket = magnitude == 0
-                ? 0
-                : Math.Min(63, 63 - BitOperations.LeadingZeroCount(magnitude));
-            return value < 0 ? 64 + magnitudeBucket : magnitudeBucket;
+            if (magnitude == 0) return 0;
+
+            var exponent = Math.Min(63, 63 - BitOperations.LeadingZeroCount(magnitude));
+            var bucketBase = 1UL << exponent;
+            var subBucketWidth = exponent >= 2 ? 1UL << (exponent - 2) : 1UL;
+            var subBucket = (int)Math.Min(
+                (ulong)(SubBucketCount - 1),
+                (magnitude - bucketBase) / subBucketWidth);
+            var magnitudeBucket = 1 + exponent * SubBucketCount + subBucket;
+            return value < 0 ? NegativeBucketOffset + magnitudeBucket : magnitudeBucket;
         }
 
         private static (long? P95, long? P99) ComputePercentiles(long[] histogram, long sampleCount)
@@ -631,13 +670,13 @@ namespace Shared.Diagnostics
             var seen = 0L;
 
             // 负数按数值从小到大遍历：更大的绝对值更小。
-            for (var index = HistogramBucketCount - 1; index >= 64; index--)
+            for (var index = HistogramBucketCount - 1; index >= NegativeBucketOffset; index--)
             {
                 seen += Interlocked.Read(ref histogram[index]);
                 if (seen >= rank) return BucketRepresentative(index);
             }
 
-            for (var index = 0; index < 64; index++)
+            for (var index = 0; index < NegativeBucketOffset; index++)
             {
                 seen += Interlocked.Read(ref histogram[index]);
                 if (seen >= rank) return BucketRepresentative(index);
@@ -648,9 +687,27 @@ namespace Shared.Diagnostics
 
         private static long BucketRepresentative(int index)
         {
-            var magnitudeBucket = index >= 64 ? index - 64 : index;
-            ulong magnitude = magnitudeBucket >= 63 ? 1UL << 63 : 1UL << magnitudeBucket;
-            if (index >= 64)
+            var magnitudeBucket = index >= NegativeBucketOffset
+                ? index - NegativeBucketOffset
+                : index;
+            if (magnitudeBucket == 0) return 0;
+            magnitudeBucket--;
+            var exponent = Math.Min(63, magnitudeBucket / SubBucketCount);
+            var subBucket = magnitudeBucket % SubBucketCount;
+            var bucketBase = 1UL << exponent;
+            var subBucketWidth = exponent >= 2 ? 1UL << (exponent - 2) : 1UL;
+            ulong magnitude;
+            if (exponent >= 63)
+            {
+                magnitude = ulong.MaxValue;
+            }
+            else
+            {
+                var upper = bucketBase + ((ulong)subBucket + 1UL) * subBucketWidth - 1UL;
+                magnitude = Math.Min((ulong)long.MaxValue, upper);
+            }
+
+            if (index >= NegativeBucketOffset)
             {
                 return magnitude >= (1UL << 63) ? long.MinValue : -(long)magnitude;
             }
@@ -705,6 +762,7 @@ namespace Shared.Diagnostics
         Disconnects,
         MobileSpriteBatchBegin,
         MobileSpriteBatchStateChange,
+        SaveAttemptFailure,
     }
 
     public enum PerformanceSessionState
@@ -720,14 +778,32 @@ namespace Shared.Diagnostics
     /// </summary>
     public sealed class PerformanceQueueTracker
     {
+        private readonly object _sessionGate = new object();
         private int _depth;
         private int _highWater;
+        private string _sessionId;
 
-        public int Depth => Math.Max(0, Volatile.Read(ref _depth));
-        public int HighWater => Math.Max(Depth, Volatile.Read(ref _highWater));
+        public int Depth
+        {
+            get
+            {
+                EnsureSessionBaseline();
+                return Math.Max(0, Volatile.Read(ref _depth));
+            }
+        }
+
+        public int HighWater
+        {
+            get
+            {
+                EnsureSessionBaseline();
+                return Math.Max(Depth, Volatile.Read(ref _highWater));
+            }
+        }
 
         public void Enqueue()
         {
+            EnsureSessionBaseline();
             var depth = Interlocked.Increment(ref _depth);
             while (true)
             {
@@ -739,11 +815,21 @@ namespace Shared.Diagnostics
 
         public void Dequeue()
         {
-            while (true)
+            Dequeue(1);
+        }
+
+        public void Dequeue(int count)
+        {
+            if (count <= 0) return;
+            EnsureSessionBaseline();
+            while (count-- > 0)
             {
-                var depth = Volatile.Read(ref _depth);
-                if (depth <= 0) return;
-                if (Interlocked.CompareExchange(ref _depth, depth - 1, depth) == depth) return;
+                while (true)
+                {
+                    var depth = Volatile.Read(ref _depth);
+                    if (depth <= 0) break;
+                    if (Interlocked.CompareExchange(ref _depth, depth - 1, depth) == depth) break;
+                }
             }
         }
 
@@ -751,6 +837,23 @@ namespace Shared.Diagnostics
         public int CaptureHighWater()
         {
             return HighWater;
+        }
+
+        private void EnsureSessionBaseline()
+        {
+            var currentSessionId = PerformanceMetrics.SessionId;
+            if (string.Equals(Volatile.Read(ref _sessionId), currentSessionId, StringComparison.Ordinal))
+                return;
+
+            lock (_sessionGate)
+            {
+                currentSessionId = PerformanceMetrics.SessionId;
+                if (string.Equals(_sessionId, currentSessionId, StringComparison.Ordinal))
+                    return;
+
+                Interlocked.Exchange(ref _highWater, Math.Max(0, Volatile.Read(ref _depth)));
+                Volatile.Write(ref _sessionId, currentSessionId);
+            }
         }
     }
 
@@ -793,8 +896,10 @@ namespace Shared.Diagnostics
         public long? LastValue { get; set; }
         public long? P95Value { get; set; }
         public long? P99Value { get; set; }
-        /// <summary>百分位算法；当前为覆盖全会话样本的固定对数直方图，结果是近似值。</summary>
+        /// <summary>百分位算法；当前为覆盖全会话样本的固定子桶直方图。</summary>
         public string PercentileMethod { get; set; }
+        /// <summary>百分位代表值相对真实样本的保守最大误差上界。</summary>
+        public double? PercentileMaxRelativeError { get; set; }
         public long? PercentileSampleCount { get; set; }
         public string DurationPercentileMethod { get; set; }
         public long? DurationPercentileSampleCount { get; set; }

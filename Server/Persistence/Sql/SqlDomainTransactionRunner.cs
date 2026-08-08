@@ -98,7 +98,8 @@ namespace Server.Persistence.Sql
                 catch (Exception ex) when (attempt < MaxAttempts && SqlTransientDetector.IsTransient(_provider, ex))
                 {
                     lastError = ex;
-                    PerformanceMetrics.Increment(PerformanceMetricKind.SaveFailure);
+                    // 本次尝试失败但整个保存调用仍会继续重试，不应冒充最终失败。
+                    PerformanceMetrics.Increment(PerformanceMetricKind.SaveAttemptFailure);
                     if (transactionStart > 0)
                         PerformanceMetrics.RecordDuration(
                             PerformanceMetricKind.SaveTransactionCommit,
@@ -139,6 +140,7 @@ namespace Server.Persistence.Sql
             swTotal.Stop();
             if (recordFullSaveDuration)
                 PerformanceMetrics.RecordDuration(PerformanceMetricKind.Save, swTotal.ElapsedTicks);
+            PerformanceMetrics.Increment(PerformanceMetricKind.SaveFailure);
             MessageQueue.Instance.Enqueue($"[SQL:{_provider}] {domain} 保存事务连续失败（{MaxAttempts} 次，{swTotal.ElapsedMilliseconds}ms）：{lastError}");
             if (lastError != null)
             {
