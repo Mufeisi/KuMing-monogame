@@ -68,7 +68,7 @@ dotnet test Tests/Base05.Tests/Base05.Tests.csproj --no-restore --nologo --filte
 
 ```text
 dotnet test Tests/Base05.Tests/Base05.Tests.csproj --no-restore --nologo
-结果：152/152 通过，0 失败，0 跳过。
+结果：153/153 通过，0 失败，0 跳过。
 ```
 
 同日平台构建：
