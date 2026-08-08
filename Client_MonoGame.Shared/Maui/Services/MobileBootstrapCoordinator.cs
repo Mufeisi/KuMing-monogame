@@ -31,7 +31,8 @@ public sealed class MobileBootstrapCoordinator
 
             PackageResourceRegistry.Configure(OpenPackageStream);
 
-            Settings.ConfigureClientRoot(FileSystem.AppDataDirectory);
+            try { Settings.ConfigureClientRoot(FileSystem.AppDataDirectory); }
+            catch (Exception ex) { CMain.SaveError($"移动端配置敏感项清理失败：{ex.GetType().Name}"); throw; }
             Settings.Load();
             ClientResourceLayout.EnsureWritableResourceDirectories();
             ClientResourceLayout.EnsureCoreBootstrapAssetsAvailable();

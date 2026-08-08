@@ -397,7 +397,8 @@ namespace MonoShare
 
  	        public CMain(string absolutePath)
  	        {
- 	            Settings.ConfigureClientRoot(absolutePath);
+                    try { Settings.ConfigureClientRoot(absolutePath); }
+                    catch (Exception ex) { SaveError($"移动端配置敏感项清理失败：{ex.GetType().Name}"); throw; }
 
  	            try
  	            {
