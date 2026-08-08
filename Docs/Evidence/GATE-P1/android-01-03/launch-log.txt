@@ -1,0 +1,29 @@
+# 启动、资源阻塞与前后台恢复日志
+
+## 启动组件与前后台
+
+- `cmd package resolve-activity --brief com.lommir.client.monogame.android` 返回：`com.lommir.client.monogame.android/crc648e1c27e8d74093fe.MainActivity`。
+- 前台启动：`mResumedActivity` 为 `com.lommir.client.monogame.android/crc648e1c27e8d74093fe.MainActivity`。
+- `input keyevent HOME` 后：`mResumedActivity` 为 `com.microvirt.launcher2/com.microvirt.launcher.Launcher`。
+- 再次启动后：`mResumedActivity` 恢复为 `com.lommir.client.monogame.android/crc648e1c27e8d74093fe.MainActivity`。
+- `dumpsys package`：`versionCode=20000 minSdk=24 targetSdk=36`、`versionName=2.0.0`。
+
+## logcat 摘要
+
+```text
+08-09 00:27:34.369 D/LomMir2: 启动：Platform=Unix ClientRoot=/data/user/0/com.lommir.client.monogame.android/files RuntimeRoot=/data/user/0/com.lommir.client.monogame.android/files/Cache/Mobile/Runtime
+08-09 00:27:35.057 I/ActivityManager: Displayed com.lommir.client.monogame.android/...MainActivity: +2s486ms
+08-09 00:27:35.128 D/MonoGame: GraphicsDeviceManager.ResetClientBounds: Width=1520 Height=855
+08-09 00:27:35.676 D/LomMir2: FairyGUI: Stage 初始化完成（移动端 UI 接入 POC）
+08-09 00:27:35.989 D/LomMir2: FairyGUI: 预登录更新阶段等待默认 FGUI 包资源同步，hydrated=0/30，缺少 BaseRes_fui.bytes、UIRes_fui.bytes、Font_fui.bytes 等探针
+08-09 00:27:36.189 E/LomMir2-Err: PreLoginUpdate 下载版本索引失败：Url=http://127.0.0.1:7777/api/file/Packages/bootstrap-package-index.json Error=Connection failure
+08-09 00:28:40.187 I/ActivityManager: Force stopping com.lommir.client.monogame.android（对应 HOME/重启操作）
+08-09 00:28:42.086 I/ActivityManager: Displayed com.lommir.client.monogame.android/...MainActivity: +1s742ms
+08-09 00:28:42.294 D/LomMir2: FairyGUI: Stage 初始化完成（移动端 UI 接入 POC）
+08-09 00:28:42.587 E/LomMir2-Err: PreLoginUpdate 下载版本索引失败：Url=http://127.0.0.1:7777/api/file/Packages/bootstrap-package-index.json Error=Connection failure
+08-09 00:29:00.175 D/LomMir2: FairyGUI: 默认 FGUI 包尚未就绪，hydrated=0/30，缺少 BaseRes_fui.bytes、UIRes_fui.bytes、Font_fui.bytes 等探针
+08-09 00:29:00.175 D/LomMir2: FairyGUI: 默认 FGUI 包尚未就绪，hydrated=0/30，缺少 BaseRes_fui.bytes、UIRes_fui.bytes、Font_fui.bytes 等探针
+```
+
+未发现应用 `FATAL EXCEPTION` 或 `AndroidRuntime` 崩溃；`NetworkManagementSocketTagger`/模拟器内核缓冲区告警属于设备环境噪声，未作为应用故障判定。
+
