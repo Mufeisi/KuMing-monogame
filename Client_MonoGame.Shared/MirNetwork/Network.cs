@@ -13,6 +13,7 @@ using C = ClientPackets;
 using S = ServerPackets;
 using Shared.Diagnostics;
 using Shared.Security;
+using Shared.Transport;
 
 
 namespace MonoShare.MirNetwork
@@ -37,7 +38,7 @@ namespace MonoShare.MirNetwork
         public static bool Connected;
         public static long TimeOutTime, TimeConnected;
         private static bool _paused;
-        private static readonly object _sendGate = new object();
+        private static StreamWriteGate _sendGate = new StreamWriteGate();
         private static Timer _backgroundKeepAliveTimer;
         private static int _backgroundKeepAliveStarted;
 
@@ -104,6 +105,8 @@ namespace MonoShare.MirNetwork
         {
             if (_client != null)
                 Disconnect();
+
+            _sendGate = new StreamWriteGate();
 
             if (!Settings.UseTlsV2 && !TlsClientPolicy.IsLoopbackHost(Settings.IPAddress))
             {
@@ -311,9 +314,14 @@ namespace MonoShare.MirNetwork
             BeginReceive();
         }
 
-        private static void BeginSend(List<byte> data)
+        private static bool BeginSend(List<byte> data, bool gateHeld = false)
         {
-            if (_client == null || !_client.Connected || data.Count == 0) return;
+            if (_client == null || !_client.Connected || data.Count == 0)
+            {
+                if (gateHeld) _sendGate.Complete();
+                return false;
+            }
+            if (!gateHeld && !_sendGate.TryEnter()) return false;
 
             long nowTick = Environment.TickCount64;
             Interlocked.Exchange(ref _lastSendTick, nowTick);
@@ -321,12 +329,20 @@ namespace MonoShare.MirNetwork
             try
             {
                 byte[] bytes = data.ToArray();
-                if (!TrySendRawBytes(bytes))
-                    Disconnect();
+                Stream stream = _stream;
+                if (stream == null)
+                {
+                    _sendGate.Complete();
+                    return false;
+                }
+                stream.BeginWrite(bytes, 0, bytes.Length, SendData, (stream, _sendGate));
+                return true;
             }
             catch
             {
+                _sendGate.Complete();
                 Disconnect();
+                return false;
             }
         }
 
@@ -335,28 +351,46 @@ namespace MonoShare.MirNetwork
             if (bytes == null || bytes.Length == 0)
                 return true;
 
-            Stream stream = _stream;
-            if (stream == null || _client == null || !_client.Connected)
+            StreamWriteGate gate = _sendGate;
+            if (!gate.TryEnter())
                 return false;
 
+            Stream stream = _stream;
+            if (stream == null || _client == null || !_client.Connected)
+            {
+                gate.Complete();
+                return false;
+            }
             try
             {
-                lock (_sendGate)
-                {
-                    stream = _stream;
-                    if (stream == null || _client == null || !_client.Connected)
-                        return false;
-
-                    IAsyncResult write = stream.BeginWrite(bytes, 0, bytes.Length, null, null);
-                    stream.EndWrite(write);
-                }
+                stream.BeginWrite(bytes, 0, bytes.Length, SendData, (stream, gate));
+                return true;
             }
             catch
             {
+                gate.Complete();
+                Disconnect();
                 return false;
             }
+        }
 
-            return true;
+        private static void SendData(IAsyncResult result)
+        {
+            var state = ((Stream, StreamWriteGate))result.AsyncState;
+            try
+            {
+                state.Item1.EndWrite(result);
+            }
+            catch
+            {
+                if (ReferenceEquals(_stream, state.Item1) && ReferenceEquals(_sendGate, state.Item2))
+                    Disconnect();
+            }
+            finally
+            {
+                state.Item2.Complete();
+            }
+
         }
 
 
@@ -368,20 +402,12 @@ namespace MonoShare.MirNetwork
                 Math.Max(0, _receiveQueueMetrics.Depth) +
                 Math.Max(0, _sendQueueMetrics.Depth));
 
+            _sendGate.Dispose();
             try
             {
-                lock (_sendGate)
-                {
-                    try
-                    {
-                        _stream?.Dispose();
-                        _stream = null;
-                        _client.Close();
-                    }
-                    catch
-                    {
-                    }
-                }
+                _stream?.Dispose();
+                _stream = null;
+                _client?.Close();
             }
             catch
             {
@@ -491,6 +517,9 @@ namespace MonoShare.MirNetwork
 
             if (_sendList != null && !_sendList.IsEmpty)
             {
+                if (!_sendGate.TryEnter())
+                    return;
+
                 TimeOutTime = GetRuntimeTimeMs() + Settings.TimeOut;
 
                 List<byte> data = new List<byte>();
@@ -507,7 +536,7 @@ namespace MonoShare.MirNetwork
 
                 CMain.BytesSent += data.Count;
 
-                BeginSend(data);
+                BeginSend(data, gateHeld: true);
             }
 
             if (_client == null || !_client.Connected)

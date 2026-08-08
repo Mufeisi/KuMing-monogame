@@ -7,6 +7,7 @@ using Client.MirControls;
 using C = ClientPackets;
 using Shared.Diagnostics;
 using Shared.Security;
+using Shared.Transport;
 
 
 namespace Client.MirNetwork
@@ -22,6 +23,7 @@ namespace Client.MirNetwork
 
         private static TcpClient _client;
         private static Stream _stream;
+        private static StreamWriteGate _sendGate = new StreamWriteGate();
         private static bool _usingTls;
         private static int _activePort;
         public static int ConnectAttempt = 0;
@@ -46,6 +48,8 @@ namespace Client.MirNetwork
         {
             if (_client != null)
                 Disconnect();
+
+            _sendGate = new StreamWriteGate();
 
             if (!Settings.UseTlsV2 && !TlsClientPolicy.IsLoopbackHost(Settings.IPAddress))
             {
@@ -205,27 +209,44 @@ namespace Client.MirNetwork
             BeginReceive();
         }
 
-        private static void BeginSend(List<byte> data)
+        private static bool BeginSend(List<byte> data, bool gateHeld = false)
         {
-            if (_stream == null || _client == null || !_client.Connected || data.Count == 0) return;
-            
+            if (_stream == null || _client == null || !_client.Connected || data.Count == 0)
+            {
+                if (gateHeld) _sendGate.Complete();
+                return false;
+            }
+            if (!gateHeld && !_sendGate.TryEnter()) return false;
+
             try
             {
-                _stream.BeginWrite(data.ToArray(), 0, data.Count, SendData, null);
+                Stream stream = _stream;
+                stream.BeginWrite(data.ToArray(), 0, data.Count, SendData, (stream, _sendGate));
+                return true;
             }
             catch
             {
+                _sendGate.Complete();
                 Disconnect();
+                return false;
             }
         }
         private static void SendData(IAsyncResult result)
         {
+            var state = ((Stream, StreamWriteGate))result.AsyncState;
             try
             {
-                _stream?.EndWrite(result);
+                state.Item1.EndWrite(result);
             }
             catch
-            { }
+            {
+                if (ReferenceEquals(_stream, state.Item1) && ReferenceEquals(_sendGate, state.Item2))
+                    Disconnect();
+            }
+            finally
+            {
+                state.Item2.Complete();
+            }
         }
 
         public static void Disconnect()
@@ -235,6 +256,7 @@ namespace Client.MirNetwork
             _networkQueueMetrics.Dequeue(
                 Math.Max(0, _receiveQueueMetrics.Depth) + Math.Max(0, _sendQueueMetrics.Depth));
 
+            _sendGate.Dispose();
             _stream?.Dispose();
             _stream = null;
             _client?.Close();
@@ -318,6 +340,8 @@ namespace Client.MirNetwork
 
             if (_sendList == null || _sendList.IsEmpty) return;
 
+            if (!_sendGate.TryEnter()) return;
+
             TimeOutTime = CMain.Time + Settings.TimeOut;
 
             List<byte> data = new List<byte>();
@@ -334,7 +358,7 @@ namespace Client.MirNetwork
 
             CMain.BytesSent += data.Count;
 
-            BeginSend(data);
+            BeginSend(data, gateHeld: true);
         }
         
         public static void Enqueue(Packet p)

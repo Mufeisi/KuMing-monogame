@@ -9,6 +9,7 @@ using S = ServerPackets;
 using System.Text.RegularExpressions;
 using Server.Utils;
 using Shared.Diagnostics;
+using Shared.Transport;
 
 namespace Server.MirNetwork
 {
@@ -36,6 +37,7 @@ namespace Server.MirNetwork
         private ConcurrentQueue<Packet> _receiveList;
         private ConcurrentQueue<Packet> _sendList; 
         private Queue<Packet> _retryList;
+        private readonly StreamWriteGate _sendGate = new StreamWriteGate();
         private readonly PerformanceQueueTracker _receiveQueueMetrics = new PerformanceQueueTracker();
         private readonly PerformanceQueueTracker _sendQueueMetrics = new PerformanceQueueTracker();
         private readonly PerformanceQueueTracker _retryQueueMetrics = new PerformanceQueueTracker();
@@ -224,29 +226,55 @@ namespace Server.MirNetwork
 
             BeginReceive();
         }
-        private void BeginSend(List<byte> data)
+        private bool BeginSend(List<byte> data, Action completed = null, bool gateHeld = false)
         {
-            if (!Connected || data.Count == 0) return;
+            if (!Connected || data.Count == 0)
+            {
+                if (gateHeld) _sendGate.Complete();
+                return false;
+            }
+
+            if (!gateHeld && !_sendGate.TryEnter()) return false;
 
             //Interlocked.Add(ref Network.Sent, data.Count);
 
             try
             {
-                _stream.BeginWrite(data.ToArray(), 0, data.Count, SendData, Disconnecting);
+                Stream stream = _stream;
+                if (stream == null)
+                {
+                    _sendGate.Complete();
+                    Disconnect(0);
+                    return false;
+                }
+
+                stream.BeginWrite(data.ToArray(), 0, data.Count, SendData, (stream, _sendGate, completed));
+                return true;
             }
             catch
             {
-                Disconnecting = true;
+                _sendGate.Complete();
+                Disconnect(0);
+                completed?.Invoke();
+                return false;
             }
         }
         private void SendData(IAsyncResult result)
         {
+            var state = ((Stream, StreamWriteGate, Action))result.AsyncState;
             try
             {
-                _stream.EndWrite(result);
+                state.Item1.EndWrite(result);
             }
             catch
-            { }
+            {
+                Disconnect(0);
+            }
+            finally
+            {
+                try { state.Item3?.Invoke(); }
+                finally { state.Item2.Complete(); }
+            }
         }
         
         public void Enqueue(Packet p)
@@ -310,6 +338,12 @@ namespace Server.MirNetwork
                 return;
             }
 
+            if (!_sendGate.TryEnter())
+            {
+                PacketTraceLogger.FlushIfDue();
+                return;
+            }
+
             List<byte> data = new List<byte>();
 
             while (!_sendList.IsEmpty)
@@ -328,7 +362,7 @@ namespace Server.MirNetwork
                 data.AddRange(packetBytes);
             }
 
-            BeginSend(data);
+            BeginSend(data, gateHeld: true);
             PacketTraceLogger.FlushIfDue();
         }
 
@@ -841,6 +875,7 @@ namespace Server.MirNetwork
             _retryList = null;
             _rawData = null;
 
+            _sendGate.Dispose();
             _stream?.Dispose();
             if (_client != null) _client.Client.Dispose();
             _client = null;
@@ -860,8 +895,9 @@ namespace Server.MirNetwork
 
             data.AddRange(new S.Disconnect { Reason = reason }.GetPacketBytes());
 
-            BeginSend(data);
             SoftDisconnect(reason);
+            if (!BeginSend(data, () => Disconnect(reason)))
+                Disconnect(reason);
         }
         public void CleanObservers()
         {
@@ -897,8 +933,9 @@ namespace Server.MirNetwork
 
                     data.AddRange(new S.ClientVersion { Result = 0 }.GetPacketBytes());
 
-                    BeginSend(data);
                     SoftDisconnect(10);
+                    if (!BeginSend(data, () => Disconnect(10)))
+                        Disconnect(10);
                     MessageQueue.Enqueue(SessionID + "断开连接 客户端版本错误");
                     return;
                 }
