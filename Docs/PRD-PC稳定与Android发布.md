@@ -125,10 +125,19 @@ GATE-P0 ──► GATE-P1 ──► GATE-P2 ──► GATE-P3 ──► GATE-P4 
 1. 每个会话只领取一个有独立退出条件的任务，明确负责的文件/模块；禁止多会话同时修改同一核心文件。
 2. 任务分支从同一个已验证基线创建，会话内自行实现、测试、分阶段提交；不直接在共享 `main` 工作区并行写入。
 3. 每个任务交付“提交 + 测试输出 + 门禁证据”；只有达到本任务退出条件才能进入集成队列。
-4. 由单一集成会话按依赖顺序合并；每次合并后跑局部回归，一批任务合并后跑完整测试/CI，失败时只回退引入问题的任务提交。
+4. 由单一集成会话按依赖顺序合并；每次合并后跑局部回归，一批任务合并后跑完整测试/CI，失败时只回退引入问题的任务提交。任务达到退出条件且集成验证通过后，集成会话自主合并并推送远程，不再逐次要求人工确认；仅破坏性操作、门禁定义冲突或不可恢复风险需升级。
 5. 下一门禁的分支不得提前合并。高冲突区（`Shared/Packet.cs`、主循环、网络发送队列、数据库 Schema）默认单会话独占。
 
-**当前建议并行组**：GATE-P1 先分为“真机功能验收”、“协议/资源/性能工件复核”、“CI 与文档归档”三条低冲突工作线；GATE-P1 关闭后，P2 可将 SEC-03、SEC-04/05、SEC-06 按依赖和文件边界分支并行。
+**当前可分派的独立任务**：
+
+| 任务 | 会话所有权 | 退出条件 | 并行关系 |
+|---|---|---|---|
+| P1-VERIFY-A | ANDROID-01..03 真机验收工件 | 商城/师徒/关系的截图、日志、APK/设备信息归档 | 可与 P1-VERIFY-B、P1-EVIDENCE 并行 |
+| P1-VERIFY-B | ANDROID-04..07 真机验收工件 | 坐骑/封印租赁/钓鱼/活动的截图、日志、APK/设备信息归档 | 可与 P1-VERIFY-A、P1-EVIDENCE 并行 |
+| P1-EVIDENCE | PROTO-01/BASE-10/PERF-00 已有工件复核 | 清单可读、兼容/资源/性能专项绿，证据归档 | 可与两组真机验收并行 |
+| P1-INTEGRATE | GATE-P1 集成与文档状态 | 前三项已合并，完整测试/远程 CI 绿，§4.3 快照更新 | 被前三项阻塞，不并行合并 |
+
+GATE-P1 关闭后，P2 的 SEC-03、SEC-04、SEC-05、SEC-06 各为独立任务；只有依赖已满足且文件所有权不冲突的任务才能并行。
 
 ### P0 可复现基线 + .NET 10 迁移（阻塞，4~6 周）
 
@@ -149,7 +158,7 @@ GATE-P0 ──► GATE-P1 ──► GATE-P2 ──► GATE-P3 ──► GATE-P4 
 
 **GATE-P0 当前状态（2026-08-06）：已完成。** 在提交 [`4436426`](https://github.com/Mufeisi/KuMing-monogame/commit/443642644bc709a6059caaa94d84dc7a2eee15fd) 上，[GitHub Actions run 31081000003](https://github.com/Mufeisi/KuMing-monogame/actions/runs/31081000003) 的 `Windows build (solution filter)`、`General tests (discovered projects)`、`Android Release arm64 AOT publish` 三个 job 全绿，Android arm64 AOT 发布工件已上传。BASE-06 的 x86_64 模拟器 Debug/Release/AOT+Trim/Trim-only 四态仍为已验收；本次 arm64 AOT 发布不等同真机测试，arm64 真机四态仍延期至 RELEASE-03。约 11GB 的 BASE-02b CI 裸 clone 外部资源镜像仍在 backlog；本次提交已将 Micro 启动工件纳入仓库。
 
-**P1 入口：从 `ANDROID-01` 开始。** `ANDROID-01..07`、`PROTO-01`、`BASE-10` 与 `PERF-00` 按现有顺序继续，均未因 GATE-P0 完成而关闭。
+**P1 当前入口：从真机验收与工件复核开始。** ANDROID-01..07 的代码实现、PROTO-01、BASE-10 与 PERF-00 代码退出项已有工件，不得重复领取；当前任务队列见 §4.4。
 
 ### P1 Android 真机闭环 + 协议盘点（5~6 周）
 
