@@ -148,6 +148,8 @@ GATE-P0 ──► GATE-P1 ──► GATE-P2 ──► GATE-P3 ──► GATE-P4 
 | SEC-05 | **配置秘密治理**：生产密钥仅受保护密钥存储（CI 短暂获取，不常驻环境变量）；启动强校验禁止默认 GM 密码/公网 HTTP 管理端点 | SEC-02 | 正式服无法以弱配置启动 |
 | SEC-06 | **微端签名格式确定**：ECDSA 签名格式（canonical JSON 或二进制）、Key ID、密钥轮换、单调版本防降级、最低兼容版本（密钥实现与流水线在 RELEASE） | GATE-P1/BASE-10 | 签名格式文档化 + 校验实现（T-07 前置） |
 
+**SEC-01 实施记录（2026-08-08）**：服务端 `AccountInfo.Password` 与注册/改密入口统一写入 Argon2id PHC（`v=19,m=32768 KiB,t=3,p=1`，盐 16 字节，输出 32 字节）；实现使用固定版本 `Konscious.Security.Cryptography.Argon2` 1.3.1（MIT，支持 net10），PHC 编解码和固定时比较在服务端边界完成。旧 PBKDF2-SHA1（50 次、现有 24 字节盐）仅在成功认证时兼容一次并立即重哈希，错误密码和畸形 PHC 不升级；兼容回退期限暂定为 2026-12-31，届时移除旧格式验证路径（若迁移未完成需另立安全变更）。PC 与移动正式版加载时清理旧密码字段，保存始终写空值；移动端 `RememberPassword` 固定为 false，不再作为保存条件。SmokeTest 若需要密码，只接受显式环境变量 `LYOCRYSTAL_SMOKETEST_PASSWORD` 或本次进程内存注入，不写配置。T-03/T-04/T-05 专项证据见 `Tests/Base05.Tests`，SEC-02/TLS、Credential Manager/Keystore 仍按后续任务处理。
+
 **GATE-P2 退出条件**：公开测试前安全项全部完成；凭据不通过未加密网络传输；公网无 V1 明文登录。
 
 ### P3 SQLite 生产化（3~5 周）

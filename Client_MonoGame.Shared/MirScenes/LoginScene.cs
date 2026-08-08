@@ -30,6 +30,7 @@ namespace MonoShare.MirScenes
 	        private bool _manualLoginAttempted;
 	        private bool _smokeTestAutoCreateAccountPending;
 	        private bool _smokeTestAutoLoginSent;
+	        private string _smokeTestPassword = string.Empty;
 	        private NewAccountDialog _account;
 	        private ChangePasswordDialog _password;
 
@@ -437,7 +438,10 @@ namespace MonoShare.MirScenes
 	            _autoLoginAttempted = true;
 
 	            string account = Settings.AccountID ?? string.Empty;
-	            string password = Settings.Password ?? string.Empty;
+	            // SmokeTest 密码只允许显式环境变量或本次进程内存注入，绝不从配置读取或保存。
+	            string password = Environment.GetEnvironmentVariable("LYOCRYSTAL_SMOKETEST_PASSWORD") ??
+	                              Settings.Password ?? string.Empty;
+	            _smokeTestPassword = password;
 
 	            if (string.IsNullOrWhiteSpace(account) || string.IsNullOrWhiteSpace(password))
 	            {
@@ -504,7 +508,7 @@ namespace MonoShare.MirScenes
                     if (p.Result == 8 || p.Result == 7)
                     {
                         string account = Settings.AccountID ?? string.Empty;
-                        string password = Settings.Password ?? string.Empty;
+	                        string password = _smokeTestPassword;
                         if (!string.IsNullOrWhiteSpace(account) && !string.IsNullOrWhiteSpace(password))
 	                        EnqueueSmokeTestLogin(account, password);
                     }

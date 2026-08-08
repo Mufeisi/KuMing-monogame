@@ -23,8 +23,8 @@ namespace Server.MirDatabase
             get { return password; }
             set
             {                
-                Salt = Crypto.GenerateSalt();
-                password = Crypto.HashPassword(value, Salt);
+                password = PasswordHasher.Hash(value ?? string.Empty);
+                Salt = Array.Empty<byte>();
                 
             }
         }
@@ -34,7 +34,20 @@ namespace Server.MirDatabase
         internal void SetPasswordHashAndSalt(string passwordHash, byte[] salt)
         {
             password = passwordHash ?? string.Empty;
-            Salt = salt ?? Array.Empty<byte>();
+            Salt = PasswordHasher.IsArgon2idHash(password)
+                ? Array.Empty<byte>()
+                : salt == null ? Array.Empty<byte>() : (byte[])salt.Clone();
+        }
+
+        internal PasswordVerificationResult VerifyPassword(string candidate)
+        {
+            var result = PasswordHasher.Verify(password, candidate ?? string.Empty, Salt);
+            if (result == PasswordVerificationResult.ValidNeedsUpgrade)
+            {
+                Password = candidate ?? string.Empty;
+            }
+
+            return result;
         }
 
         public string UserName = string.Empty;

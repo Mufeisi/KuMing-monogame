@@ -317,7 +317,7 @@ namespace Client
 
             //Game
             AccountID = Reader.ReadString("Game", "AccountID", AccountID);
-            Password = Reader.ReadString("Game", "Password", Password);
+            Password = Shared.Security.PasswordStoragePolicy.ClearOnLoad(value => Reader.Write("Game", "Password", value));
 
             SkillMode = Reader.ReadBoolean("Game", "SkillMode", SkillMode);
             SkillBar = Reader.ReadBoolean("Game", "SkillBar", SkillBar);
@@ -372,7 +372,7 @@ namespace Client
             P_PatchFileName = Reader.ReadString("Launcher", "PatchFile", P_PatchFileName);
             P_NeedLogin = Reader.ReadBoolean("Launcher", "NeedLogin", P_NeedLogin);
             P_Login = Reader.ReadString("Launcher", "Login", P_Login);
-            P_Password = Reader.ReadString("Launcher", "Password", P_Password);
+            P_Password = Shared.Security.PasswordStoragePolicy.ClearOnLoad(value => Reader.Write("Launcher", "Password", value));
             P_AutoStart = Reader.ReadBoolean("Launcher", "AutoStart", P_AutoStart);
             P_ServerName = Reader.ReadString("Launcher", "ServerName", P_ServerName);
             P_BrowserAddress = Reader.ReadString("Launcher", "Browser", P_BrowserAddress);
@@ -429,7 +429,7 @@ namespace Client
 
             //Game
             Reader.Write("Game", "AccountID", AccountID);
-            Reader.Write("Game", "Password", Password);
+            Shared.Security.PasswordStoragePolicy.ClearOnSave(value => Reader.Write("Game", "Password", value));
             Reader.Write("Game", "SkillMode", SkillMode);
             Reader.Write("Game", "SkillBar", SkillBar);
             //Reader.Write("Game", "SkillSet", SkillSet);
@@ -484,7 +484,7 @@ namespace Client
             Reader.Write("Launcher", "PatchFile", P_PatchFileName);
             Reader.Write("Launcher", "NeedLogin", P_NeedLogin);
             Reader.Write("Launcher", "Login", P_Login);
-            Reader.Write("Launcher", "Password", P_Password);
+            Shared.Security.PasswordStoragePolicy.ClearOnSave(value => Reader.Write("Launcher", "Password", value));
             Reader.Write("Launcher", "ServerName", P_ServerName);
             Reader.Write("Launcher", "Browser", P_BrowserAddress);
             Reader.Write("Launcher", "AutoStart", P_AutoStart);

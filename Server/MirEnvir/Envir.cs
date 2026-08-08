@@ -4776,8 +4776,7 @@ namespace Server.MirEnvir
             account.BanReason = string.Empty;
             account.ExpiryDate = DateTime.MinValue;
 
-            p.CurrentPassword = Utils.Crypto.HashPassword(p.CurrentPassword, account.Salt);
-            if (string.CompareOrdinal(account.Password, p.CurrentPassword) != 0)
+            if (account.VerifyPassword(p.CurrentPassword) == Utils.PasswordVerificationResult.Invalid)
             {
                 c.Enqueue(new ServerPackets.ChangePassword { Result = 5 });
                 return;
@@ -4830,9 +4829,7 @@ namespace Server.MirEnvir
             account.BanReason = string.Empty;
             account.ExpiryDate = DateTime.MinValue;
 
-            p.Password = Utils.Crypto.HashPassword(p.Password, account.Salt);
-
-            if (string.CompareOrdinal(account.Password, p.Password) != 0)
+            if (account.VerifyPassword(p.Password) == Utils.PasswordVerificationResult.Invalid)
             {
                 if (account.WrongPasswordCount++ >= 5)
                 {
@@ -4910,7 +4907,7 @@ namespace Server.MirEnvir
             }
             account.BanReason = string.Empty;
             account.ExpiryDate = DateTime.MinValue;
-            if (string.CompareOrdinal(account.Password, Password) != 0)
+            if (account.VerifyPassword(Password) == Utils.PasswordVerificationResult.Invalid)
             {
                 if (account.WrongPasswordCount++ >= 5)
                 {

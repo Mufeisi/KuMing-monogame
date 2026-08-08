@@ -2,6 +2,7 @@ using System;
 using System.Drawing;
 using System.IO;
 using MonoShare.MirSounds;
+using Shared.Security;
 
 namespace MonoShare
 {
@@ -319,7 +320,8 @@ namespace MonoShare
 
         public static string AccountID = "",
                              Password = "";
-        public static bool RememberPassword = Environment.OSVersion.Platform == PlatformID.Win32NT;
+        // 正式版不持久化密码；保留运行时字段仅供登录界面和显式内存注入使用。
+        public static bool RememberPassword = PasswordStoragePolicy.RememberPassword;
 
         public static bool
             SkillMode = false,
@@ -557,10 +559,8 @@ namespace MonoShare
             MusicVolume = Reader.ReadByte("Sound", "Music", MusicVolume);
 
             AccountID = Reader.ReadString("Game", "AccountID", AccountID);
-            RememberPassword = Reader.ReadBoolean("Game", "RememberPassword", RememberPassword);
-            Password = Reader.ReadString("Game", "Password", Password);
-            if (!RememberPassword)
-                Password = string.Empty;
+            RememberPassword = PasswordStoragePolicy.RememberPassword;
+            Password = PasswordStoragePolicy.ClearOnLoad(value => Reader.Write("Game", "Password", value));
 
             SkillMode = Reader.ReadBoolean("Game", "SkillMode", SkillMode);
             SkillBar = Reader.ReadBoolean("Game", "SkillBar", SkillBar);
@@ -605,7 +605,7 @@ namespace MonoShare
             P_PatchFileName = Reader.ReadString("Launcher", "PatchFile", P_PatchFileName);
             P_NeedLogin = Reader.ReadBoolean("Launcher", "NeedLogin", P_NeedLogin);
             P_Login = Reader.ReadString("Launcher", "Login", P_Login);
-            P_Password = Reader.ReadString("Launcher", "Password", P_Password);
+            P_Password = PasswordStoragePolicy.ClearOnLoad(value => Reader.Write("Launcher", "Password", value));
             P_AutoStart = Reader.ReadBoolean("Launcher", "AutoStart", P_AutoStart);
             P_ServerName = Reader.ReadString("Launcher", "ServerName", P_ServerName);
             P_BrowserAddress = Reader.ReadString("Launcher", "Browser", P_BrowserAddress);
@@ -710,8 +710,7 @@ namespace MonoShare
             Reader.Write("Sound", "SoundOverLap", SoundOverLap);
 
             Reader.Write("Game", "AccountID", AccountID);
-            Reader.Write("Game", "RememberPassword", RememberPassword);
-            Reader.Write("Game", "Password", RememberPassword ? Password : string.Empty);
+            PasswordStoragePolicy.ClearOnSave(value => Reader.Write("Game", "Password", value));
             Reader.Write("Game", "SkillMode", SkillMode);
             Reader.Write("Game", "SkillBar", SkillBar);
             Reader.Write("Game", "Effect", Effect);
@@ -755,7 +754,7 @@ namespace MonoShare
             Reader.Write("Launcher", "PatchFile", P_PatchFileName);
             Reader.Write("Launcher", "NeedLogin", P_NeedLogin);
             Reader.Write("Launcher", "Login", P_Login);
-            Reader.Write("Launcher", "Password", P_Password);
+            PasswordStoragePolicy.ClearOnSave(value => Reader.Write("Launcher", "Password", value));
             Reader.Write("Launcher", "ServerName", P_ServerName);
             Reader.Write("Launcher", "Browser", P_BrowserAddress);
             Reader.Write("Launcher", "AutoStart", P_AutoStart);

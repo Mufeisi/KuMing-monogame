@@ -3,6 +3,7 @@ using Server.MirDatabase;
 using Server.MirEnvir;
 using Server.Persistence;
 using Server.Persistence.Sql;
+using Server.Utils;
 using Shared.Diagnostics;
 using Xunit;
 
@@ -28,6 +29,7 @@ public sealed class SqlPersistenceRoundTripTests
                 AccountID = "base05-account",
                 UserName = "Base05",
                 Gold = 1234,
+                Password = "roundtrip-secret",
             };
             var character = new CharacterInfo
             {
@@ -83,6 +85,9 @@ public sealed class SqlPersistenceRoundTripTests
             var restoredAccount = Assert.Single(restored.AccountList);
             var restoredCharacter = Assert.Single(restored.CharacterList);
             Assert.Equal("base05-account", restoredAccount.AccountID);
+            Assert.StartsWith("$argon2id$v=19$", restoredAccount.Password, StringComparison.Ordinal);
+            Assert.Empty(restoredAccount.Salt);
+            Assert.Equal(PasswordVerificationResult.Valid, restoredAccount.VerifyPassword("roundtrip-secret"));
             Assert.Equal(1234u, restoredAccount.Gold);
             Assert.Equal(101, restoredAccount.Index);
             Assert.Equal("base05-character", restoredCharacter.Name);

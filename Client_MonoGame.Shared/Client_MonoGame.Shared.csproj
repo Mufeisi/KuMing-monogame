@@ -28,6 +28,7 @@
 
   <ItemGroup Condition="'$(TargetFramework)' == 'net10.0'">
     <Compile Include="..\Shared\Diagnostics\PerformanceMetrics.cs" Link="Diagnostics\PerformanceMetrics.cs" />
+    <Compile Include="..\Shared\Security\PasswordStoragePolicy.cs" Link="Security\PasswordStoragePolicy.cs" />
     <Compile Include="InternalsVisibleTo.BootstrapRuntimeSmokeTest.cs" />
     <Compile Include="BootstrapPackageRuntime.cs" />
     <Compile Include="BootstrapPackageDownloader.cs" />
@@ -45,6 +46,7 @@
 
   <ItemGroup Condition="'$(TargetFramework)' == 'net10.0-android'">
     <Compile Include="..\Shared\Diagnostics\PerformanceMetrics.cs" Link="Diagnostics\PerformanceMetrics.cs" />
+    <Compile Include="..\Shared\Security\PasswordStoragePolicy.cs" Link="Security\PasswordStoragePolicy.cs" />
     <Compile Include="InternalsVisibleTo.BootstrapRuntimeSmokeTest.cs" />
     <Compile Include="BootstrapPackageRuntime.cs" />
     <Compile Include="BootstrapPackageDownloader.cs" />
@@ -68,6 +70,7 @@
 
   <ItemGroup Condition="'$(TargetFramework)' == 'net10.0-ios'">
     <Compile Include="..\Shared\Diagnostics\PerformanceMetrics.cs" Link="Diagnostics\PerformanceMetrics.cs" />
+    <Compile Include="..\Shared\Security\PasswordStoragePolicy.cs" Link="Security\PasswordStoragePolicy.cs" />
     <Compile Include="InternalsVisibleTo.BootstrapRuntimeSmokeTest.cs" />
     <Compile Include="BootstrapPackageRuntime.cs" />
     <Compile Include="BootstrapPackageDownloader.cs" />
