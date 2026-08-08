@@ -1,0 +1,12 @@
+{
+  "开始时间": "2026-08-09T01:01:28.0642215+08:00",
+  "结束时间": "2026-08-09T01:01:36.9841442+08:00",
+  "设备": "127.0.0.1:21503",
+  "清理日志退出码": 0,
+  "停止应用退出码": 0,
+  "启动命令": "am start -n com.lommir.client.monogame.android/crc[REDACTED].MainActivity",
+  "启动退出码": 0,
+  "启动输出": "Starting: Intent { cmp=com.lommir.client.monogame.android/crc[REDACTED].MainActivity }",
+  "前台状态": "mResumedActivity/ResumedActivity: com.lommir.client.monogame.android/crc[REDACTED].MainActivity（ActivityRecord 标识已脱敏）",
+  "截图退出码": 0
+}

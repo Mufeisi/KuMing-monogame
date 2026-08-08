@@ -1,0 +1,14 @@
+# 预登录/资源阻塞过滤日志（不含原始全量 logcat）
+
+设备：`127.0.0.1:21503`（Android 模拟器/虚拟设备）
+采集包：`com.lommir.client.monogame.android`
+过滤结果：仅保留预登录资源同步、Bootstrap 索引失败与 FGUI 探针行；进程/线程标识已脱敏。
+
+```text
+08-09 01:06:05.404 D LomMir2 : FairyGUI: 预登录更新阶段等待默认 FGUI 包资源同步，fui-retro=declared (hydrated=0/30, staged=0)，缺少探针=BaseRes_fui.bytes, UIRes_fui.bytes, Font_fui.bytes 等
+08-09 01:06:05.549 E LomMir2-Err: PreLoginUpdate 下载版本索引失败：Url=http://127.0.0.1:7777/api/file/Packages/bootstrap-package-index.json Error=Connection failure
+08-09 01:06:06.525 D LomMir2 : FairyGUI: 默认 FGUI 包尚未就绪，fui-retro=declared (hydrated=0/30, staged=0)，缺少探针=BaseRes_fui.bytes, UIRes_fui.bytes, Font_fui.bytes 等
+08-09 01:06:12.110 D LomMir2 : FairyGUI: 默认 FGUI 包尚未就绪，fui-retro=declared (hydrated=0/30, staged=0)，缺少探针=BaseRes_fui.bytes, UIRes_fui.bytes, Font_fui.bytes 等
+```
+
+结论：Bootstrap 版本索引连接失败且默认 FGUI 包探针未就绪；应用停留登录页，无法进入角色/游戏场景。未保存原始全量日志。
