@@ -4646,9 +4646,10 @@ namespace Server.MirEnvir
 
         private void Connection(IAsyncResult result)
         {
+            var listener = _listener;
             try
             {
-                if (!Running || !_listener.Server.IsBound) return;
+                if (!Running || listener is null || !listener.Server.IsBound) return;
             }
             catch (Exception e)
             {
@@ -4657,7 +4658,7 @@ namespace Server.MirEnvir
 
             try
             {
-                var tempTcpClient = _listener.EndAcceptTcpClient(result);
+                var tempTcpClient = listener.EndAcceptTcpClient(result);
 
                 bool connected = false;
                 var ipAddress = tempTcpClient.Client.RemoteEndPoint.ToString().Split(':')[0];
@@ -4706,8 +4707,8 @@ namespace Server.MirEnvir
                 while (Connections.Count >= Settings.MaxUser)
                     Thread.Sleep(1);
 
-                if (Running && _listener.Server.IsBound)
-                    _listener.BeginAcceptTcpClient(Connection, null);
+                if (Running && listener is not null && listener.Server.IsBound)
+                    listener.BeginAcceptTcpClient(Connection, null);
             }
         }
 

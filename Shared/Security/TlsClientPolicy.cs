@@ -23,6 +23,9 @@ public static class TlsClientPolicy
         };
     }
 
+    public static string FormatFailure(Exception error, string host, int port) =>
+        $"TLS连接失败：{error.GetType().Name} {host}:{port}；请检查系统时间、TlsServerName 是否匹配证书 SAN，以及证书链和有效期。";
+
     public static bool IsLoopbackHost(string host)
     {
         if (string.IsNullOrWhiteSpace(host))

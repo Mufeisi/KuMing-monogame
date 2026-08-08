@@ -162,6 +162,8 @@ GATE-P0 ──► GATE-P1 ──► GATE-P2 ──► GATE-P3 ──► GATE-P4 
 
 **SEC-02 C2 单写者收口记录（2026-08-08）**：Shared 新增 `StreamWriteGate` 原子门闩，Server `MirConnection`、PC 与 Mono/Android Network 在从现有发送队列取批次前先占用门闩，忙时保留队列并返回；`EndWrite` 回调在 `finally` 释放，写入失败统一断开，重连时旧门闩与旧流回调不会释放或断开新连接。Server 断开包仅在门闩空闲时尽力发送，忙时走幂等关闭，不与普通写重叠；未复制 Packet/业务队列、未增加后台线程。C2 门闩专项 4/4，TLS+C2 专项 18/18，Base05 全量 189/189；Server.Library、PC Release、Mono net10 Release 构建均 0 错误。Android 构建留待 C3 最终轮次。
 
+**SEC-02 C3 收口记录（2026-08-08）**：真实服务端验收拆为四个相互独立的生产路径用例：错误 PFX 密码失败后修正重启、TLS KeepAlive 往返、回环 V1 KeepAlive 往返、TLS 端口占用失败后释放重启；每例独立临时 SQLite/端口/证书/密码环境作用域，临时目录清理失败仅记录并保留路径，不阻断测试。客户端 TLS 失败提示补充系统时间、`TlsServerName`/证书 SAN、证书链和有效期排障线索；运维配置见 `Docs/SEC-02-TLS运维配置.md`（PFX、`LYOCRYSTAL_TLS_CERT_PASSWORD`、TLS 1.2、轮换/回滚/到期监控、客户端时钟、公网 V1 禁止及私网 V1 2026-12-31 停止）。C3 专项 4/4、TLS/生命周期合并专项 21/21、Base05 全量 194/194；Server.Library、Server.MirForms、PC、Mono net10 Release 与 Android Release 构建均 0 错误（既有警告不阻断）。
+
 **SEC-01 后续（P2，待用户批准）**：HTTPLogin 的线程事务边界（工作线程进入主线程、认证/账户状态提交及失败回滚）与真实 PC/移动 Settings-登录集成测试仍未实现，单独立项后再做；不阻塞本次 P1 收口，也不在本次提交引入 Credential Manager、Keystore 或其它 SEC-02 代码。
 
 **GATE-P2 退出条件**：公开测试前安全项全部完成；凭据不通过未加密网络传输；公网无 V1 明文登录。

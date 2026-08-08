@@ -12,6 +12,7 @@ using Xunit;
 
 namespace Base05.Tests;
 
+[Collection("TLS环境")]
 public sealed class TlsTransportTests
 {
     [Fact]
@@ -135,6 +136,16 @@ public sealed class TlsTransportTests
         Assert.Null(options.RemoteCertificateValidationCallback);
         Assert.Null(options.CertificateChainPolicy);
         Assert.Null(options.ClientCertificates);
+    }
+
+    [Fact]
+    public void TLS连接失败提示包含排障线索()
+    {
+        string message = TlsClientPolicy.FormatFailure(new AuthenticationException("test"), "game.example", 7001);
+        Assert.Contains("系统时间", message);
+        Assert.Contains("TlsServerName", message);
+        Assert.Contains("证书 SAN", message);
+        Assert.Contains("证书链和有效期", message);
     }
 
     [Fact]
@@ -432,4 +443,9 @@ public sealed class TlsTransportTests
         Directory.CreateDirectory(directory);
         return directory;
     }
+}
+
+[CollectionDefinition("TLS环境", DisableParallelization = true)]
+public sealed class TlsEnvironmentCollection
+{
 }

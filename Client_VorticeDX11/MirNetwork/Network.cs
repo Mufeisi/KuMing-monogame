@@ -142,7 +142,7 @@ namespace Client.MirNetwork
             {
                 if (Settings.LogErrors)
                     CMain.SaveError(_usingTls
-                        ? $"TLS连接失败：{ex.GetType().Name} {_activePort}"
+                        ? TlsClientPolicy.FormatFailure(ex, Settings.IPAddress, _activePort)
                         : ex.ToString());
                 Disconnect();
             }
