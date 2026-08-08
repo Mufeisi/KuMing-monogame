@@ -61,6 +61,7 @@ namespace Server
         public static string IPAddress = "127.0.0.1";
 
         public static ushort Port = 7000,
+                             TlsPort = 7001,
                              TimeOut = 10000,
                              MaxUser = 500,
                              RelogDelay = 50,
@@ -68,6 +69,9 @@ namespace Server
                              MaxPacket = 50;
 
         public static int IPBlockSeconds = 5;
+        public static bool TlsEnabled = false,
+                           AllowLegacyV1 = false;
+        public static string TlsCertificatePath = string.Empty;
         public static bool TracePackets = false;
         public static string TracePacketsLogPath = @".\Logs\PacketTrace.log";
         public static int TracePacketsRotateMB = 20;
@@ -448,6 +452,10 @@ namespace Server
             //Paths
             IPAddress = Reader.ReadString("Network", "IPAddress", IPAddress);
             Port = Reader.ReadUInt16("Network", "Port", Port);
+            TlsEnabled = Reader.ReadBoolean("Network", "TlsEnabled", TlsEnabled);
+            TlsPort = Reader.ReadUInt16("Network", "TlsPort", TlsPort);
+            AllowLegacyV1 = Reader.ReadBoolean("Network", "AllowLegacyV1", AllowLegacyV1);
+            TlsCertificatePath = Reader.ReadString("Network", "TlsCertificatePath", TlsCertificatePath);
             TimeOut = Reader.ReadUInt16("Network", "TimeOut", TimeOut);
             MaxUser = Reader.ReadUInt16("Network", "MaxUser", MaxUser);
             MaxIP = Reader.ReadUInt16("Network", "MaxIP", MaxIP);
@@ -753,6 +761,10 @@ namespace Server
             //Paths
             Reader.Write("Network", "IPAddress", IPAddress);
             Reader.Write("Network", "Port", Port);
+            Reader.Write("Network", "TlsEnabled", TlsEnabled);
+            Reader.Write("Network", "TlsPort", TlsPort);
+            Reader.Write("Network", "AllowLegacyV1", AllowLegacyV1);
+            Reader.Write("Network", "TlsCertificatePath", TlsCertificatePath);
             Reader.Write("Network", "TimeOut", TimeOut);
             Reader.Write("Network", "MaxUser", MaxUser);
             Reader.Write("Network", "MaxIP", MaxIP);

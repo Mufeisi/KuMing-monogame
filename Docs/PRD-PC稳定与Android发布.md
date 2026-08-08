@@ -152,6 +152,8 @@ GATE-P0 ──► GATE-P1 ──► GATE-P2 ──► GATE-P3 ──► GATE-P4 
 
 **SEC-01 P1 收口记录（2026-08-08）**：旧 PBKDF2 摘要的历史实现是 24 字节结果直接 `Encoding.UTF8.GetString`；兼容验证在 PBKDF2 派生和 `Encoding.GetBytes` 前限制不超过 24 个 UTF-16 单元并拒绝未配对代理项，转换仍在受控异常边界内，超长/非法输入不升级。PC 与移动 Settings 在构造 `InIReader` 前通过 `Shared.Security.SensitiveIniSanitizer` 读取快照，遍历并删除 `Game`/`Launcher` 节内全部重复 `Password`、`RememberPassword` 键后以同目录临时文件原子替换；读取、写入或替换失败即抛出并阻止空配置继续启动。PC 补丁源在 `NeedLogin=true` 时只从运行时环境读取 `LYOCRYSTAL_PATCH_PASSWORD`（用户名可由 `LYOCRYSTAL_PATCH_USER` 覆盖配置），凭据仅在内存组装 Basic Auth；缺少凭据时记录无秘密错误并提示，清空下载队列，不发送 `用户名:`。P1 专项证据见 `PasswordSecurityTests`、`PasswordStoragePolicyTests`。
 
+**SEC-02 阶段A实施记录（2026-08-08）**：服务端新增独立 TLS V2 端口与 `SslStream` 传输接缝，最低 TLS 1.2；证书路径来自正式配置，证书密码只从运行时环境变量 `LYOCRYSTAL_TLS_CERT_PASSWORD` 读取；非回环地址默认关闭 V1 明文监听，仅回环或显式开发开关允许。T-02 阶段A已用临时自签证书完成严格信任握手、现有 Packet 往返、过期/不受信任证书拒绝、端口冲突与双监听停止释放验证。PC/Mono/Android 客户端 TLS 接线、客户端域名/链校验和 ConfigForm 配置界面留待阶段B，当前不宣称完成。
+
 **SEC-01 后续（P2，待用户批准）**：HTTPLogin 的线程事务边界（工作线程进入主线程、认证/账户状态提交及失败回滚）与真实 PC/移动 Settings-登录集成测试仍未实现，单独立项后再做；不阻塞本次 P1 收口，也不在本次提交引入 Credential Manager、Keystore 或其它 SEC-02 代码。
 
 **GATE-P2 退出条件**：公开测试前安全项全部完成；凭据不通过未加密网络传输；公网无 V1 明文登录。

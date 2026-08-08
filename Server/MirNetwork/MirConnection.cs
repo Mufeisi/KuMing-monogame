@@ -1,4 +1,5 @@
 ﻿using System.Collections.Concurrent;
+using System.IO;
 using System.Net.Sockets;
 using Server.MirDatabase;
 using Server.MirEnvir;
@@ -31,6 +32,7 @@ namespace Server.MirNetwork
         public GameStage Stage;
 
         private TcpClient _client;
+        private readonly Stream _stream;
         private ConcurrentQueue<Packet> _receiveList;
         private ConcurrentQueue<Packet> _sendList; 
         private Queue<Packet> _retryList;
@@ -85,7 +87,7 @@ namespace Server.MirNetwork
         private int _dataCounter;
         private FixedSizedQueue<Packet> _lastPackets;
 
-        public MirConnection(int sessionID, TcpClient client)
+        public MirConnection(int sessionID, TcpClient client, Stream stream = null)
         {
             SessionID = sessionID;
             IPAddress = client.Client.RemoteEndPoint.ToString().Split(':')[0];
@@ -96,6 +98,7 @@ namespace Server.MirNetwork
 
             _client = client;
             _client.NoDelay = true;
+            _stream = stream ?? client.GetStream();
 
             TimeConnected = Envir.Time;
             TimeOutTime = TimeConnected + Settings.TimeOut;
@@ -131,7 +134,7 @@ namespace Server.MirNetwork
 
             try
             {
-                _client.Client.BeginReceive(_rawBytes, 0, _rawBytes.Length, SocketFlags.None, ReceiveData, _rawBytes);
+                _stream.BeginRead(_rawBytes, 0, _rawBytes.Length, ReceiveData, _rawBytes);
             }
             catch
             {
@@ -147,7 +150,7 @@ namespace Server.MirNetwork
 
             try
             {
-                dataRead = _client.Client.EndReceive(result);
+                dataRead = _stream.EndRead(result);
             }
             catch
             {
@@ -229,7 +232,7 @@ namespace Server.MirNetwork
 
             try
             {
-                _client.Client.BeginSend(data.ToArray(), 0, data.Count, SocketFlags.None, SendData, Disconnecting);
+                _stream.BeginWrite(data.ToArray(), 0, data.Count, SendData, Disconnecting);
             }
             catch
             {
@@ -240,7 +243,7 @@ namespace Server.MirNetwork
         {
             try
             {
-                _client.Client.EndSend(result);
+                _stream.EndWrite(result);
             }
             catch
             { }
@@ -838,6 +841,7 @@ namespace Server.MirNetwork
             _retryList = null;
             _rawData = null;
 
+            _stream?.Dispose();
             if (_client != null) _client.Client.Dispose();
             _client = null;
         }

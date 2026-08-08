@@ -1,0 +1,81 @@
+using System.Net;
+using System.Net.Security;
+using System.Security.Authentication;
+using System.Security.Cryptography.X509Certificates;
+
+namespace Server.MirNetwork;
+
+public static class TlsTransportPolicy
+{
+    public const string CertificatePasswordEnvironmentVariable = "LYOCRYSTAL_TLS_CERT_PASSWORD";
+    public const SslProtocols MinimumProtocols = SslProtocols.Tls12 | SslProtocols.Tls13;
+
+    public static bool ShouldStartLegacyV1(IPAddress address, bool allowLegacyV1)
+    {
+        return address != null && (IPAddress.IsLoopback(address) || allowLegacyV1);
+    }
+
+    public static void ValidateTlsPorts(ushort legacyPort, ushort tlsPort)
+    {
+        if (tlsPort == 0)
+            throw new InvalidOperationException("TLS端口未配置");
+        if (tlsPort == legacyPort)
+            throw new InvalidOperationException("TLS端口不能与V1端口相同");
+    }
+
+    public static X509Certificate2 LoadServerCertificate(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+            throw new InvalidOperationException("TLS证书路径未配置");
+
+        var password = Environment.GetEnvironmentVariable(CertificatePasswordEnvironmentVariable) ?? string.Empty;
+        var certificate = X509CertificateLoader.LoadPkcs12FromFile(path, password, X509KeyStorageFlags.UserKeySet);
+        try
+        {
+            ValidateServerCertificate(certificate);
+            return certificate;
+        }
+        catch
+        {
+            certificate.Dispose();
+            throw;
+        }
+    }
+
+    public static SslStream AuthenticateServer(Stream innerStream, X509Certificate2 certificate)
+    {
+        if (innerStream == null) throw new ArgumentNullException(nameof(innerStream));
+        ValidateServerCertificate(certificate);
+
+        var ssl = new SslStream(innerStream, leaveInnerStreamOpen: false);
+        try
+        {
+            ssl.AuthenticateAsServer(certificate, clientCertificateRequired: false, MinimumProtocols, checkCertificateRevocation: false);
+            return ssl;
+        }
+        catch
+        {
+            ssl.Dispose();
+            throw;
+        }
+    }
+
+    private static void ValidateServerCertificate(X509Certificate2 certificate)
+    {
+        if (certificate == null || !certificate.HasPrivateKey)
+            throw new InvalidOperationException("TLS证书缺少私钥");
+
+        var now = DateTime.UtcNow;
+        if (certificate.NotBefore.ToUniversalTime() > now || certificate.NotAfter.ToUniversalTime() <= now)
+            throw new InvalidOperationException("TLS证书已过期或尚未生效");
+
+        using var rsa = certificate.GetRSAPrivateKey();
+        using var ecdsa = certificate.GetECDsaPrivateKey();
+        if (rsa == null && ecdsa == null)
+            throw new InvalidOperationException("TLS证书私钥算法不受支持");
+        if (rsa != null && rsa.KeySize < 2048)
+            throw new InvalidOperationException("TLS证书RSA密钥长度不足");
+        if (ecdsa != null && ecdsa.KeySize < 256)
+            throw new InvalidOperationException("TLS证书椭圆曲线密钥长度不足");
+    }
+}
