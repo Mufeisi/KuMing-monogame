@@ -81,6 +81,72 @@ public class InIReader
         {
         }
     }
+
+    /// <summary>
+    /// 删除指定节内所有同名键，并以一次写盘完成密码类配置清理。
+    /// 该专用入口不吞写盘异常，调用方可将失败交给现有启动日志处理。
+    /// </summary>
+    public int ClearKeys(string section, params string[] keys)
+    {
+        if (string.IsNullOrEmpty(section) || keys == null || keys.Length == 0)
+            return 0;
+
+        var removed = 0;
+        string currentSection = null;
+        for (var i = 0; i < _contents.Count;)
+        {
+            string line = _contents[i] ?? string.Empty;
+            if (line.Length >= 2 && line[0] == '[' && line[^1] == ']')
+            {
+                currentSection = line.Substring(1, line.Length - 2);
+                i++;
+                continue;
+            }
+
+            if (!string.Equals(currentSection, section, StringComparison.Ordinal))
+            {
+                i++;
+                continue;
+            }
+
+            var separator = line.IndexOf('=');
+            if (separator <= 0)
+            {
+                i++;
+                continue;
+            }
+
+            string key = line.Substring(0, separator);
+            var matched = false;
+            for (var keyIndex = 0; keyIndex < keys.Length; keyIndex++)
+            {
+                if (string.Equals(key, keys[keyIndex], StringComparison.Ordinal))
+                {
+                    matched = true;
+                    break;
+                }
+            }
+
+            if (!matched)
+            {
+                i++;
+                continue;
+            }
+
+            _contents.RemoveAt(i);
+            removed++;
+        }
+
+        if (removed > 0)
+            SaveSensitiveValues();
+
+        return removed;
+    }
+
+    private void SaveSensitiveValues()
+    {
+        File.WriteAllLines(_fileName, _contents);
+    }
     #endregion
 
     #region Read

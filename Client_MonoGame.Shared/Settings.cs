@@ -558,10 +558,10 @@ namespace MonoShare
             SoundOverLap = Reader.ReadInt32("Sound", "SoundOverLap", SoundOverLap);
             MusicVolume = Reader.ReadByte("Sound", "Music", MusicVolume);
 
+            PasswordStoragePolicy.ClearStoredCredentials(Reader, "Game");
             AccountID = Reader.ReadString("Game", "AccountID", AccountID);
             RememberPassword = PasswordStoragePolicy.RememberPassword;
-            Password = PasswordStoragePolicy.ClearOnLoad(value => Reader.Write("Game", "Password", value));
-            PasswordStoragePolicy.ClearRememberPasswordOnLoad(value => Reader.Write("Game", "RememberPassword", value));
+            Password = string.Empty;
 
             SkillMode = Reader.ReadBoolean("Game", "SkillMode", SkillMode);
             SkillBar = Reader.ReadBoolean("Game", "SkillBar", SkillBar);
@@ -606,8 +606,8 @@ namespace MonoShare
             P_PatchFileName = Reader.ReadString("Launcher", "PatchFile", P_PatchFileName);
             P_NeedLogin = Reader.ReadBoolean("Launcher", "NeedLogin", P_NeedLogin);
             P_Login = Reader.ReadString("Launcher", "Login", P_Login);
-            P_Password = PasswordStoragePolicy.ClearOnLoad(value => Reader.Write("Launcher", "Password", value));
-            PasswordStoragePolicy.ClearRememberPasswordOnLoad(value => Reader.Write("Launcher", "RememberPassword", value));
+            PasswordStoragePolicy.ClearStoredCredentials(Reader, "Launcher");
+            P_Password = string.Empty;
             P_AutoStart = Reader.ReadBoolean("Launcher", "AutoStart", P_AutoStart);
             P_ServerName = Reader.ReadString("Launcher", "ServerName", P_ServerName);
             P_BrowserAddress = Reader.ReadString("Launcher", "Browser", P_BrowserAddress);
@@ -712,8 +712,7 @@ namespace MonoShare
             Reader.Write("Sound", "SoundOverLap", SoundOverLap);
 
             Reader.Write("Game", "AccountID", AccountID);
-            PasswordStoragePolicy.ClearOnSave(value => Reader.Write("Game", "Password", value));
-            PasswordStoragePolicy.ClearRememberPasswordOnSave(value => Reader.Write("Game", "RememberPassword", value));
+            PasswordStoragePolicy.ClearStoredCredentials(Reader, "Game");
             Reader.Write("Game", "SkillMode", SkillMode);
             Reader.Write("Game", "SkillBar", SkillBar);
             Reader.Write("Game", "Effect", Effect);
@@ -757,8 +756,7 @@ namespace MonoShare
             Reader.Write("Launcher", "PatchFile", P_PatchFileName);
             Reader.Write("Launcher", "NeedLogin", P_NeedLogin);
             Reader.Write("Launcher", "Login", P_Login);
-            PasswordStoragePolicy.ClearOnSave(value => Reader.Write("Launcher", "Password", value));
-            PasswordStoragePolicy.ClearRememberPasswordOnSave(value => Reader.Write("Launcher", "RememberPassword", value));
+            PasswordStoragePolicy.ClearStoredCredentials(Reader, "Launcher");
             Reader.Write("Launcher", "ServerName", P_ServerName);
             Reader.Write("Launcher", "Browser", P_BrowserAddress);
             Reader.Write("Launcher", "AutoStart", P_AutoStart);

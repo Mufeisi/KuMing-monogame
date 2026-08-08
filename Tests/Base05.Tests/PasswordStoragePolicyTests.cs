@@ -75,4 +75,96 @@ public sealed class PasswordStoragePolicyTests
             if (File.Exists(path)) File.Delete(path);
         }
     }
+
+    [Fact]
+    public void 密码清除接缝删除目标节全部重复键且文件不留旧值()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"base05-password-clear-{Guid.NewGuid():N}.ini");
+        try
+        {
+            File.WriteAllText(path,
+                "[Game]\r\n" +
+                "Password=legacy-game-one\r\n" +
+                "Password=legacy-game-two\r\n" +
+                "RememberPassword=true\r\n" +
+                "RememberPassword=true\r\n" +
+                "AccountID=keep-me\r\n" +
+                "[Launcher]\r\n" +
+                "Password=legacy-launcher-one\r\n" +
+                "Password=legacy-launcher-two\r\n" +
+                "RememberPassword=true\r\n" +
+                "RememberPassword=true\r\n");
+
+            var reader = new InIReader(path);
+            Assert.Equal(4, PasswordStoragePolicy.ClearStoredCredentials(reader, "Game"));
+            Assert.Equal(4, PasswordStoragePolicy.ClearStoredCredentials(reader, "Launcher"));
+
+            var contents = File.ReadAllText(path);
+            Assert.DoesNotContain("legacy-game", contents, StringComparison.Ordinal);
+            Assert.DoesNotContain("legacy-launcher", contents, StringComparison.Ordinal);
+            Assert.DoesNotContain("Password=", contents, StringComparison.Ordinal);
+            Assert.DoesNotContain("RememberPassword=", contents, StringComparison.Ordinal);
+            Assert.Contains("AccountID=keep-me", contents, StringComparison.Ordinal);
+        }
+        finally
+        {
+            if (File.Exists(path)) File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public void 密码清除写盘失败会抛出而不是静默吞掉()
+    {
+        if (!OperatingSystem.IsWindows())
+            return;
+
+        var path = Path.Combine(Path.GetTempPath(), $"base05-password-readonly-{Guid.NewGuid():N}.ini");
+        try
+        {
+            File.WriteAllText(path, "[Game]\r\nPassword=legacy\r\n");
+            File.SetAttributes(path, FileAttributes.ReadOnly);
+            var reader = new InIReader(path);
+
+            Assert.ThrowsAny<Exception>(() => PasswordStoragePolicy.ClearStoredCredentials(reader, "Game"));
+        }
+        finally
+        {
+            if (File.Exists(path))
+            {
+                File.SetAttributes(path, FileAttributes.Normal);
+                File.Delete(path);
+            }
+        }
+    }
+
+    [Fact]
+    public void 补丁凭据只从运行时环境解析且缺少密码时失败()
+    {
+        var values = new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            [PasswordStoragePolicy.PatchUserEnvironmentVariable] = "runtime-user",
+            [PasswordStoragePolicy.PatchPasswordEnvironmentVariable] = "runtime-secret",
+        };
+
+        Assert.True(PasswordStoragePolicy.TryResolvePatchCredentials(
+            "config-user", name => values.TryGetValue(name, out var value) ? value : null,
+            out var user, out var password));
+        Assert.Equal("runtime-user", user);
+        Assert.Equal("runtime-secret", password);
+
+        values.Remove(PasswordStoragePolicy.PatchPasswordEnvironmentVariable);
+        Assert.False(PasswordStoragePolicy.TryResolvePatchCredentials(
+            "config-user", name => values.TryGetValue(name, out var value) ? value : null,
+            out user, out password));
+        Assert.Empty(user);
+        Assert.Empty(password);
+
+        values[PasswordStoragePolicy.PatchPasswordEnvironmentVariable] = "runtime-secret";
+        values.Remove(PasswordStoragePolicy.PatchUserEnvironmentVariable);
+        Assert.True(PasswordStoragePolicy.TryResolvePatchCredentials(
+            "config-user", name => values.TryGetValue(name, out var value) ? value : null,
+            out user, out password));
+        Assert.Equal("config-user", user);
+        Assert.Equal("runtime-secret", password);
+    }
 }

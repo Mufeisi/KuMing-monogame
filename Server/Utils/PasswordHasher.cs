@@ -33,6 +33,9 @@ internal static class PasswordHasher
     private const int MaximumSaltLength = 64;
     private const int MinimumHashLength = 16;
     private const int MaximumHashLength = 64;
+    // Crypto.HashPassword 将 24 字节 PBKDF2 摘要直接按 UTF-8 解码后存储；解码结果最多
+    // 24 个 UTF-16 单元（非法序列会替换为 U+FFFD），因此先以字符数作为输入预算。
+    private const int MaximumLegacyHashCharacters = Crypto.HashSize;
     private const int MaximumPhcLength = 256;
     private const int MaximumParameterFieldLength = 32;
     private const int MaximumEncodedSaltLength = 88;
@@ -104,32 +107,56 @@ internal static class PasswordHasher
 
     private static PasswordVerificationResult VerifyLegacy(string storedHash, string password, byte[] legacySalt)
     {
-        if (string.IsNullOrEmpty(storedHash) || legacySalt == null || legacySalt.Length != Crypto.SaltSize)
+        if (!IsLegacyHashShape(storedHash) || legacySalt == null || legacySalt.Length != Crypto.SaltSize)
             return PasswordVerificationResult.Invalid;
 
-        string calculated;
+        byte[] expectedBytes = null;
+        byte[] calculatedBytes = null;
         try
         {
-            calculated = Crypto.HashPassword(password ?? string.Empty, legacySalt);
+            string calculated = Crypto.HashPassword(password ?? string.Empty, legacySalt);
+            expectedBytes = Encoding.UTF8.GetBytes(storedHash);
+            calculatedBytes = Encoding.UTF8.GetBytes(calculated);
+
+            return CryptographicOperations.FixedTimeEquals(expectedBytes, calculatedBytes)
+                ? PasswordVerificationResult.ValidNeedsUpgrade
+                : PasswordVerificationResult.Invalid;
         }
         catch
         {
             return PasswordVerificationResult.Invalid;
         }
-
-        byte[] expectedBytes = Encoding.UTF8.GetBytes(storedHash);
-        byte[] calculatedBytes = Encoding.UTF8.GetBytes(calculated);
-        try
-        {
-            return CryptographicOperations.FixedTimeEquals(expectedBytes, calculatedBytes)
-                ? PasswordVerificationResult.ValidNeedsUpgrade
-                : PasswordVerificationResult.Invalid;
-        }
         finally
         {
-            CryptographicOperations.ZeroMemory(expectedBytes);
-            CryptographicOperations.ZeroMemory(calculatedBytes);
+            if (expectedBytes != null)
+                CryptographicOperations.ZeroMemory(expectedBytes);
+            if (calculatedBytes != null)
+                CryptographicOperations.ZeroMemory(calculatedBytes);
         }
+    }
+
+    private static bool IsLegacyHashShape(string storedHash)
+    {
+        if (string.IsNullOrEmpty(storedHash) || storedHash.Length > MaximumLegacyHashCharacters)
+            return false;
+
+        for (var i = 0; i < storedHash.Length; i++)
+        {
+            char value = storedHash[i];
+            if (char.IsHighSurrogate(value))
+            {
+                if (i + 1 >= storedHash.Length || !char.IsLowSurrogate(storedHash[i + 1]))
+                    return false;
+
+                i++;
+            }
+            else if (char.IsLowSurrogate(value))
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private static byte[] Derive(string password, byte[] salt, int memoryCostKiB, int timeCost, int parallelism,

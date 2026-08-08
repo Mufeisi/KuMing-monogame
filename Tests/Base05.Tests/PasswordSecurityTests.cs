@@ -59,6 +59,8 @@ public sealed class PasswordSecurityTests
         var account = new AccountInfo();
         account.SetPasswordHashAndSalt(legacyHash, salt);
 
+        Assert.InRange(legacyHash.Length, 1, Crypto.HashSize);
+
         Assert.Equal(PasswordVerificationResult.Invalid, account.VerifyPassword("wrong-password"));
         Assert.Equal(legacyHash, account.Password);
 
@@ -66,6 +68,29 @@ public sealed class PasswordSecurityTests
         Assert.StartsWith("$argon2id$v=19$", account.Password, StringComparison.Ordinal);
         Assert.Empty(account.Salt);
         Assert.Equal(PasswordVerificationResult.Valid, account.VerifyPassword("legacy-password"));
+    }
+
+    [Fact]
+    public void 旧格式超长或非法字符在派生前拒绝且不升级()
+    {
+        var salt = Crypto.GenerateSalt();
+        var maliciousInputs = new[]
+        {
+            new string('x', Crypto.HashSize + 1),
+            new string('\uD800', Crypto.HashSize),
+        };
+
+        foreach (var storedHash in maliciousInputs)
+        {
+            var account = new AccountInfo();
+            account.SetPasswordHashAndSalt(storedHash, salt);
+
+            var exception = Record.Exception(() => account.VerifyPassword("any-password"));
+
+            Assert.Null(exception);
+            Assert.Equal(PasswordVerificationResult.Invalid, account.VerifyPassword("any-password"));
+            Assert.Equal(storedHash, account.Password);
+        }
     }
 
     [Theory]

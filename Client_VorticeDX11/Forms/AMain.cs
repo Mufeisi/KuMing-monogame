@@ -1,10 +1,13 @@
 ﻿using System.Diagnostics;
 using System.Net;
+using System.Security.Cryptography;
+using System.Text;
 using Client;
 using Microsoft.Web.WebView2.Core;
 using System.Net.Http.Headers;
 using System.Net.Http.Handlers;
 using Client.Utils;
+using Shared.Security;
 
 namespace Launcher
 {
@@ -30,6 +33,7 @@ namespace Launcher
         private Config ConfigForm = new Config();
 
         private bool Restart = false;
+        private bool _patchCredentialFailureReported;
 
         public AMain()
         {
@@ -51,6 +55,39 @@ namespace Launcher
             }
             catch
             {
+            }
+        }
+
+        private bool TryApplyPatchAuthorization(HttpClient client)
+        {
+            if (!Settings.P_NeedLogin)
+                return true;
+
+            if (!PasswordStoragePolicy.TryResolvePatchCredentials(Settings.P_Login, out var user, out var password))
+            {
+                if (!_patchCredentialFailureReported)
+                {
+                    const string message = "补丁源需要登录，但未提供运行时凭据。请设置 LYOCRYSTAL_PATCH_PASSWORD（可选 LYOCRYSTAL_PATCH_USER）。";
+                    SaveError(message);
+                    MessageBox.Show(message, "补丁登录失败");
+                    _patchCredentialFailureReported = true;
+                }
+
+                return false;
+            }
+
+            byte[] authBytes = null;
+            try
+            {
+                authBytes = Encoding.UTF8.GetBytes(user + ":" + password);
+                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+                    "Basic", Convert.ToBase64String(authBytes));
+                return true;
+            }
+            finally
+            {
+                if (authBytes != null)
+                    CryptographicOperations.ZeroMemory(authBytes);
             }
         }
 
@@ -227,11 +264,13 @@ namespace Launcher
                     client.DefaultRequestHeaders.AcceptCharset.Clear();
                     client.DefaultRequestHeaders.AcceptCharset.Add(new StringWithQualityHeaderValue("utf-8"));
 
-                    if (Settings.P_NeedLogin)
+                    if (!TryApplyPatchAuthorization(client))
                     {
-                        string authInfo = Settings.P_Login + ":" + Settings.P_Password;
-                        authInfo = Convert.ToBase64String(System.Text.Encoding.Default.GetBytes(authInfo));
-                        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", authInfo);
+                        ErrorFound = true;
+                        dl.Completed = true;
+                        DownloadList.Clear();
+                        Completed = true;
+                        return;
                     }
 
                     ActiveDownloads.Add(dl);
@@ -336,11 +375,9 @@ namespace Launcher
                 client.DefaultRequestHeaders.AcceptCharset.Clear();
                 client.DefaultRequestHeaders.AcceptCharset.Add(new StringWithQualityHeaderValue("utf-8"));
 
-                if (Settings.P_NeedLogin)
+                if (!TryApplyPatchAuthorization(client))
                 {
-                    string authInfo = Settings.P_Login + ":" + Settings.P_Password;
-                    authInfo = Convert.ToBase64String(System.Text.Encoding.Default.GetBytes(authInfo));
-                    client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", authInfo);
+                    return null;
                 }
 
                 string uriString = Settings.P_Host + Path.ChangeExtension(fileName, ".gz");
