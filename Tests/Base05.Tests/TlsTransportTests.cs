@@ -184,14 +184,16 @@ public sealed class TlsTransportTests
     }
 
     [Fact]
-    public void 停止网络取消TLS握手代次并限制在途数量()
+    public void 停止网络取消TLS握手代次且不改动旧代计数()
     {
         var environment = new Envir();
-        var cancellation = new CancellationTokenSource();
-        typeof(Envir).GetField("_tlsHandshakeCancellation", BindingFlags.Instance | BindingFlags.NonPublic)
-            ?.SetValue(environment, cancellation);
-        FieldInfo pending = typeof(Envir).GetField("_pendingTlsHandshakes", BindingFlags.Instance | BindingFlags.NonPublic);
-        pending.SetValue(environment, 3);
+        var stateType = typeof(Envir).GetNestedType("TlsGenerationState", BindingFlags.NonPublic);
+        var state = Activator.CreateInstance(stateType!, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
+            null, new object[] { 1 }, null);
+        var cancellation = (CancellationTokenSource)stateType!.GetField("Cancellation", BindingFlags.Instance | BindingFlags.Public)!.GetValue(state)!;
+        FieldInfo pending = stateType.GetField("Pending", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)!;
+        pending.SetValue(state, 3);
+        typeof(Envir).GetField("_tlsGeneration", BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(environment, state);
         var limit = typeof(Envir).GetField("MaxPendingTlsHandshakes", BindingFlags.Static | BindingFlags.NonPublic)
             ?.GetRawConstantValue();
         var stop = typeof(Envir).GetMethod("StopNetwork", BindingFlags.Instance | BindingFlags.NonPublic);
@@ -200,7 +202,22 @@ public sealed class TlsTransportTests
 
         Assert.Equal(64, limit);
         Assert.True(cancellation.IsCancellationRequested);
-        Assert.Equal(0, pending.GetValue(environment));
+        Assert.Equal(3, pending.GetValue(state));
+    }
+
+    [Fact]
+    public void 旧TLS代次释放不修改新代计数()
+    {
+        var stateType = typeof(Envir).GetNestedType("TlsGenerationState", BindingFlags.NonPublic);
+        Assert.NotNull(stateType);
+        var oldState = Activator.CreateInstance(stateType!, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, new object[] { 1 }, null);
+        var newState = Activator.CreateInstance(stateType!, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, new object[] { 2 }, null);
+        var pending = stateType!.GetField("Pending", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+        pending!.SetValue(oldState, 1);
+        pending.SetValue(newState, 2);
+        typeof(Envir).GetMethod("ReleaseTlsHandshake", BindingFlags.Static | BindingFlags.NonPublic)!.Invoke(null, new[] { oldState });
+        Assert.Equal(0, pending.GetValue(oldState));
+        Assert.Equal(2, pending.GetValue(newState));
     }
 
     [Fact]

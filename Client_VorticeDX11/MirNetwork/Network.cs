@@ -114,7 +114,7 @@ namespace Client.MirNetwork
 
                 if (!state.Client.Connected)
                 {
-                    Connect();
+                    FailIfCurrent(state.Client, state.Generation, "CONNECT Failed (NotConnected)", reconnect: true);
                     return;
                 }
 
@@ -148,22 +148,12 @@ namespace Client.MirNetwork
             }
             catch (SocketException)
             {
-                if (state.Generation == Volatile.Read(ref _connectionGeneration) && ReferenceEquals(_client, state.Client))
-                {
-                    EnqueuePacketTraceLine($"[{CMain.Now:yyyy-MM-dd HH:mm:ss.fff}] CONNECT SocketException");
-                    Connect();
-                }
+                FailIfCurrent(state.Client, state.Generation, "CONNECT SocketException", reconnect: true);
             }
             catch (Exception ex)
             {
-                if (state.Generation == Volatile.Read(ref _connectionGeneration) && ReferenceEquals(_client, state.Client))
-                {
-                    if (Settings.LogErrors)
-                        CMain.SaveError(state.UseTls
-                            ? TlsClientPolicy.FormatFailure(ex, state.Host, state.Port)
-                            : ex.ToString());
-                    Disconnect();
-                }
+                FailIfCurrent(state.Client, state.Generation, "CONNECT Failed",
+                    state.UseTls ? TlsClientPolicy.FormatFailure(ex, state.Host, state.Port) : ex.ToString());
             }
             finally
             {
@@ -179,14 +169,58 @@ namespace Client.MirNetwork
         private static bool IsCurrent(int generation, TcpClient client, Stream stream) =>
             generation == Volatile.Read(ref _connectionGeneration) && ReferenceEquals(_client, client) && ReferenceEquals(_stream, stream);
 
-        private static void DisconnectIfCurrent(int generation, TcpClient client, Stream stream)
+        private static bool DetachCurrent(TcpClient expectedClient, int expectedGeneration,
+            out (TcpClient Client, Stream Stream, StreamWriteGate Gate) detached)
         {
-            lock (_connectionGate) { if (IsCurrent(generation, client, stream)) Disconnect(); }
+            lock (_connectionGate)
+            {
+                if (expectedClient != null && (expectedGeneration != Volatile.Read(ref _connectionGeneration) || !ReferenceEquals(_client, expectedClient)))
+                {
+                    detached = default;
+                    return false;
+                }
+
+                bool hadState = _client != null || _stream != null || _receiveList != null || _sendList != null;
+                int queueDepth = Math.Max(0, _receiveQueueMetrics.Depth) + Math.Max(0, _sendQueueMetrics.Depth);
+                detached = (_client, _stream, _sendGate);
+                Interlocked.Increment(ref _connectionGeneration);
+                _client = null;
+                _stream = null;
+                _sendGate = new StreamWriteGate();
+                _networkQueueMetrics.Dequeue(queueDepth);
+                _sendList = null;
+                _receiveList = null;
+                _rawData = new byte[0];
+                TimeConnected = 0;
+                Connected = false;
+                _usingTls = false;
+                _activePort = 0;
+                return hadState;
+            }
+        }
+
+        private static bool FailIfCurrent(TcpClient expectedClient, int generation, string trace,
+            string error = null, bool reconnect = false)
+        {
+            if (!DetachCurrent(expectedClient, generation, out var detached)) return false;
+            try { detached.Gate?.Dispose(); } catch { }
+            try { detached.Stream?.Dispose(); } catch { }
+            try { detached.Client?.Close(); } catch { }
+            if (!string.IsNullOrWhiteSpace(error) && Settings.LogErrors) CMain.SaveError(error);
+            EnqueuePacketTraceLine($"[{CMain.Now:yyyy-MM-dd HH:mm:ss.fff}] {trace}");
+            FlushPacketTraceIfDue(force: true);
+            if (reconnect) Connect();
+            return true;
         }
 
         private static void BeginReceive(TcpClient client, int generation, Stream stream)
         {
-            if (!IsCurrent(generation, client, stream) || !client.Connected) return;
+            if (!IsCurrent(generation, client, stream)) return;
+            if (!client.Connected)
+            {
+                FailIfCurrent(client, generation, "RECV NotConnected");
+                return;
+            }
 
             try
             {
@@ -195,13 +229,18 @@ namespace Client.MirNetwork
             }
             catch
             {
-                DisconnectIfCurrent(generation, client, stream);
+                FailIfCurrent(client, generation, "RECV BeginReadFailed");
             }
         }
         private static void ReceiveData(IAsyncResult result)
         {
             var state = ((TcpClient Client, int Generation, Stream Stream, byte[] Buffer))result.AsyncState;
-            if (!IsCurrent(state.Generation, state.Client, state.Stream) || !state.Client.Connected) return;
+            if (!IsCurrent(state.Generation, state.Client, state.Stream)) return;
+            if (!state.Client.Connected)
+            {
+                FailIfCurrent(state.Client, state.Generation, "RECV NotConnected");
+                return;
+            }
 
             int dataRead;
 
@@ -211,14 +250,14 @@ namespace Client.MirNetwork
             }
             catch
             {
-                DisconnectIfCurrent(state.Generation, state.Client, state.Stream);
+                FailIfCurrent(state.Client, state.Generation, "RECV Error");
                 return;
             }
 
             if (!IsCurrent(state.Generation, state.Client, state.Stream)) return;
             if (dataRead == 0)
             {
-                DisconnectIfCurrent(state.Generation, state.Client, state.Stream);
+                FailIfCurrent(state.Client, state.Generation, "RECV EOF");
                 return;
             }
 
@@ -294,31 +333,7 @@ namespace Client.MirNetwork
 
         public static void Disconnect()
         {
-            lock (_connectionGate)
-            {
-            Interlocked.Increment(ref _connectionGeneration);
-            if (_client == null && _receiveList == null && _sendList == null) return;
-
-            _networkQueueMetrics.Dequeue(
-                Math.Max(0, _receiveQueueMetrics.Depth) + Math.Max(0, _sendQueueMetrics.Depth));
-
-            _sendGate.Dispose();
-            _stream?.Dispose();
-            _stream = null;
-            _client?.Close();
-
-            TimeConnected = 0;
-            Connected = false;
-            _sendList = null;
-            _client = null;
-            _usingTls = false;
-            _activePort = 0;
-
-            _receiveList = null;
-
-            EnqueuePacketTraceLine($"[{CMain.Now:yyyy-MM-dd HH:mm:ss.fff}] DISCONNECT");
-            FlushPacketTraceIfDue(force: true);
-            }
+            FailIfCurrent(null, 0, "DISCONNECT");
         }
 
         public static void Process()

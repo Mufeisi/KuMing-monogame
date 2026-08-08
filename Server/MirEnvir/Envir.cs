@@ -342,11 +342,19 @@ namespace Server.MirEnvir
         public List<MirStatusConnection> StatusConnections = new List<MirStatusConnection>();
         private TcpListener _StatusPort;
         private int _sessionID;
-        private int _networkGeneration;
-        private int _pendingTlsHandshakes;
-        private CancellationTokenSource _tlsHandshakeCancellation;
+        private int _tlsGenerationId;
+        private TlsGenerationState _tlsGeneration;
         private const int MaxPendingTlsHandshakes = 64;
         public List<MirConnection> Connections = new List<MirConnection>();
+
+        private sealed class TlsGenerationState
+        {
+            public readonly int Generation;
+            public readonly CancellationTokenSource Cancellation = new CancellationTokenSource();
+            public X509Certificate2 Certificate;
+            public int Pending;
+            public TlsGenerationState(int generation) => Generation = generation;
+        }
 
         // 服务器网络指标使用会话级逻辑队列，而不是把每个连接的历史峰值相加。
         // MirConnection 在入队/出队处维护这些原子计数，采样只读取当前深度和高水位。
@@ -4329,10 +4337,10 @@ namespace Server.MirEnvir
         }
         private void StartNetwork()
         {
-            int generation = Interlocked.Increment(ref _networkGeneration);
-            var cancellation = Interlocked.Exchange(ref _tlsHandshakeCancellation, new CancellationTokenSource());
-            cancellation?.Cancel();
-            cancellation?.Dispose();
+            var generation = new TlsGenerationState(Interlocked.Increment(ref _tlsGenerationId));
+            var previousGeneration = Interlocked.Exchange(ref _tlsGeneration, generation);
+            previousGeneration?.Cancellation.Cancel();
+            previousGeneration?.Cancellation.Dispose();
 
             IPAddress listenAddress = IPAddress.Parse(Settings.IPAddress);
             if (!Settings.TlsEnabled && !TlsTransportPolicy.ShouldStartLegacyV1(listenAddress, Settings.AllowLegacyV1))
@@ -4359,6 +4367,7 @@ namespace Server.MirEnvir
                 TlsTransportPolicy.ValidateTlsPorts(Settings.Port, Settings.TlsPort);
 
                 _tlsCertificate = TlsTransportPolicy.LoadServerCertificate(Settings.TlsCertificatePath);
+                generation.Certificate = _tlsCertificate;
                 _tlsListener = CreateStartedListener(listenAddress, Settings.TlsPort, "TLS游戏端口");
                 gameListenerStarted = true;
                 if (!QueueTlsAccept(generation))
@@ -4458,21 +4467,23 @@ namespace Server.MirEnvir
 
         private void CancelTlsGeneration()
         {
-            Interlocked.Increment(ref _networkGeneration);
-            Interlocked.Exchange(ref _pendingTlsHandshakes, 0);
-            var cancellation = Interlocked.Exchange(ref _tlsHandshakeCancellation, null);
-            cancellation?.Cancel();
-            cancellation?.Dispose();
+            var generation = Interlocked.Exchange(ref _tlsGeneration, null);
+            generation?.Cancellation.Cancel();
+            generation?.Cancellation.Dispose();
         }
 
-        private void ReleasePendingTlsHandshake(int generation)
+        private static bool AcquireTlsHandshake(TlsGenerationState generation)
         {
-            if (generation != Volatile.Read(ref _networkGeneration)) return;
-            while (true)
-            {
-                var count = Volatile.Read(ref _pendingTlsHandshakes);
-                if (count <= 0 || Interlocked.CompareExchange(ref _pendingTlsHandshakes, count - 1, count) == count) return;
-            }
+            if (generation == null) return false;
+            var count = Interlocked.Increment(ref generation.Pending);
+            if (count <= MaxPendingTlsHandshakes) return true;
+            Interlocked.Decrement(ref generation.Pending);
+            return false;
+        }
+
+        private static void ReleaseTlsHandshake(TlsGenerationState generation)
+        {
+            if (generation != null) Interlocked.Decrement(ref generation.Pending);
         }
 
         private static TcpListener CreateStartedListener(IPAddress address, int port, string label)
@@ -4601,21 +4612,21 @@ namespace Server.MirEnvir
             }
         }
 
-        private bool QueueTlsAccept(int generation)
+        private bool QueueTlsAccept(TlsGenerationState generation)
         {
             try
             {
                 var listener = _tlsListener;
-                if (Running && generation == Volatile.Read(ref _networkGeneration) && listener?.Server?.IsBound == true)
+                if (Running && ReferenceEquals(generation, Volatile.Read(ref _tlsGeneration)) && listener?.Server?.IsBound == true)
                 {
-                    listener.BeginAcceptTcpClient(TlsConnection, generation);
+                    listener.BeginAcceptTcpClient(TlsConnection, (Listener: listener, Generation: generation));
                     return true;
                 }
                 return false;
             }
             catch (Exception ex)
             {
-                if (Running && generation == Volatile.Read(ref _networkGeneration))
+                if (Running && ReferenceEquals(generation, Volatile.Read(ref _tlsGeneration)))
                     MessageQueue.Enqueue("TLS监听接受失败：" + ex.GetType().Name);
                 return false;
             }
@@ -4623,62 +4634,55 @@ namespace Server.MirEnvir
 
         private void TlsConnection(IAsyncResult result)
         {
-            var generation = result.AsyncState is int value ? value : -1;
+            var accept = ((TcpListener Listener, TlsGenerationState Generation))result.AsyncState;
+            var generation = accept.Generation;
             TcpClient client = null;
             var pending = false;
             var handedOff = false;
             try
             {
-                var listener = _tlsListener;
-                if (!Running || generation != Volatile.Read(ref _networkGeneration) || listener?.Server?.IsBound != true) return;
-                client = listener.EndAcceptTcpClient(result);
+                if (!Running || !ReferenceEquals(generation, Volatile.Read(ref _tlsGeneration)) || accept.Listener?.Server?.IsBound != true) return;
+                client = accept.Listener.EndAcceptTcpClient(result);
                 QueueTlsAccept(generation);
-                var cancellation = _tlsHandshakeCancellation;
-                var certificate = _tlsCertificate;
-                if (cancellation == null || certificate == null || generation != Volatile.Read(ref _networkGeneration)) return;
-                if (Interlocked.Increment(ref _pendingTlsHandshakes) > MaxPendingTlsHandshakes)
-                {
-                    ReleasePendingTlsHandshake(generation);
-                    return;
-                }
+                if (generation.Certificate == null || !AcquireTlsHandshake(generation)) return;
                 pending = true;
-                if (generation != Volatile.Read(ref _networkGeneration)) return;
-                _ = ProcessTlsClientAsync(client, generation, certificate, cancellation.Token);
+                if (!ReferenceEquals(generation, Volatile.Read(ref _tlsGeneration))) return;
+                _ = ProcessTlsClientAsync(client, generation);
                 handedOff = true;
                 client = null;
             }
             catch (Exception ex)
             {
-                if (Running && generation == Volatile.Read(ref _networkGeneration))
+                if (Running && ReferenceEquals(generation, Volatile.Read(ref _tlsGeneration)))
                     MessageQueue.Enqueue("TLS连接接受失败：" + ex.GetType().Name);
                 QueueTlsAccept(generation);
             }
             finally
             {
-                if (pending && !handedOff) ReleasePendingTlsHandshake(generation);
+                if (pending && !handedOff) ReleaseTlsHandshake(generation);
                 client?.Close();
             }
         }
 
-        private async Task ProcessTlsClientAsync(TcpClient client, int generation, X509Certificate2 certificate, CancellationToken cancellation)
+        private async Task ProcessTlsClientAsync(TcpClient client, TlsGenerationState generation)
         {
             SslStream ssl = null;
             bool connected = false;
             try
             {
-                using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellation);
+                using var timeout = CancellationTokenSource.CreateLinkedTokenSource(generation.Cancellation.Token);
                 timeout.CancelAfter(10000);
-                ssl = await TlsTransportPolicy.AuthenticateServerAsync(client.GetStream(), certificate, timeout.Token);
+                ssl = await TlsTransportPolicy.AuthenticateServerAsync(client.GetStream(), generation.Certificate, timeout.Token);
                 connected = TryAdmitConnection(client, ssl, generation);
             }
             catch (Exception ex)
             {
-                if (Running && generation == Volatile.Read(ref _networkGeneration))
+                if (Running && ReferenceEquals(generation, Volatile.Read(ref _tlsGeneration)))
                     MessageQueue.Enqueue("TLS连接握手失败：" + ex.GetType().Name);
             }
             finally
             {
-                ReleasePendingTlsHandshake(generation);
+                ReleaseTlsHandshake(generation);
                 if (!connected)
                 {
                     try { ssl?.Dispose(); } catch { }
@@ -4687,11 +4691,11 @@ namespace Server.MirEnvir
             }
         }
 
-        private bool TryAdmitConnection(TcpClient client, Stream stream, int generation)
+        private bool TryAdmitConnection(TcpClient client, Stream stream, TlsGenerationState generation)
         {
             lock (Connections)
             {
-                if (!Running || (generation != 0 && generation != Volatile.Read(ref _networkGeneration))) return false;
+                if (!Running || (generation != null && !ReferenceEquals(generation, Volatile.Read(ref _tlsGeneration)))) return false;
                 var ipAddress = client.Client.RemoteEndPoint?.ToString()?.Split(':')[0];
                 if (string.IsNullOrWhiteSpace(ipAddress)) return false;
                 if (IPBlocks.TryGetValue(ipAddress, out DateTime banDate) && banDate >= Now) return false;
@@ -4728,7 +4732,7 @@ namespace Server.MirEnvir
             {
                 if (!Running || listener is null || !listener.Server.IsBound) return;
                 tempTcpClient = listener.EndAcceptTcpClient(result);
-                connected = TryAdmitConnection(tempTcpClient, null, 0);
+                connected = TryAdmitConnection(tempTcpClient, null, null);
             }
             catch (Exception ex)
             {
