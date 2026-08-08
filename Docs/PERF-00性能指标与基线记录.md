@@ -69,6 +69,7 @@ dotnet test Tests/Base05.Tests/Base05.Tests.csproj --no-restore --nologo --filte
 ```text
 dotnet test Tests/Base05.Tests/Base05.Tests.csproj --no-restore --nologo
 结果：146/146 通过，0 失败，0 跳过。
+```
 
 同日平台构建：
 
@@ -79,7 +80,6 @@ dotnet build Client_MonoGame.Shared/Client_MonoGame.Shared.csproj -f net10.0 --n
 结果：0 错误（既有警告）。
 dotnet build Client_MonoGame.Shared/Client_MonoGame.Shared.csproj -f net10.0-android --no-restore --nologo
 结果：0 错误（既有警告）。
-```
 ```
 
 ## 真实性与关闭条件
