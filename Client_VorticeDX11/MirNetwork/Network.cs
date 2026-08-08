@@ -26,6 +26,7 @@ namespace Client.MirNetwork
         private static StreamWriteGate _sendGate = new StreamWriteGate();
         private static bool _usingTls;
         private static int _activePort;
+        private static int _connectionGeneration;
         public static int ConnectAttempt = 0;
         public static int MaxAttempts = 20;
         public static bool ErrorShown;
@@ -87,8 +88,11 @@ namespace Client.MirNetwork
                 _usingTls = Settings.UseTlsV2;
                 _activePort = _usingTls ? Settings.TlsPort : Settings.Port;
                 _client = new TcpClient { NoDelay = true };
+                int generation = Interlocked.Increment(ref _connectionGeneration);
+                var state = (Client: _client, Generation: generation, UseTls: _usingTls,
+                    Port: _activePort, Host: Settings.IPAddress, ServerName: Settings.TlsServerName);
                 EnqueuePacketTraceLine($"[{CMain.Now:yyyy-MM-dd HH:mm:ss.fff}] CONNECT Attempt={ConnectAttempt} Host={Settings.IPAddress}:{_activePort}");
-                _client?.BeginConnect(Settings.IPAddress, _activePort, Connection, null);
+                _client.BeginConnect(Settings.IPAddress, _activePort, Connection, state);
             }
             catch (ObjectDisposedException ex)
             {
@@ -97,27 +101,35 @@ namespace Client.MirNetwork
             }
         }
 
-        private static void Connection(IAsyncResult result)
+        private static async void Connection(IAsyncResult result)
         {
+            var state = ((TcpClient Client, int Generation, bool UseTls, int Port, string Host, string ServerName))result.AsyncState;
+            Stream stream = null;
+            SslStream ssl = null;
+            bool adopted = false;
             try
             {
-                _client?.EndConnect(result);
+                state.Client.EndConnect(result);
+                bool current = state.Generation == Volatile.Read(ref _connectionGeneration) && ReferenceEquals(_client, state.Client);
+                if (!current) return;
 
-                if ((_client != null &&
-                    !_client.Connected) ||
-                    _client == null)
+                if (!state.Client.Connected)
                 {
                     Connect();
                     return;
                 }
 
-                _stream = _client.GetStream();
-                if (_usingTls)
+                stream = state.Client.GetStream();
+                if (state.UseTls)
                 {
-                    var ssl = new SslStream(_stream, leaveInnerStreamOpen: false);
-                    _stream = ssl;
-                    ssl.AuthenticateAsClient(TlsClientPolicy.CreateOptions(Settings.TlsServerName));
+                    ssl = new SslStream(stream, leaveInnerStreamOpen: false);
+                    using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+                    await ssl.AuthenticateAsClientAsync(TlsClientPolicy.CreateOptions(state.ServerName), timeout.Token);
+                    stream = ssl;
                 }
+                if (state.Generation != Volatile.Read(ref _connectionGeneration) || !ReferenceEquals(_client, state.Client)) return;
+                _stream = stream;
+                adopted = true;
 
                 _receiveList = new ConcurrentQueue<Packet>();
                 _sendList = new ConcurrentQueue<Packet>();
@@ -129,22 +141,36 @@ namespace Client.MirNetwork
                 TimeOutTime = CMain.Time + Settings.TimeOut;
                 TimeConnected = CMain.Time;
 
-                EnqueuePacketTraceLine($"[{CMain.Now:yyyy-MM-dd HH:mm:ss.fff}] CONNECTED Host={Settings.IPAddress}:{_activePort}");
+                EnqueuePacketTraceLine($"[{CMain.Now:yyyy-MM-dd HH:mm:ss.fff}] CONNECTED Host={state.Host}:{state.Port}");
                 BeginReceive();
             }
             catch (SocketException)
             {
-                EnqueuePacketTraceLine($"[{CMain.Now:yyyy-MM-dd HH:mm:ss.fff}] CONNECT SocketException");
-                Thread.Sleep(100);
-                Connect();
+                if (state.Generation == Volatile.Read(ref _connectionGeneration) && ReferenceEquals(_client, state.Client))
+                {
+                    EnqueuePacketTraceLine($"[{CMain.Now:yyyy-MM-dd HH:mm:ss.fff}] CONNECT SocketException");
+                    Connect();
+                }
             }
             catch (Exception ex)
             {
-                if (Settings.LogErrors)
-                    CMain.SaveError(_usingTls
-                        ? TlsClientPolicy.FormatFailure(ex, Settings.IPAddress, _activePort)
-                        : ex.ToString());
-                Disconnect();
+                if (state.Generation == Volatile.Read(ref _connectionGeneration) && ReferenceEquals(_client, state.Client))
+                {
+                    if (Settings.LogErrors)
+                        CMain.SaveError(state.UseTls
+                            ? TlsClientPolicy.FormatFailure(ex, state.Host, state.Port)
+                            : ex.ToString());
+                    Disconnect();
+                }
+            }
+            finally
+            {
+                if (!adopted)
+                {
+                    try { ssl?.Dispose(); } catch { }
+                    try { if (stream != null && !ReferenceEquals(stream, ssl)) stream.Dispose(); } catch { }
+                    try { state.Client.Close(); } catch { }
+                }
             }
         }
 
@@ -251,6 +277,7 @@ namespace Client.MirNetwork
 
         public static void Disconnect()
         {
+            Interlocked.Increment(ref _connectionGeneration);
             if (_client == null && _receiveList == null && _sendList == null) return;
 
             _networkQueueMetrics.Dequeue(

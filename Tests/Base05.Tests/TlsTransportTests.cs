@@ -184,6 +184,23 @@ public sealed class TlsTransportTests
     }
 
     [Fact]
+    public void 停止网络取消TLS握手代次并限制在途数量()
+    {
+        var environment = new Envir();
+        var cancellation = new CancellationTokenSource();
+        typeof(Envir).GetField("_tlsHandshakeCancellation", BindingFlags.Instance | BindingFlags.NonPublic)
+            ?.SetValue(environment, cancellation);
+        var limit = typeof(Envir).GetField("MaxPendingTlsHandshakes", BindingFlags.Static | BindingFlags.NonPublic)
+            ?.GetRawConstantValue();
+        var stop = typeof(Envir).GetMethod("StopNetwork", BindingFlags.Instance | BindingFlags.NonPublic);
+
+        stop.Invoke(environment, null);
+
+        Assert.Equal(64, limit);
+        Assert.True(cancellation.IsCancellationRequested);
+    }
+
+    [Fact]
     public async Task 临时证书SslStream握手并完成现有Packet往返()
     {
         string directory = CreateTempDirectory();

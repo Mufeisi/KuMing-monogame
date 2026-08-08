@@ -15,7 +15,7 @@ AllowLegacyV1=false
 TlsCertificatePath=certs/server.pfx
 ```
 
-PFX 私钥密码只在启动进程的受保护环境中注入为 `LYOCRYSTAL_TLS_CERT_PASSWORD`，不写入 INI、日志或仓库。证书必须包含客户端使用的 DNS/IP SAN；客户端 `TlsServerName` 必须与 SAN 匹配。协议最低 TLS 1.2（可协商 TLS 1.3）。
+当前实现仍在启动进程中读取 `LYOCRYSTAL_TLS_CERT_PASSWORD`，仅作为 SEC-05 受保护密钥存储接入前的过渡；普通环境变量不是最终生产密钥存储，正式公网上线受 SEC-05 门禁阻塞。密码不写入 INI、日志或仓库。证书必须包含客户端使用的 DNS/IP SAN；客户端 `TlsServerName` 必须与 SAN 匹配。协议最低 TLS 1.2（可协商 TLS 1.3）。
 
 ## PC 与 Android 客户端
 
@@ -40,4 +40,3 @@ V2 握手失败不会降级 V1。错误提示会引导检查客户端系统时�
 
 - 公网、`0.0.0.0` 和 `IPv6Any` 始终禁止 V1 明文。
 - 回环或明确私网迁移期间可按需保留 V1；最后停止日期为 **2026-12-31**。到期前将所有客户端切换到 V2，并把 `AllowLegacyV1=false` 固化。
-

@@ -342,6 +342,10 @@ namespace Server.MirEnvir
         public List<MirStatusConnection> StatusConnections = new List<MirStatusConnection>();
         private TcpListener _StatusPort;
         private int _sessionID;
+        private int _networkGeneration;
+        private int _pendingTlsHandshakes;
+        private CancellationTokenSource _tlsHandshakeCancellation;
+        private const int MaxPendingTlsHandshakes = 64;
         public List<MirConnection> Connections = new List<MirConnection>();
 
         // 服务器网络指标使用会话级逻辑队列，而不是把每个连接的历史峰值相加。
@@ -4325,6 +4329,11 @@ namespace Server.MirEnvir
         }
         private void StartNetwork()
         {
+            int generation = Interlocked.Increment(ref _networkGeneration);
+            var cancellation = Interlocked.Exchange(ref _tlsHandshakeCancellation, new CancellationTokenSource());
+            cancellation?.Cancel();
+            cancellation?.Dispose();
+
             IPAddress listenAddress = IPAddress.Parse(Settings.IPAddress);
             if (!Settings.TlsEnabled && !TlsTransportPolicy.ShouldStartLegacyV1(listenAddress, Settings.AllowLegacyV1))
                 throw new InvalidOperationException("没有可用的游戏监听器：请启用TLS或配置回环/私网V1。");
@@ -4352,7 +4361,7 @@ namespace Server.MirEnvir
                 _tlsCertificate = TlsTransportPolicy.LoadServerCertificate(Settings.TlsCertificatePath);
                 _tlsListener = CreateStartedListener(listenAddress, Settings.TlsPort, "TLS游戏端口");
                 gameListenerStarted = true;
-                if (!QueueTlsAccept())
+                if (!QueueTlsAccept(generation))
                     throw new InvalidOperationException("TLS监听器无法接受连接。");
             }
 
@@ -4396,6 +4405,7 @@ namespace Server.MirEnvir
         }
         private void StopNetwork()
         {
+            CancelTlsGeneration();
             ReleaseListener(ref _listener);
             ReleaseListener(ref _tlsListener);
             _tlsCertificate?.Dispose();
@@ -4444,6 +4454,14 @@ namespace Server.MirEnvir
 
             StatusConnections.Clear();
             MessageQueue.Enqueue("网络已停止");
+        }
+
+        private void CancelTlsGeneration()
+        {
+            Interlocked.Increment(ref _networkGeneration);
+            var cancellation = Interlocked.Exchange(ref _tlsHandshakeCancellation, null);
+            cancellation?.Cancel();
+            cancellation?.Dispose();
         }
 
         private static TcpListener CreateStartedListener(IPAddress address, int port, string label)
@@ -4572,70 +4590,75 @@ namespace Server.MirEnvir
             }
         }
 
-        private bool QueueTlsAccept()
+        private bool QueueTlsAccept(int generation)
         {
             try
             {
-                if (Running && _tlsListener?.Server?.IsBound == true)
+                var listener = _tlsListener;
+                if (Running && generation == Volatile.Read(ref _networkGeneration) && listener?.Server?.IsBound == true)
                 {
-                    _tlsListener.BeginAcceptTcpClient(TlsConnection, null);
+                    listener.BeginAcceptTcpClient(TlsConnection, generation);
                     return true;
                 }
                 return false;
             }
             catch (Exception ex)
             {
-                if (Running) MessageQueue.Enqueue("TLS监听接受失败：" + ex.GetType().Name);
+                if (Running && generation == Volatile.Read(ref _networkGeneration))
+                    MessageQueue.Enqueue("TLS监听接受失败：" + ex.GetType().Name);
                 return false;
             }
         }
 
         private void TlsConnection(IAsyncResult result)
         {
+            var generation = result.AsyncState is int value ? value : -1;
+            TcpClient client = null;
             try
             {
-                if (!Running || _tlsListener?.Server?.IsBound != true) return;
-                var client = _tlsListener.EndAcceptTcpClient(result);
-                QueueTlsAccept();
-                _ = ProcessTlsClientAsync(client);
+                var listener = _tlsListener;
+                if (!Running || generation != Volatile.Read(ref _networkGeneration) || listener?.Server?.IsBound != true) return;
+                client = listener.EndAcceptTcpClient(result);
+                QueueTlsAccept(generation);
+                if (Interlocked.Increment(ref _pendingTlsHandshakes) > MaxPendingTlsHandshakes)
+                {
+                    Interlocked.Decrement(ref _pendingTlsHandshakes);
+                    client.Close();
+                    client = null;
+                    return;
+                }
+                var cancellation = _tlsHandshakeCancellation;
+                _ = ProcessTlsClientAsync(client, generation, _tlsCertificate, cancellation?.Token ?? default);
+                client = null;
             }
             catch (Exception ex)
             {
-                if (Running) MessageQueue.Enqueue("TLS连接接受失败：" + ex.GetType().Name);
-                QueueTlsAccept();
+                if (Running && generation == Volatile.Read(ref _networkGeneration))
+                    MessageQueue.Enqueue("TLS连接接受失败：" + ex.GetType().Name);
+                QueueTlsAccept(generation);
+                client?.Close();
             }
         }
 
-        private async Task ProcessTlsClientAsync(TcpClient client)
+        private async Task ProcessTlsClientAsync(TcpClient client, int generation, X509Certificate2 certificate, CancellationToken cancellation)
         {
             SslStream ssl = null;
             bool connected = false;
             try
             {
-                using var timeout = new CancellationTokenSource(10000);
-                ssl = await TlsTransportPolicy.AuthenticateServerAsync(client.GetStream(), _tlsCertificate, timeout.Token);
-                if (!Running) return;
-                var ipAddress = client.Client.RemoteEndPoint.ToString().Split(':')[0];
-                if (!IPBlocks.TryGetValue(ipAddress, out DateTime banDate) || banDate < Now)
-                {
-                    int count = Connections.Count(c => c.Connected && c.IPAddress == ipAddress);
-                    if (count < Settings.MaxIP)
-                    {
-                        var connection = new MirConnection(++_sessionID, client, ssl);
-                        if (connection.Connected)
-                        {
-                            connected = true;
-                            lock (Connections) Connections.Add(connection);
-                        }
-                    }
-                }
+                using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellation);
+                timeout.CancelAfter(10000);
+                ssl = await TlsTransportPolicy.AuthenticateServerAsync(client.GetStream(), certificate, timeout.Token);
+                connected = TryAdmitConnection(client, ssl, generation);
             }
             catch (Exception ex)
             {
-                if (Running) MessageQueue.Enqueue("TLS连接握手失败：" + ex.GetType().Name);
+                if (Running && generation == Volatile.Read(ref _networkGeneration))
+                    MessageQueue.Enqueue("TLS连接握手失败：" + ex.GetType().Name);
             }
             finally
             {
+                Interlocked.Decrement(ref _pendingTlsHandshakes);
                 if (!connected)
                 {
                     try { ssl?.Dispose(); } catch { }
@@ -4644,59 +4667,48 @@ namespace Server.MirEnvir
             }
         }
 
+        private bool TryAdmitConnection(TcpClient client, Stream stream, int generation)
+        {
+            lock (Connections)
+            {
+                if (!Running || (generation != 0 && generation != Volatile.Read(ref _networkGeneration))) return false;
+                var ipAddress = client.Client.RemoteEndPoint?.ToString()?.Split(':')[0];
+                if (string.IsNullOrWhiteSpace(ipAddress)) return false;
+                if (IPBlocks.TryGetValue(ipAddress, out DateTime banDate) && banDate >= Now) return false;
+
+                var ipCount = 0;
+                var userCount = 0;
+                for (var i = 0; i < Connections.Count; i++)
+                {
+                    var connection = Connections[i];
+                    if (!connection.Connected) continue;
+                    userCount++;
+                    if (connection.IPAddress == ipAddress) ipCount++;
+                }
+                if (ipCount >= Settings.MaxIP)
+                {
+                    UpdateIPBlock(ipAddress, TimeSpan.FromSeconds(Settings.IPBlockSeconds));
+                    MessageQueue.Enqueue(ipAddress + " 已断开连接，连接次数过于频繁");
+                    return false;
+                }
+                if (userCount >= Settings.MaxUser) return false;
+                var newConnection = new MirConnection(Interlocked.Increment(ref _sessionID), client, stream);
+                if (!newConnection.Connected) return false;
+                Connections.Add(newConnection);
+                return true;
+            }
+        }
+
         private void Connection(IAsyncResult result)
         {
             var listener = _listener;
+            TcpClient tempTcpClient = null;
+            bool connected = false;
             try
             {
                 if (!Running || listener is null || !listener.Server.IsBound) return;
-            }
-            catch (Exception e)
-            {
-                MessageQueue.Enqueue(e.ToString());
-            }
-
-            try
-            {
-                var tempTcpClient = listener.EndAcceptTcpClient(result);
-
-                bool connected = false;
-                var ipAddress = tempTcpClient.Client.RemoteEndPoint.ToString().Split(':')[0];
-
-                if (!IPBlocks.TryGetValue(ipAddress, out DateTime banDate) || banDate < Now)
-                {
-                    int count = 0;
-
-                    for (int i = 0; i < Connections.Count; i++)
-                    {
-                        var connection = Connections[i];
-
-                        if (!connection.Connected || connection.IPAddress != ipAddress)
-                            continue;
-
-                        count++;
-                    }
-
-                    if (count >= Settings.MaxIP)
-                    {
-                        UpdateIPBlock(ipAddress, TimeSpan.FromSeconds(Settings.IPBlockSeconds));
-
-                        MessageQueue.Enqueue(ipAddress + " 已断开连接，连接次数过于频繁");
-                    }
-                    else
-                    {
-                        var tempConnection = new MirConnection(++_sessionID, tempTcpClient);
-                        if (tempConnection.Connected)
-                        {
-                            connected = true;
-                            lock (Connections)
-                                Connections.Add(tempConnection);
-                        }
-                    }
-                }
-
-                if (!connected)
-                    tempTcpClient.Close();
+                tempTcpClient = listener.EndAcceptTcpClient(result);
+                connected = TryAdmitConnection(tempTcpClient, null, 0);
             }
             catch (Exception ex)
             {
@@ -4704,9 +4716,7 @@ namespace Server.MirEnvir
             }
             finally
             {
-                while (Connections.Count >= Settings.MaxUser)
-                    Thread.Sleep(1);
-
+                if (!connected) tempTcpClient?.Close();
                 if (Running && listener is not null && listener.Server.IsBound)
                     listener.BeginAcceptTcpClient(Connection, null);
             }

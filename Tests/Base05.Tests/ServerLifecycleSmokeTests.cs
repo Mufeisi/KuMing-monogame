@@ -132,6 +132,21 @@ public sealed class ServerLifecycleSmokeTests
     }
 
     [Fact]
+    public async Task 真实Server停止重启取消旧TLS握手代次()
+    {
+        using var scope = new ServerNetworkScope();
+        scope.SetCertificatePassword(scope.CertificatePassword);
+        scope.Start();
+        Assert.True(SpinWait.SpinUntil(() => scope.ServerEnvironment.StartState == EnvirStartState.Ready, TimeSpan.FromSeconds(8)));
+        using var slowClient = new TcpClient();
+        await slowClient.ConnectAsync(IPAddress.Loopback, scope.TlsPort);
+        scope.Stop();
+        scope.Start();
+        Assert.True(SpinWait.SpinUntil(() => scope.ServerEnvironment.StartState == EnvirStartState.Ready, TimeSpan.FromSeconds(8)));
+        Assert.True(await SendKeepAliveAndObserveAsync(scope.ServerEnvironment, scope.TlsPort, useTls: true, scope.Certificate));
+    }
+
+    [Fact]
     public async Task 真实Server回环V1路径完成KeepAlive()
     {
         using var scope = new ServerNetworkScope(tlsEnabled: false);
@@ -160,6 +175,39 @@ public sealed class ServerLifecycleSmokeTests
         Assert.True(scope.ServerEnvironment.Running);
     }
 
+    [Fact]
+    public async Task 真实ServerMaxUser与MaxIP准入在同一临界区生效()
+    {
+        using var userScope = new ServerNetworkScope(maxUser: 1, maxIp: 5, ipBlockSeconds: 0);
+        Envir.IPBlocks.Clear();
+        userScope.SetCertificatePassword(userScope.CertificatePassword);
+        userScope.Start();
+        Assert.True(SpinWait.SpinUntil(() => userScope.ServerEnvironment.StartState == EnvirStartState.Ready, TimeSpan.FromSeconds(8)), userScope.ServerEnvironment.StartFailure?.ToString());
+        var first = await userScope.ConnectTlsClientAsync();
+        using var firstClient = first.Client;
+        using var firstSsl = first.Ssl;
+        Assert.True(SpinWait.SpinUntil(() => userScope.ServerEnvironment.Connections.Count(c => c.Connected) == 1, TimeSpan.FromSeconds(4)));
+        var second = await userScope.ConnectTlsClientAsync();
+        using var secondClient = second.Client;
+        using var secondSsl = second.Ssl;
+        Assert.True(SpinWait.SpinUntil(() => userScope.ServerEnvironment.Connections.Count(c => c.Connected) == 1, TimeSpan.FromSeconds(2)));
+        userScope.Stop();
+
+        using var ipScope = new ServerNetworkScope(maxUser: 5, maxIp: 1, ipBlockSeconds: 0);
+        Envir.IPBlocks.Clear();
+        ipScope.SetCertificatePassword(ipScope.CertificatePassword);
+        ipScope.Start();
+        Assert.True(SpinWait.SpinUntil(() => ipScope.ServerEnvironment.StartState == EnvirStartState.Ready, TimeSpan.FromSeconds(8)), ipScope.ServerEnvironment.StartFailure?.ToString());
+        var ipFirst = await ipScope.ConnectTlsClientAsync();
+        using var ipFirstClient = ipFirst.Client;
+        using var ipFirstSsl = ipFirst.Ssl;
+        Assert.True(SpinWait.SpinUntil(() => ipScope.ServerEnvironment.Connections.Count(c => c.Connected) == 1, TimeSpan.FromSeconds(4)));
+        var ipSecond = await ipScope.ConnectTlsClientAsync();
+        using var ipSecondClient = ipSecond.Client;
+        using var ipSecondSsl = ipSecond.Ssl;
+        Assert.True(SpinWait.SpinUntil(() => ipScope.ServerEnvironment.Connections.Count(c => c.Connected) == 1, TimeSpan.FromSeconds(2)));
+    }
+
     private sealed class ServerNetworkScope : IDisposable
     {
         public const string DefaultCertificatePassword = "c3-test-password";
@@ -183,8 +231,11 @@ public sealed class ServerLifecycleSmokeTests
         private readonly bool _oldAutoImport;
         private readonly string _oldPassword;
         private readonly bool _oldPacketDirection;
+        private readonly ushort _oldMaxUser;
+        private readonly ushort _oldMaxIP;
+        private readonly int _oldIPBlockSeconds;
 
-        public ServerNetworkScope(bool tlsEnabled = true)
+        public ServerNetworkScope(bool tlsEnabled = true, ushort maxUser = 500, ushort maxIp = 5, int ipBlockSeconds = 5)
         {
             Directory = CreateTempDirectory();
             CertificatePath = Path.Combine(Directory, "server.pfx");
@@ -206,6 +257,9 @@ public sealed class ServerLifecycleSmokeTests
             _oldAutoImport = Settings.AutoImportLegacyOnEmpty;
             _oldPassword = Environment.GetEnvironmentVariable(TlsTransportPolicy.CertificatePasswordEnvironmentVariable);
             _oldPacketDirection = Packet.IsServer;
+            _oldMaxUser = Settings.MaxUser;
+            _oldMaxIP = Settings.MaxIP;
+            _oldIPBlockSeconds = Settings.IPBlockSeconds;
 
             Settings.IPAddress = "127.0.0.1";
             Settings.Port = (ushort)LegacyPort;
@@ -217,6 +271,9 @@ public sealed class ServerLifecycleSmokeTests
             Settings.SqlitePath = Path.Combine(Directory, "server.db");
             Settings.AutoApplySchemaOnStartup = true;
             Settings.AutoImportLegacyOnEmpty = false;
+            Settings.MaxUser = maxUser;
+            Settings.MaxIP = maxIp;
+            Settings.IPBlockSeconds = ipBlockSeconds;
 
             ServerEnvironment = new Envir();
             typeof(Envir).GetField("StatusPortEnabled", BindingFlags.Instance | BindingFlags.NonPublic)?.SetValue(ServerEnvironment, false);
@@ -239,6 +296,22 @@ public sealed class ServerLifecycleSmokeTests
 
         public void Start() => ServerEnvironment.Start(StartOptions);
 
+        public async Task<(TcpClient Client, SslStream Ssl)> ConnectTlsClientAsync()
+        {
+            var client = new TcpClient();
+            await client.ConnectAsync(IPAddress.Loopback, TlsPort);
+            var ssl = new SslStream(client.GetStream(), leaveInnerStreamOpen: false);
+            var options = TlsClientPolicy.CreateOptions("localhost");
+            options.CertificateChainPolicy = new X509ChainPolicy
+            {
+                TrustMode = X509ChainTrustMode.CustomRootTrust,
+                RevocationMode = X509RevocationMode.NoCheck,
+            };
+            options.CertificateChainPolicy.CustomTrustStore.Add(Certificate);
+            await ssl.AuthenticateAsClientAsync(options);
+            return (client, ssl);
+        }
+
         public void Stop() => ServerEnvironment.Stop();
 
         public TcpListener GetListener(string fieldName) =>
@@ -259,6 +332,9 @@ public sealed class ServerLifecycleSmokeTests
             Settings.SqlitePath = _oldSqlitePath;
             Settings.AutoApplySchemaOnStartup = _oldAutoApply;
             Settings.AutoImportLegacyOnEmpty = _oldAutoImport;
+            Settings.MaxUser = _oldMaxUser;
+            Settings.MaxIP = _oldMaxIP;
+            Settings.IPBlockSeconds = _oldIPBlockSeconds;
             Certificate.Dispose();
             TryDeleteDirectory(Directory);
         }
