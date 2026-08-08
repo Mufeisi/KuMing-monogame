@@ -1,0 +1,35 @@
+# 前台→HOME→同一 Activity 恢复原始命令记录
+
+设备：`127.0.0.1:21503`（Android 模拟器/虚拟设备）
+
+组件：`com.lommir.client.monogame.android/crc648e1c27e8d74093fe.MainActivity`
+
+本段流程没有执行 `force-stop`。
+
+```text
+===== P1-VERIFY-A 前台→HOME→恢复流程（全缓冲区日志） =====
+命令开始时间：2026-08-09T00:40:44.2895377+08:00
+命令：adb -s 127.0.0.1:21503 logcat -b all -c
+状态0（清理日志后，Activity 已在前台）：
+时间：2026-08-09T00:40:44.4089096+08:00
+mResumedActivity: ActivityRecord{f5f5234 u0 com.lommir.client.monogame.android/crc648e1c27e8d74093fe.MainActivity t9}
+命令：adb -s 127.0.0.1:21503 shell input keyevent KEYCODE_HOME
+状态1（HOME 后为模拟器 Launcher）：
+时间：2026-08-09T00:40:47.2035625+08:00
+mResumedActivity: ActivityRecord{eb5e1d5 u0 com.microvirt.launcher2/com.microvirt.launcher.Launcher t2}
+命令：adb -s 127.0.0.1:21503 shell am start -n com.lommir.client.monogame.android/crc648e1c27e8d74093fe.MainActivity
+Starting: Intent { cmp=com.lommir.client.monogame.android/crc648e1c27e8d74093fe.MainActivity }
+状态2（恢复后为同一 MainActivity）：
+时间：2026-08-09T00:40:52.6970078+08:00
+mResumedActivity: ActivityRecord{f5f5234 u0 com.lommir.client.monogame.android/crc648e1c27e8d74093fe.MainActivity t9}
+命令结束时间：2026-08-09T00:40:53.2135194+08:00
+命令：adb -s 127.0.0.1:21503 logcat -b all -d -v threadtime > raw-logcat-20260809-0041.txt
+原始全缓冲区 logcat 已导出。
+```
+
+截图对应关系：
+
+- `07-before-home.png`：状态0。
+- `08-home.png`：状态1。
+- `09-after-resume.png`：状态2。
+

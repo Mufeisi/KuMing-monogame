@@ -5,7 +5,7 @@
 - 任务：ANDROID-01 商城、ANDROID-02 师徒（Mentor/Mentee）、ANDROID-03 关系（Marriage 系）。
 - 验收设备：`127.0.0.1:21503`，Android 模拟器/虚拟设备；**不是实体真机**。
 - 本次仅做模拟器可达的基本启动验收，不把模拟器结果冒充真机门禁。
-- 基本启动、登录页显示、前后台恢复：通过（见 `02-login.png`、`03-login-resume.png`）。
+- 基本启动、登录页显示、前台→HOME→同一 Activity 恢复：在明确采集窗口内完成（见 `02-login.png`、`07-before-home.png`、`08-home.png`、`09-after-resume.png` 与 `foreground-home-flow.txt`）。
 - ANDROID-01～03 业务闭环：**阻塞，未通过**。当前没有可用测试服/Bootstrap 资源和已授权测试账号，无法进入角色/游戏场景；未猜测账号、未启动临时服务、未修改服务器或配置。
 
 ## APK 与设备
@@ -26,8 +26,8 @@
 
 - 解析后的 Android 启动组件为 `com.lommir.client.monogame.android/crc648e1c27e8d74093fe.MainActivity`。
 - 首次使用源码类名直接启动会得到 `Error type 3`（类名不是打包后的组件名）；改用 `resolve-activity` 返回的组件后启动成功。
-- 前台启动后 `mResumedActivity` 为上述 MainActivity；执行 HOME 后回到模拟器桌面；再次启动恢复到上述 MainActivity。
-- 启动日志显示 MonoGame 图形设备初始化、FairyGUI Stage 初始化和登录界面绘制；没有 `FATAL EXCEPTION` 或 `AndroidRuntime` 崩溃。
+- 前台启动后 `mResumedActivity` 为上述 MainActivity；在不 force-stop 的前台→HOME→恢复流程中，HOME 后为模拟器 Launcher，再次 `am start` 恢复上述 MainActivity。
+- `raw-logcat-20260809-0041.txt` 覆盖该采集窗口的全缓冲区原始输出；**仅就该窗口**未见应用 `FATAL EXCEPTION` 或立即崩溃，不作全局稳定性结论。
 - `PreLoginUpdate` 明确报告：`http://127.0.0.1:7777/api/file/Packages/bootstrap-package-index.json` 连接失败，且默认 FGUI 包资源探针未就绪。这是外部资源/测试服缺失的可复现阻塞，不在本任务内补服务或改配置。
 
 ## ANDROID-01～03 精确阻塞
@@ -42,10 +42,14 @@
 
 ## 证据文件
 
-- `01-login.png`、`window-login.xml`：首次尝试使用源码类名启动时的模拟器桌面/层级；随后通过 `resolve-activity` 得到正确打包组件并成功启动，保留用于解释启动组件解析过程。
+- `01-login.png`、`window-login.xml`：首次使用错误源码类名启动时留下的近乎空白截图与层级；不能用来证明模拟器桌面，仅保留用于解释随后通过 `resolve-activity` 修正组件名的过程。
 - `02-login.png`：启动后登录页截图。
-- `02-login-ui.xml`：启动后 Android UI 层级（游戏画布为单一 SurfaceView，业务控件由 MonoGame 绘制）。
-- `03-login-resume.png`：HOME 后重新拉起的登录页截图。
-- `03-login-resume-ui.xml`：恢复后的 UI 层级。
+- `02-login-ui.xml`：启动后 Android UI 层级（根下为 `android.view.View`，业务控件由 MonoGame 绘制）。
+- `07-before-home.png`：正确组件启动后、HOME 前的登录页截图。
+- `08-home.png`：HOME 后的模拟器 Launcher 截图。
+- `09-after-resume.png`：不 force-stop、使用同一组件恢复后的登录页截图。
+- `03-login-resume.png`、`03-login-resume-ui.xml`、`06-after-resume-ui.xml`：较早采集的补充截图/层级，不作为本次 HOME 结论的唯一依据。
+- `foreground-home-flow.txt`：完整命令、时间戳及三次 `dumpsys` 状态。
+- `raw-logcat-20260809-0041.txt`：该窗口结束后用 `adb logcat -b all -d -v threadtime` 导出的完整原始日志。
 - `device-apk.txt`：设备、APK 元数据、安装与启动状态命令输出。
 - `launch-log.txt`：应用启动、资源同步阻塞与前后台恢复相关 logcat 摘要。
