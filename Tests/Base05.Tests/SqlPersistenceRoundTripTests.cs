@@ -29,8 +29,18 @@ public sealed class SqlPersistenceRoundTripTests
                 AccountID = "base05-account",
                 UserName = "Base05",
                 Gold = 1234,
-                Password = "roundtrip-secret",
             };
+            var legacySalt = Crypto.GenerateSalt();
+            var legacyHash = Crypto.HashPassword("roundtrip-secret", legacySalt);
+            account.SetPasswordHashAndSalt(legacyHash, legacySalt);
+            Assert.False(source.HasPendingAutoSave);
+            Assert.Equal(PasswordVerificationResult.Invalid,
+                source.VerifyAccountPassword(account, "wrong-roundtrip-secret"));
+            Assert.False(source.HasPendingAutoSave);
+            Assert.Equal(legacyHash, account.Password);
+            Assert.Equal(PasswordVerificationResult.ValidNeedsUpgrade,
+                source.VerifyAccountPassword(account, "roundtrip-secret"));
+            Assert.True(source.HasPendingAutoSave);
             var character = new CharacterInfo
             {
                 Index = 202,

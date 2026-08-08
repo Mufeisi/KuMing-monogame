@@ -24,13 +24,19 @@ internal static class PasswordHasher
     internal const int Version = 19;
 
     private const int MinimumMemoryCostKiB = 16 * 1024;
-    private const int MaximumMemoryCostKiB = 256 * 1024;
-    private const int MaximumTimeCost = 10;
-    private const int MaximumParallelism = 8;
+    // 兼容外部 Argon2 PHC 时限制最坏资源：生产默认 32 MiB/3 次/1 线程，
+    // 单次验证最多接受 64 MiB/4 次/4 线程，避免登录主线程被恶意参数拖垮。
+    internal const int MaximumMemoryCostKiB = 64 * 1024;
+    internal const int MaximumTimeCost = 4;
+    internal const int MaximumParallelism = 4;
     private const int MinimumSaltLength = 16;
     private const int MaximumSaltLength = 64;
     private const int MinimumHashLength = 16;
     private const int MaximumHashLength = 64;
+    private const int MaximumPhcLength = 256;
+    private const int MaximumParameterFieldLength = 32;
+    private const int MaximumEncodedSaltLength = 88;
+    private const int MaximumEncodedHashLength = 88;
     private const string Prefix = "$argon2id$";
 
     internal static string Hash(string password)
@@ -152,6 +158,9 @@ internal static class PasswordHasher
         parameters = default;
         try
         {
+            if (string.IsNullOrEmpty(storedHash) || storedHash.Length > MaximumPhcLength)
+                return false;
+
             string[] fields = storedHash.Split('$');
             if (fields.Length != 6 || fields[0].Length != 0 || fields[1] != "argon2id" || fields[2] != "v=19")
                 return false;
@@ -161,6 +170,9 @@ internal static class PasswordHasher
             if (memoryCostKiB < MinimumMemoryCostKiB || memoryCostKiB > MaximumMemoryCostKiB ||
                 timeCost < 1 || timeCost > MaximumTimeCost || parallelism < 1 || parallelism > MaximumParallelism)
                 return false;
+            if (fields[4].Length > MaximumEncodedSaltLength || fields[5].Length > MaximumEncodedHashLength)
+                return false;
+
             byte[] salt = null;
             byte[] hash = null;
             if (!TryDecodePhcBase64(fields[4], out salt) ||
@@ -188,13 +200,16 @@ internal static class PasswordHasher
         memoryCostKiB = 0;
         timeCost = 0;
         parallelism = 0;
+        if (string.IsNullOrEmpty(value) || value.Length > MaximumParameterFieldLength)
+            return false;
+
         string[] parts = value.Split(',');
         if (parts.Length != 3) return false;
 
         var seen = 0;
         for (var i = 0; i < parts.Length; i++)
         {
-            string[] pair = parts[i].Split('=');
+            string[] pair = parts[i].Split('=', 2);
             if (pair.Length != 2 || !int.TryParse(pair[1], out int parsed) || parsed <= 0)
                 return false;
 
@@ -222,20 +237,23 @@ internal static class PasswordHasher
 
     private static string EncodePhcBase64(byte[] bytes)
     {
-        return Convert.ToBase64String(bytes).TrimEnd('=').Replace('+', '.');
+        // PHC 字段使用无填充的标准 Base64，保留 '+'；旧版本错误地把 '+' 写成 '.'，
+        // 解码端会在兼容期限内接受该历史形式。
+        return Convert.ToBase64String(bytes).TrimEnd('=');
     }
 
     private static bool TryDecodePhcBase64(string value, out byte[] bytes)
     {
         bytes = null;
-        if (string.IsNullOrEmpty(value)) return false;
+        if (string.IsNullOrEmpty(value) || value.Length > MaximumEncodedHashLength) return false;
         for (var i = 0; i < value.Length; i++)
         {
             char c = value[i];
-            if (!(c is >= 'A' and <= 'Z' or >= 'a' and <= 'z' or >= '0' and <= '9' or '.' or '/'))
+            if (!(c is >= 'A' and <= 'Z' or >= 'a' and <= 'z' or >= '0' and <= '9' or '+' or '.' or '/'))
                 return false;
         }
 
+        // '.' 是已发布错误实现的 '+' 替代符，只作为临时兼容输入接受。
         string standard = value.Replace('.', '+');
         var remainder = standard.Length % 4;
         if (remainder == 1) return false;

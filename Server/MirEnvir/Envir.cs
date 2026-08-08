@@ -204,6 +204,34 @@ namespace Server.MirEnvir
             Interlocked.Exchange(ref _autoSaveRequested, 1);
         }
 
+        internal bool HasPendingAutoSave => Volatile.Read(ref _autoSaveRequested) == 1;
+
+        /// <summary>
+        /// 统一登录密码验证边界。旧哈希升级必须在服务主线程完成，并通过现有自动保存接缝
+        /// 交给后续账户保存；错误密码不会设置保存请求。HTTP 登录从工作线程进入时同步投递，
+        /// 避免直接在工作线程改账户状态。
+        /// </summary>
+        internal Utils.PasswordVerificationResult VerifyAccountPassword(AccountInfo account, string candidate)
+        {
+            if (account == null)
+                return Utils.PasswordVerificationResult.Invalid;
+
+            if (!IsMainThread && Volatile.Read(ref _mainThreadId) != 0)
+                return InvokeOnMainThread(() => VerifyAccountPasswordOnMainThread(account, candidate));
+
+            return VerifyAccountPasswordOnMainThread(account, candidate);
+        }
+
+        private Utils.PasswordVerificationResult VerifyAccountPasswordOnMainThread(AccountInfo account,
+            string candidate)
+        {
+            var result = account.VerifyPassword(candidate);
+            if (result == Utils.PasswordVerificationResult.ValidNeedsUpgrade)
+                RequestAutoSave();
+
+            return result;
+        }
+
         public bool Running { get; private set; }
 
         private abstract class MainThreadWorkItem
@@ -4776,7 +4804,7 @@ namespace Server.MirEnvir
             account.BanReason = string.Empty;
             account.ExpiryDate = DateTime.MinValue;
 
-            if (account.VerifyPassword(p.CurrentPassword) == Utils.PasswordVerificationResult.Invalid)
+            if (VerifyAccountPassword(account, p.CurrentPassword) == Utils.PasswordVerificationResult.Invalid)
             {
                 c.Enqueue(new ServerPackets.ChangePassword { Result = 5 });
                 return;
@@ -4829,7 +4857,7 @@ namespace Server.MirEnvir
             account.BanReason = string.Empty;
             account.ExpiryDate = DateTime.MinValue;
 
-            if (account.VerifyPassword(p.Password) == Utils.PasswordVerificationResult.Invalid)
+            if (VerifyAccountPassword(account, p.Password) == Utils.PasswordVerificationResult.Invalid)
             {
                 if (account.WrongPasswordCount++ >= 5)
                 {
@@ -4907,7 +4935,7 @@ namespace Server.MirEnvir
             }
             account.BanReason = string.Empty;
             account.ExpiryDate = DateTime.MinValue;
-            if (account.VerifyPassword(Password) == Utils.PasswordVerificationResult.Invalid)
+            if (VerifyAccountPassword(account, Password) == Utils.PasswordVerificationResult.Invalid)
             {
                 if (account.WrongPasswordCount++ >= 5)
                 {

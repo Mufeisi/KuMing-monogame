@@ -318,6 +318,7 @@ namespace Client
             //Game
             AccountID = Reader.ReadString("Game", "AccountID", AccountID);
             Password = Shared.Security.PasswordStoragePolicy.ClearOnLoad(value => Reader.Write("Game", "Password", value));
+            Shared.Security.PasswordStoragePolicy.ClearRememberPasswordOnLoad(value => Reader.Write("Game", "RememberPassword", value));
 
             SkillMode = Reader.ReadBoolean("Game", "SkillMode", SkillMode);
             SkillBar = Reader.ReadBoolean("Game", "SkillBar", SkillBar);
@@ -373,6 +374,7 @@ namespace Client
             P_NeedLogin = Reader.ReadBoolean("Launcher", "NeedLogin", P_NeedLogin);
             P_Login = Reader.ReadString("Launcher", "Login", P_Login);
             P_Password = Shared.Security.PasswordStoragePolicy.ClearOnLoad(value => Reader.Write("Launcher", "Password", value));
+            Shared.Security.PasswordStoragePolicy.ClearRememberPasswordOnLoad(value => Reader.Write("Launcher", "RememberPassword", value));
             P_AutoStart = Reader.ReadBoolean("Launcher", "AutoStart", P_AutoStart);
             P_ServerName = Reader.ReadString("Launcher", "ServerName", P_ServerName);
             P_BrowserAddress = Reader.ReadString("Launcher", "Browser", P_BrowserAddress);
@@ -430,6 +432,7 @@ namespace Client
             //Game
             Reader.Write("Game", "AccountID", AccountID);
             Shared.Security.PasswordStoragePolicy.ClearOnSave(value => Reader.Write("Game", "Password", value));
+            Shared.Security.PasswordStoragePolicy.ClearRememberPasswordOnSave(value => Reader.Write("Game", "RememberPassword", value));
             Reader.Write("Game", "SkillMode", SkillMode);
             Reader.Write("Game", "SkillBar", SkillBar);
             //Reader.Write("Game", "SkillSet", SkillSet);
@@ -485,6 +488,7 @@ namespace Client
             Reader.Write("Launcher", "NeedLogin", P_NeedLogin);
             Reader.Write("Launcher", "Login", P_Login);
             Shared.Security.PasswordStoragePolicy.ClearOnSave(value => Reader.Write("Launcher", "Password", value));
+            Shared.Security.PasswordStoragePolicy.ClearRememberPasswordOnSave(value => Reader.Write("Launcher", "RememberPassword", value));
             Reader.Write("Launcher", "ServerName", P_ServerName);
             Reader.Write("Launcher", "Browser", P_BrowserAddress);
             Reader.Write("Launcher", "AutoStart", P_AutoStart);

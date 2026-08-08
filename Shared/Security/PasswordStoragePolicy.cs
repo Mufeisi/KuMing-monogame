@@ -15,8 +15,19 @@ public static class PasswordStoragePolicy
         return string.Empty;
     }
 
+    public static bool ClearRememberPasswordOnLoad(Action<bool> clearStoredValue)
+    {
+        clearStoredValue?.Invoke(false);
+        return false;
+    }
+
     public static void ClearOnSave(Action<string> writeValue)
     {
         writeValue?.Invoke(string.Empty);
+    }
+
+    public static void ClearRememberPasswordOnSave(Action<bool> writeValue)
+    {
+        writeValue?.Invoke(false);
     }
 }
