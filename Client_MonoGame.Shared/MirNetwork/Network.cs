@@ -104,11 +104,6 @@ namespace MonoShare.MirNetwork
 
         public static void Connect()
         {
-            if (_client != null)
-                Disconnect();
-
-            _sendGate = new StreamWriteGate();
-
             if (!Settings.UseTlsV2 && !TlsClientPolicy.IsLoopbackHost(Settings.IPAddress))
             {
                 if (Settings.LogErrors) CMain.SaveError("已拒绝非回环V1明文连接");
@@ -123,16 +118,32 @@ namespace MonoShare.MirNetwork
 
             ConnectAttempt++;
 
-            _usingTls = Settings.UseTlsV2;
-            _activePort = _usingTls ? Settings.TlsPort : Settings.Port;
-            _client = new TcpClient {NoDelay = true};
-            int generation = Interlocked.Increment(ref _connectionGeneration);
-            var state = (Client: _client, Generation: generation, UseTls: _usingTls,
-                Port: _activePort, Host: Settings.IPAddress, ServerName: Settings.TlsServerName);
-            EnqueuePacketTraceLine($"[{CMain.Now:yyyy-MM-dd HH:mm:ss.fff}] CONNECT Attempt={ConnectAttempt} Host={Settings.IPAddress}:{_activePort}");
-            EnsureBackgroundKeepAliveTimerStarted();
-            _client.BeginConnect(Settings.IPAddress, _activePort, Connection, state);
+            bool useTls = Settings.UseTlsV2;
+            int activePort = useTls ? Settings.TlsPort : Settings.Port;
+            TcpClient client = new TcpClient { NoDelay = true };
+            int generation;
+            lock (_connectionGate)
+            {
+                if (_client != null)
+                {
+                    client.Close();
+                    return;
+                }
 
+                (_client, _sendGate, _usingTls, _activePort) =
+                    (client, new StreamWriteGate(), useTls, activePort);
+                generation = Interlocked.Increment(ref _connectionGeneration);
+            }
+
+            try
+            {
+                var state = (Client: client, Generation: generation, UseTls: useTls,
+                    Port: activePort, Host: Settings.IPAddress, ServerName: Settings.TlsServerName);
+                EnqueuePacketTraceLine($"[{CMain.Now:yyyy-MM-dd HH:mm:ss.fff}] CONNECT Attempt={ConnectAttempt} Host={Settings.IPAddress}:{activePort}");
+                EnsureBackgroundKeepAliveTimerStarted();
+                client.BeginConnect(Settings.IPAddress, activePort, Connection, state);
+            }
+            catch (Exception ex) { FailIfCurrent(client, generation, "CONNECT BeginConnectFailed", ex.ToString()); }
         }
 
         private static async void Connection(IAsyncResult result)
@@ -149,7 +160,7 @@ namespace MonoShare.MirNetwork
 
                 if (!state.Client.Connected)
                 {
-                    FailIfCurrent(state.Client, state.Generation, "CONNECT Failed (NotConnected)", reconnect: true);
+                    FailIfCurrent(state.Client, state.Generation, "CONNECT Failed (NotConnected)");
                     return;
                 }
 
@@ -189,7 +200,7 @@ namespace MonoShare.MirNetwork
             }
             catch (SocketException)
             {
-                FailIfCurrent(state.Client, state.Generation, "CONNECT SocketException", reconnect: true);
+                FailIfCurrent(state.Client, state.Generation, "CONNECT SocketException");
             }
             catch (Exception ex)
             {
@@ -321,11 +332,10 @@ namespace MonoShare.MirNetwork
         }
 
         private static bool FailIfCurrent(TcpClient expectedClient, int generation, string trace,
-            string error = null, bool reconnect = false)
+            string error = null)
         {
             if (!DetachCurrent(expectedClient, generation, out var detached)) return false;
             CloseDetached(detached, trace, error);
-            if (reconnect) Connect();
             return true;
         }
 
