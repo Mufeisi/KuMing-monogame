@@ -10,6 +10,7 @@ using Server.Scripting;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Net;
+using System.Net.Security;
 using System.Net.Sockets;
 using System.Numerics;
 using System.Security.Cryptography.X509Certificates;
@@ -191,7 +192,7 @@ namespace Server.MirEnvir
             {
                 try
                 {
-                    return _listener?.Server?.IsBound == true;
+                    return _listener?.Server?.IsBound == true || _tlsListener?.Server?.IsBound == true;
                 }
                 catch
                 {
@@ -1069,6 +1070,7 @@ namespace Server.MirEnvir
             }
             catch (Exception ex)
             {
+                Running = false;
                 if (StartState == EnvirStartState.Starting)
                     MarkStartupFailed(ex);
 
@@ -4323,6 +4325,10 @@ namespace Server.MirEnvir
         }
         private void StartNetwork()
         {
+            IPAddress listenAddress = IPAddress.Parse(Settings.IPAddress);
+            if (!Settings.TlsEnabled && !TlsTransportPolicy.ShouldStartLegacyV1(listenAddress, Settings.AllowLegacyV1))
+                throw new InvalidOperationException("没有可用的游戏监听器：请启用TLS或配置回环/私网V1。");
+
             Connections.Clear();
             StatusConnections.Clear();
 
@@ -4338,23 +4344,29 @@ namespace Server.MirEnvir
 
             LoadConquests();
 
-            IPAddress listenAddress = IPAddress.Parse(Settings.IPAddress);
+            bool gameListenerStarted = false;
             if (Settings.TlsEnabled)
             {
                 TlsTransportPolicy.ValidateTlsPorts(Settings.Port, Settings.TlsPort);
 
                 _tlsCertificate = TlsTransportPolicy.LoadServerCertificate(Settings.TlsCertificatePath);
                 _tlsListener = CreateStartedListener(listenAddress, Settings.TlsPort, "TLS游戏端口");
-                _tlsListener.BeginAcceptTcpClient(TlsConnection, null);
+                gameListenerStarted = true;
+                if (!QueueTlsAccept())
+                    throw new InvalidOperationException("TLS监听器无法接受连接。");
             }
 
             if (TlsTransportPolicy.ShouldStartLegacyV1(listenAddress, Settings.AllowLegacyV1))
             {
                 _listener = CreateStartedListener(listenAddress, Settings.Port, "游戏端口");
+                gameListenerStarted = true;
                 _listener.BeginAcceptTcpClient(Connection, null);
             }
             else
                 MessageQueue.Enqueue("V1明文游戏端口已关闭");
+
+            if (!gameListenerStarted)
+                throw new InvalidOperationException("没有可用的游戏监听器：请启用TLS或配置回环/私网V1。");
 
             if (StatusPortEnabled)
             {
@@ -4560,17 +4572,50 @@ namespace Server.MirEnvir
             }
         }
 
-        private void TlsConnection(IAsyncResult result)
+        private bool QueueTlsAccept()
         {
-            TcpClient client = null;
             try
             {
-                if (!Running || _tlsListener == null || !_tlsListener.Server.IsBound) return;
-                client = _tlsListener.EndAcceptTcpClient(result);
-                var ssl = TlsTransportPolicy.AuthenticateServer(client.GetStream(), _tlsCertificate);
-                var ipAddress = client.Client.RemoteEndPoint.ToString().Split(':')[0];
-                bool connected = false;
+                if (Running && _tlsListener?.Server?.IsBound == true)
+                {
+                    _tlsListener.BeginAcceptTcpClient(TlsConnection, null);
+                    return true;
+                }
+                return false;
+            }
+            catch (Exception ex)
+            {
+                if (Running) MessageQueue.Enqueue("TLS监听接受失败：" + ex.GetType().Name);
+                return false;
+            }
+        }
 
+        private void TlsConnection(IAsyncResult result)
+        {
+            try
+            {
+                if (!Running || _tlsListener?.Server?.IsBound != true) return;
+                var client = _tlsListener.EndAcceptTcpClient(result);
+                QueueTlsAccept();
+                _ = ProcessTlsClientAsync(client);
+            }
+            catch (Exception ex)
+            {
+                if (Running) MessageQueue.Enqueue("TLS连接接受失败：" + ex.GetType().Name);
+                QueueTlsAccept();
+            }
+        }
+
+        private async Task ProcessTlsClientAsync(TcpClient client)
+        {
+            SslStream ssl = null;
+            bool connected = false;
+            try
+            {
+                using var timeout = new CancellationTokenSource(10000);
+                ssl = await TlsTransportPolicy.AuthenticateServerAsync(client.GetStream(), _tlsCertificate, timeout.Token);
+                if (!Running) return;
+                var ipAddress = client.Client.RemoteEndPoint.ToString().Split(':')[0];
                 if (!IPBlocks.TryGetValue(ipAddress, out DateTime banDate) || banDate < Now)
                 {
                     int count = Connections.Count(c => c.Connected && c.IPAddress == ipAddress);
@@ -4584,22 +4629,18 @@ namespace Server.MirEnvir
                         }
                     }
                 }
-
-                if (!connected)
-                {
-                    ssl.Dispose();
-                    client.Close();
-                }
             }
             catch (Exception ex)
             {
                 if (Running) MessageQueue.Enqueue("TLS连接握手失败：" + ex.GetType().Name);
-                client?.Close();
             }
             finally
             {
-                if (Running && _tlsListener != null && _tlsListener.Server.IsBound)
-                    _tlsListener.BeginAcceptTcpClient(TlsConnection, null);
+                if (!connected)
+                {
+                    try { ssl?.Dispose(); } catch { }
+                    try { client?.Close(); } catch { }
+                }
             }
         }
 

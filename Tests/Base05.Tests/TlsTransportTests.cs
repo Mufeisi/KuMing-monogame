@@ -18,8 +18,103 @@ public sealed class TlsTransportTests
     public void 非回环默认拒绝明文监听而回环或显式开发开关允许()
     {
         Assert.False(TlsTransportPolicy.ShouldStartLegacyV1(IPAddress.Parse("0.0.0.0"), false));
+        Assert.False(TlsTransportPolicy.ShouldStartLegacyV1(IPAddress.Parse("0.0.0.0"), true));
         Assert.True(TlsTransportPolicy.ShouldStartLegacyV1(IPAddress.Loopback, false));
-        Assert.True(TlsTransportPolicy.ShouldStartLegacyV1(IPAddress.Parse("192.0.2.10"), true));
+        Assert.True(TlsTransportPolicy.ShouldStartLegacyV1(IPAddress.Parse("192.168.1.10"), true));
+        Assert.True(TlsTransportPolicy.ShouldStartLegacyV1(IPAddress.Parse("10.20.30.40"), true));
+        Assert.True(TlsTransportPolicy.ShouldStartLegacyV1(IPAddress.Parse("172.16.10.10"), true));
+        Assert.False(TlsTransportPolicy.ShouldStartLegacyV1(IPAddress.Parse("192.168.1.10"), false));
+        Assert.True(TlsTransportPolicy.ShouldStartLegacyV1(IPAddress.Parse("fe80::1"), true));
+        Assert.True(TlsTransportPolicy.ShouldStartLegacyV1(IPAddress.Parse("fd00::1"), true));
+        Assert.False(TlsTransportPolicy.ShouldStartLegacyV1(IPAddress.Parse("2001:db8::1"), true));
+    }
+
+    [Fact]
+    public void TLS监听存在时网络绑定状态为真()
+    {
+        var environment = new Envir();
+        var tlsListener = new TcpListener(IPAddress.Loopback, 0);
+        tlsListener.Start();
+        FieldInfo tlsField = typeof(Envir).GetField("_tlsListener", BindingFlags.Instance | BindingFlags.NonPublic);
+        MethodInfo stopMethod = typeof(Envir).GetMethod("StopNetwork", BindingFlags.Instance | BindingFlags.NonPublic);
+        tlsField.SetValue(environment, tlsListener);
+        try
+        {
+            Assert.True(environment.IsNetworkBound);
+        }
+        finally
+        {
+            stopMethod.Invoke(environment, null);
+            tlsListener.Stop();
+        }
+    }
+
+    [Fact]
+    public async Task TLS异步握手支持取消并释放慢连接()
+    {
+        string directory = CreateTempDirectory();
+        string path = Path.Combine(directory, "server.pfx");
+        try
+        {
+            using var source = CreateCertificate("localhost", DateTimeOffset.UtcNow.AddMinutes(-1), DateTimeOffset.UtcNow.AddHours(1));
+            File.WriteAllBytes(path, source.Export(X509ContentType.Pfx));
+            using var certificate = TlsTransportPolicy.LoadServerCertificate(path);
+            using var listener = new TcpListener(IPAddress.Loopback, 0);
+            listener.Start();
+            var serverTask = Task.Run(async () =>
+            {
+                using var serverClient = await listener.AcceptTcpClientAsync();
+                using var cancellation = new CancellationTokenSource(TimeSpan.FromMilliseconds(100));
+                var handshake = TlsTransportPolicy.AuthenticateServerAsync(serverClient.GetStream(), certificate, cancellation.Token);
+                await Assert.ThrowsAnyAsync<OperationCanceledException>(() => handshake);
+            });
+
+            using var client = new TcpClient();
+            await client.ConnectAsync(IPAddress.Loopback, ((IPEndPoint)listener.LocalEndpoint).Port);
+            await serverTask.WaitAsync(TimeSpan.FromSeconds(2));
+        }
+        finally
+        {
+            Directory.Delete(directory, true);
+        }
+    }
+
+    [Fact]
+    public async Task 慢TLS握手不阻塞第二个合法握手()
+    {
+        string directory = CreateTempDirectory();
+        string path = Path.Combine(directory, "server.pfx");
+        try
+        {
+            using var source = CreateCertificate("localhost", DateTimeOffset.UtcNow.AddMinutes(-1), DateTimeOffset.UtcNow.AddHours(1));
+            File.WriteAllBytes(path, source.Export(X509ContentType.Pfx));
+            using var certificate = TlsTransportPolicy.LoadServerCertificate(path);
+            using var listener = new TcpListener(IPAddress.Loopback, 0);
+            listener.Start();
+            var serverTask = Task.Run(async () =>
+            {
+                using var slowClient = await listener.AcceptTcpClientAsync();
+                using var cancellation = new CancellationTokenSource(TimeSpan.FromMilliseconds(250));
+                var slowHandshake = TlsTransportPolicy.AuthenticateServerAsync(slowClient.GetStream(), certificate, cancellation.Token);
+                using var fastClient = await listener.AcceptTcpClientAsync();
+                using var fastSsl = await TlsTransportPolicy.AuthenticateServerAsync(fastClient.GetStream(), certificate, CancellationToken.None);
+                await Assert.ThrowsAnyAsync<OperationCanceledException>(() => slowHandshake);
+            });
+
+            using var slowSocket = new TcpClient();
+            await slowSocket.ConnectAsync(IPAddress.Loopback, ((IPEndPoint)listener.LocalEndpoint).Port);
+            using var fastSocket = new TcpClient();
+            await fastSocket.ConnectAsync(IPAddress.Loopback, ((IPEndPoint)listener.LocalEndpoint).Port);
+            using var fastSslClient = new SslStream(fastSocket.GetStream(), false);
+            var options = TlsClientPolicy.CreateOptions("localhost");
+            options.CertificateChainPolicy = CreateCustomRootPolicy(certificate);
+            await fastSslClient.AuthenticateAsClientAsync(options);
+            await serverTask.WaitAsync(TimeSpan.FromSeconds(2));
+        }
+        finally
+        {
+            Directory.Delete(directory, true);
+        }
     }
 
     [Fact]
