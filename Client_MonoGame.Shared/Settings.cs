@@ -11,6 +11,9 @@ namespace MonoShare
         public static bool UseConfig = false;
         public static string IPAddress = "192.168.0.100";
         public static int Port = 7000;
+        public static bool UseTlsV2 = false;
+        public static int TlsPort = 7001;
+        public static string TlsServerName = "localhost";
         public const int TimeOut = 5000;
 
         public static string AsynDownLoadIPAddress = "ftp://192.168.0.100:8888/";
@@ -531,6 +534,9 @@ namespace MonoShare
             {
                 IPAddress = Reader.ReadString("Network", "IPAddress", IPAddress);
                 Port = Reader.ReadInt32("Network", "Port", Port);
+                UseTlsV2 = Reader.ReadBoolean("Network", "UseTlsV2", UseTlsV2);
+                TlsPort = Reader.ReadInt32("Network", "TlsPort", TlsPort);
+                TlsServerName = Reader.ReadString("Network", "TlsServerName", TlsServerName);
             }
 
             BootstrapPackageRepo = Reader.ReadString("Bootstrap", "PackageRepo", BootstrapPackageRepo)?.Trim() ?? string.Empty;
@@ -698,6 +704,9 @@ namespace MonoShare
             Reader.Write("Network", "UseConfig", UseConfig);
             Reader.Write("Network", "IPAddress", IPAddress ?? string.Empty);
             Reader.Write("Network", "Port", Port);
+            Reader.Write("Network", "UseTlsV2", UseTlsV2);
+            Reader.Write("Network", "TlsPort", TlsPort);
+            Reader.Write("Network", "TlsServerName", TlsServerName ?? string.Empty);
             Reader.Write("Network", "BackgroundNetworkTickMs", BackgroundNetworkTickMs);
 
             Reader.Write("Bootstrap", "PackageRepo", BootstrapPackageRepo ?? string.Empty);

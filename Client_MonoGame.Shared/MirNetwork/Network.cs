@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net.Security;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
@@ -11,6 +12,7 @@ using MonoShare.MirScenes;
 using C = ClientPackets;
 using S = ServerPackets;
 using Shared.Diagnostics;
+using Shared.Security;
 
 
 namespace MonoShare.MirNetwork
@@ -28,6 +30,9 @@ namespace MonoShare.MirNetwork
         private const int DefaultBackgroundKeepAliveTickMs = 1000;
 
         private static TcpClient _client;
+        private static Stream _stream;
+        private static bool _usingTls;
+        private static int _activePort;
         public static int ConnectAttempt = 0;
         public static bool Connected;
         public static long TimeOutTime, TimeConnected;
@@ -100,12 +105,26 @@ namespace MonoShare.MirNetwork
             if (_client != null)
                 Disconnect();
 
+            if (!Settings.UseTlsV2 && !TlsClientPolicy.IsLoopbackHost(Settings.IPAddress))
+            {
+                if (Settings.LogErrors) CMain.SaveError("已拒绝非回环V1明文连接");
+                return;
+            }
+
+            if (Settings.UseTlsV2 && (Settings.TlsPort < 1 || Settings.TlsPort > 65535))
+            {
+                if (Settings.LogErrors) CMain.SaveError("TLS端口配置无效");
+                return;
+            }
+
             ConnectAttempt++;
 
+            _usingTls = Settings.UseTlsV2;
+            _activePort = _usingTls ? Settings.TlsPort : Settings.Port;
             _client = new TcpClient {NoDelay = true};
-            EnqueuePacketTraceLine($"[{CMain.Now:yyyy-MM-dd HH:mm:ss.fff}] CONNECT Attempt={ConnectAttempt} Host={Settings.IPAddress}:{Settings.Port}");
+            EnqueuePacketTraceLine($"[{CMain.Now:yyyy-MM-dd HH:mm:ss.fff}] CONNECT Attempt={ConnectAttempt} Host={Settings.IPAddress}:{_activePort}");
             EnsureBackgroundKeepAliveTimerStarted();
-            _client.BeginConnect(Settings.IPAddress, Settings.Port, Connection, null);
+            _client.BeginConnect(Settings.IPAddress, _activePort, Connection, null);
 
         }
 
@@ -120,6 +139,14 @@ namespace MonoShare.MirNetwork
                     EnqueuePacketTraceLine($"[{CMain.Now:yyyy-MM-dd HH:mm:ss.fff}] CONNECT Failed (NotConnected)");
                     Connect();
                     return;
+                }
+
+                _stream = _client.GetStream();
+                if (_usingTls)
+                {
+                    var ssl = new SslStream(_stream, leaveInnerStreamOpen: false);
+                    _stream = ssl;
+                    ssl.AuthenticateAsClient(TlsClientPolicy.CreateOptions(Settings.TlsServerName));
                 }
 
                 _receiveList = new ConcurrentQueue<Packet>();
@@ -137,7 +164,7 @@ namespace MonoShare.MirNetwork
                 _lastReceiveTick = nowTick;
                 _lastSendTick = nowTick;
 
-                EnqueuePacketTraceLine($"[{CMain.Now:yyyy-MM-dd HH:mm:ss.fff}] CONNECTED Host={Settings.IPAddress}:{Settings.Port}");
+                EnqueuePacketTraceLine($"[{CMain.Now:yyyy-MM-dd HH:mm:ss.fff}] CONNECTED Host={Settings.IPAddress}:{_activePort}");
 
                 BeginReceive();
             }
@@ -148,7 +175,10 @@ namespace MonoShare.MirNetwork
             }
             catch (Exception ex)
             {
-                if (Settings.LogErrors) CMain.SaveError(ex.ToString());
+                if (Settings.LogErrors)
+                    CMain.SaveError(_usingTls
+                        ? $"TLS连接失败：{ex.GetType().Name} {Settings.IPAddress}:{_activePort}"
+                        : ex.ToString());
                 Disconnect();
             }
         }
@@ -220,11 +250,11 @@ namespace MonoShare.MirNetwork
 
         private static void BeginReceive()
         {
-            if (_client == null || !_client.Connected) return;
+            if (_stream == null || _client == null || !_client.Connected) return;
 
             try
             {
-                _client.Client.BeginReceive(_rawBytes, 0, _rawBytes.Length, SocketFlags.None, ReceiveData, _rawBytes);
+                _stream.BeginRead(_rawBytes, 0, _rawBytes.Length, ReceiveData, _rawBytes);
             }
             catch
             {
@@ -233,13 +263,13 @@ namespace MonoShare.MirNetwork
         }
         private static void ReceiveData(IAsyncResult result)
         {
-            if (_client == null || !_client.Connected) return;
+            if (_stream == null || _client == null || !_client.Connected) return;
 
             int dataRead;
 
             try
             {
-                dataRead = _client.Client.EndReceive(result);
+                dataRead = _stream.EndRead(result);
             }
             catch
             {
@@ -305,30 +335,20 @@ namespace MonoShare.MirNetwork
             if (bytes == null || bytes.Length == 0)
                 return true;
 
-            TcpClient client = _client;
-            if (client == null || !client.Connected)
+            Stream stream = _stream;
+            if (stream == null || _client == null || !_client.Connected)
                 return false;
 
             try
             {
                 lock (_sendGate)
                 {
-                    client = _client;
-                    if (client == null || !client.Connected)
+                    stream = _stream;
+                    if (stream == null || _client == null || !_client.Connected)
                         return false;
 
-                    Socket socket = client.Client;
-                    int offset = 0;
-                    int remaining = bytes.Length;
-                    while (remaining > 0)
-                    {
-                        int sent = socket.Send(bytes, offset, remaining, SocketFlags.None);
-                        if (sent <= 0)
-                            return false;
-
-                        offset += sent;
-                        remaining -= sent;
-                    }
+                    IAsyncResult write = stream.BeginWrite(bytes, 0, bytes.Length, null, null);
+                    stream.EndWrite(write);
                 }
             }
             catch
@@ -354,6 +374,8 @@ namespace MonoShare.MirNetwork
                 {
                     try
                     {
+                        _stream?.Dispose();
+                        _stream = null;
                         _client.Close();
                     }
                     catch
@@ -369,6 +391,8 @@ namespace MonoShare.MirNetwork
             Connected = false;
             _sendList = null;
             _client = null;
+            _usingTls = false;
+            _activePort = 0;
 
             _receiveList = null;
             _connectedTick = 0;

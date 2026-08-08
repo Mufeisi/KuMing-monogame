@@ -156,6 +156,8 @@ GATE-P0 ──► GATE-P1 ──► GATE-P2 ──► GATE-P3 ──► GATE-P4 
 
 **SEC-02 阶段B1实施记录（2026-08-08）**：PC 客户端复用同一 Packet 解析/发送队列和 Stream 接缝，V1 使用 `NetworkStream`、V2 使用 `SslStream` 独立连接 `TlsPort`；`TlsClientPolicy` 强制非空 `TlsServerName`、TLS 1.2/1.3，默认系统信任链、域名、有效期严格校验，无回调绕过、客户端证书或密码落盘。PC `UseTlsV2=false` 时仅允许回环开发地址，非回环直接拒绝且 TLS 失败不降级 V1。T-02 B1 临时证书真实握手/Packet 往返、错误主机、不受信任/过期证书及非回环门禁专项已通过；Mono 客户端 TLS 接线（B2）、ConfigForm UI 与证书固定仍未完成。
 
+**SEC-02 阶段B2实施记录（2026-08-08）**：Mono/Android 主 Network 复用同一 Packet 解析/发送队列和 `Stream` 接缝，V1 使用 `NetworkStream`、V2 使用 `SslStream` 独立连接 `TlsPort`；`UseTlsV2`、`TlsPort`、`TlsServerName` 已接入移动 Settings 的 Load/Save。非回环地址关闭 V1 明文，TLS 失败不降级，目标主机为空由共享 `TlsClientPolicy` 拒绝；日志仅记录异常类型与目标主机/端口，不记录证书或秘密。沿用 T-02 TLS 专项的严格域名/链/过期验证与 Packet 往返证据，TLS 专项 11/11、Base05 全量 181/181、Mono net10 Release 与 Android Release 构建均通过；ConfigForm UI、证书固定、生命周期及 iOS 仍未完成。
+
 **SEC-01 后续（P2，待用户批准）**：HTTPLogin 的线程事务边界（工作线程进入主线程、认证/账户状态提交及失败回滚）与真实 PC/移动 Settings-登录集成测试仍未实现，单独立项后再做；不阻塞本次 P1 收口，也不在本次提交引入 Credential Manager、Keystore 或其它 SEC-02 代码。
 
 **GATE-P2 退出条件**：公开测试前安全项全部完成；凭据不通过未加密网络传输；公网无 V1 明文登录。
