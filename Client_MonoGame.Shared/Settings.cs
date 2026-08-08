@@ -39,7 +39,7 @@ namespace MonoShare
 
         public const long CleanDelay = 600000;
         public static int ScreenWidth = 1334, ScreenHeight = 750;
-        private static InIReader Reader = CreateReader();
+        private static InIReader Reader;
 
         private static bool _useTestConfig;
         public static bool UseTestConfig
@@ -50,7 +50,8 @@ namespace MonoShare
             }
             set
             {
-                Reader = CreateReader();
+                if (Reader != null)
+                    Reader = CreateReader();
                 _useTestConfig = value;
             }
         }
@@ -363,6 +364,7 @@ namespace MonoShare
 
         private static InIReader CreateReader()
         {
+            SensitiveIniSanitizer.Sanitize(ConfigFilePath);
             return new InIReader(ConfigFilePath);
         }
 

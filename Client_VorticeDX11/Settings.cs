@@ -7,8 +7,14 @@ namespace Client
         public const long CleanDelay = 600000;
 
         public static int ScreenWidth = 800, ScreenHeight = 600; //ScreenWidth = 1024, ScreenHeight = 768
-        private static InIReader Reader = new InIReader(@".\Mir2Config.ini");
+        private static InIReader Reader;
         private static InIReader QuestTrackingReader = new InIReader(Path.Combine(UserDataPath, @".\QuestTracking.ini"));
+
+        private static InIReader CreateReader(string fileName)
+        {
+            Shared.Security.SensitiveIniSanitizer.Sanitize(fileName);
+            return new InIReader(fileName);
+        }
 
         private static bool _useTestConfig;
         public static bool UseTestConfig
@@ -19,9 +25,9 @@ namespace Client
             }
             set 
             {
-                if (value == true)
+                if (value == true && Reader != null)
                 {
-                    Reader = new InIReader(@".\Mir2Test.ini");
+                    Reader = CreateReader(@".\Mir2Test.ini");
                 }
                 _useTestConfig = value;
             }
@@ -259,6 +265,7 @@ namespace Client
 
         public static void Load()
         {
+            Reader ??= CreateReader(_useTestConfig ? @".\Mir2Test.ini" : @".\Mir2Config.ini");
             GameLanguage.LoadClientLanguage(@".\Language.ini");
 
             if (!Directory.Exists(DataPath)) Directory.CreateDirectory(DataPath);
@@ -397,6 +404,7 @@ namespace Client
 
         public static void Save()
         {
+            Reader ??= CreateReader(_useTestConfig ? @".\Mir2Test.ini" : @".\Mir2Config.ini");
             //Graphics
             Reader.Write("Graphics", "FullScreen", FullScreen);
             Reader.Write("Graphics", "Borderless", Borderless);
