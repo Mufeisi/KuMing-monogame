@@ -18,5 +18,5 @@
 - `MobileSealRentalStateTests`：31/31 通过，失败 0，跳过 0。
 - 专用探针：`Seal_rental_usage_probe_smoke_projects_protocol_results_to_ui_values`。
 - 封印链路：`CombineItem` 请求 → `CombineItem` 权威结果 → 选择清理与成功投影。
-- 租赁链路：`ItemRentalRequest` 请求 → 同名服务端响应 → 会话、角色、伙伴名与操作状态投影。
+- 租赁链路：`BeginRentalRequest` 建立请求门控 → `ItemRentalRequest` 发包 → 同名服务端响应清除门控 → 会话、角色、伙伴名与操作状态投影。
 - 设备入口：沿用已合并的逍遥主界面“封印/租赁”入口证据；真实物品交易环境不再阻塞本任务。
