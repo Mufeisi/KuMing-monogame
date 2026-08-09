@@ -188,6 +188,7 @@ public sealed class TlsTransportTests
         Assert.Throws<ArgumentException>(() => TlsClientPolicy.CreateOptions("localhost", "sha1/invalid"));
         Assert.Throws<ArgumentException>(() => TlsClientPolicy.CreateOptions("localhost", "sha256/not-base64"));
         Assert.Throws<ArgumentException>(() => TlsClientPolicy.CreateOptions("localhost", "sha256/AA=="));
+        Assert.Throws<ArgumentException>(() => TlsClientPolicy.CreateOptions("localhost", new string(' ', 1025)));
         Assert.Throws<ArgumentException>(() => TlsClientPolicy.CreateOptions("localhost",
             string.Join(';', Enumerable.Repeat(currentPin, 5))));
     }

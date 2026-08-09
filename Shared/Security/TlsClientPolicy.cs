@@ -69,9 +69,10 @@ public static class TlsClientPolicy
 
     private static byte[][] ParseSpkiSha256Pins(string pinsText)
     {
-        if (string.IsNullOrWhiteSpace(pinsText)) return Array.Empty<byte[]>();
+        if (pinsText == null) return Array.Empty<byte[]>();
         if (pinsText.Length > MaxPinsTextLength)
             throw new ArgumentException("TLS证书固定值配置过长", nameof(pinsText));
+        if (string.IsNullOrWhiteSpace(pinsText)) return Array.Empty<byte[]>();
 
         string[] values = pinsText.Split(new[] { ';', ',', '\r', '\n' },
             StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
