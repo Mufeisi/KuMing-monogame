@@ -939,6 +939,16 @@ namespace Server.MirEnvir
             }
             catch (Exception ex)
             {
+                try
+                {
+                    StopNetwork();
+                }
+                catch (Exception cleanupEx)
+                {
+                    MessageQueue.Enqueue("[SAVE:Sqlite] 清理未完整恢复的游戏监听失败：" + cleanupEx);
+                }
+
+                Interlocked.Exchange(ref _shutdownNetworkStopped, 1);
                 MessageQueue.Enqueue("[SAVE:Sqlite] 最终保存未通过且游戏监听恢复失败，请修复存储或监听配置后重试关服：" + ex);
             }
         }
