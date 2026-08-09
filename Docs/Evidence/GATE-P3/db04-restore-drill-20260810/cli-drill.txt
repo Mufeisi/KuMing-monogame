@@ -1,0 +1,20 @@
+日期：2026-08-10
+平台：Windows / .NET 10 Release
+宿主：Server.MirForms/bin/Release/Server.dll
+
+数据准备：
+使用与 DB-03 相同的 Microsoft.Data.Sqlite BackupDatabase API 从 WAL 源库生成恢复副本。
+
+空环境恢复：
+SQLite恢复成功；进程退出码=0；目标读取值=20260810；从恢复启动到读取验证完成=1161ms。
+
+强制停止恢复：
+另一个 .NET 进程以 WAL 模式保持未提交事务，随后被 Stop-Process -Force 终止，进程退出码=-1。
+终止后确认 server.db-wal 与 server.db-shm 存在。
+正式恢复命令退出码=0；恢复后读取值=20260810。
+从强制终止到恢复后读取验证完成的 RTO=1157ms。
+备份最后写入到验证完成的年龄=2.224 秒，作为本次演练 RPO。
+旧 server.db、server.db-wal、server.db-shm 均保留为同代次 .pre-restore 回滚工件。
+
+门槛：RPO≤300 秒；RTO≤1800000ms。
+结论：通过。

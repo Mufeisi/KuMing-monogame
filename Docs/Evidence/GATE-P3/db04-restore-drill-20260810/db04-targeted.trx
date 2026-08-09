@@ -1,0 +1,64 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="add8a6de-fd89-4421-b5f2-1e75096ad42f" name="luo@DESKTOP-4J13TH0 2026-08-10 03:32:33" runUser="DESKTOP-4J13TH0\luo" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-08-10T03:32:33.7245329+08:00" queuing="2026-08-10T03:32:33.7245335+08:00" start="2026-08-10T03:32:32.5004229+08:00" finish="2026-08-10T03:32:33.7315571+08:00" />
+  <TestSettings name="default" id="8a6b73d9-9ee8-4c68-8b91-a12a1d0bee4f">
+    <Deployment runDeploymentRoot="luo_DESKTOP-4J13TH0_2026-08-10_03_32_33" />
+  </TestSettings>
+  <Results>
+    <UnitTestResult executionId="14df62a6-3c8c-45dc-9d4c-3b79da5f1f4f" testId="5d393519-dd36-1d16-8b59-d5f6fd245fe4" testName="Base05.Tests.SqliteRestoreServiceTests.损坏副本在覆盖前拒绝且原库保持不变" computerName="DESKTOP-4J13TH0" duration="00:00:00.0601231" startTime="2026-08-10T03:32:33.3228730+08:00" endTime="2026-08-10T03:32:33.3923821+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="14df62a6-3c8c-45dc-9d4c-3b79da5f1f4f" />
+    <UnitTestResult executionId="1ba20f5e-43c6-45f6-9fac-8327b000d6b1" testId="f6b6a1ec-545d-8158-7292-41eac4c4aec6" testName="Base05.Tests.SqliteRestoreServiceTests.空白路径在任何文件操作前拒绝" computerName="DESKTOP-4J13TH0" duration="00:00:00.0004236" startTime="2026-08-10T03:32:33.4380639+08:00" endTime="2026-08-10T03:32:33.4383285+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="1ba20f5e-43c6-45f6-9fac-8327b000d6b1" />
+    <UnitTestResult executionId="27be0179-1372-4cc3-988f-8139e756ea12" testId="76144644-5b20-4190-7b1a-deeece20ecba" testName="Base05.Tests.SqliteRestoreServiceTests.空环境从完整副本恢复并可立即读取" computerName="DESKTOP-4J13TH0" duration="00:00:00.0177608" startTime="2026-08-10T03:32:33.4209504+08:00" endTime="2026-08-10T03:32:33.4378670+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="27be0179-1372-4cc3-988f-8139e756ea12" />
+    <UnitTestResult executionId="e054215f-d69f-451d-b566-e74344218a78" testId="5ce737ad-2e23-7674-19c8-d2cca640bd13" testName="Base05.Tests.SqliteRestoreServiceTests.正在使用的目标库拒绝恢复且不移动强停Sidecar" computerName="DESKTOP-4J13TH0" duration="00:00:00.0272502" startTime="2026-08-10T03:32:33.4047522+08:00" endTime="2026-08-10T03:32:33.4200906+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="e054215f-d69f-451d-b566-e74344218a78" />
+    <UnitTestResult executionId="e179c44c-c406-4ad4-8994-1e346f898314" testId="edd53d16-dd91-66ab-91a2-9fc4267c131a" testName="Base05.Tests.SqliteRestoreServiceTests.DB03在线备份产物可直接进入DB04空环境恢复" computerName="DESKTOP-4J13TH0" duration="00:00:00.0892940" startTime="2026-08-10T03:32:33.4878619+08:00" endTime="2026-08-10T03:32:33.5770545+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="e179c44c-c406-4ad4-8994-1e346f898314" />
+    <UnitTestResult executionId="95c7aefe-7914-43c2-8aa4-4155c37d1dc6" testId="8d0ddd38-b9d4-6666-afce-e3ea4ade4f2c" testName="Base05.Tests.SqliteRestoreServiceTests.强停遗留库和Sidecar被替换并保留为回滚工件" computerName="DESKTOP-4J13TH0" duration="00:00:00.0492152" startTime="2026-08-10T03:32:33.4384845+08:00" endTime="2026-08-10T03:32:33.4876750+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="95c7aefe-7914-43c2-8aa4-4155c37d1dc6" />
+  </Results>
+  <TestDefinitions>
+    <UnitTest name="Base05.Tests.SqliteRestoreServiceTests.正在使用的目标库拒绝恢复且不移动强停Sidecar" storage="c:\users\luo\.codex\worktrees\p3-db04-restore-drill-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="5ce737ad-2e23-7674-19c8-d2cca640bd13">
+      <Execution id="e054215f-d69f-451d-b566-e74344218a78" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p3-db04-restore-drill-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.SqliteRestoreServiceTests" name="正在使用的目标库拒绝恢复且不移动强停Sidecar" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.SqliteRestoreServiceTests.DB03在线备份产物可直接进入DB04空环境恢复" storage="c:\users\luo\.codex\worktrees\p3-db04-restore-drill-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="edd53d16-dd91-66ab-91a2-9fc4267c131a">
+      <Execution id="e179c44c-c406-4ad4-8994-1e346f898314" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p3-db04-restore-drill-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.SqliteRestoreServiceTests" name="DB03在线备份产物可直接进入DB04空环境恢复" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.SqliteRestoreServiceTests.强停遗留库和Sidecar被替换并保留为回滚工件" storage="c:\users\luo\.codex\worktrees\p3-db04-restore-drill-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="8d0ddd38-b9d4-6666-afce-e3ea4ade4f2c">
+      <Execution id="95c7aefe-7914-43c2-8aa4-4155c37d1dc6" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p3-db04-restore-drill-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.SqliteRestoreServiceTests" name="强停遗留库和Sidecar被替换并保留为回滚工件" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.SqliteRestoreServiceTests.空环境从完整副本恢复并可立即读取" storage="c:\users\luo\.codex\worktrees\p3-db04-restore-drill-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="76144644-5b20-4190-7b1a-deeece20ecba">
+      <Execution id="27be0179-1372-4cc3-988f-8139e756ea12" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p3-db04-restore-drill-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.SqliteRestoreServiceTests" name="空环境从完整副本恢复并可立即读取" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.SqliteRestoreServiceTests.损坏副本在覆盖前拒绝且原库保持不变" storage="c:\users\luo\.codex\worktrees\p3-db04-restore-drill-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="5d393519-dd36-1d16-8b59-d5f6fd245fe4">
+      <Execution id="14df62a6-3c8c-45dc-9d4c-3b79da5f1f4f" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p3-db04-restore-drill-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.SqliteRestoreServiceTests" name="损坏副本在覆盖前拒绝且原库保持不变" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.SqliteRestoreServiceTests.空白路径在任何文件操作前拒绝" storage="c:\users\luo\.codex\worktrees\p3-db04-restore-drill-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="f6b6a1ec-545d-8158-7292-41eac4c4aec6">
+      <Execution id="1ba20f5e-43c6-45f6-9fac-8327b000d6b1" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p3-db04-restore-drill-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.SqliteRestoreServiceTests" name="空白路径在任何文件操作前拒绝" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestEntries>
+    <TestEntry testId="5d393519-dd36-1d16-8b59-d5f6fd245fe4" executionId="14df62a6-3c8c-45dc-9d4c-3b79da5f1f4f" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="f6b6a1ec-545d-8158-7292-41eac4c4aec6" executionId="1ba20f5e-43c6-45f6-9fac-8327b000d6b1" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="76144644-5b20-4190-7b1a-deeece20ecba" executionId="27be0179-1372-4cc3-988f-8139e756ea12" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="5ce737ad-2e23-7674-19c8-d2cca640bd13" executionId="e054215f-d69f-451d-b566-e74344218a78" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="edd53d16-dd91-66ab-91a2-9fc4267c131a" executionId="e179c44c-c406-4ad4-8994-1e346f898314" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="8d0ddd38-b9d4-6666-afce-e3ea4ade4f2c" executionId="95c7aefe-7914-43c2-8aa4-4155c37d1dc6" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+  </TestEntries>
+  <TestLists>
+    <TestList name="列表中未列出的结果" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="所有已加载的结果" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Completed">
+    <Counters total="6" executed="6" passed="6" failed="0" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <Output>
+      <StdOut>[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.0.2+dd36e86129 (64-bit .NET 10.0.4)&#xD;
+[xUnit.net 00:00:00.12]   Discovering: Base05.Tests&#xD;
+[xUnit.net 00:00:00.21]   Discovered:  Base05.Tests&#xD;
+[xUnit.net 00:00:00.24]   Starting:    Base05.Tests&#xD;
+[xUnit.net 00:00:00.53]   Finished:    Base05.Tests&#xD;
+</StdOut>
+    </Output>
+  </ResultSummary>
+</TestRun>

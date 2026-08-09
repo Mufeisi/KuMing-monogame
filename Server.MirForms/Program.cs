@@ -1,4 +1,5 @@
 ﻿using log4net;
+using Server.Persistence.Sql;
 using System.Reflection;
 using System.Runtime.InteropServices;
 
@@ -10,8 +11,14 @@ namespace Server.MirForms
         /// The main entry point for the application.
         /// </summary>
         [STAThread]
-        static void Main()
+        static void Main(string[] args)
         {
+            if (args.Length > 0)
+            {
+                Environment.ExitCode = RunCommandLine(args);
+                return;
+            }
+
             // winform aot
             ComWrappers.RegisterForMarshalling(WinFormsComInterop.WinFormsComWrappers.Instance);
 
@@ -33,6 +40,40 @@ namespace Server.MirForms
             catch(Exception ex)
             {
                 //Logger.GetLogger().Error(ex);
+            }
+        }
+
+        private static int RunCommandLine(string[] args)
+        {
+            if (!string.Equals(args[0], "--restore-sqlite", StringComparison.OrdinalIgnoreCase) ||
+                (args.Length != 2 && args.Length != 4) ||
+                (args.Length == 4 && !string.Equals(args[2], "--target", StringComparison.OrdinalIgnoreCase)))
+            {
+                Console.Error.WriteLine("用法：Server.exe --restore-sqlite <备份路径> [--target <目标数据库路径>]");
+                return 2;
+            }
+
+            try
+            {
+                string target;
+                if (args.Length == 4)
+                {
+                    target = args[3];
+                }
+                else
+                {
+                    Settings.Load();
+                    target = Settings.SqlitePath;
+                }
+
+                SqliteRestoreResult result = SqliteRestoreService.Restore(args[1], target);
+                Console.WriteLine($"SQLite恢复成功：目标={result.TargetPath}；耗时={result.DurationMilliseconds}ms；回滚={result.RollbackPath}");
+                return 0;
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"SQLite恢复失败：{ex.GetType().Name}：{ex.Message}");
+                return 1;
             }
         }
     }

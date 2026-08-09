@@ -237,6 +237,8 @@ GATE-P1 关闭后，P2 的 SEC-03、SEC-04、SEC-05、SEC-06 各为独立任务�
 
 **DB-06 MySQL 切换门槛收口记录（2026-08-10）**：SQLite 保持默认数据库；只有峰值在线玩家连续 7 天达到 500、主库连续 3 天达到 10 GiB、`SaveTransactionCommit` P95 连续 3 天达到 750ms，或保存失败连续 3 小时达到每小时 3 次中的任一项，才进入 MySQL 迁移规划。单次尖峰、窗口不足或没有触发项均明确返回继续 SQLite。迁移前门禁直接重新判定原始指标，要求备份服务源库与当前 `Settings.SqlitePath` 一致，以唯一触发标识复用 DB-03 服务现场生成新本地/异地副本，强制异地为 UNC/不同卷，再次检查两份数据库完整性，并将格式版本、规范化源路径、指标、路径和 SHA-256 作为 Windows DPAPI `CurrentUser` 受保护授权原子保存。正式 `CreateFromSettings()` 选择 MySQL 前必须解密记录、核对当前源库、重新计算门槛并复验完整性与摘要；仅修改 provider、手写 JSON、使用其他源库/同卷目录或篡改副本均失败关闭。DB-06 不实现实际迁移、双写、Schema 映射或回切；说明见 `Docs/DB-06-MySQL切换门槛与迁移前备份.md`，证据见 `Docs/Evidence/GATE-P3/db06-mysql-threshold-20260810/`。DB-04 与 DB-05 仍未完成，GATE-P3 保持开启。
 
+**DB-04 SQLite 恢复演练收口记录（2026-08-10）**：现有 `Server.MirForms` 宿主增加离线 `--restore-sqlite` 模式，复用 Server 库恢复接缝；来源副本和目标目录 `.partial` 均通过 `integrity_check` 后才同目录原子发布，正在使用的目标库失败关闭。已有主库及强停遗留 WAL/SHM 被保留为同代次 `.pre-restore` 回滚组，损坏副本不会覆盖原库。当前版本真实进程演练先用与 DB-03 相同的 `BackupDatabase` API 从 WAL 源库生成副本：空环境恢复到读取验证完成 1161ms；另一个 WAL 事务进程被强制终止并确认 WAL/SHM 后，从在线备份产物恢复到读取验证完成 1157ms，备份年龄 2.224 秒，满足 RPO≤5 分钟、RTO≤30 分钟。实现说明和每版本演练步骤见 `Docs/DB-04-SQLite恢复演练.md`，证据见 `Docs/Evidence/GATE-P3/db04-restore-drill-20260810/`。DB-04 不替代 DB-05 的生产保存间隔强校验及故障注入，GATE-P3 仍未关闭。
+
 **GATE-P2 退出条件**：公开测试前安全项全部完成；凭据不通过未加密网络传输；公网无 V1 明文登录。
 
 ### P3 SQLite 生产化（3~5 周）
