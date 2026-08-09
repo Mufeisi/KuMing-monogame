@@ -196,7 +196,11 @@ public sealed class ProductionRpoPolicyTests
         ((IPendingSaveCoordinator)persistence).DrainPendingSaves();
         long committedGeneration = persistence.GetLastCommittedGeneration(SqlSaveDomain.Accounts);
 
-        account.Gold = 777;
+        environment.InvokeOnMainThread(() =>
+        {
+            account.Gold = 777;
+            return true;
+        });
         Interlocked.Exchange(ref simulatedTime, crashAt);
         Thread.Sleep(100);
         var verifier = new SqlServerPersistence(DatabaseProviderKind.Sqlite, new SqlDatabaseOptions { SqlitePath = databasePath });
@@ -205,7 +209,8 @@ public sealed class ProductionRpoPolicyTests
         if (beforeCrash.AccountList.Single().Gold != 100)
             throw new InvalidOperationException("下一截止前发生了非预期自动保存");
 
-        File.WriteAllLines(markerPath,
+        string markerPartialPath = markerPath + ".partial";
+        File.WriteAllLines(markerPartialPath,
         [
             $"LAST_COMMITTED_LOGICAL_MS={firstDeadline}",
             $"CRASH_LOGICAL_MS={crashAt}",
@@ -213,6 +218,7 @@ public sealed class ProductionRpoPolicyTests
             "MEMORY_GOLD=777",
             "DATABASE_GOLD=100",
         ]);
+        File.Move(markerPartialPath, markerPath);
         Thread.Sleep(Timeout.Infinite);
     }
 

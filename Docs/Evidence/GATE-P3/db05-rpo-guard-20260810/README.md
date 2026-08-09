@@ -17,7 +17,7 @@
 ## 故障注入口径
 
 - 正式代码仍使用 Envir 现有 `Stopwatch`；测试通过 internal 时间提供器压缩 5 分钟等待。
-- 被强停的是独立 `dotnet test` 进程树；子进程不执行 Stop、Drain 或最终保存。
+- 被强停的是独立 `dotnet test` 进程树；首次成功提交完成后才进入故障窗口，窗口内不执行 Stop、Drain 或最终保存。
 - 首次提交与重启读取均走真实 `SqlServerPersistence` 和 SQLite 文件，不用内存假实现。
 - 存储提交失败不在时间 RPO 承诺内，继续沿用既有保存失败告警与关服保护。
 
