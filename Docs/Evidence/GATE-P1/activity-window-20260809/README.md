@@ -29,4 +29,3 @@ dotnet test Tests/Base05.Tests/Base05.Tests.csproj --no-build --no-restore --nol
 - 用户可见工件：活动窗口代码差异、活动专项测试 `15/15`、fallback 窗口树和修复后活动运行记录。
 - 过程资产：领取声明与本说明。
 - 结论：代码与运行输出工件数量高于过程资产；本任务未触发防走偏停止条件。
-

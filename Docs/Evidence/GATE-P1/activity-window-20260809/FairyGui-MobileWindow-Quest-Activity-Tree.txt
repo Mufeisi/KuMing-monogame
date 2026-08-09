@@ -15,4 +15,3 @@ Root=__codex_mobile_activity_fallback
 
 分页绑定依据：PageCount / ClampPage / PageItemIndex
 专项回归：7 条活动、每页 6 行时为 2 页，第 2 页首行索引为 6。
-
