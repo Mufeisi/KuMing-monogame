@@ -286,6 +286,17 @@ namespace MonoShare
                 }
             }
 
+            if (target == null &&
+                string.Equals(actionKey, "Shop", StringComparison.OrdinalIgnoreCase))
+            {
+                target = TryCreateShopHudFallbackButton();
+                if (target != null)
+                {
+                    selectedScore = Math.Max(selectedScore, 1000);
+                    error = null;
+                }
+            }
+
             if (target != null &&
                 string.Equals(actionKey, "Attack", StringComparison.OrdinalIgnoreCase))
             {
@@ -852,6 +863,80 @@ namespace MonoShare
                 try
                 {
                     label.textFormat.size = 16;
+                    label.textFormat.color = Color.White;
+                    label.textFormat.bold = true;
+                }
+                catch
+                {
+                }
+                button.AddChild(label);
+
+                _root.AddChild(button);
+                try { _root.SetChildIndex(button, _root.numChildren - 1); } catch { }
+                return button;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        private GObject TryCreateShopHudFallbackButton()
+        {
+            if (_root == null || _root._disposed)
+                return null;
+
+            try
+            {
+                GObject existing = _root.GetChild("__codex_mobile_shop_hud_fallback");
+                if (existing != null && !existing._disposed)
+                    return existing;
+            }
+            catch
+            {
+            }
+
+            try
+            {
+                MobileMainHudFallbackBounds bounds =
+                    MobileMainHudFallbackLayout.Shop(_root.width, _root.height);
+                float width = bounds.Width;
+                float height = bounds.Height;
+                var button = new GButton
+                {
+                    name = "__codex_mobile_shop_hud_fallback",
+                    title = "商店",
+                    touchable = true,
+                    enabled = true,
+                    grayed = false,
+                    opaque = true,
+                    changeStateOnClick = false,
+                };
+                button.SetSize(width, height);
+                button.SetPosition(bounds.X, bounds.Y);
+
+                var background = new GGraph
+                {
+                    name = "__codex_mobile_shop_hud_fallback_bg",
+                    touchable = false,
+                };
+                background.DrawRect(width, height, 2,
+                    new Color(105, 155, 105, 255), new Color(38, 82, 45, 245));
+                button.AddChild(background);
+
+                var label = new GTextField
+                {
+                    name = "title",
+                    text = "商店",
+                    touchable = false,
+                    align = AlignType.Center,
+                    verticalAlign = VertAlignType.Middle,
+                    autoSize = AutoSizeType.None,
+                };
+                label.SetSize(width, height);
+                try
+                {
+                    label.textFormat.size = 18;
                     label.textFormat.color = Color.White;
                     label.textFormat.bold = true;
                 }

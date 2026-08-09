@@ -2,6 +2,46 @@ using System.Collections.Generic;
 
 namespace MonoShare.MirScenes
 {
+    public enum MobileShopPaymentOptions
+    {
+        None,
+        CreditOnly,
+        GoldOnly,
+        CreditAndGold,
+    }
+
+    /// <summary>Pure selection rules shared by the mobile shop UI and regression tests.</summary>
+    public static class MobileShopPurchasePolicy
+    {
+        public static MobileShopPaymentOptions GetPaymentOptions(GameShopItem item)
+        {
+            bool credit = item != null && item.CanBuyCredit && item.CreditPrice > 0;
+            bool gold = item != null && item.CanBuyGold && item.GoldPrice > 0;
+
+            if (credit && gold) return MobileShopPaymentOptions.CreditAndGold;
+            if (credit) return MobileShopPaymentOptions.CreditOnly;
+            if (gold) return MobileShopPaymentOptions.GoldOnly;
+            return MobileShopPaymentOptions.None;
+        }
+
+        public static int GetLastPage(int itemCount, int pageSize)
+        {
+            if (itemCount <= 0 || pageSize <= 0)
+                return 0;
+
+            return (itemCount - 1) / pageSize;
+        }
+
+        public static int GetItemIndex(int page, int slot, int pageSize, int itemCount)
+        {
+            if (page < 0 || slot < 0 || pageSize <= 0 || slot >= pageSize || itemCount <= 0)
+                return -1;
+
+            long index = (long)page * pageSize + slot;
+            return index < itemCount ? (int)index : -1;
+        }
+    }
+
     /// <summary>
     /// Main-thread state for the mobile GameShop view.
     ///

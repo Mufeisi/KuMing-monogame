@@ -86,6 +86,52 @@ public sealed class GameShopStateTests
         Assert.Equal(9, collision.Stock);
     }
 
+    [Theory]
+    [InlineData(false, 0, false, 0, MobileShopPaymentOptions.None)]
+    [InlineData(true, 10, false, 0, MobileShopPaymentOptions.CreditOnly)]
+    [InlineData(false, 0, true, 20, MobileShopPaymentOptions.GoldOnly)]
+    [InlineData(true, 10, true, 20, MobileShopPaymentOptions.CreditAndGold)]
+    [InlineData(true, 0, true, 20, MobileShopPaymentOptions.GoldOnly)]
+    public void Payment_policy_requires_an_explicit_choice_for_dual_currency_items(
+        bool canCredit,
+        uint creditPrice,
+        bool canGold,
+        uint goldPrice,
+        MobileShopPaymentOptions expected)
+    {
+        GameShopItem item = CreateItem(gIndex: 1, stock: 1);
+        item.CanBuyCredit = canCredit;
+        item.CreditPrice = creditPrice;
+        item.CanBuyGold = canGold;
+        item.GoldPrice = goldPrice;
+
+        Assert.Equal(expected, MobileShopPurchasePolicy.GetPaymentOptions(item));
+    }
+
+    [Theory]
+    [InlineData(0, 15, 0)]
+    [InlineData(1, 15, 0)]
+    [InlineData(15, 15, 0)]
+    [InlineData(16, 15, 1)]
+    [InlineData(30, 15, 1)]
+    [InlineData(31, 15, 2)]
+    public void Fixed_grid_calculates_the_last_page(int count, int pageSize, int expected)
+    {
+        Assert.Equal(expected, MobileShopPurchasePolicy.GetLastPage(count, pageSize));
+    }
+
+    [Theory]
+    [InlineData(0, 0, 15, 16, 0)]
+    [InlineData(0, 14, 15, 16, 14)]
+    [InlineData(1, 0, 15, 16, 15)]
+    [InlineData(1, 1, 15, 16, -1)]
+    [InlineData(-1, 0, 15, 16, -1)]
+    [InlineData(0, 15, 15, 16, -1)]
+    public void Fixed_grid_maps_only_visible_slots(int page, int slot, int pageSize, int count, int expected)
+    {
+        Assert.Equal(expected, MobileShopPurchasePolicy.GetItemIndex(page, slot, pageSize, count));
+    }
+
     private static GameShopItem CreateItem(int gIndex, int stock, int? infoIndex = null)
     {
         return new GameShopItem
