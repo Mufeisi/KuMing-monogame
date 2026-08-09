@@ -4,6 +4,7 @@ using System.Drawing;
 using System.IO;
 using System.Reflection;
 using System.Text;
+using System.Threading;
 using Server.MirDatabase;
 using Server.MirEnvir;
 using Server.MirObjects;
@@ -580,8 +581,14 @@ namespace Server.Persistence.Sql
         private readonly SqliteSingleWriter _sqliteWriter;
         private readonly object _initGate = new object();
         private bool _initialized;
+        private long _nextSaveGeneration;
+        private int _lastSnapshotCaptureThreadId;
 
         public DatabaseProviderKind Provider => _provider;
+        internal long LastIssuedSaveGeneration => Interlocked.Read(ref _nextSaveGeneration);
+        internal int LastSnapshotCaptureThreadId => Volatile.Read(ref _lastSnapshotCaptureThreadId);
+        internal int SqliteWriterThreadId => _sqliteWriter?.WorkerThreadId ?? 0;
+        internal long GetLastCommittedGeneration(SqlSaveDomain domain) => _sqliteWriter?.GetLastCommittedGeneration(domain) ?? 0;
 
         public SqlServerPersistence(DatabaseProviderKind provider)
             : this(provider, CreateOptionsFromSettings())
@@ -615,7 +622,8 @@ namespace Server.Persistence.Sql
         private void RunSaveWithSnapshot<TSnapshot>(
             SqlSaveDomain domain,
             Func<TSnapshot> snapshotFactory,
-            Action<SqlSession, TSnapshot> work)
+            Action<SqlSession, TSnapshot> work,
+            bool coalescePending = true)
         {
             var runner = new SqlDomainTransactionRunner(_provider, _databaseOptions);
             if (_provider != DatabaseProviderKind.Sqlite)
@@ -625,10 +633,13 @@ namespace Server.Persistence.Sql
             }
 
             TSnapshot snapshot;
+            long generation = Interlocked.Increment(ref _nextSaveGeneration);
+            int captureThreadId = Environment.CurrentManagedThreadId;
             long snapshotStart = Stopwatch.GetTimestamp();
             try
             {
                 snapshot = snapshotFactory();
+                Volatile.Write(ref _lastSnapshotCaptureThreadId, captureThreadId);
                 PerformanceMetrics.RecordDuration(
                     PerformanceMetricKind.SaveSnapshotCapture,
                     Stopwatch.GetTimestamp() - snapshotStart);
@@ -650,7 +661,12 @@ namespace Server.Persistence.Sql
                 return;
             }
 
-            _sqliteWriter.Enqueue(domain, () => runner.RunCapturedSnapshot(domain, snapshot, work));
+            var immutableSnapshot = new ImmutableSaveSnapshot<TSnapshot>(generation, captureThreadId, snapshot);
+            _sqliteWriter.Enqueue(
+                domain,
+                immutableSnapshot.Generation,
+                () => immutableSnapshot.Commit(payload => runner.RunCapturedSnapshot(domain, payload, work).Success),
+                coalescePending);
         }
 
         private static SqlDatabaseOptions CreateOptionsFromSettings()
@@ -6833,39 +6849,30 @@ namespace Server.Persistence.Sql
 
             EnsureInitialized();
 
-            var now = envir.Now;
-            var relativePath = $"{info.Name}{now:_MMddyyyy_HHmmss}.MirCA";
-            var payload = Array.Empty<byte>();
-
-            try
-            {
-                using var ms = new MemoryStream();
-                using (var writer = new BinaryWriter(ms))
-                {
-                    writer.Write(Envir.Version);
-                    writer.Write(Envir.CustomVersion);
-                    info.Save(writer);
-                    writer.Flush();
-                }
-
-                payload = ms.ToArray();
-            }
-            catch (Exception ex)
-            {
-                MessageQueue.Instance.EnqueueDebugging($"[SQL:{_provider}] Archive payload 序列化失败：{ex}");
-                return;
-            }
-
             try
             {
                 RunSaveWithSnapshot(
                     domain: SqlSaveDomain.Archive,
-                    snapshotFactory: () => new LegacyFileRow
+                    snapshotFactory: () =>
                     {
-                        RelativePath = relativePath,
-                        Payload = payload,
+                        var now = envir.Now;
+                        using var ms = new MemoryStream();
+                        using (var writer = new BinaryWriter(ms))
+                        {
+                            writer.Write(Envir.Version);
+                            writer.Write(Envir.CustomVersion);
+                            info.Save(writer);
+                            writer.Flush();
+                        }
+
+                        return new LegacyFileRow
+                        {
+                            RelativePath = $"{info.Name}{now:_MMddyyyy_HHmmss}.MirCA",
+                            Payload = ms.ToArray(),
+                        };
                     },
-                    work: (session, row) => UpsertLegacyFile(session, LegacyFilesDomainArchive, row));
+                    work: (session, row) => UpsertLegacyFile(session, LegacyFilesDomainArchive, row),
+                    coalescePending: false);
             }
             catch (Exception ex)
             {

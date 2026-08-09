@@ -110,6 +110,7 @@ namespace Server.Persistence.Sql
                 ExecuteSqlitePragma($"PRAGMA busy_timeout = {SqliteBusyTimeoutMilliseconds};");
                 if (!string.Equals(ExecuteSqliteScalar("PRAGMA journal_mode;"), "wal", StringComparison.OrdinalIgnoreCase))
                     ExecuteSqlitePragma("PRAGMA journal_mode = WAL;");
+                ExecuteSqlitePragma("PRAGMA synchronous = FULL;");
             }
         }
 

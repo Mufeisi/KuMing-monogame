@@ -13,52 +13,88 @@ namespace Server.Persistence.Sql
         private sealed class PendingWrite
         {
             public SqlSaveDomain Domain;
-            public Action Commit;
+            public long Generation;
+            public bool Coalescible;
+            public Func<bool> Commit;
         }
 
         private readonly object _gate = new object();
-        private readonly Queue<SqlSaveDomain> _order = new Queue<SqlSaveDomain>();
+        private readonly Queue<PendingWrite> _order = new Queue<PendingWrite>();
         private readonly Dictionary<SqlSaveDomain, PendingWrite> _pending = new Dictionary<SqlSaveDomain, PendingWrite>();
+        private readonly Dictionary<SqlSaveDomain, long> _highestAcceptedGeneration = new Dictionary<SqlSaveDomain, long>();
+        private readonly Dictionary<SqlSaveDomain, long> _lastCommittedGeneration = new Dictionary<SqlSaveDomain, long>();
         private Thread _thread;
         private bool _busy;
         private int _workerThreadId;
         private long _enqueuedCount;
         private long _mergedCount;
         private long _completedCount;
+        private long _committedCount;
+        private long _staleRejectedCount;
 
         internal int WorkerThreadId => Volatile.Read(ref _workerThreadId);
         internal long EnqueuedCount => Interlocked.Read(ref _enqueuedCount);
         internal long MergedCount => Interlocked.Read(ref _mergedCount);
         internal long CompletedCount => Interlocked.Read(ref _completedCount);
+        internal long CommittedCount => Interlocked.Read(ref _committedCount);
+        internal long StaleRejectedCount => Interlocked.Read(ref _staleRejectedCount);
 
-        internal void Enqueue(SqlSaveDomain domain, Action commit)
+        internal bool Enqueue(
+            SqlSaveDomain domain,
+            long generation,
+            Func<bool> commit,
+            bool coalescePending = true)
         {
             if (commit == null) throw new ArgumentNullException(nameof(commit));
+            if (generation <= 0) throw new ArgumentOutOfRangeException(nameof(generation));
 
             lock (_gate)
             {
                 Interlocked.Increment(ref _enqueuedCount);
-                if (_pending.TryGetValue(domain, out PendingWrite existing))
+                if (_highestAcceptedGeneration.TryGetValue(domain, out long highest) && generation <= highest)
                 {
+                    Interlocked.Increment(ref _staleRejectedCount);
+                    return false;
+                }
+
+                _highestAcceptedGeneration[domain] = generation;
+                if (coalescePending && _pending.TryGetValue(domain, out PendingWrite existing))
+                {
+                    existing.Generation = generation;
                     existing.Commit = commit;
                     Interlocked.Increment(ref _mergedCount);
                 }
                 else
                 {
-                    _pending.Add(domain, new PendingWrite { Domain = domain, Commit = commit });
-                    _order.Enqueue(domain);
+                    var write = new PendingWrite
+                    {
+                        Domain = domain,
+                        Generation = generation,
+                        Coalescible = coalescePending,
+                        Commit = commit,
+                    };
+                    if (coalescePending)
+                        _pending.Add(domain, write);
+                    _order.Enqueue(write);
                 }
 
                 EnsureWorkerStarted();
                 Monitor.PulseAll(_gate);
+                return true;
             }
+        }
+
+        internal long GetLastCommittedGeneration(SqlSaveDomain domain)
+        {
+            lock (_gate)
+                return _lastCommittedGeneration.TryGetValue(domain, out long generation) ? generation : 0;
         }
 
         internal void Drain()
         {
             lock (_gate)
             {
-                while (_busy || _pending.Count > 0)
+                while (_busy || _order.Count > 0)
                     Monitor.Wait(_gate);
             }
         }
@@ -93,15 +129,24 @@ namespace Server.Persistence.Sql
                         }
                     }
 
-                    SqlSaveDomain domain = _order.Dequeue();
-                    write = _pending[domain];
-                    _pending.Remove(domain);
+                    write = _order.Dequeue();
+                    if (write.Coalescible &&
+                        _pending.TryGetValue(write.Domain, out PendingWrite current) &&
+                        ReferenceEquals(current, write))
+                    {
+                        _pending.Remove(write.Domain);
+                    }
                     _busy = true;
                 }
 
                 try
                 {
-                    write.Commit();
+                    if (write.Commit())
+                    {
+                        lock (_gate)
+                            _lastCommittedGeneration[write.Domain] = write.Generation;
+                        Interlocked.Increment(ref _committedCount);
+                    }
                 }
                 catch (Exception ex)
                 {

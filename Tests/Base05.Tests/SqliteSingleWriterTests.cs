@@ -26,6 +26,10 @@ public sealed class SqliteSingleWriterTests
                 timeout.CommandText = "PRAGMA busy_timeout;";
                 Assert.Equal(SqlSession.SqliteBusyTimeoutMilliseconds, Convert.ToInt32(timeout.ExecuteScalar()));
 
+                using var synchronous = session.Connection.CreateCommand();
+                synchronous.CommandText = "PRAGMA synchronous;";
+                Assert.Equal(2, Convert.ToInt32(synchronous.ExecuteScalar()));
+
                 var builder = new SqliteConnectionStringBuilder(session.Connection.ConnectionString);
                 Assert.Equal(SqliteCacheMode.Private, builder.Cache);
                 Assert.Equal(5, builder.DefaultTimeout);
@@ -63,15 +67,15 @@ public sealed class SqliteSingleWriterTests
             Interlocked.Decrement(ref active);
         }
 
-        writer.Enqueue(SqlSaveDomain.Accounts, () => Execute(1, block: true));
+        writer.Enqueue(SqlSaveDomain.Accounts, 1, Commit(() => Execute(1, block: true)));
         Assert.True(firstStarted.Wait(TimeSpan.FromSeconds(5)));
 
         for (int value = 2; value <= 101; value++)
         {
             int captured = value;
-            writer.Enqueue(SqlSaveDomain.Guilds, () => Execute(captured));
+            writer.Enqueue(SqlSaveDomain.Guilds, captured, Commit(() => Execute(captured)));
         }
-        writer.Enqueue(SqlSaveDomain.Goods, () => Execute(200));
+        writer.Enqueue(SqlSaveDomain.Goods, 102, Commit(() => Execute(200)));
 
         releaseFirst.Set();
         writer.Drain();
@@ -81,6 +85,7 @@ public sealed class SqliteSingleWriterTests
         Assert.Equal(102, writer.EnqueuedCount);
         Assert.Equal(99, writer.MergedCount);
         Assert.Equal(3, writer.CompletedCount);
+        Assert.Equal(3, writer.CommittedCount);
         Assert.NotEqual(callerThreadId, writer.WorkerThreadId);
         Assert.Single(threadIds.Distinct());
     }
@@ -93,13 +98,13 @@ public sealed class SqliteSingleWriterTests
         using var release = new ManualResetEventSlim(false);
         int committed = 0;
 
-        writer.Enqueue(SqlSaveDomain.Accounts, () =>
+        writer.Enqueue(SqlSaveDomain.Accounts, 1, Commit(() =>
         {
             started.Set();
             Assert.True(release.Wait(TimeSpan.FromSeconds(5)));
             Interlocked.Increment(ref committed);
-        });
-        writer.Enqueue(SqlSaveDomain.Conquests, () => Interlocked.Increment(ref committed));
+        }));
+        writer.Enqueue(SqlSaveDomain.Conquests, 2, Commit(() => Interlocked.Increment(ref committed)));
         Assert.True(started.Wait(TimeSpan.FromSeconds(5)));
 
         Task drain = Task.Run(writer.Drain);
@@ -128,7 +133,7 @@ public sealed class SqliteSingleWriterTests
                 command.ExecuteNonQuery();
             }
 
-            writer.Enqueue(SqlSaveDomain.Accounts, () =>
+            writer.Enqueue(SqlSaveDomain.Accounts, 1, Commit(() =>
             {
                 using SqlSession session = SqlSession.Open(DatabaseProviderKind.Sqlite, options);
                 session.BeginTransaction();
@@ -139,7 +144,7 @@ public sealed class SqliteSingleWriterTests
                 writeStarted.Set();
                 Assert.True(releaseWrite.Wait(TimeSpan.FromSeconds(5)));
                 session.Commit();
-            });
+            }));
             Assert.True(writeStarted.Wait(TimeSpan.FromSeconds(5)));
 
             Task[] readers = Enumerable.Range(0, 8).Select(_ => Task.Run(() =>
@@ -168,6 +173,66 @@ public sealed class SqliteSingleWriterTests
             writer.Drain();
             DeleteSqliteFiles(databasePath);
         }
+    }
+
+    [Fact]
+    public void 单写线程拒绝迟到旧代且只在事务成功时推进成功代次()
+    {
+        var writer = new SqliteSingleWriter();
+        var committed = new ConcurrentQueue<long>();
+
+        Assert.True(writer.Enqueue(SqlSaveDomain.Accounts, 20, () =>
+        {
+            committed.Enqueue(20);
+            return true;
+        }));
+        writer.Drain();
+        Assert.Equal(20, writer.GetLastCommittedGeneration(SqlSaveDomain.Accounts));
+
+        Assert.False(writer.Enqueue(SqlSaveDomain.Accounts, 19, () =>
+        {
+            committed.Enqueue(19);
+            return true;
+        }));
+        Assert.True(writer.Enqueue(SqlSaveDomain.Accounts, 21, () => false));
+        writer.Drain();
+
+        Assert.Equal(new long[] { 20 }, committed.ToArray());
+        Assert.Equal(20, writer.GetLastCommittedGeneration(SqlSaveDomain.Accounts));
+        Assert.Equal(1, writer.StaleRejectedCount);
+        Assert.Equal(1, writer.CommittedCount);
+    }
+
+    [Fact]
+    public void 增量归档写入不参与同域合并()
+    {
+        var writer = new SqliteSingleWriter();
+        var committed = new ConcurrentQueue<long>();
+
+        Assert.True(writer.Enqueue(SqlSaveDomain.Archive, 1, () =>
+        {
+            committed.Enqueue(1);
+            return true;
+        }, coalescePending: false));
+        Assert.True(writer.Enqueue(SqlSaveDomain.Archive, 2, () =>
+        {
+            committed.Enqueue(2);
+            return true;
+        }, coalescePending: false));
+        writer.Drain();
+
+        Assert.Equal(new long[] { 1, 2 }, committed.ToArray());
+        Assert.Equal(0, writer.MergedCount);
+        Assert.Equal(2, writer.GetLastCommittedGeneration(SqlSaveDomain.Archive));
+    }
+
+    private static Func<bool> Commit(Action action)
+    {
+        return () =>
+        {
+            action();
+            return true;
+        };
     }
 
     private static void UpdateMaximum(ref int target, int value)
