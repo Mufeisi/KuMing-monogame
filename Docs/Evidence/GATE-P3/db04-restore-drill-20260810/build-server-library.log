@@ -1,0 +1,13 @@
+C:\Users\luo\.codex\worktrees\p3-db04-restore-drill-20260810\Server\Server.Library.csproj : warning NU1902: 包 "log4net" 3.0.3 具有已知的 中 严重性漏洞，https://github.com/advisories/GHSA-4f7c-pmjv-c25w
+C:\Users\luo\.codex\worktrees\p3-db04-restore-drill-20260810\Server\Server.Library.csproj : warning NU1903: 包 "SQLitePCLRaw.lib.e_sqlite3" 2.1.11 具有已知的 高 严重性漏洞，https://github.com/advisories/GHSA-2m69-gcr7-jv3q
+  Shared -> C:\Users\luo\.codex\worktrees\p3-db04-restore-drill-20260810\Shared\bin\Release\Shared.dll
+  Server.Library -> C:\Users\luo\.codex\worktrees\p3-db04-restore-drill-20260810\Server\bin\Release\Server.Library.dll
+
+已成功生成。
+
+C:\Users\luo\.codex\worktrees\p3-db04-restore-drill-20260810\Server\Server.Library.csproj : warning NU1902: 包 "log4net" 3.0.3 具有已知的 中 严重性漏洞，https://github.com/advisories/GHSA-4f7c-pmjv-c25w
+C:\Users\luo\.codex\worktrees\p3-db04-restore-drill-20260810\Server\Server.Library.csproj : warning NU1903: 包 "SQLitePCLRaw.lib.e_sqlite3" 2.1.11 具有已知的 高 严重性漏洞，https://github.com/advisories/GHSA-2m69-gcr7-jv3q
+    2 个警告
+    0 个错误
+
+已用时间 00:00:00.92
