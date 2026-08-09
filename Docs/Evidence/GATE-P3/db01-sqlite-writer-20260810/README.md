@@ -10,7 +10,7 @@ DB-01 退出条件已满足：SQLite 正式连接启用 WAL 与 5 秒忙等待�
 
    `dotnet test Tests/Base05.Tests/Base05.Tests.csproj -c Release --no-restore --filter "FullyQualifiedName~SqliteSingleWriterTests|FullyQualifiedName~SqlPersistenceRoundTripTests|FullyQualifiedName~Sqlite关服|FullyQualifiedName~Sqlite最终保存" --logger "trx;LogFileName=db01-targeted-pass.trx" --results-directory TestResults/DB01-targeted-pass`
 
-   结果：10/10 通过，0 失败，0 跳过。
+   结果：11/11 通过，0 失败，0 跳过。
 
 2. Base05 全量：
 
@@ -34,7 +34,7 @@ DB-01 退出条件已满足：SQLite 正式连接启用 WAL 与 5 秒忙等待�
 
 ## 证据文件
 
-- `db01-targeted-pass.trx`：专项 10/10。
+- `db01-targeted-pass.trx`：专项 11/11。
 - `db01-base05-full.trx`：全量 263/263。
 
 ## 已知非本任务项

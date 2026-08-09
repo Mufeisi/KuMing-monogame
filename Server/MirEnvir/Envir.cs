@@ -1007,6 +1007,8 @@ namespace Server.MirEnvir
                             RecordPerformanceNetworkSnapshot();
                         }
                         ProcessMainThreadQueue();
+                        if (!Running)
+                            break;
 
                         if (Time >= processTime)
                         {
@@ -4494,7 +4496,9 @@ namespace Server.MirEnvir
 
         private void StopEnvir()
         {
-            SaveGoods(true);
+            // SQLite 正常关服已经在主线程捕获并排空最终 Goods 快照；资源清理阶段不得在排空后追加写入。
+            if (Volatile.Read(ref _shutdownSavePrepared) == 0)
+                SaveGoods(true);
 
             MapList.Clear();
             StartPoints.Clear();

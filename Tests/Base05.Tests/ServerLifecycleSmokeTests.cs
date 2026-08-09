@@ -163,6 +163,23 @@ public sealed class ServerLifecycleSmokeTests : IDisposable
         }
     }
 
+    [Fact]
+    public void Sqlite最终保存已排空时资源清理不再追加商品保存()
+    {
+        var persistence = new ShutdownRecordingPersistence();
+        var envir = new Envir();
+        Type envirType = typeof(Envir);
+        envirType.GetField("_persistence", BindingFlags.Instance | BindingFlags.NonPublic)!
+            .SetValue(envir, persistence);
+        envirType.GetField("_shutdownSavePrepared", BindingFlags.Instance | BindingFlags.NonPublic)!
+            .SetValue(envir, 1);
+
+        envirType.GetMethod("StopEnvir", BindingFlags.Instance | BindingFlags.NonPublic)!
+            .Invoke(envir, null);
+
+        Assert.Empty(persistence.Events);
+    }
+
     private sealed class ShutdownRecordingPersistence : IServerPersistence, IPendingSaveCoordinator
     {
         private readonly List<string> _events = new();
