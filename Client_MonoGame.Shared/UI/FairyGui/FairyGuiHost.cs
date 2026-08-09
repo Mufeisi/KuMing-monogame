@@ -12,6 +12,7 @@ using FairyGUI;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
+using MonoShare.MirControls;
 using MonoShare.MirGraphics;
 using MonoShare.MirScenes;
 
@@ -4018,7 +4019,7 @@ namespace MonoShare
             }
         }
 
-        private static void TrySendMobileShopBuy(GameShopItem item, byte quantity, int pType)
+        private static void EnqueueMobileShopBuy(GameShopItem item, byte quantity, int pType)
         {
             if (item == null)
                 return;
@@ -4189,7 +4190,7 @@ namespace MonoShare
 
                     if (canBuyGold)
                     {
-                        view.BuyGoldCallback = () => TrySendMobileShopBuy(shopItem, quantity: 1, pType: 1);
+                        view.BuyGoldCallback = () => TryConfirmMobileShopBuy(shopItem, quantity: 1, pType: 1);
                         view.BuyGoldButton.onClick.Add(view.BuyGoldCallback);
                     }
                     else
@@ -4214,7 +4215,7 @@ namespace MonoShare
 
                     if (canBuyCredit)
                     {
-                        view.BuyCreditCallback = () => TrySendMobileShopBuy(shopItem, quantity: 1, pType: 0);
+                        view.BuyCreditCallback = () => TryConfirmMobileShopBuy(shopItem, quantity: 1, pType: 0);
                         view.BuyCreditButton.onClick.Add(view.BuyCreditCallback);
                     }
                     else
@@ -4240,8 +4241,7 @@ namespace MonoShare
 
                     if (canBuy)
                     {
-                        int pType = canBuyCredit ? 0 : 1;
-                        view.BuyFallbackCallback = () => TrySendMobileShopBuy(shopItem, quantity: 1, pType: pType);
+                        view.BuyFallbackCallback = () => TryPromptMobileShopBuy(shopItem, quantity: 1);
                         view.BuyFallbackButton.onClick.Add(view.BuyFallbackCallback);
                     }
                     else
@@ -4517,6 +4517,62 @@ namespace MonoShare
             }
         }
 
+        private static void TryConfirmMobileShopBuy(GameShopItem item, byte quantity, int pType)
+        {
+            if (item?.Info == null)
+                return;
+
+            MobileShopPaymentOptions options = MobileShopPurchasePolicy.GetPaymentOptions(item);
+            bool valid = pType == 0
+                ? options == MobileShopPaymentOptions.CreditOnly || options == MobileShopPaymentOptions.CreditAndGold
+                : options == MobileShopPaymentOptions.GoldOnly || options == MobileShopPaymentOptions.CreditAndGold;
+            if (!valid)
+                return;
+
+            string name = item.Info.FriendlyName ?? item.Info.Name ?? "商品";
+            string currency = pType == 0 ? "点券" : "元宝";
+            uint price = pType == 0 ? item.CreditPrice : item.GoldPrice;
+            var box = new MirMessageBox($"确定花费 {price:#,##0} {currency}购买 {name} 吗？", MirMessageBoxButtons.YesNo);
+            if (box.YesButton != null)
+                box.YesButton.Click += (o, e) => EnqueueMobileShopBuy(item, quantity, pType);
+            box.Show();
+        }
+
+        private static void TryPromptMobileShopBuy(GameShopItem item, byte quantity)
+        {
+            if (item?.Info == null)
+                return;
+
+            MobileShopPaymentOptions options = MobileShopPurchasePolicy.GetPaymentOptions(item);
+            if (options == MobileShopPaymentOptions.None)
+            {
+                GameScene.Scene?.MobileReceiveChat("当前商品没有可用付款方式。", ChatType.System);
+                return;
+            }
+
+            if (options == MobileShopPaymentOptions.CreditOnly)
+            {
+                TryConfirmMobileShopBuy(item, quantity, pType: 0);
+                return;
+            }
+
+            if (options == MobileShopPaymentOptions.GoldOnly)
+            {
+                TryConfirmMobileShopBuy(item, quantity, pType: 1);
+                return;
+            }
+
+            string name = item.Info.FriendlyName ?? item.Info.Name ?? "商品";
+            var box = new MirMessageBox(
+                $"购买 {name}，请选择付款方式：\n是：点券 {item.CreditPrice:#,##0}\n否：元宝 {item.GoldPrice:#,##0}\n取消：不购买",
+                MirMessageBoxButtons.YesNoCancel);
+            if (box.YesButton != null)
+                box.YesButton.Click += (o, e) => EnqueueMobileShopBuy(item, quantity, pType: 0);
+            if (box.NoButton != null)
+                box.NoButton.Click += (o, e) => EnqueueMobileShopBuy(item, quantity, pType: 1);
+            box.Show();
+        }
+
         private static bool TryBindMobileShopFixedCells(MobileShopWindowBinding binding, GComponent window)
         {
             if (binding == null || window == null || window._disposed)
@@ -4536,28 +4592,49 @@ namespace MonoShare
                     break;
                 }
 
-                int slot = binding.FixedItemCells.Count;
-                EventCallback0 callback = () =>
-                {
-                    binding.FixedSelectedIndex = binding.FixedPage * binding.FixedItemCells.Count + slot;
-                    _mobileShopDirty = true;
-                };
-                try
-                {
-                    cell.touchable = true;
-                    cell.onClick.Add(callback);
-                }
-                catch
-                {
-                    return false;
-                }
-
                 binding.FixedItemCells.Add(cell);
-                binding.FixedItemCallbacks.Add(callback);
             }
 
             if (binding.FixedItemCells.Count == 0)
                 return false;
+
+            for (int i = 0; i < binding.FixedItemCells.Count; i++)
+            {
+                GComponent cell = binding.FixedItemCells[i];
+                try
+                {
+                    cell.data = new MobileShopItemView
+                    {
+                        Root = cell,
+                        Icon = cell.GetChild("Item") as GLoader,
+                        Name = cell.GetChild("Info") as GTextField,
+                    };
+
+                    int slot = i;
+                    EventCallback0 callback = () =>
+                    {
+                        binding.FixedSelectedIndex = MobileShopPurchasePolicy.GetItemIndex(
+                            binding.FixedPage,
+                            slot,
+                            binding.FixedItemCells.Count,
+                            GameScene.GameShopInfoList?.Count ?? 0);
+                        _mobileShopDirty = true;
+                    };
+                    cell.touchable = true;
+                    cell.onClick.Add(callback);
+                    binding.FixedItemCallbacks.Add(callback);
+                }
+                catch
+                {
+                    for (int j = 0; j < binding.FixedItemCallbacks.Count; j++)
+                    {
+                        try { binding.FixedItemCells[j].onClick.Remove(binding.FixedItemCallbacks[j]); } catch { }
+                    }
+                    binding.FixedItemCallbacks.Clear();
+                    binding.FixedItemCells.Clear();
+                    return false;
+                }
+            }
 
             try { binding.FixedInfo = window.GetChild("ItemShowInfo") as GTextField; } catch { }
             try { binding.FixedBuyButton = window.GetChild("BtnBuy") as GButton; } catch { }
@@ -4573,9 +4650,7 @@ namespace MonoShare
                     if (items == null || index < 0 || index >= items.Count)
                         return;
 
-                    GameShopItem item = items[index];
-                    int priceType = item.CanBuyCredit && item.CreditPrice > 0 ? 0 : 1;
-                    TrySendMobileShopBuy(item, quantity: 1, pType: priceType);
+                    TryPromptMobileShopBuy(items[index], quantity: 1);
                 };
                 binding.FixedBuyButton.onClick.Add(binding.FixedBuyCallback);
             }
@@ -4597,7 +4672,7 @@ namespace MonoShare
                 {
                     int count = GameScene.GameShopInfoList?.Count ?? 0;
                     int pageSize = Math.Max(1, binding.FixedItemCells.Count);
-                    int lastPage = Math.Max(0, (count - 1) / pageSize);
+                    int lastPage = MobileShopPurchasePolicy.GetLastPage(count, pageSize);
                     binding.FixedPage = Math.Min(lastPage, binding.FixedPage + 1);
                     binding.FixedSelectedIndex = -1;
                     _mobileShopDirty = true;
@@ -4611,15 +4686,15 @@ namespace MonoShare
         private static void RefreshMobileShopFixedCells(MobileShopWindowBinding binding, int count)
         {
             int pageSize = Math.Max(1, binding.FixedItemCells.Count);
-            int lastPage = Math.Max(0, (count - 1) / pageSize);
+            int lastPage = MobileShopPurchasePolicy.GetLastPage(count, pageSize);
             binding.FixedPage = Math.Clamp(binding.FixedPage, 0, lastPage);
             int firstIndex = binding.FixedPage * pageSize;
 
             for (int i = 0; i < binding.FixedItemCells.Count; i++)
             {
                 GComponent cell = binding.FixedItemCells[i];
-                int itemIndex = firstIndex + i;
-                try { cell.visible = itemIndex < count; } catch { }
+                int itemIndex = MobileShopPurchasePolicy.GetItemIndex(binding.FixedPage, i, pageSize, count);
+                try { cell.visible = itemIndex >= 0 && itemIndex < count; } catch { }
                 RenderMobileShopListItem(itemIndex, cell);
             }
 
