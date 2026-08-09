@@ -1,0 +1,20 @@
+# 前台→HOME→同一 Activity 恢复命令记录（已脱敏）
+
+设备：127.0.0.1:21503（Android 模拟器/虚拟设备）
+组件：com.lommir.client.monogame.android/crc[REDACTED].MainActivity（打包生成类标识已脱敏）
+本段流程在清理日志后未执行 force-stop；启动前 Activity 已在前台。
+
+命令开始时间：2026-08-09T01:03:02.0213436+08:00
+日志清理退出码：0
+状态0（HOME 前）：    mResumedActivity: ActivityRecord{[REDACTED] u0 com.lommir.client.monogame.android/crc[REDACTED].MainActivity t[REDACTED]}   ResumedActivity: ActivityRecord{[REDACTED] u0 com.lommir.client.monogame.android/crc[REDACTED].MainActivity t[REDACTED]}
+HOME 命令时间：2026-08-09T01:03:02.6737215+08:00
+HOME 命令退出码：0
+状态1（HOME 后应为模拟器 Launcher）：    mResumedActivity: ActivityRecord{[REDACTED] u0 com.microvirt.launcher2/com.microvirt.launcher.Launcher t[REDACTED]}   ResumedActivity: ActivityRecord{[REDACTED] u0 com.microvirt.launcher2/com.microvirt.launcher.Launcher t[REDACTED]}
+恢复命令时间：2026-08-09T01:03:06.2997708+08:00
+恢复命令：am start -n com.lommir.client.monogame.android/crc[REDACTED].MainActivity
+恢复命令输出：Starting: Intent { cmp=com.lommir.client.monogame.android/crc[REDACTED].MainActivity } Warning: Activity not started, its current task has been brought to the front
+恢复命令退出码：0
+状态2（恢复后应为同一 MainActivity）：    mResumedActivity: ActivityRecord{[REDACTED] u0 com.lommir.client.monogame.android/crc[REDACTED].MainActivity t[REDACTED]}   ResumedActivity: ActivityRecord{[REDACTED] u0 com.lommir.client.monogame.android/crc[REDACTED].MainActivity t[REDACTED]}
+命令结束时间：2026-08-09T01:03:11.9164382+08:00
+
+截图对应：02-before-home.png=状态0；03-home.png=状态1；04-after-resume.png=状态2。

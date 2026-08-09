@@ -1,0 +1,2 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<hierarchy rotation="0"><node package="com.lommir.client.monogame.android" class="android.widget.FrameLayout" bounds="[0,0][1600,900]" note="原始 UI 层级中的 text、resource-id、content-desc、任务标识等字段已脱敏；登录页渲染由自定义 View 承载" /></hierarchy>
