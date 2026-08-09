@@ -1,0 +1,88 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="791a70ff-a32c-47fa-994d-366bf4e7eb1d" name="luo@DESKTOP-4J13TH0 2026-08-10 02:06:39" runUser="DESKTOP-4J13TH0\luo" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-08-10T02:06:39.1365463+08:00" queuing="2026-08-10T02:06:39.1365469+08:00" start="2026-08-10T02:06:37.2642151+08:00" finish="2026-08-10T02:06:39.1937846+08:00" />
+  <TestSettings name="default" id="f7a7352c-c31b-44a9-a0b4-4318fd3af0cc">
+    <Deployment runDeploymentRoot="luo_DESKTOP-4J13TH0_2026-08-10_02_06_39" />
+  </TestSettings>
+  <Results>
+    <UnitTestResult executionId="e66149a6-ea74-499f-a3e4-dcc8b20cf2b7" testId="b40151a1-974c-f772-c96b-e74750faa80d" testName="Base05.Tests.SqlPersistenceRoundTripTests.Sql_retry_success_counts_attempt_failure_without_final_failure" computerName="DESKTOP-4J13TH0" duration="00:00:00.0088462" startTime="2026-08-10T02:06:38.2930902+08:00" endTime="2026-08-10T02:06:38.3018153+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="e66149a6-ea74-499f-a3e4-dcc8b20cf2b7" />
+    <UnitTestResult executionId="edc978a4-08b2-416b-8444-53f916b460b1" testId="b38567ab-3502-affc-4a96-8e2534f1581c" testName="Base05.Tests.SqlPersistenceRoundTripTests.Sql_save_failure_records_full_call_and_failure_segment" computerName="DESKTOP-4J13TH0" duration="00:00:00.0021703" startTime="2026-08-10T02:06:38.3020266+08:00" endTime="2026-08-10T02:06:38.3040348+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="edc978a4-08b2-416b-8444-53f916b460b1" />
+    <UnitTestResult executionId="efb121d9-7989-4494-b3f8-cf4ed5d84925" testId="2141fe34-414e-d511-d1ce-d04ff30c4c08" testName="Base05.Tests.SqliteSingleWriterTests.Drain等待正在执行和排队的最后一次提交" computerName="DESKTOP-4J13TH0" duration="00:00:00.1023578" startTime="2026-08-10T02:06:38.1462145+08:00" endTime="2026-08-10T02:06:38.2489566+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="efb121d9-7989-4494-b3f8-cf4ed5d84925" />
+    <UnitTestResult executionId="feea6f62-a2c3-4aec-8ead-b10f4be359af" testId="fca6e1fe-0d22-f6a0-d620-861de219e87f" testName="Base05.Tests.SqliteSingleWriterTests.单写线程串行提交并把同域待处理请求合并为最新一次" computerName="DESKTOP-4J13TH0" duration="00:00:00.0228890" startTime="2026-08-10T02:06:38.0329594+08:00" endTime="2026-08-10T02:06:38.0651264+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="feea6f62-a2c3-4aec-8ead-b10f4be359af" />
+    <UnitTestResult executionId="ea4eeed8-0a97-46ea-9c3f-f204795cbe8b" testId="e0f5f252-0db0-9a8b-d5a9-4dd34a1f4116" testName="Base05.Tests.SqliteSingleWriterTests.Wal模式下单写事务进行时并发读取不死锁" computerName="DESKTOP-4J13TH0" duration="00:00:00.0335469" startTime="2026-08-10T02:06:38.1088072+08:00" endTime="2026-08-10T02:06:38.1447630+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="ea4eeed8-0a97-46ea-9c3f-f204795cbe8b" />
+    <UnitTestResult executionId="6bcf5f9a-f91f-4769-9894-bed5f77f69ea" testId="9cf9f59b-3223-5cec-9053-a72eea093514" testName="Base05.Tests.SqlPersistenceRoundTripTests.Sqlite_round_trips_account_character_inventory_storage_and_mail" computerName="DESKTOP-4J13TH0" duration="00:00:00.7346270" startTime="2026-08-10T02:06:38.3075651+08:00" endTime="2026-08-10T02:06:39.0388422+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="6bcf5f9a-f91f-4769-9894-bed5f77f69ea" />
+    <UnitTestResult executionId="f122b5f1-16ce-46b4-b936-557354f108b2" testId="77ade749-cbbc-4a3f-176b-24f396cf406f" testName="Base05.Tests.ServerLifecycleSmokeTests.Sqlite最终保存连续失败时取消关服恢复成功后允许重试" computerName="DESKTOP-4J13TH0" duration="00:00:00.0058143" startTime="2026-08-10T02:06:39.1053669+08:00" endTime="2026-08-10T02:06:39.1054946+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="f122b5f1-16ce-46b4-b936-557354f108b2" />
+    <UnitTestResult executionId="5a45d437-759c-4620-9792-59633ecf4249" testId="13c736ea-ef99-4959-3e96-1b9703f979a7" testName="Base05.Tests.ServerLifecycleSmokeTests.Sqlite关服先在主线程捕获四个最终快照并排空写队列" computerName="DESKTOP-4J13TH0" duration="00:00:00.0257402" startTime="2026-08-10T02:06:39.0394197+08:00" endTime="2026-08-10T02:06:39.0655854+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="5a45d437-759c-4620-9792-59633ecf4249" />
+    <UnitTestResult executionId="01d1f58b-171f-47b9-896c-632120cb21d3" testId="e5dca11a-29c8-9b9c-77f3-660666093833" testName="Base05.Tests.SqliteSingleWriterTests.Sqlite连接启用Wal和五秒忙等待" computerName="DESKTOP-4J13TH0" duration="00:00:00.0423387" startTime="2026-08-10T02:06:38.0773387+08:00" endTime="2026-08-10T02:06:38.1079035+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="01d1f58b-171f-47b9-896c-632120cb21d3" />
+    <UnitTestResult executionId="b02e77fa-05f2-4258-a7da-b890324a7b9a" testId="6e0fff1a-894b-3ee9-eebf-ed67831d1893" testName="Base05.Tests.SqlPersistenceRoundTripTests.Sql_retry_exhaustion_counts_one_final_failure_after_attempts" computerName="DESKTOP-4J13TH0" duration="00:00:00.0392488" startTime="2026-08-10T02:06:38.2535683+08:00" endTime="2026-08-10T02:06:38.2928688+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="b02e77fa-05f2-4258-a7da-b890324a7b9a" />
+  </Results>
+  <TestDefinitions>
+    <UnitTest name="Base05.Tests.SqlPersistenceRoundTripTests.Sql_save_failure_records_full_call_and_failure_segment" storage="c:\users\luo\.codex\worktrees\p3-db01-sqlite-writer-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="b38567ab-3502-affc-4a96-8e2534f1581c">
+      <Execution id="edc978a4-08b2-416b-8444-53f916b460b1" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p3-db01-sqlite-writer-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.SqlPersistenceRoundTripTests" name="Sql_save_failure_records_full_call_and_failure_segment" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.SqlPersistenceRoundTripTests.Sql_retry_success_counts_attempt_failure_without_final_failure" storage="c:\users\luo\.codex\worktrees\p3-db01-sqlite-writer-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="b40151a1-974c-f772-c96b-e74750faa80d">
+      <Execution id="e66149a6-ea74-499f-a3e4-dcc8b20cf2b7" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p3-db01-sqlite-writer-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.SqlPersistenceRoundTripTests" name="Sql_retry_success_counts_attempt_failure_without_final_failure" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.SqliteSingleWriterTests.Drain等待正在执行和排队的最后一次提交" storage="c:\users\luo\.codex\worktrees\p3-db01-sqlite-writer-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="2141fe34-414e-d511-d1ce-d04ff30c4c08">
+      <Execution id="efb121d9-7989-4494-b3f8-cf4ed5d84925" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p3-db01-sqlite-writer-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.SqliteSingleWriterTests" name="Drain等待正在执行和排队的最后一次提交" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.ServerLifecycleSmokeTests.Sqlite关服先在主线程捕获四个最终快照并排空写队列" storage="c:\users\luo\.codex\worktrees\p3-db01-sqlite-writer-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="13c736ea-ef99-4959-3e96-1b9703f979a7">
+      <Execution id="5a45d437-759c-4620-9792-59633ecf4249" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p3-db01-sqlite-writer-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.ServerLifecycleSmokeTests" name="Sqlite关服先在主线程捕获四个最终快照并排空写队列" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.SqlPersistenceRoundTripTests.Sql_retry_exhaustion_counts_one_final_failure_after_attempts" storage="c:\users\luo\.codex\worktrees\p3-db01-sqlite-writer-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="6e0fff1a-894b-3ee9-eebf-ed67831d1893">
+      <Execution id="b02e77fa-05f2-4258-a7da-b890324a7b9a" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p3-db01-sqlite-writer-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.SqlPersistenceRoundTripTests" name="Sql_retry_exhaustion_counts_one_final_failure_after_attempts" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.SqliteSingleWriterTests.单写线程串行提交并把同域待处理请求合并为最新一次" storage="c:\users\luo\.codex\worktrees\p3-db01-sqlite-writer-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="fca6e1fe-0d22-f6a0-d620-861de219e87f">
+      <Execution id="feea6f62-a2c3-4aec-8ead-b10f4be359af" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p3-db01-sqlite-writer-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.SqliteSingleWriterTests" name="单写线程串行提交并把同域待处理请求合并为最新一次" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.ServerLifecycleSmokeTests.Sqlite最终保存连续失败时取消关服恢复成功后允许重试" storage="c:\users\luo\.codex\worktrees\p3-db01-sqlite-writer-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="77ade749-cbbc-4a3f-176b-24f396cf406f">
+      <Execution id="f122b5f1-16ce-46b4-b936-557354f108b2" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p3-db01-sqlite-writer-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.ServerLifecycleSmokeTests" name="Sqlite最终保存连续失败时取消关服恢复成功后允许重试" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.SqliteSingleWriterTests.Sqlite连接启用Wal和五秒忙等待" storage="c:\users\luo\.codex\worktrees\p3-db01-sqlite-writer-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="e5dca11a-29c8-9b9c-77f3-660666093833">
+      <Execution id="01d1f58b-171f-47b9-896c-632120cb21d3" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p3-db01-sqlite-writer-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.SqliteSingleWriterTests" name="Sqlite连接启用Wal和五秒忙等待" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.SqliteSingleWriterTests.Wal模式下单写事务进行时并发读取不死锁" storage="c:\users\luo\.codex\worktrees\p3-db01-sqlite-writer-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="e0f5f252-0db0-9a8b-d5a9-4dd34a1f4116">
+      <Execution id="ea4eeed8-0a97-46ea-9c3f-f204795cbe8b" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p3-db01-sqlite-writer-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.SqliteSingleWriterTests" name="Wal模式下单写事务进行时并发读取不死锁" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.SqlPersistenceRoundTripTests.Sqlite_round_trips_account_character_inventory_storage_and_mail" storage="c:\users\luo\.codex\worktrees\p3-db01-sqlite-writer-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="9cf9f59b-3223-5cec-9053-a72eea093514">
+      <Execution id="6bcf5f9a-f91f-4769-9894-bed5f77f69ea" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p3-db01-sqlite-writer-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.SqlPersistenceRoundTripTests" name="Sqlite_round_trips_account_character_inventory_storage_and_mail" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestEntries>
+    <TestEntry testId="b40151a1-974c-f772-c96b-e74750faa80d" executionId="e66149a6-ea74-499f-a3e4-dcc8b20cf2b7" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="b38567ab-3502-affc-4a96-8e2534f1581c" executionId="edc978a4-08b2-416b-8444-53f916b460b1" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="2141fe34-414e-d511-d1ce-d04ff30c4c08" executionId="efb121d9-7989-4494-b3f8-cf4ed5d84925" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="fca6e1fe-0d22-f6a0-d620-861de219e87f" executionId="feea6f62-a2c3-4aec-8ead-b10f4be359af" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="e0f5f252-0db0-9a8b-d5a9-4dd34a1f4116" executionId="ea4eeed8-0a97-46ea-9c3f-f204795cbe8b" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="9cf9f59b-3223-5cec-9053-a72eea093514" executionId="6bcf5f9a-f91f-4769-9894-bed5f77f69ea" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="77ade749-cbbc-4a3f-176b-24f396cf406f" executionId="f122b5f1-16ce-46b4-b936-557354f108b2" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="13c736ea-ef99-4959-3e96-1b9703f979a7" executionId="5a45d437-759c-4620-9792-59633ecf4249" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="e5dca11a-29c8-9b9c-77f3-660666093833" executionId="01d1f58b-171f-47b9-896c-632120cb21d3" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="6e0fff1a-894b-3ee9-eebf-ed67831d1893" executionId="b02e77fa-05f2-4258-a7da-b890324a7b9a" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+  </TestEntries>
+  <TestLists>
+    <TestList name="列表中未列出的结果" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="所有已加载的结果" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Completed">
+    <Counters total="10" executed="10" passed="10" failed="0" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <Output>
+      <StdOut>[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.0.2+dd36e86129 (64-bit .NET 10.0.4)&#xD;
+[xUnit.net 00:00:00.11]   Discovering: Base05.Tests&#xD;
+[xUnit.net 00:00:00.18]   Discovered:  Base05.Tests&#xD;
+[xUnit.net 00:00:00.21]   Starting:    Base05.Tests&#xD;
+[xUnit.net 00:00:01.31]   Finished:    Base05.Tests&#xD;
+</StdOut>
+    </Output>
+  </ResultSummary>
+</TestRun>

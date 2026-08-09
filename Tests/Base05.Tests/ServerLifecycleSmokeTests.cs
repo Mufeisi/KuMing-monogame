@@ -7,7 +7,10 @@ using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using Server;
 using Server.MirEnvir;
+using Server.MirDatabase;
 using Server.MirNetwork;
+using Server.Persistence;
+using Server.Persistence.Sql;
 using Server.Security;
 using Shared.Security;
 using Xunit;
@@ -68,6 +71,139 @@ public sealed class ServerLifecycleSmokeTests : IDisposable
 
         envir.Stop();
         Assert.False(envir.Running);
+    }
+
+    [Fact]
+    public void Sqlite关服先在主线程捕获四个最终快照并排空写队列()
+    {
+        bool oldBlockShutdown = Settings.BlockShutdownOnSaveFailures;
+        var persistence = new ShutdownRecordingPersistence();
+        var envir = new Envir();
+        typeof(Envir).GetField("_persistence", BindingFlags.Instance | BindingFlags.NonPublic)!
+            .SetValue(envir, persistence);
+        int callerThreadId = Environment.CurrentManagedThreadId;
+
+        try
+        {
+            Settings.BlockShutdownOnSaveFailures = false;
+            envir.Start(new EnvirStartOptions
+            {
+                EnforceProductionSecurity = false,
+                LoadResources = false,
+                BindNetwork = false,
+                StartScripts = false,
+                StartHttp = false,
+                SaveOnStop = true,
+                Multithreaded = false,
+            });
+            Assert.True(SpinWait.SpinUntil(
+                () => envir.StartState is EnvirStartState.Ready or EnvirStartState.Failed,
+                TimeSpan.FromSeconds(2)));
+            Assert.Equal(EnvirStartState.Ready, envir.StartState);
+
+            envir.Stop();
+
+            Assert.Equal(new[] { "Accounts", "Guilds", "Goods", "Conquests", "Drain" }, persistence.Events);
+            Assert.DoesNotContain(callerThreadId, persistence.SaveThreadIds);
+            Assert.Single(persistence.SaveThreadIds.Distinct());
+            Assert.False(envir.Running);
+        }
+        finally
+        {
+            Settings.BlockShutdownOnSaveFailures = oldBlockShutdown;
+            envir.Stop();
+        }
+    }
+
+    [Fact]
+    public void Sqlite最终保存连续失败时取消关服恢复成功后允许重试()
+    {
+        bool oldBlockShutdown = Settings.BlockShutdownOnSaveFailures;
+        int oldThreshold = Settings.BlockShutdownOnSaveFailuresThreshold;
+        var persistence = new ShutdownRecordingPersistence { FailAccounts = true };
+        var envir = new Envir();
+        typeof(Envir).GetField("_persistence", BindingFlags.Instance | BindingFlags.NonPublic)!
+            .SetValue(envir, persistence);
+
+        try
+        {
+            Settings.BlockShutdownOnSaveFailures = true;
+            Settings.BlockShutdownOnSaveFailuresThreshold = 1;
+            envir.Start(new EnvirStartOptions
+            {
+                EnforceProductionSecurity = false,
+                LoadResources = false,
+                BindNetwork = false,
+                StartScripts = false,
+                StartHttp = false,
+                SaveOnStop = true,
+                Multithreaded = false,
+            });
+            Assert.True(SpinWait.SpinUntil(
+                () => envir.StartState is EnvirStartState.Ready or EnvirStartState.Failed,
+                TimeSpan.FromSeconds(2)));
+            Assert.Equal(EnvirStartState.Ready, envir.StartState);
+
+            envir.Stop();
+
+            Assert.True(envir.Running);
+
+            persistence.FailAccounts = false;
+            SqlSaveResilience.ReportSuccess(DatabaseProviderKind.Sqlite, SqlSaveDomain.Accounts);
+            envir.Stop();
+            Assert.False(envir.Running);
+        }
+        finally
+        {
+            persistence.FailAccounts = false;
+            SqlSaveResilience.ReportSuccess(DatabaseProviderKind.Sqlite, SqlSaveDomain.Accounts);
+            Settings.BlockShutdownOnSaveFailures = oldBlockShutdown;
+            Settings.BlockShutdownOnSaveFailuresThreshold = oldThreshold;
+            envir.Stop();
+        }
+    }
+
+    private sealed class ShutdownRecordingPersistence : IServerPersistence, IPendingSaveCoordinator
+    {
+        private readonly List<string> _events = new();
+        private readonly List<int> _saveThreadIds = new();
+
+        public DatabaseProviderKind Provider => DatabaseProviderKind.Sqlite;
+        public IReadOnlyList<string> Events => _events;
+        public IReadOnlyList<int> SaveThreadIds => _saveThreadIds;
+        public bool FailAccounts { get; set; }
+
+        public bool LoadWorld(Envir envir) => true;
+        public void SaveWorld(Envir envir) { }
+        public void LoadAccounts(Envir envir) { }
+        public void BeginSaveAccounts(Envir envir) { }
+        public void SaveAccounts(Envir envir)
+        {
+            Record("Accounts");
+            if (FailAccounts)
+            {
+                SqlSaveResilience.ReportFailure(
+                    DatabaseProviderKind.Sqlite,
+                    SqlSaveDomain.Accounts,
+                    new IOException("测试最终保存失败"),
+                    operation: "ShutdownTest");
+            }
+        }
+        public void LoadGuilds(Envir envir) { }
+        public void SaveGuilds(Envir envir, bool forced) => Record("Guilds");
+        public void SaveGoods(Envir envir, bool forced) => Record("Goods");
+        public void LoadConquests(Envir envir) { }
+        public void SaveConquests(Envir envir, bool forced) => Record("Conquests");
+        public void SaveArchivedCharacter(Envir envir, CharacterInfo info) { }
+        public CharacterInfo GetArchivedCharacter(Envir envir, string name) => null;
+
+        public void DrainPendingSaves() => _events.Add("Drain");
+
+        private void Record(string name)
+        {
+            _events.Add(name);
+            _saveThreadIds.Add(Environment.CurrentManagedThreadId);
+        }
     }
 
     [Fact]

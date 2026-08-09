@@ -212,5 +212,14 @@ namespace Server.Persistence.Sql
                     Stopwatch.GetTimestamp() - saveStart);
             }
         }
+
+        internal SqlDomainTransactionResult RunCapturedSnapshot<TSnapshot>(
+            SqlSaveDomain domain,
+            TSnapshot snapshot,
+            Action<SqlSession, TSnapshot> work)
+        {
+            if (work == null) throw new ArgumentNullException(nameof(work));
+            return RunCore(domain, session => work(session, snapshot), recordFullSaveDuration: true);
+        }
     }
 }

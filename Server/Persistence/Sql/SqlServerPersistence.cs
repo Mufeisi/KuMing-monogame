@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Reflection;
@@ -6,6 +7,7 @@ using System.Text;
 using Server.MirDatabase;
 using Server.MirEnvir;
 using Server.MirObjects;
+using Shared.Diagnostics;
 
 namespace Server.Persistence.Sql
 {
@@ -13,7 +15,7 @@ namespace Server.Persistence.Sql
     /// SQL 持久化入口（SQLite/MySQL）。
     /// 当前阶段：仅用于把调用链切换到“持久化层”，具体各域表结构与加载/保存闭环将按升级计划逐步落地。
     /// </summary>
-    public sealed class SqlServerPersistence : IServerPersistence
+    public sealed class SqlServerPersistence : IServerPersistence, IPendingSaveCoordinator
     {
         private const string LegacyDomainWorld = "world";
 
@@ -575,6 +577,7 @@ namespace Server.Persistence.Sql
         private readonly DatabaseProviderKind _provider;
         private readonly SqlDatabaseOptions _databaseOptions;
         private readonly ISchemaMigrator _schemaMigrator;
+        private readonly SqliteSingleWriter _sqliteWriter;
         private readonly object _initGate = new object();
         private bool _initialized;
 
@@ -599,8 +602,55 @@ namespace Server.Persistence.Sql
 
             _provider = provider;
             _databaseOptions = databaseOptions;
+            _sqliteWriter = provider == DatabaseProviderKind.Sqlite ? new SqliteSingleWriter() : null;
 
             _schemaMigrator = new SchemaMigrator(SchemaMigrator.CreateDefaultMigrations(), commandTimeoutSeconds: _databaseOptions.CommandTimeoutSeconds);
+        }
+
+        void IPendingSaveCoordinator.DrainPendingSaves()
+        {
+            _sqliteWriter?.Drain();
+        }
+
+        private void RunSaveWithSnapshot<TSnapshot>(
+            SqlSaveDomain domain,
+            Func<TSnapshot> snapshotFactory,
+            Action<SqlSession, TSnapshot> work)
+        {
+            var runner = new SqlDomainTransactionRunner(_provider, _databaseOptions);
+            if (_provider != DatabaseProviderKind.Sqlite)
+            {
+                runner.RunWithSnapshot(domain, snapshotFactory, work);
+                return;
+            }
+
+            TSnapshot snapshot;
+            long snapshotStart = Stopwatch.GetTimestamp();
+            try
+            {
+                snapshot = snapshotFactory();
+                PerformanceMetrics.RecordDuration(
+                    PerformanceMetricKind.SaveSnapshotCapture,
+                    Stopwatch.GetTimestamp() - snapshotStart);
+            }
+            catch (Exception ex)
+            {
+                PerformanceMetrics.RecordDuration(
+                    PerformanceMetricKind.SaveSnapshotCapture,
+                    Stopwatch.GetTimestamp() - snapshotStart);
+                PerformanceMetrics.Increment(PerformanceMetricKind.SaveFailure);
+                MessageQueue.Instance.Enqueue($"[SQL:{_provider}] {domain} 快照构建失败：{ex}");
+                SqlSaveResilience.ReportFailure(
+                    _provider,
+                    domain,
+                    ex,
+                    operation: "SqlServerPersistence.Snapshot",
+                    transient: SqlTransientDetector.IsTransient(_provider, ex),
+                    attempts: 0);
+                return;
+            }
+
+            _sqliteWriter.Enqueue(domain, () => runner.RunCapturedSnapshot(domain, snapshot, work));
         }
 
         private static SqlDatabaseOptions CreateOptionsFromSettings()
@@ -6130,17 +6180,15 @@ namespace Server.Persistence.Sql
 
             try
             {
-                var runner = new SqlDomainTransactionRunner(_provider, _databaseOptions);
-
                 if (Settings.WorldLegacyBlobWriteEnabled)
                 {
-                    runner.RunWithSnapshot(
+                    RunSaveWithSnapshot(
                         domain: SqlSaveDomain.World,
                         snapshotFactory: () => envir.Legacy_SaveDBToBytes(),
                         work: (session, payload) => UpsertLegacyBlob(session, LegacyDomainWorld, payload));
                 }
 
-                runner.RunWithSnapshot(
+                RunSaveWithSnapshot(
                     domain: SqlSaveDomain.WorldRelations,
                     snapshotFactory: () => SqlWorldRelationsStore.Capture(envir),
                     work: (session, snapshot) => SqlWorldRelationsStore.ReplaceAll(session, snapshot));
@@ -6536,8 +6584,7 @@ namespace Server.Persistence.Sql
 
             try
             {
-                var runner = new SqlDomainTransactionRunner(_provider, _databaseOptions);
-                runner.RunWithSnapshot(
+                RunSaveWithSnapshot(
                     domain: SqlSaveDomain.Accounts,
                     snapshotFactory: () =>
                     {
@@ -6703,8 +6750,7 @@ namespace Server.Persistence.Sql
 
             EnsureInitialized();
 
-            var runner = new SqlDomainTransactionRunner(_provider, _databaseOptions);
-            runner.RunWithSnapshot(
+            RunSaveWithSnapshot(
                 domain: SqlSaveDomain.Guilds,
                 snapshotFactory: () => CaptureGuildLegacyFiles(envir),
                 work: (session, snapshot) => ReplaceLegacyFiles(session, LegacyFilesDomainGuilds, snapshot));
@@ -6716,8 +6762,7 @@ namespace Server.Persistence.Sql
 
             EnsureInitialized();
 
-            var runner = new SqlDomainTransactionRunner(_provider, _databaseOptions);
-            runner.RunWithSnapshot(
+            RunSaveWithSnapshot(
                 domain: SqlSaveDomain.Goods,
                 snapshotFactory: () => CaptureGoodsLegacyFiles(envir, forced),
                 work: (session, snapshot) => ReplaceLegacyFiles(session, LegacyFilesDomainGoods, snapshot));
@@ -6775,8 +6820,7 @@ namespace Server.Persistence.Sql
 
             EnsureInitialized();
 
-            var runner = new SqlDomainTransactionRunner(_provider, _databaseOptions);
-            runner.RunWithSnapshot(
+            RunSaveWithSnapshot(
                 domain: SqlSaveDomain.Conquests,
                 snapshotFactory: () => CaptureConquestLegacyFiles(envir),
                 work: (session, snapshot) => ReplaceLegacyFiles(session, LegacyFilesDomainConquests, snapshot));
@@ -6814,8 +6858,7 @@ namespace Server.Persistence.Sql
 
             try
             {
-                var runner = new SqlDomainTransactionRunner(_provider, _databaseOptions);
-                runner.RunWithSnapshot(
+                RunSaveWithSnapshot(
                     domain: SqlSaveDomain.Archive,
                     snapshotFactory: () => new LegacyFileRow
                     {

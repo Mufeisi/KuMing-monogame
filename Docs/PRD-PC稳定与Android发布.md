@@ -114,7 +114,7 @@ GATE-P0 ──► GATE-P1 ──► GATE-P2 ──► GATE-P3 ──► GATE-P4 
 | GATE-P0 | **已完成**；远程 CI 证据见 §P0 | 无 |
 | GATE-P1 | **已完成**：ANDROID-01 商城逍遥端到端通过；ANDROID-02..07 按本轮替代口径完成真实协议/门控/权威响应/UI 投影使用探针并复核通过；PROTO-01、BASE-10、PERF-00 证据已归档；Base05 集成 223/223 通过；远程 CI `31313826844` 的 Windows、通用测试、Android Release arm64 AOT 全绿 | 无 |
 | GATE-P2 | **已完成**：SEC-01～SEC-06 全部完成；签名私钥与发布流水线按边界留在 RELEASE-01/02 | 按门禁顺序进入 GATE-P3 |
-| GATE-P3 | 未开始 | 等待 GATE-P2 |
+| GATE-P3 | **进行中**：DB-01 已完成，DB-02～06 未开始 | 按依赖进入 DB-02 |
 | GATE-P4 | PERF-00 采集基建已完成，真实基线/PERF-01..05 未开始 | 等待 GATE-P3 与真实 S1/S2/S3 输入 |
 | GATE-P5 | 未开始 | 等待 GATE-P4 |
 
@@ -228,6 +228,8 @@ GATE-P1 关闭后，P2 的 SEC-03、SEC-04、SEC-05、SEC-06 各为独立任务�
 **SEC-05 配置秘密治理收口记录（2026-08-10）**：服务端新增 Windows DPAPI `CurrentUser` 受保护秘密存储，TLS 证书密码、管理端角色令牌、游戏 GM 密码、MySQL 连接串、微端 Code 与 AI API Key 均不再从 INI 或常驻环境变量读取；历史明文键在 `Settings.Load` 时严格删除。CI/运维只允许通过专用 `LYOCRYSTAL_IMPORT_*` 变量短暂导入，进程读取后立即清空；旧 TLS、管理端和 AI 环境变量按迁移错误失败关闭。正式启动在脚本、监听器和服务线程之前统一校验：默认或短 GM 密码、缺失的已启用功能秘密、同值或过短管理令牌、公网/通配管理监听及内网明文 HTTP 均阻止启动。DPAPI 往返、文件无明文、短暂导入清理、旧 INI 删除、完整配置覆盖和启动前失败专项与关联安全/生命周期测试 `38/38`，Base05 全量 `249/249`；Server.Library 与 Server.MirForms Release 构建 0 错误。运维与恢复说明见 `Docs/SEC-05-受保护秘密与启动门禁.md`，证据见 `Docs/Evidence/GATE-P2/sec05-secret-governance-20260810/`。SEC-05 至此完成；SEC-06 仍阻塞 GATE-P2。
 
 **SEC-06 微端资源索引签名收口记录（2026-08-10）**：PC 与 Mono/Android 的现有远端 Bootstrap 更新接缝统一复用 `BootstrapManifestSignaturePolicy`，仅在严格 JSON 包装通过确定性二进制载荷、ECDSA P-256/SHA-256/P1363、编译期 SPKI Key ID 信任表、密钥序列窗口、宿主显式最低客户端版本和持久化单调序列校验后生成更新队列。低序列、同序列异资源版本或异载荷、未知/过期密钥、哈希或签名篡改、未知字段、重复包、非规范摘要、损坏状态、当前安装中单独删除状态及替换为旧有效状态快照均失败关闭；安装标记绑定最高序列与载荷摘要，状态先落盘的崩溃窗口可在验签后安全前推标记。保存的原始清单在重启后重新验签，更新队列的资源版本、包名和 SHA-256 逐项匹配该清单；PC 与 Mono/Android 正式下载不可关闭地使用签名摘要校验 ZIP，旧队列、篡改队列或 ZIP 不再继续。签名载荷的字节级顺序、字段边界、轮换步骤与 RELEASE-01 接缝见 `Docs/SEC-06-微端资源索引签名格式.md`。SEC-06 不生成或托管私钥，生产公钥注入、CI 签名和事务发布仍按 PRD 留在 RELEASE-01/02；在生产公钥注入前，远端更新按设计拒绝。专项 `8/8`、Base05 全量 `257/257`，PC、Mono net10 与 Android arm64 Release/AOT 构建均 0 错误；证据见 `Docs/Evidence/GATE-P2/sec06-micro-signing-20260810/`。SEC-01～SEC-06 至此全部完成，GATE-P2 关闭，开发队列进入 GATE-P3。
+
+**DB-01 SQLite 单写线程收口记录（2026-08-10）**：SQLite 正式连接启用 WAL、私有连接缓存与 5 秒 `busy_timeout`；运行期世界、关系、账户、行会、商品、攻城和角色归档保存先在调用主线程捕获既有快照，再由唯一后台写线程串行提交。同一数据域尚未开始的请求合并为最新快照，已开始事务不被替换；关服在主线程捕获账户、行会、商品与攻城最终快照，等待正在执行及各域最后一次提交后再停止，连续保存失败达到既有阈值时取消关服，恢复后可重试。真实 WAL 写事务期间 8 路并发读、同域 100 次合并、单写并行度、排空等待与关服失败策略均已验证；专项 `10/10`、Base05 全量 `263/263`，Server.Library 与 Server.MirForms Release 构建 0 错误。实现说明见 `Docs/DB-01-SQLite单写线程与关服策略.md`，证据见 `Docs/Evidence/GATE-P3/db01-sqlite-writer-20260810/`。DB-01 完成不代表 GATE-P3 关闭；保存代次、`synchronous=FULL` 与完整后台保存口径仍属于 DB-02。
 
 **GATE-P2 退出条件**：公开测试前安全项全部完成；凭据不通过未加密网络传输；公网无 V1 明文登录。
 

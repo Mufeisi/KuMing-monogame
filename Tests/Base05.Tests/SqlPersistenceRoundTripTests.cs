@@ -74,6 +74,7 @@ public sealed class SqlPersistenceRoundTripTests
             character.Mail.Add(mail);
 
             persistence.SaveAccounts(source);
+            ((IPendingSaveCoordinator)persistence).DrainPendingSaves();
 
             var saveMetric = PerformanceMetrics.CreateSnapshot().Metrics
                 .Single(item => item.Name == nameof(PerformanceMetricKind.Save));

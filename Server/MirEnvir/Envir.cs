@@ -177,6 +177,7 @@ namespace Server.MirEnvir
         public RespawnTimer RespawnTick = new RespawnTimer();
 
         private int _autoSaveRequested;
+        private int _shutdownSavePrepared;
         private LoginProtectionOptions _loginProtectionOptions;
         private LoginProtection _loginProtection;
 
@@ -839,6 +840,50 @@ namespace Server.MirEnvir
             }
         }
 
+        private void QueueFinalPersistenceSave()
+        {
+            SaveAccounts();
+            SaveGuilds(true);
+            SaveGoods(true);
+            SaveConquests(true);
+            if (Persistence is IPendingSaveCoordinator coordinator)
+                coordinator.DrainPendingSaves();
+        }
+
+        private bool PrepareSqliteShutdownSave()
+        {
+            try
+            {
+                bool completed = InvokeOnMainThread(
+                    () =>
+                    {
+                        QueueFinalPersistenceSave();
+                        return true;
+                    },
+                    timeoutMs: 180000,
+                    allowInlineWithoutMainThread: false);
+                if (!completed)
+                {
+                    MessageQueue.Enqueue("[SAVE:Sqlite] 关服前最终保存未能在主线程完成，已取消本次关服。");
+                    return false;
+                }
+
+                if (SqlSaveResilience.ShouldBlockShutdown(out string reason))
+                {
+                    MessageQueue.Enqueue("[SAVE:Sqlite] 已阻止关服：" + reason);
+                    return false;
+                }
+
+                Interlocked.Exchange(ref _shutdownSavePrepared, 1);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                MessageQueue.Enqueue("[SAVE:Sqlite] 关服前最终保存异常，已取消本次关服：" + ex);
+                return false;
+            }
+        }
+
         private void RecordPerformanceNetworkSnapshot()
         {
             if (!PerformanceMetrics.Enabled) return;
@@ -1111,9 +1156,8 @@ namespace Server.MirEnvir
                     StopEnvir();
                 if (options.SaveOnStop)
                 {
-                    SaveAccounts();
-                    SaveGuilds(true);
-                    SaveConquests(true);
+                    if (Interlocked.Exchange(ref _shutdownSavePrepared, 0) == 0)
+                        QueueFinalPersistenceSave();
                 }
             }
             catch (Exception ex)
@@ -3682,6 +3726,7 @@ namespace Server.MirEnvir
             if (options == null) throw new ArgumentNullException(nameof(options));
 
             _startOptions = options;
+            Interlocked.Exchange(ref _shutdownSavePrepared, 0);
             Volatile.Write(ref _startFailure, null);
             Volatile.Write(ref _startState, (int)EnvirStartState.Starting);
 
@@ -3719,6 +3764,14 @@ namespace Server.MirEnvir
         }
         public void Stop()
         {
+            var options = _startOptions ?? EnvirStartOptions.FromSettings();
+            if (Running &&
+                StartState == EnvirStartState.Ready &&
+                options.SaveOnStop &&
+                Persistence.Provider == DatabaseProviderKind.Sqlite &&
+                !PrepareSqliteShutdownSave())
+                return;
+
             Running = false;
 
             try
