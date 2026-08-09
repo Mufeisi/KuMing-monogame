@@ -37,7 +37,7 @@ dotnet Server.dll --restore-sqlite "<DB-03 已验证备份.db>" --target "<Data\
 2026-08-10 Windows Release 演练使用正式 DB-03 `SqliteBackupService` 从实际五域 SQLite 库生成 C: 本地副本和 D: 异卷副本，两份 SHA-256 一致且 `integrity_check=ok`。备份后把账号金币从 100 提交为 777，并在 WAL/SHM 存在时强制终止持有进程；正式 `Server.dll --restore-sqlite` 返回 0。恢复后账号金币回到备份值 100，账号、角色、行会、商品、攻城五域均由现有加载接缝复读，宿主进入 `Ready`。
 
 - RPO：303ms（最后成功备份到强停故障）。
-- RTO：600ms（恢复命令开始到业务域复读及 `Ready`）；故障到 `Ready` 为 625ms。
+- RTO：按 UTC 端点差保守上取整为 603ms（恢复命令开始到业务域复读及 `Ready`；进程内 Stopwatch 为 600ms）；故障到 `Ready` 为 625ms。
 - 门槛：RPO≤5 分钟、RTO≤30 分钟，均通过。
 
 原始可复算记录见 `Docs/Evidence/GATE-P3/db04-restore-drill-20260810/raw-powershell-transcript.txt`。DB-04 不替代 DB-05 的生产保存间隔与最坏崩溃点故障注入，也不实现 DB-06 的 MySQL 迁移。

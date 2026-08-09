@@ -21,7 +21,7 @@ DB-03 备份：
 
 可复算结果：
 - RPO=303ms。
-- 恢复命令开始到 Ready 的 RTO=600ms。
+- 恢复命令开始到 Ready：UTC 端点差=602.31ms，保守上取整 RTO=603ms；进程内 Stopwatch=600ms。
 - 故障到 Ready=625ms。
 - 门槛 RPO≤300000ms、RTO≤1800000ms，结论通过。
 
