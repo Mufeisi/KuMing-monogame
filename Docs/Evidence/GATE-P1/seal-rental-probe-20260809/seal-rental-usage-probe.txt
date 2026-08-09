@@ -1,0 +1,14 @@
+P1-SEAL-RENTAL 使用探针冒烟
+语言：中文
+
+命令：
+dotnet test Tests/Base05.Tests/Base05.Tests.csproj -c Release --filter "FullyQualifiedName~MobileSealRentalStateTests" --logger "console;verbosity=minimal"
+
+结果：
+已通过：31
+失败：0
+跳过：0
+持续时间：169 ms
+
+覆盖链路：
+CombineItem 请求/结果 -> 封印 UI 状态；ItemRentalRequest 请求/响应 -> 租赁 UI 状态。

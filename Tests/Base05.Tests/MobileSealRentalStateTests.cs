@@ -9,6 +9,54 @@ namespace Base05.Tests;
 public sealed class MobileSealRentalStateTests
 {
     [Fact]
+    public void Seal_rental_usage_probe_smoke_projects_protocol_results_to_ui_values()
+    {
+        var state = new MobileSealRentalState();
+
+        var sealRequest = new ClientPackets.CombineItem
+        {
+            Grid = MirGridType.Inventory,
+            IDFrom = 11,
+            IDTo = 22,
+        };
+        Assert.Equal((short)ClientPacketIds.CombineItem, sealRequest.Index);
+        Assert.True(state.SelectSealMaterial(sealRequest.IDFrom));
+        Assert.True(state.SelectSealTarget(sealRequest.IDTo));
+        Assert.True(state.BeginSealRequest(10_000));
+        Assert.True(state.SealRequestPending);
+
+        var sealResult = new ServerPackets.CombineItem
+        {
+            IDFrom = 11,
+            IDTo = 22,
+            Success = true,
+            Destroy = true,
+        };
+        Assert.Equal((short)ServerPacketIds.CombineItem, sealResult.Index);
+        Assert.True(state.ApplyCombineResult(sealResult));
+        Assert.True(state.LastSealSucceeded);
+        Assert.False(state.HasSealSelection);
+
+        var rentalRequest = new ClientPackets.ItemRentalRequest();
+        Assert.Equal((short)ClientPacketIds.ItemRentalRequest, rentalRequest.Index);
+        var rentalResponse = new ServerPackets.ItemRentalRequest
+        {
+            Name = "探针租客",
+            Renting = false,
+        };
+        Assert.Equal((short)ServerPacketIds.ItemRentalRequest, rentalResponse.Index);
+        Assert.True(state.ApplyRentalRequest(rentalResponse));
+
+        // FairyGuiHost.MobileSealRental 刷新窗口时读取这些公开投影。
+        Assert.True(state.IsOpen);
+        Assert.True(state.RentalSessionActive);
+        Assert.False(state.IsRenting);
+        Assert.Equal("探针租客", state.RentalPartnerName);
+        Assert.Equal(MobileSealRentalState.RentalOperation.None, state.PendingRentalOperation);
+        Assert.Null(state.Error);
+    }
+
+    [Fact]
     public void Seal_and_rental_commands_keep_existing_packet_indexes_and_shapes()
     {
         Assert.Equal((short)ClientPacketIds.CombineItem, new ClientPackets.CombineItem
