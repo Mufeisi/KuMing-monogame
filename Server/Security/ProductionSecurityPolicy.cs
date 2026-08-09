@@ -1,6 +1,7 @@
 using System.Net;
 using System.Security.Cryptography;
 using System.Text;
+using Server.Persistence.Sql;
 
 namespace Server.Security;
 
@@ -46,6 +47,12 @@ internal static class ProductionSecurityPolicy
         if (Settings.DatabaseProvider.Equals("MySql", StringComparison.OrdinalIgnoreCase) ||
             Settings.DatabaseProvider.Equals("MySQL", StringComparison.OrdinalIgnoreCase))
             Settings.MySqlConnectionString = Require(ProtectedSecretStore.MySqlConnectionString, "MySQL 连接字符串");
+        else if (Settings.DatabaseProvider.Equals("Sqlite", StringComparison.OrdinalIgnoreCase))
+        {
+            if (!Settings.SqliteBackupEnabled)
+                throw new InvalidOperationException("正式服 SQLite 自动备份不得关闭");
+            SqliteBackupOptions.FromSettings().Validate(requireOffsite: true);
+        }
 
         if (Settings.MicroServerActive)
             Settings.MicroCode = Require(ProtectedSecretStore.MicroCode, "微端访问 Code");

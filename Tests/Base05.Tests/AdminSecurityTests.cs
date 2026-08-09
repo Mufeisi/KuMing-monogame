@@ -47,6 +47,12 @@ public sealed class AdminSecurityTests
             "Bearer " + operatorToken, "/broadcast", administrator, operatorToken);
         Assert.Equal(AdminAuthorizationStatus.Authorized, operatorBroadcast.Status);
         Assert.Equal(AdminRole.Operator, operatorBroadcast.Role);
+        Assert.Equal(AdminAuthorizationStatus.Authorized,
+            AdminSecurityPolicy.Authorize(
+                "Bearer " + operatorToken, "/backup/status", administrator, operatorToken).Status);
+        Assert.Equal(AdminAuthorizationStatus.Forbidden,
+            AdminSecurityPolicy.Authorize(
+                "Bearer " + operatorToken, "/backup/run", administrator, operatorToken).Status);
         Assert.Equal(AdminAuthorizationStatus.Forbidden,
             AdminSecurityPolicy.Authorize(
                 "Bearer " + operatorToken, "/newaccount", administrator, operatorToken).Status);

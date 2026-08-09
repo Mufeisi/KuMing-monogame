@@ -179,6 +179,11 @@ namespace Server
         public static short CredxGold = 30;
         public static string DatabaseProvider = "Sqlite"; // Legacy|Sqlite|MySql
         public static string SqlitePath = @".\Data\server.db";
+        public static bool SqliteBackupEnabled = true;
+        public static string SqliteBackupDirectory = @".\Backups\SQLite";
+        public static string SqliteBackupOffsiteDirectory = string.Empty;
+        public static int SqliteBackupIntervalMinutes = 60;
+        public static int SqliteBackupRetentionCount = 48;
         public static string MySqlConnectionString = string.Empty;
 
         //MySQL（连接池/断线容灾）
@@ -584,6 +589,11 @@ namespace Server
             CredxGold = Reader.ReadInt16("Database", "CredxGold", CredxGold);
             DatabaseProvider = Reader.ReadString("Database", "Provider", DatabaseProvider);
             SqlitePath = Reader.ReadString("Database", "SqlitePath", SqlitePath);
+            SqliteBackupEnabled = Reader.ReadBoolean("Database", "SqliteBackupEnabled", SqliteBackupEnabled);
+            SqliteBackupDirectory = Reader.ReadString("Database", "SqliteBackupDirectory", SqliteBackupDirectory);
+            SqliteBackupOffsiteDirectory = Reader.ReadString("Database", "SqliteBackupOffsiteDirectory", SqliteBackupOffsiteDirectory);
+            SqliteBackupIntervalMinutes = Reader.ReadInt32("Database", "SqliteBackupIntervalMinutes", SqliteBackupIntervalMinutes);
+            SqliteBackupRetentionCount = Reader.ReadInt32("Database", "SqliteBackupRetentionCount", SqliteBackupRetentionCount);
             MySqlConnectionString = string.Empty; // SEC-05：仅从受保护秘密存储读取。
             MySqlPooling = Reader.ReadInt32("Database", "MySqlPooling", MySqlPooling);
             MySqlMinPoolSize = Reader.ReadInt32("Database", "MySqlMinPoolSize", MySqlMinPoolSize);
@@ -899,6 +909,11 @@ namespace Server
             Reader.Write("Database", "CredxGold", CredxGold);
             Reader.Write("Database", "Provider", DatabaseProvider);
             Reader.Write("Database", "SqlitePath", SqlitePath);
+            Reader.Write("Database", "SqliteBackupEnabled", SqliteBackupEnabled);
+            Reader.Write("Database", "SqliteBackupDirectory", SqliteBackupDirectory);
+            Reader.Write("Database", "SqliteBackupOffsiteDirectory", SqliteBackupOffsiteDirectory);
+            Reader.Write("Database", "SqliteBackupIntervalMinutes", SqliteBackupIntervalMinutes);
+            Reader.Write("Database", "SqliteBackupRetentionCount", SqliteBackupRetentionCount);
             Reader.Write("Database", "MySqlConnectionString", string.Empty);
             Reader.Write("Database", "MySqlPooling", MySqlPooling);
             Reader.Write("Database", "MySqlMinPoolSize", MySqlMinPoolSize);

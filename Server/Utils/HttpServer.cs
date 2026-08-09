@@ -3,6 +3,7 @@ using Server.MirEnvir;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using Server.Security;
+using Server.Persistence.Sql;
 using S = ServerPackets;
 
 namespace Server.Library.Utils
@@ -17,6 +18,7 @@ namespace Server.Library.Utils
             new(StringComparer.OrdinalIgnoreCase);
         private readonly string _administratorToken;
         private readonly string _operatorToken;
+        private readonly SqliteBackupService _backupService;
 
         private sealed class CachedSoundList
         {
@@ -25,11 +27,12 @@ namespace Server.Library.Utils
             public Dictionary<int, string> Entries = new();
         }
 
-        public HttpServer()
+        public HttpServer(SqliteBackupService backupService = null)
         {
             Host = Settings.HTTPIPAddress;
             _administratorToken = ProtectedSecretStore.Read(ProtectedSecretStore.AdministratorToken);
             _operatorToken = ProtectedSecretStore.Read(ProtectedSecretStore.OperatorToken);
+            _backupService = backupService;
         }
 
         public void Start()
@@ -110,6 +113,14 @@ namespace Server.Library.Utils
                             Type = ChatType.Shout2
                         });
                         WriteResponse(response, "true");
+                        break;
+                    case "/backup/status":
+                        if (_backupService == null)
+                        {
+                            WriteStatusResponse(response, HttpStatusCode.ServiceUnavailable, "sqlite backup disabled");
+                            break;
+                        }
+                        WriteJsonResponse(response, HttpStatusCode.OK, _backupService.GetStatus());
                         break;
                     default:
                         WriteResponse(response, "error");
@@ -772,7 +783,31 @@ namespace Server.Library.Utils
                 if (!IsTrustedClient(request, response) || !AuthorizeAdminRequest(request, response, path))
                     return;
             }
+
+            if (path.Equals("/backup/run", StringComparison.OrdinalIgnoreCase))
+            {
+                if (_backupService == null)
+                {
+                    WriteStatusResponse(response, HttpStatusCode.ServiceUnavailable, "sqlite backup disabled");
+                    return;
+                }
+
+                if (!_backupService.TryQueueBackup("admin"))
+                {
+                    WriteJsonResponse(response, HttpStatusCode.Conflict, _backupService.GetStatus());
+                    return;
+                }
+
+                WriteJsonResponse(response, HttpStatusCode.Accepted, _backupService.GetStatus());
+                return;
+            }
             WriteStatusResponse(response, HttpStatusCode.MethodNotAllowed, "method not allowed");
+        }
+
+        private void WriteJsonResponse(HttpListenerResponse response, HttpStatusCode statusCode, object value)
+        {
+            byte[] payload = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(value);
+            WriteStatusBytesResponse(response, statusCode, payload, "application/json; charset=UTF-8");
         }
     }
 

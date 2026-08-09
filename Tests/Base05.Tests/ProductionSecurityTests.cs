@@ -22,6 +22,11 @@ public sealed class ProductionSecurityTests : IDisposable
         Settings.TlsEnabled = false;
         Settings.StartHTTPService = false;
         Settings.DatabaseProvider = "Sqlite";
+        Settings.SqliteBackupEnabled = true;
+        Settings.SqliteBackupDirectory = Path.Combine(_secretRoot, "backup-local");
+        Settings.SqliteBackupOffsiteDirectory = Path.Combine(_secretRoot, "backup-offsite");
+        Settings.SqliteBackupIntervalMinutes = 60;
+        Settings.SqliteBackupRetentionCount = 48;
         Settings.MicroServerActive = false;
         Settings.AiScriptsEnabled = false;
     }
@@ -168,6 +173,22 @@ public sealed class ProductionSecurityTests : IDisposable
         Assert.False(environment.Running);
     }
 
+    [Fact]
+    public void 正式服SQLite拒绝关闭备份或缺少异地目录()
+    {
+        ProtectedSecretStore.Write(ProtectedSecretStore.GameMasterPassword, "safe-game-master-password-123456");
+
+        Settings.SqliteBackupEnabled = false;
+        Assert.Throws<InvalidOperationException>(() => ProductionSecurityPolicy.ValidateAndApply());
+
+        Settings.SqliteBackupEnabled = true;
+        Settings.SqliteBackupOffsiteDirectory = string.Empty;
+        Assert.Throws<InvalidOperationException>(() => ProductionSecurityPolicy.ValidateAndApply());
+
+        Settings.SqliteBackupOffsiteDirectory = Path.Combine(_secretRoot, "backup-offsite-valid");
+        ProductionSecurityPolicy.ValidateAndApply();
+    }
+
     private sealed class ProductionSettingsScope : IDisposable
     {
         private readonly bool _testServer = Settings.TestServer;
@@ -178,6 +199,11 @@ public sealed class ProductionSecurityTests : IDisposable
         private readonly string _httpTrusted = Settings.HTTPTrustedIPAddress;
         private readonly string _provider = Settings.DatabaseProvider;
         private readonly string _mySql = Settings.MySqlConnectionString;
+        private readonly bool _sqliteBackupEnabled = Settings.SqliteBackupEnabled;
+        private readonly string _sqliteBackupDirectory = Settings.SqliteBackupDirectory;
+        private readonly string _sqliteBackupOffsiteDirectory = Settings.SqliteBackupOffsiteDirectory;
+        private readonly int _sqliteBackupIntervalMinutes = Settings.SqliteBackupIntervalMinutes;
+        private readonly int _sqliteBackupRetentionCount = Settings.SqliteBackupRetentionCount;
         private readonly bool _microActive = Settings.MicroServerActive;
         private readonly string _microCode = Settings.MicroCode;
         private readonly bool _aiEnabled = Settings.AiScriptsEnabled;
@@ -193,6 +219,11 @@ public sealed class ProductionSecurityTests : IDisposable
             Settings.HTTPTrustedIPAddress = _httpTrusted;
             Settings.DatabaseProvider = _provider;
             Settings.MySqlConnectionString = _mySql;
+            Settings.SqliteBackupEnabled = _sqliteBackupEnabled;
+            Settings.SqliteBackupDirectory = _sqliteBackupDirectory;
+            Settings.SqliteBackupOffsiteDirectory = _sqliteBackupOffsiteDirectory;
+            Settings.SqliteBackupIntervalMinutes = _sqliteBackupIntervalMinutes;
+            Settings.SqliteBackupRetentionCount = _sqliteBackupRetentionCount;
             Settings.MicroServerActive = _microActive;
             Settings.MicroCode = _microCode;
             Settings.AiScriptsEnabled = _aiEnabled;

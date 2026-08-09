@@ -94,6 +94,7 @@ namespace Server.MirEnvir
         public ScriptManager CSharpScripts { get; } = new ScriptManager();
 
         private IServerPersistence? _persistence;
+        internal SqliteBackupService SqliteBackup { get; private set; }
 
         private IServerPersistence Persistence => _persistence ??= ServerPersistenceFactory.CreateFromSettings();
 
@@ -1031,6 +1032,13 @@ namespace Server.MirEnvir
                         Stop();
                         return;
                     }
+
+                    if (Settings.SqliteBackupEnabled &&
+                        Settings.DatabaseProvider.Equals("Sqlite", StringComparison.OrdinalIgnoreCase))
+                    {
+                        SqliteBackup = new SqliteBackupService(SqliteBackupOptions.FromSettings());
+                        SqliteBackup.StartAutomatic();
+                    }
                 }
 
                 if (options.Multithreaded)
@@ -1048,7 +1056,7 @@ namespace Server.MirEnvir
                     StartNetwork();
                 if (options.StartHttp && Settings.StartHTTPService)
                 {
-                    http = new HttpServer();
+                    http = new HttpServer(SqliteBackup);
                     http.Start();
                 }
 
@@ -1279,6 +1287,15 @@ namespace Server.MirEnvir
 
                 MessageQueue.Enqueue($"[外循环错误 线程 {line}]" + ex);
             }
+
+            try
+            {
+                SqliteBackup?.Dispose();
+            }
+            catch
+            {
+            }
+            SqliteBackup = null;
 
             Volatile.Write(ref _mainThreadId, 0);
             _thread = null;
