@@ -107,12 +107,12 @@ GATE-P0 ──► GATE-P1 ──► GATE-P2 ──► GATE-P3 ──► GATE-P4 
 - 任何 `GATE-P{N}` 未通过，`P{N+1}` 不得开始。
 - 例外：OPS-BASIC-01..04 是发布前能力，属于 P5 门禁依赖（RELEASE-02/03 依赖它们），不属于后置。
 
-### 4.3 当前开发快照（2026-08-08）
+### 4.3 当前开发快照（2026-08-09）
 
 | 门禁 | 实际状态 | 下一个可关闭条件 |
 |---|---|---|
 | GATE-P0 | **已完成**；远程 CI 证据见 §P0 | 无 |
-| GATE-P1 | ANDROID-01..07 代码闭环已实现；PROTO-01、BASE-10、PERF-00 代码退出项已有工件；**门禁未关闭** | Android 真机逐项闭环与工件归档 |
+| GATE-P1 | ANDROID-01..07 代码闭环已实现；PROTO-01、BASE-10、PERF-00 证据已归档；A/B 两组逍遥模拟器预验收已归档，但七项业务闭环均停在登录页；**门禁未关闭** | 提供可用测试服、Bootstrap 资源、授权测试账号与 Android 实体真机后，完成七项逐项闭环 |
 | GATE-P2 | SEC-01 核心改造已实现；SEC-02 已有 TLS 和连接生命周期成果，但仍未完成；SEC-03..06 未完成；**门禁未关闭** | 先关闭 GATE-P1，再补齐 SEC-01..06 的公开测试准入条件 |
 | GATE-P3 | 未开始 | 等待 GATE-P2 |
 | GATE-P4 | PERF-00 采集基建已完成，真实基线/PERF-01..05 未开始 | 等待 GATE-P3 与真实 S1/S2/S3 输入 |
@@ -134,10 +134,10 @@ GATE-P0 ──► GATE-P1 ──► GATE-P2 ──► GATE-P3 ──► GATE-P4 
 
 | 任务 | 当前状态（2026-08-09） | 文件/证据所有权 | 退出条件 | 并行关系 |
 |---|---|---|---|---|
-| P1-VERIFY-A | 进行中：`codex/p1-verify-a-20260809`；逍遥模拟器预验收不等同真机退出 | `Docs/Evidence/GATE-P1/android-01-03/`；验收时不改生产代码 | 商城/师徒/关系的截图、日志、APK/设备信息归档 | 可与 P1-VERIFY-B、P1-EVIDENCE 并行；只有一台真机时两组设备操作串行 |
-| P1-VERIFY-B | 待领取 | `Docs/Evidence/GATE-P1/android-04-07/`；验收时不改生产代码 | 坐骑/封印租赁/钓鱼/活动的截图、日志、APK/设备信息归档 | 可与 P1-VERIFY-A、P1-EVIDENCE 并行；只有一台真机时两组设备操作串行 |
+| P1-VERIFY-A | 模拟器预验收已审核并合并：`70d1787`；真机业务闭环阻塞 | `Docs/Evidence/GATE-P1/android-01-03/`；验收时不改生产代码 | 商城/师徒/关系的截图、日志、APK/设备信息归档 | 可与 P1-VERIFY-B、P1-EVIDENCE 并行；只有一台真机时两组设备操作串行 |
+| P1-VERIFY-B | 模拟器预验收已审核并合并：`e417e0a`；真机业务闭环阻塞 | `Docs/Evidence/GATE-P1/android-04-07/`；验收时不改生产代码 | 坐骑/封印租赁/钓鱼/活动的截图、日志、APK/设备信息归档 | 可与 P1-VERIFY-A、P1-EVIDENCE 并行；只有一台真机时两组设备操作串行 |
 | P1-EVIDENCE | 已审核并合并：`ff0b436` | `Docs/Evidence/GATE-P1/proto-base-perf/`；只读复核现有清单/测试入口 | 清单可读、兼容/资源/性能专项绿，证据归档 | 可与两组真机验收并行 |
-| P1-INTEGRATE | 阻塞：等待两组真机验收 | `Docs/Evidence/GATE-P1/integration/` 与本文 §4.3 | 前三项已合并，完整测试/远程 CI 绿，§4.3 快照更新 | 被前三项阻塞，不并行合并 |
+| P1-INTEGRATE | 阻塞：等待可用测试服、Bootstrap 资源、授权测试账号和实体真机完成 A/B 业务闭环 | `Docs/Evidence/GATE-P1/integration/` 与本文 §4.3 | 前三项已合并，完整测试/远程 CI 绿，§4.3 快照更新 | 被前三项阻塞，不并行合并 |
 
 GATE-P1 关闭后，P2 的 SEC-03、SEC-04、SEC-05、SEC-06 各为独立任务；只有依赖已满足且文件所有权不冲突的任务才能并行。
 
