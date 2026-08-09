@@ -854,27 +854,29 @@ namespace Server.MirEnvir
         {
             try
             {
+                string blockedReason = null;
                 bool completed = InvokeOnMainThread(
                     () =>
                     {
                         QueueFinalPersistenceSave();
+
+                        if (SqlSaveResilience.ShouldBlockShutdown(out blockedReason))
+                            return false;
+
+                        Interlocked.Exchange(ref _shutdownSavePrepared, 1);
+                        // 与最终快照同在主线程内冻结运行态，避免排空后到 Stop 调用线程继续执行之间再推进一帧状态。
+                        Running = false;
                         return true;
                     },
                     timeoutMs: 180000,
                     allowInlineWithoutMainThread: false);
                 if (!completed)
                 {
-                    MessageQueue.Enqueue("[SAVE:Sqlite] 关服前最终保存未能在主线程完成，已取消本次关服。");
+                    MessageQueue.Enqueue(string.IsNullOrWhiteSpace(blockedReason)
+                        ? "[SAVE:Sqlite] 关服前最终保存未能在主线程完成，已取消本次关服。"
+                        : "[SAVE:Sqlite] 已阻止关服：" + blockedReason);
                     return false;
                 }
-
-                if (SqlSaveResilience.ShouldBlockShutdown(out string reason))
-                {
-                    MessageQueue.Enqueue("[SAVE:Sqlite] 已阻止关服：" + reason);
-                    return false;
-                }
-
-                Interlocked.Exchange(ref _shutdownSavePrepared, 1);
                 return true;
             }
             catch (Exception ex)
