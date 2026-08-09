@@ -3,7 +3,7 @@ PowerShell transcript start
 Start time: 20260810042630
 Username: DESKTOP-4J13TH0\luo
 RunAs User: DESKTOP-4J13TH0\luo
-Configuration Name: 
+Configuration Name:
 Machine: DESKTOP-4J13TH0 (Microsoft Windows NT 10.0.19045.0)
 Host Application: C:\Program Files\PowerShell\7\pwsh.dll -Command try { [Console]::OutputEncoding=[System.Text.Encoding]::UTF8 } catch {}
 & 'TestResults\DB04-run-real-drill.ps1'
