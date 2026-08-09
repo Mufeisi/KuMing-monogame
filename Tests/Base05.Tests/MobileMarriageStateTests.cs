@@ -7,6 +7,43 @@ namespace Base05.Tests;
 public sealed class MobileMarriageStateTests
 {
     [Fact]
+    public void Marriage_usage_probe_smoke_projects_request_response_and_server_state_to_ui_values()
+    {
+        var state = new MobileMarriageState();
+        var request = new ServerPackets.MarriageRequest { Name = "探针伴侣" };
+
+        Assert.Equal((short)ServerPacketIds.MarriageRequest, request.Index);
+        Assert.True(state.ApplyMarriageRequest(request));
+        Assert.True(state.HasPendingMarriageRequest);
+        Assert.Equal("探针伴侣", state.PendingMarriageRequestName);
+
+        var reply = new ClientPackets.MarriageReply { AcceptInvite = true };
+        Assert.Equal((short)ClientPacketIds.MarriageReply, reply.Index);
+        Assert.True(state.ApplyMarriageReply(reply.AcceptInvite));
+        Assert.False(state.HasPendingMarriageRequest);
+        Assert.True(state.LastMarriageAccepted);
+
+        var update = new ServerPackets.LoverUpdate
+        {
+            Name = "探针伴侣",
+            Date = new DateTime(2026, 8, 9, 12, 0, 0, DateTimeKind.Utc),
+            MapName = "盟重省",
+            MarriedDays = 3,
+        };
+        Assert.Equal((short)ServerPacketIds.LoverUpdate, update.Index);
+        Assert.True(state.ApplyLoverUpdate(update));
+
+        // FairyGuiHost.MobileMarriage 刷新关系窗口时读取这些公开投影。
+        Assert.True(state.IsOpen);
+        Assert.True(state.HasRelationship);
+        Assert.Equal("探针伴侣", state.PartnerName);
+        Assert.Equal("盟重省", state.PartnerMapName);
+        Assert.True(state.PartnerOnline);
+        Assert.Equal((short)3, state.MarriedDays);
+        Assert.Equal(MobileMarriageState.LoverRecallActionLabel, state.ChangeMarriageActionLabel);
+    }
+
+    [Fact]
     public void Protocol_indexes_and_fields_match_marriage_contract()
     {
         Assert.Equal((short)ServerPacketIds.MarriageRequest, new ServerPackets.MarriageRequest().Index);

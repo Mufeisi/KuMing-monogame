@@ -1,0 +1,14 @@
+P1-MARRIAGE 使用探针冒烟
+语言：中文
+
+命令：
+dotnet test Tests/Base05.Tests/Base05.Tests.csproj -c Release --filter "FullyQualifiedName~MobileMarriageStateTests" --logger "console;verbosity=minimal"
+
+结果：
+已通过：14
+失败：0
+跳过：0
+持续时间：90 ms
+
+覆盖链路：
+MarriageRequest 输入 -> MarriageReply 接受 -> LoverUpdate 权威状态 -> FairyGUI 使用的公开 UI 投影值。
