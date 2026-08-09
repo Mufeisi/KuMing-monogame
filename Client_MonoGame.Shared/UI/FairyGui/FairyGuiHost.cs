@@ -485,9 +485,11 @@ namespace MonoShare
             public EventCallback0 FixedPageDownCallback;
             public int FixedPage;
             public int FixedSelectedIndex = -1;
+            public string LastRenderedEvidence;
         }
 
         private static MobileShopWindowBinding _mobileShopBinding;
+        private static MirMessageBox _mobileShopPurchasePrompt;
         private static DateTime _nextMobileShopBindAttemptUtc = DateTime.MinValue;
         private static bool _mobileShopBindingsDumped;
         private static bool _mobileShopDirty;
@@ -3154,6 +3156,16 @@ namespace MonoShare
         {
             try
             {
+                if (_mobileShopPurchasePrompt != null && !_mobileShopPurchasePrompt.IsDisposed)
+                    _mobileShopPurchasePrompt.Dispose();
+            }
+            catch
+            {
+            }
+            _mobileShopPurchasePrompt = null;
+
+            try
+            {
                 MobileShopWindowBinding binding = _mobileShopBinding;
                 if (binding != null)
                 {
@@ -4083,6 +4095,11 @@ namespace MonoShare
                     Quantity = quantity,
                     PType = pType,
                 });
+                if (Settings.DebugMode)
+                {
+                    string name = item.Info?.FriendlyName ?? item.Info?.Name ?? "商品";
+                    CMain.SaveLog($"FairyGUI: 商城购买请求已入队：GIndex={item.GIndex} Name={name} Quantity={quantity} PType={pType}");
+                }
             }
             catch (Exception ex)
             {
@@ -4570,6 +4587,11 @@ namespace MonoShare
             if (item?.Info == null)
                 return;
 
+            if (!MobileShopPurchasePolicy.ShouldOpenPurchasePrompt(
+                    _mobileShopPurchasePrompt != null,
+                    _mobileShopPurchasePrompt?.IsDisposed ?? false))
+                return;
+
             MobileShopPaymentOptions options = MobileShopPurchasePolicy.GetPaymentOptions(item);
             bool valid = pType == 0
                 ? options == MobileShopPaymentOptions.CreditOnly || options == MobileShopPaymentOptions.CreditAndGold
@@ -4581,14 +4603,26 @@ namespace MonoShare
             string currency = pType == 0 ? "点券" : "元宝";
             uint price = pType == 0 ? item.CreditPrice : item.GoldPrice;
             var box = new MirMessageBox($"确定花费 {price:#,##0} {currency}购买 {name} 吗？", MirMessageBoxButtons.YesNo);
+            _mobileShopPurchasePrompt = box;
             if (box.YesButton != null)
-                box.YesButton.Click += (o, e) => EnqueueMobileShopBuy(item, quantity, pType);
+                box.YesButton.Click += (o, e) =>
+                {
+                    _mobileShopPurchasePrompt = null;
+                    EnqueueMobileShopBuy(item, quantity, pType);
+                };
+            if (box.NoButton != null)
+                box.NoButton.Click += (o, e) => _mobileShopPurchasePrompt = null;
             box.Show();
         }
 
         private static void TryPromptMobileShopBuy(GameShopItem item, byte quantity)
         {
             if (item?.Info == null)
+                return;
+
+            if (!MobileShopPurchasePolicy.ShouldOpenPurchasePrompt(
+                    _mobileShopPurchasePrompt != null,
+                    _mobileShopPurchasePrompt?.IsDisposed ?? false))
                 return;
 
             MobileShopPaymentOptions options = MobileShopPurchasePolicy.GetPaymentOptions(item);
@@ -4614,10 +4648,21 @@ namespace MonoShare
             var box = new MirMessageBox(
                 $"购买 {name}，请选择付款方式：\n是：点券 {item.CreditPrice:#,##0}\n否：元宝 {item.GoldPrice:#,##0}\n取消：不购买",
                 MirMessageBoxButtons.YesNoCancel);
+            _mobileShopPurchasePrompt = box;
             if (box.YesButton != null)
-                box.YesButton.Click += (o, e) => EnqueueMobileShopBuy(item, quantity, pType: 0);
+                box.YesButton.Click += (o, e) =>
+                {
+                    _mobileShopPurchasePrompt = null;
+                    EnqueueMobileShopBuy(item, quantity, pType: 0);
+                };
             if (box.NoButton != null)
-                box.NoButton.Click += (o, e) => EnqueueMobileShopBuy(item, quantity, pType: 1);
+                box.NoButton.Click += (o, e) =>
+                {
+                    _mobileShopPurchasePrompt = null;
+                    EnqueueMobileShopBuy(item, quantity, pType: 1);
+                };
+            if (box.CancelButton != null)
+                box.CancelButton.Click += (o, e) => _mobileShopPurchasePrompt = null;
             box.Show();
         }
 
@@ -4689,10 +4734,21 @@ namespace MonoShare
             try { binding.FixedPageUpButton = window.GetChild("BtnPageUp") as GButton; } catch { }
             try { binding.FixedPageDownButton = window.GetChild("BtnPageDown") as GButton; } catch { }
 
+            if (Settings.DebugMode)
+            {
+                string firstCell = binding.FixedItemCells.Count > 0 ? DescribeObject(window, binding.FixedItemCells[0]) : "-";
+                string secondCell = binding.FixedItemCells.Count > 1 ? DescribeObject(window, binding.FixedItemCells[1]) : "-";
+                CMain.SaveLog($"FairyGUI: 商城固定控件坐标：Root=pos({window.x:0.##},{window.y:0.##}) size({window.width:0.##},{window.height:0.##}) " +
+                              $"Cell1={firstCell} Cell2={secondCell} Buy={DescribeObject(window, binding.FixedBuyButton)}");
+            }
+
             if (binding.FixedBuyButton != null && !binding.FixedBuyButton._disposed)
             {
                 binding.FixedBuyCallback = () =>
                 {
+                    if (Settings.DebugMode)
+                        CMain.SaveLog("FairyGUI: 商城购买按钮已点击");
+
                     IReadOnlyList<GameShopItem> items = GameScene.GameShopInfoList;
                     int index = binding.FixedSelectedIndex;
                     if (items == null || index < 0 || index >= items.Count)
@@ -4764,6 +4820,22 @@ namespace MonoShare
                     text = prices.Count > 0 ? name + "  " + string.Join(" / ", prices) : name;
                 }
                 binding.FixedInfo.text = text;
+            }
+
+            if (Settings.DebugMode)
+            {
+                int visibleCount = Math.Min(pageSize, Math.Max(0, count - firstIndex));
+                string selectedName = string.Empty;
+                IReadOnlyList<GameShopItem> items = GameScene.GameShopInfoList;
+                if (items != null && binding.FixedSelectedIndex >= 0 && binding.FixedSelectedIndex < items.Count)
+                    selectedName = items[binding.FixedSelectedIndex]?.Info?.FriendlyName ?? items[binding.FixedSelectedIndex]?.Info?.Name ?? string.Empty;
+
+                string evidence = $"Products={count} Page={binding.FixedPage + 1}/{lastPage + 1} Visible={visibleCount} Selected={binding.FixedSelectedIndex} Name={selectedName}";
+                if (!string.Equals(binding.LastRenderedEvidence, evidence, StringComparison.Ordinal))
+                {
+                    binding.LastRenderedEvidence = evidence;
+                    CMain.SaveLog("FairyGUI: 商城固定商品格渲染完成：" + evidence);
+                }
             }
         }
 

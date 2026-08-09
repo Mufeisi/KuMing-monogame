@@ -108,6 +108,14 @@ public sealed class GameShopStateTests
         Assert.Equal(expected, MobileShopPurchasePolicy.GetPaymentOptions(item));
     }
 
+    [Fact]
+    public void Purchase_prompt_rejects_repeated_taps_until_the_active_prompt_closes()
+    {
+        Assert.True(MobileShopPurchasePolicy.ShouldOpenPurchasePrompt(promptExists: false, promptDisposed: false));
+        Assert.False(MobileShopPurchasePolicy.ShouldOpenPurchasePrompt(promptExists: true, promptDisposed: false));
+        Assert.True(MobileShopPurchasePolicy.ShouldOpenPurchasePrompt(promptExists: true, promptDisposed: true));
+    }
+
     [Theory]
     [InlineData(0, 15, 0)]
     [InlineData(1, 15, 0)]
