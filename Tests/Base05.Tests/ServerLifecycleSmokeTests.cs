@@ -180,6 +180,64 @@ public sealed class ServerLifecycleSmokeTests : IDisposable
         Assert.Empty(persistence.Events);
     }
 
+    [Fact]
+    public async Task Sqlite关服排空期间入队的旧主线程工作被取消且重启不执行()
+    {
+        bool oldBlockShutdown = Settings.BlockShutdownOnSaveFailures;
+        var persistence = new ShutdownRecordingPersistence { BlockDrain = true };
+        var envir = new Envir();
+        typeof(Envir).GetField("_persistence", BindingFlags.Instance | BindingFlags.NonPublic)!
+            .SetValue(envir, persistence);
+        bool staleWorkExecuted = false;
+
+        try
+        {
+            Settings.BlockShutdownOnSaveFailures = false;
+            envir.Start(CreateSqliteShutdownTestOptions(saveOnStop: true));
+            Assert.True(SpinWait.SpinUntil(() => envir.StartState == EnvirStartState.Ready, TimeSpan.FromSeconds(2)));
+
+            Task stop = Task.Run(envir.Stop);
+            Assert.True(persistence.DrainStarted.Wait(TimeSpan.FromSeconds(5)));
+            Task<bool> staleWork = Task.Run(() => envir.InvokeOnMainThread(() =>
+            {
+                staleWorkExecuted = true;
+                return true;
+            }));
+            Assert.True(SpinWait.SpinUntil(() => envir.PendingMainThreadWorkCount == 1, TimeSpan.FromSeconds(5)));
+
+            persistence.ReleaseDrain.Set();
+            await stop.WaitAsync(TimeSpan.FromSeconds(5));
+            Assert.False(await staleWork.WaitAsync(TimeSpan.FromSeconds(5)));
+            Assert.False(staleWorkExecuted);
+
+            persistence.BlockDrain = false;
+            envir.Start(CreateSqliteShutdownTestOptions(saveOnStop: false));
+            Assert.True(SpinWait.SpinUntil(() => envir.StartState == EnvirStartState.Ready, TimeSpan.FromSeconds(2)));
+            await Task.Delay(50);
+            Assert.False(staleWorkExecuted);
+        }
+        finally
+        {
+            persistence.ReleaseDrain.Set();
+            Settings.BlockShutdownOnSaveFailures = oldBlockShutdown;
+            envir.Stop();
+        }
+    }
+
+    private static EnvirStartOptions CreateSqliteShutdownTestOptions(bool saveOnStop)
+    {
+        return new EnvirStartOptions
+        {
+            EnforceProductionSecurity = false,
+            LoadResources = false,
+            BindNetwork = false,
+            StartScripts = false,
+            StartHttp = false,
+            SaveOnStop = saveOnStop,
+            Multithreaded = false,
+        };
+    }
+
     private sealed class ShutdownRecordingPersistence : IServerPersistence, IPendingSaveCoordinator
     {
         private readonly List<string> _events = new();
@@ -189,6 +247,9 @@ public sealed class ServerLifecycleSmokeTests : IDisposable
         public IReadOnlyList<string> Events => _events;
         public IReadOnlyList<int> SaveThreadIds => _saveThreadIds;
         public bool FailAccounts { get; set; }
+        public bool BlockDrain { get; set; }
+        public ManualResetEventSlim DrainStarted { get; } = new(false);
+        public ManualResetEventSlim ReleaseDrain { get; } = new(false);
 
         public bool LoadWorld(Envir envir) => true;
         public void SaveWorld(Envir envir) { }
@@ -214,7 +275,13 @@ public sealed class ServerLifecycleSmokeTests : IDisposable
         public void SaveArchivedCharacter(Envir envir, CharacterInfo info) { }
         public CharacterInfo GetArchivedCharacter(Envir envir, string name) => null;
 
-        public void DrainPendingSaves() => _events.Add("Drain");
+        public void DrainPendingSaves()
+        {
+            _events.Add("Drain");
+            if (!BlockDrain) return;
+            DrainStarted.Set();
+            Assert.True(ReleaseDrain.Wait(TimeSpan.FromSeconds(5)));
+        }
 
         private void Record(string name)
         {

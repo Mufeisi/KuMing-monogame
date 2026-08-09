@@ -178,6 +178,7 @@ namespace Server.MirEnvir
 
         private int _autoSaveRequested;
         private int _shutdownSavePrepared;
+        private int _shutdownNetworkStopped;
         private LoginProtectionOptions _loginProtectionOptions;
         private LoginProtection _loginProtection;
 
@@ -294,7 +295,9 @@ namespace Server.MirEnvir
         }
 
         private int _mainThreadId;
+        private readonly object _mainThreadQueueGate = new object();
         private readonly ConcurrentQueue<MainThreadWorkItem> _mainThreadQueue = new ConcurrentQueue<MainThreadWorkItem>();
+        internal int PendingMainThreadWorkCount => _mainThreadQueue.Count;
 
         public bool IsMainThread
         {
@@ -320,10 +323,12 @@ namespace Server.MirEnvir
             // 账户事务必须显式禁止内联，避免停服竞态把写操作落到调用线程。
             if (Volatile.Read(ref _mainThreadId) == 0)
                 return allowInlineWithoutMainThread ? func() : default;
-            if (!Running) return default;
-
             var item = new MainThreadWorkItem<T>(func);
-            _mainThreadQueue.Enqueue(item);
+            lock (_mainThreadQueueGate)
+            {
+                if (!Running) return default;
+                _mainThreadQueue.Enqueue(item);
+            }
 
             if (!item.Done.Wait(timeoutMs))
             {
@@ -353,6 +358,27 @@ namespace Server.MirEnvir
             {
                 if (!_mainThreadQueue.TryDequeue(out var item)) return;
                 item.Execute();
+                if (!Running) return;
+            }
+        }
+
+        private void FreezeAndCancelPendingMainThreadWork()
+        {
+            lock (_mainThreadQueueGate)
+            {
+                Running = false;
+                while (_mainThreadQueue.TryDequeue(out MainThreadWorkItem pending))
+                    pending.TryCancel();
+            }
+        }
+
+        private void PrepareMainThreadQueueForStart()
+        {
+            lock (_mainThreadQueueGate)
+            {
+                while (_mainThreadQueue.TryDequeue(out MainThreadWorkItem stale))
+                    stale.TryCancel();
+                Running = true;
             }
         }
 
@@ -850,7 +876,7 @@ namespace Server.MirEnvir
                 coordinator.DrainPendingSaves();
         }
 
-        private bool PrepareSqliteShutdownSave()
+        private bool PrepareSqliteShutdownSave(EnvirStartOptions options)
         {
             try
             {
@@ -858,15 +884,29 @@ namespace Server.MirEnvir
                 bool completed = InvokeOnMainThread(
                     () =>
                     {
-                        QueueFinalPersistenceSave();
+                        try
+                        {
+                            if (options.BindNetwork && Interlocked.CompareExchange(ref _shutdownNetworkStopped, 1, 0) == 0)
+                                StopNetwork();
 
-                        if (SqlSaveResilience.ShouldBlockShutdown(out blockedReason))
-                            return false;
+                            QueueFinalPersistenceSave();
 
-                        Interlocked.Exchange(ref _shutdownSavePrepared, 1);
-                        // 与最终快照同在主线程内冻结运行态，避免排空后到 Stop 调用线程继续执行之间再推进一帧状态。
-                        Running = false;
-                        return true;
+                            if (SqlSaveResilience.ShouldBlockShutdown(out blockedReason))
+                            {
+                                ResumeNetworkAfterBlockedShutdown(options);
+                                return false;
+                            }
+
+                            Interlocked.Exchange(ref _shutdownSavePrepared, 1);
+                            // 网络断开产生的登出状态已进入最终快照；冻结后取消余下队列项，禁止重启时执行旧代工作。
+                            FreezeAndCancelPendingMainThreadWork();
+                            return true;
+                        }
+                        catch
+                        {
+                            ResumeNetworkAfterBlockedShutdown(options);
+                            throw;
+                        }
                     },
                     timeoutMs: 180000,
                     allowInlineWithoutMainThread: false);
@@ -883,6 +923,23 @@ namespace Server.MirEnvir
             {
                 MessageQueue.Enqueue("[SAVE:Sqlite] 关服前最终保存异常，已取消本次关服：" + ex);
                 return false;
+            }
+        }
+
+        private void ResumeNetworkAfterBlockedShutdown(EnvirStartOptions options)
+        {
+            if (!options.BindNetwork || Volatile.Read(ref _shutdownNetworkStopped) == 0)
+                return;
+
+            try
+            {
+                StartNetwork(reloadPersistence: false);
+                Interlocked.Exchange(ref _shutdownNetworkStopped, 0);
+                MessageQueue.Enqueue("[SAVE:Sqlite] 最终保存未通过，游戏监听已恢复，未重新加载持久化状态。");
+            }
+            catch (Exception ex)
+            {
+                MessageQueue.Enqueue("[SAVE:Sqlite] 最终保存未通过且游戏监听恢复失败，请修复存储或监听配置后重试关服：" + ex);
             }
         }
 
@@ -1154,7 +1211,7 @@ namespace Server.MirEnvir
                     MessageQueue.Enqueue($"[内循环错误 线程 {line}]" + ex);
                 }
 
-                if (options.BindNetwork)
+                if (options.BindNetwork && Interlocked.Exchange(ref _shutdownNetworkStopped, 0) == 0)
                     StopNetwork();
                 if (options.LoadResources)
                     StopEnvir();
@@ -1166,7 +1223,7 @@ namespace Server.MirEnvir
             }
             catch (Exception ex)
             {
-                Running = false;
+                FreezeAndCancelPendingMainThreadWork();
                 if (StartState == EnvirStartState.Starting)
                     MarkStartupFailed(ex);
 
@@ -3731,6 +3788,7 @@ namespace Server.MirEnvir
 
             _startOptions = options;
             Interlocked.Exchange(ref _shutdownSavePrepared, 0);
+            Interlocked.Exchange(ref _shutdownNetworkStopped, 0);
             Volatile.Write(ref _startFailure, null);
             Volatile.Write(ref _startState, (int)EnvirStartState.Starting);
 
@@ -3760,7 +3818,7 @@ namespace Server.MirEnvir
                 }
             }
 
-            Running = true;
+            PrepareMainThreadQueueForStart();
 
             _thread = new Thread(WorkLoop) { IsBackground = true };
             _thread.Start();
@@ -3773,10 +3831,10 @@ namespace Server.MirEnvir
                 StartState == EnvirStartState.Ready &&
                 options.SaveOnStop &&
                 Persistence.Provider == DatabaseProviderKind.Sqlite &&
-                !PrepareSqliteShutdownSave())
+                !PrepareSqliteShutdownSave(options))
                 return;
 
-            Running = false;
+            FreezeAndCancelPendingMainThreadWork();
 
             try
             {
@@ -4431,7 +4489,7 @@ namespace Server.MirEnvir
 
             MessageQueue.Enqueue("正在部署游戏环境......");
         }
-        private void StartNetwork()
+        private void StartNetwork(bool reloadPersistence = true)
         {
             var generation = new TlsGenerationState(Interlocked.Increment(ref _tlsGenerationId));
             var previousGeneration = Interlocked.Exchange(ref _tlsGeneration, generation);
@@ -4451,11 +4509,12 @@ namespace Server.MirEnvir
             _tlsCertificate?.Dispose();
             _tlsCertificate = null;
 
-            LoadAccounts();
-
-            LoadGuilds();
-
-            LoadConquests();
+            if (reloadPersistence)
+            {
+                LoadAccounts();
+                LoadGuilds();
+                LoadConquests();
+            }
 
             bool gameListenerStarted = false;
             TlsTransportPolicy.ValidateConfiguration(
