@@ -86,6 +86,15 @@ namespace Server
         public static string HTTPIPAddress = "http://127.0.0.1:7777/";
         public static string HTTPTrustedIPAddress = "127.0.0.1";
 
+        //Login protection
+        public static int LoginAccountFailureLimit = 6;
+        public static int LoginIpFailureLimit = 20;
+        public static int LoginFailureWindowSeconds = 300;
+        public static int LoginBaseBackoffMilliseconds = 500;
+        public static int LoginMaxBackoffSeconds = 30;
+        public static int LoginAccountBlockMinutes = 15;
+        public static int LoginIpBlockMinutes = 15;
+
         //Micro (资源微端)
         public static bool MicroServerActive = false;
         public static string MicroResourcePath = Path.Combine(".", "MicroResources");
@@ -480,6 +489,15 @@ namespace Server
             HTTPIPAddress = Reader.ReadString("Network", "HTTPIPAddress", HTTPIPAddress);
             HTTPTrustedIPAddress = Reader.ReadString("Network", "HTTPTrustedIPAddress", HTTPTrustedIPAddress);
 
+            //Login protection
+            LoginAccountFailureLimit = Math.Max(1, Reader.ReadInt32("Security", "LoginAccountFailureLimit", LoginAccountFailureLimit));
+            LoginIpFailureLimit = Math.Max(1, Reader.ReadInt32("Security", "LoginIpFailureLimit", LoginIpFailureLimit));
+            LoginFailureWindowSeconds = Math.Max(1, Reader.ReadInt32("Security", "LoginFailureWindowSeconds", LoginFailureWindowSeconds));
+            LoginBaseBackoffMilliseconds = Math.Max(0, Reader.ReadInt32("Security", "LoginBaseBackoffMilliseconds", LoginBaseBackoffMilliseconds));
+            LoginMaxBackoffSeconds = Math.Max(0, Reader.ReadInt32("Security", "LoginMaxBackoffSeconds", LoginMaxBackoffSeconds));
+            LoginAccountBlockMinutes = Math.Max(1, Reader.ReadInt32("Security", "LoginAccountBlockMinutes", LoginAccountBlockMinutes));
+            LoginIpBlockMinutes = Math.Max(1, Reader.ReadInt32("Security", "LoginIpBlockMinutes", LoginIpBlockMinutes));
+
             //Micro
             MicroServerActive = Reader.ReadBoolean("Micro", "MicroServerActive", MicroServerActive);
             MicroResourcePath = Reader.ReadString("Micro", "MicroResourcePath", MicroResourcePath);
@@ -781,6 +799,15 @@ namespace Server
             Reader.Write("Network", "StartHTTPService", StartHTTPService);
             Reader.Write("Network", "HTTPIPAddress", HTTPIPAddress);
             Reader.Write("Network", "HTTPTrustedIPAddress", HTTPTrustedIPAddress);
+
+            //Login protection
+            Reader.Write("Security", "LoginAccountFailureLimit", LoginAccountFailureLimit);
+            Reader.Write("Security", "LoginIpFailureLimit", LoginIpFailureLimit);
+            Reader.Write("Security", "LoginFailureWindowSeconds", LoginFailureWindowSeconds);
+            Reader.Write("Security", "LoginBaseBackoffMilliseconds", LoginBaseBackoffMilliseconds);
+            Reader.Write("Security", "LoginMaxBackoffSeconds", LoginMaxBackoffSeconds);
+            Reader.Write("Security", "LoginAccountBlockMinutes", LoginAccountBlockMinutes);
+            Reader.Write("Security", "LoginIpBlockMinutes", LoginIpBlockMinutes);
 
             //Micro
             Reader.Write("Micro", "MicroServerActive", MicroServerActive);

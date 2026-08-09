@@ -6,6 +6,7 @@ using Server.MirObjects;
 using Server.MirObjects.Monsters;
 using Server.Persistence;
 using Server.Persistence.Sql;
+using Server.Security;
 using Server.Scripting;
 using System.Collections.Concurrent;
 using System.Diagnostics;
@@ -175,6 +176,8 @@ namespace Server.MirEnvir
         public RespawnTimer RespawnTick = new RespawnTimer();
 
         private int _autoSaveRequested;
+        private LoginProtectionOptions _loginProtectionOptions;
+        private LoginProtection _loginProtection;
 
         private static List<string> DisabledCharNames = new List<string>();
         private static List<string> LineMessages = new List<string>();
@@ -5002,14 +5005,25 @@ namespace Server.MirEnvir
                 return;
             }
 
+            var protection = GetLoginProtection();
+            var protectionNow = Now.ToUniversalTime();
+            var attempt = protection.TryBegin(p.AccountID, c.IPAddress, protectionNow);
+            if (!attempt.Allowed)
+            {
+                EnqueueLoginProtectionDenied(c, attempt);
+                return;
+            }
+
             if (!AccountIDReg.IsMatch(p.AccountID))
             {
+                if (RecordLoginFailure(null, p.AccountID, c.IPAddress, protectionNow, c)) return;
                 c.Enqueue(new ServerPackets.Login { Result = 1 });
                 return;
             }
 
             if (!PasswordReg.IsMatch(p.Password))
             {
+                if (RecordLoginFailure(null, p.AccountID, c.IPAddress, protectionNow, c)) return;
                 c.Enqueue(new ServerPackets.Login { Result = 2 });
                 return;
             }
@@ -5017,6 +5031,7 @@ namespace Server.MirEnvir
 
             if (account == null)
             {
+                if (RecordLoginFailure(null, p.AccountID, c.IPAddress, protectionNow, c)) return;
                 c.Enqueue(new ServerPackets.Login { Result = 3 });
                 return;
             }
@@ -5039,24 +5054,13 @@ namespace Server.MirEnvir
 
             if (VerifyAccountPassword(account, p.Password) == Utils.PasswordVerificationResult.Invalid)
             {
-                if (account.WrongPasswordCount++ >= 5)
-                {
-                    account.Banned = true;
-                    account.BanReason = "错误登录次数太多";
-                    account.ExpiryDate = Now.AddMinutes(2);
-
-                    c.Enqueue(new ServerPackets.LoginBanned
-                    {
-                        Reason = account.BanReason,
-                        ExpiryDate = account.ExpiryDate
-                    });
-                    return;
-                }
-
+                account.WrongPasswordCount++;
+                if (RecordLoginFailure(account, p.AccountID, c.IPAddress, protectionNow, c)) return;
                 c.Enqueue(new ServerPackets.Login { Result = 4 });
                 return;
             }
             account.WrongPasswordCount = 0;
+            protection.RecordSuccess(p.AccountID, c.IPAddress, protectionNow);
 
             if (account.RequirePasswordChange)
             {
@@ -5088,34 +5092,46 @@ namespace Server.MirEnvir
 
         internal int HTTPLogin(string AccountID, string Password, int mainThreadTimeoutMs)
         {
+            return HTTPLogin(AccountID, Password, Settings.HTTPTrustedIPAddress, mainThreadTimeoutMs);
+        }
+
+        internal int HTTPLogin(string AccountID, string Password, string sourceIpAddress, int mainThreadTimeoutMs)
+        {
             if (!IsMainThread)
             {
                 if (Volatile.Read(ref _mainThreadId) == 0 || !Running)
                     return 0;
 
                 return InvokeOnMainThread(
-                    () => HTTPLoginOnMainThread(AccountID, Password),
+                    () => HTTPLoginOnMainThread(AccountID, Password, sourceIpAddress),
                     mainThreadTimeoutMs,
                     allowInlineWithoutMainThread: false);
             }
 
-            return HTTPLoginOnMainThread(AccountID, Password);
+            return HTTPLoginOnMainThread(AccountID, Password, sourceIpAddress);
         }
 
-        private int HTTPLoginOnMainThread(string AccountID, string Password)
+        private int HTTPLoginOnMainThread(string AccountID, string Password, string sourceIpAddress)
         {
             if (!Settings.AllowLogin)
             {
                 return 0;
             }
 
+            var protection = GetLoginProtection();
+            var protectionNow = Now.ToUniversalTime();
+            if (!protection.TryBegin(AccountID, sourceIpAddress, protectionNow).Allowed)
+                return 5;
+
             if (!AccountIDReg.IsMatch(AccountID))
             {
+                RecordLoginFailure(null, AccountID, sourceIpAddress, protectionNow, null);
                 return 1;
             }
 
             if (!PasswordReg.IsMatch(Password))
             {
+                RecordLoginFailure(null, AccountID, sourceIpAddress, protectionNow, null);
                 return 2;
             }
 
@@ -5123,10 +5139,11 @@ namespace Server.MirEnvir
 
             if (account == null)
             {
+                RecordLoginFailure(null, AccountID, sourceIpAddress, protectionNow, null);
                 return 3;
             }
 
-            return ExecuteHttpLoginTransaction(account, () =>
+            var result = ExecuteHttpLoginTransaction(account, () =>
             {
                 if (account.Banned)
                 {
@@ -5140,17 +5157,72 @@ namespace Server.MirEnvir
                 account.ExpiryDate = DateTime.MinValue;
                 if (VerifyAccountPasswordOnMainThread(account, Password) == Utils.PasswordVerificationResult.Invalid)
                 {
-                    if (account.WrongPasswordCount++ >= 5)
-                    {
-                        account.Banned = true;
-                        account.BanReason = "登录错误次数太多";
-                        account.ExpiryDate = Now.AddMinutes(2);
-                        return 5;
-                    }
                     return 6;
                 }
-                account.WrongPasswordCount = 0;
                 return 7;
+            });
+
+            if (result == 6)
+            {
+                account.WrongPasswordCount++;
+                return RecordLoginFailure(account, AccountID, sourceIpAddress, protectionNow, null) ? 5 : 6;
+            }
+
+            if (result == 7)
+            {
+                account.WrongPasswordCount = 0;
+                protection.RecordSuccess(AccountID, sourceIpAddress, protectionNow);
+            }
+
+            return result;
+        }
+
+        private LoginProtection GetLoginProtection()
+        {
+            var options = LoginProtectionOptions.FromSettings();
+            if (_loginProtection == null || !Equals(_loginProtectionOptions, options))
+            {
+                _loginProtectionOptions = options;
+                _loginProtection = new LoginProtection(options);
+            }
+
+            return _loginProtection;
+        }
+
+        private bool RecordLoginFailure(
+            AccountInfo account,
+            string accountId,
+            string ipAddress,
+            DateTime utcNow,
+            MirConnection connection)
+        {
+            var decision = GetLoginProtection().RecordFailure(accountId, ipAddress, utcNow);
+            if (decision.IpBlocked)
+            {
+                IPBlocks[ipAddress] = decision.IpBlockedUntilUtc.ToLocalTime();
+                MessageQueue.Enqueue(ipAddress + " 已被登录防护临时封禁");
+            }
+
+            if (decision.AccountBlocked && account != null)
+            {
+                account.Banned = true;
+                account.BanReason = "登录失败次数过多";
+                account.ExpiryDate = decision.AccountBlockedUntilUtc.ToLocalTime();
+                RequestAutoSave();
+            }
+
+            if (!decision.AccountBlocked && !decision.IpBlocked) return false;
+            if (connection != null) EnqueueLoginProtectionDenied(connection, decision);
+            return true;
+        }
+
+        private static void EnqueueLoginProtectionDenied(MirConnection connection, LoginProtectionDecision decision)
+        {
+            connection.Enqueue(new ServerPackets.LoginBanned
+            {
+                Reason = decision.IpBlocked ? "来源地址登录失败次数过多" :
+                    decision.AccountBlocked ? "账号登录失败次数过多" : "登录失败退避中",
+                ExpiryDate = decision.RetryAfterUtc.ToLocalTime()
             });
         }
 
