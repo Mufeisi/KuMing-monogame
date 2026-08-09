@@ -223,7 +223,7 @@ namespace Client.Bootstrap
                                 progress,
                                 cancellationToken);
 
-                            if (!PcBootstrapHttp.VerifyZipSha256IfEnabled(packageName, localZipPath, desiredSha))
+                            if (!PcBootstrapHttp.VerifyZipSha256(packageName, localZipPath, desiredSha))
                             {
                                 TryDeleteFile(localZipPath);
                                 throw new InvalidDataException("SHA256 校验失败。");

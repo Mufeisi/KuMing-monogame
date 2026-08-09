@@ -191,19 +191,27 @@ namespace MonoShare
                 ClientResourceLayout.EnsureWritableResourceDirectories();
 
                 UpdatePackageStatus(packageName, "downloading", stage: "sha256", errorMessage: null);
-                string expectedSha256 = Settings.BootstrapVerifyDownloadedPackages
-                    ? await TryDownloadSha256Async(shaUrl, useMicroAuth, cancellationToken)
-                    : null;
+                bool signedUpdate = BootstrapPackageUpdateRuntime.TryGetUpdateDesiredSha256(packageName, out string signedSha256);
+                string expectedSha256 = signedUpdate
+                    ? signedSha256
+                    : Settings.BootstrapVerifyDownloadedPackages
+                        ? await TryDownloadSha256Async(shaUrl, useMicroAuth, cancellationToken)
+                        : null;
+                if (signedUpdate && string.IsNullOrWhiteSpace(expectedSha256))
+                    throw new InvalidDataException("已签名更新队列缺少资源包 SHA-256");
 
                 string zipPath = Path.Combine(ClientResourceLayout.DownloadPackageRoot, $"{MakeSafeFileName(packageName)}.zip");
                 UpdatePackageStatus(packageName, "downloading", stage: "download", errorMessage: null, zipUrl: zipUrl, sha256: expectedSha256, localZipPath: zipPath);
 
                 await DownloadFileWithResumeAsync(zipUrl, zipPath, useMicroAuth, cancellationToken);
 
-                if (!string.IsNullOrWhiteSpace(expectedSha256) && Settings.BootstrapVerifyDownloadedPackages)
+                if (!string.IsNullOrWhiteSpace(expectedSha256) && (signedUpdate || Settings.BootstrapVerifyDownloadedPackages))
                 {
                     UpdatePackageStatus(packageName, "verifying", stage: "sha256-check", errorMessage: null);
-                    VerifySha256(zipPath, expectedSha256);
+                    if (signedUpdate)
+                        Shared.Security.BootstrapSignedPackageHashPolicy.VerifyFile(zipPath, expectedSha256);
+                    else
+                        VerifySha256(zipPath, expectedSha256);
                 }
 
                 UpdatePackageStatus(packageName, "extracting", stage: "unzip", errorMessage: null);

@@ -87,7 +87,8 @@ namespace Client.Bootstrap
                 json = json.TrimStart('\uFEFF'); // tolerate UTF-8 BOM
                 BootstrapSignedManifest signed = BootstrapManifestAcceptanceStore.VerifyAndAccept(
                     json,
-                    PcBootstrapLayout.ManifestSecurityStatePath);
+                    PcBootstrapLayout.ManifestSecurityStatePath,
+                    currentClientVersion: PcBootstrapLayout.ClientCompatibilityVersion);
                 return new PcBootstrapPackageIndexView
                 {
                     GeneratedAtUtc = signed.GeneratedAtUtc,
@@ -173,6 +174,21 @@ namespace Client.Bootstrap
 
             PcBootstrapPreLoginUpdateService.TryAppendLog($"OK | VerifySha256 | Pack={packageName} | Sha256={actual}");
             return true;
+        }
+
+        public static bool VerifyZipSha256(string packageName, string localZipPath, string expectedSha256)
+        {
+            try
+            {
+                string actual = BootstrapSignedPackageHashPolicy.VerifyFile(localZipPath, expectedSha256);
+                PcBootstrapPreLoginUpdateService.TryAppendLog($"OK | VerifySha256 | Pack={packageName} | Sha256={actual}");
+                return true;
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                PcBootstrapPreLoginUpdateService.TryAppendLog($"FAIL | VerifySha256 | Pack={packageName} | Error={ex.Message}");
+                return false;
+            }
         }
 
         public static string ComputeSha256LowerHex(string filePath)

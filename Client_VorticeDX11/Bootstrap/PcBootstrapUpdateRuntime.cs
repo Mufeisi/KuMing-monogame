@@ -118,9 +118,15 @@ namespace Client.Bootstrap
                         .ToList();
 
                     if (queue.Packages.Count > 0 &&
-                        !Shared.Security.BootstrapManifestAcceptanceStore.IsAcceptedResourceVersion(
+                        !Shared.Security.BootstrapManifestAcceptanceStore.IsAuthorizedUpdateQueue(
                             PcBootstrapLayout.ManifestSecurityStatePath,
-                            queue.ResourceVersion))
+                            queue.ResourceVersion,
+                            queue.Packages.Select(item => new Shared.Security.BootstrapManifestAuthorizedPackage
+                            {
+                                Name = item.Name,
+                                Sha256 = item.DesiredSha256,
+                            }),
+                            currentClientVersion: PcBootstrapLayout.ClientCompatibilityVersion))
                     {
                         return new BootstrapPackageUpdateQueueView();
                     }

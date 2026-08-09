@@ -90,6 +90,11 @@ public static class BootstrapManifestSignaturePolicy
         try
         {
             payload = BuildCanonicalPayload(manifest);
+            string payloadSha256 = Convert.ToHexString(SHA256.HashData(payload)).ToLowerInvariant();
+            if (acceptedState != null &&
+                manifest.Sequence == acceptedState.Sequence &&
+                !string.Equals(payloadSha256, acceptedState.CanonicalPayloadSha256, StringComparison.Ordinal))
+                return BootstrapManifestVerificationResult.Reject("资源索引复用了已接受序列但签名载荷不同");
             using ECDsa ecdsa = ECDsa.Create();
             ecdsa.ImportSubjectPublicKeyInfo(publicKey, out int bytesRead);
             if (bytesRead != publicKey.Length || ecdsa.KeySize != 256)
@@ -265,6 +270,7 @@ public static class BootstrapManifestAcceptanceStore
 {
     private static readonly object Gate = new();
     private static readonly UTF8Encoding Utf8NoBom = new(false);
+    private const string MarkerContent = "lyocrystal-bootstrap-manifest-state-v1\n";
     private static readonly JsonSerializerOptions StateJsonOptions = new()
     {
         PropertyNameCaseInsensitive = false,
@@ -281,19 +287,23 @@ public static class BootstrapManifestAcceptanceStore
         if (string.IsNullOrWhiteSpace(statePath)) throw new ArgumentException("防降级状态路径不能为空", nameof(statePath));
         lock (Gate)
         {
-            BootstrapManifestSecurityState state = LoadState(statePath);
+            IReadOnlyDictionary<string, BootstrapManifestTrustedKey> resolvedKeys =
+                trustedKeys ?? BootstrapManifestTrustConfiguration.TrustedKeys;
+            Version resolvedVersion = currentClientVersion ?? BootstrapManifestTrustConfiguration.CurrentClientCompatibilityVersion;
+            BootstrapManifestSecurityState state = LoadState(statePath, resolvedKeys, resolvedVersion);
             BootstrapManifestAcceptedState acceptedState = state.Sequence > 0
                 ? new BootstrapManifestAcceptedState
                 {
                     Sequence = state.Sequence,
                     ResourceVersion = state.ResourceVersion,
+                    CanonicalPayloadSha256 = state.CanonicalPayloadSha256,
                 }
                 : null;
 
             BootstrapManifestVerificationResult result = BootstrapManifestSignaturePolicy.Verify(
                 json,
-                trustedKeys ?? BootstrapManifestTrustConfiguration.TrustedKeys,
-                currentClientVersion ?? BootstrapManifestTrustConfiguration.CurrentClientCompatibilityVersion,
+                resolvedKeys,
+                resolvedVersion,
                 acceptedState);
             if (!result.IsValid)
                 throw new InvalidDataException(result.Error);
@@ -303,20 +313,30 @@ public static class BootstrapManifestAcceptanceStore
                 Sequence = result.Manifest.Sequence,
                 ResourceVersion = result.Manifest.ResourceVersion,
                 KeyId = result.Manifest.KeyId,
+                CanonicalPayloadSha256 = HashPayload(result.CanonicalPayload),
+                ManifestJson = json.TrimStart('\uFEFF'),
                 AcceptedAtUtc = DateTime.UtcNow.ToString("o"),
             });
+            EnsureMarker(statePath);
             return result.Manifest;
         }
     }
 
-    public static bool IsAcceptedResourceVersion(string statePath, string resourceVersion)
+    public static bool IsAcceptedResourceVersion(
+        string statePath,
+        string resourceVersion,
+        IReadOnlyDictionary<string, BootstrapManifestTrustedKey> trustedKeys = null,
+        Version currentClientVersion = null)
     {
         if (string.IsNullOrWhiteSpace(statePath) || string.IsNullOrWhiteSpace(resourceVersion)) return false;
         lock (Gate)
         {
             try
             {
-                BootstrapManifestSecurityState state = LoadState(statePath);
+                BootstrapManifestSecurityState state = LoadState(
+                    statePath,
+                    trustedKeys ?? BootstrapManifestTrustConfiguration.TrustedKeys,
+                    currentClientVersion ?? BootstrapManifestTrustConfiguration.CurrentClientCompatibilityVersion);
                 return state.Sequence > 0 && string.Equals(state.ResourceVersion, resourceVersion, StringComparison.Ordinal);
             }
             catch (InvalidDataException)
@@ -326,9 +346,57 @@ public static class BootstrapManifestAcceptanceStore
         }
     }
 
-    private static BootstrapManifestSecurityState LoadState(string statePath)
+    public static bool IsAuthorizedUpdateQueue(
+        string statePath,
+        string resourceVersion,
+        IEnumerable<BootstrapManifestAuthorizedPackage> packages,
+        IReadOnlyDictionary<string, BootstrapManifestTrustedKey> trustedKeys = null,
+        Version currentClientVersion = null)
     {
-        if (!File.Exists(statePath)) return new BootstrapManifestSecurityState();
+        if (string.IsNullOrWhiteSpace(statePath) || string.IsNullOrWhiteSpace(resourceVersion) || packages == null) return false;
+        lock (Gate)
+        {
+            try
+            {
+                BootstrapManifestSecurityState state = LoadState(
+                    statePath,
+                    trustedKeys ?? BootstrapManifestTrustConfiguration.TrustedKeys,
+                    currentClientVersion ?? BootstrapManifestTrustConfiguration.CurrentClientCompatibilityVersion);
+                if (state.VerifiedManifest == null ||
+                    !string.Equals(state.ResourceVersion, resourceVersion, StringComparison.Ordinal)) return false;
+
+                var authorized = state.VerifiedManifest.Packages.ToDictionary(
+                    item => item.Name,
+                    item => item.Sha256,
+                    StringComparer.OrdinalIgnoreCase);
+                var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                foreach (BootstrapManifestAuthorizedPackage package in packages)
+                {
+                    if (package == null || string.IsNullOrWhiteSpace(package.Name) || !names.Add(package.Name)) return false;
+                    if (!authorized.TryGetValue(package.Name, out string sha256) ||
+                        !string.Equals(sha256, package.Sha256, StringComparison.Ordinal)) return false;
+                }
+                return true;
+            }
+            catch (InvalidDataException)
+            {
+                return false;
+            }
+        }
+    }
+
+    private static BootstrapManifestSecurityState LoadState(
+        string statePath,
+        IReadOnlyDictionary<string, BootstrapManifestTrustedKey> trustedKeys,
+        Version currentClientVersion)
+    {
+        string markerPath = GetMarkerPath(statePath);
+        if (!File.Exists(statePath))
+        {
+            if (File.Exists(markerPath))
+                throw new InvalidDataException("资源签名防降级状态在当前安装中丢失");
+            return new BootstrapManifestSecurityState();
+        }
         try
         {
             using JsonDocument document = JsonDocument.Parse(File.ReadAllText(statePath));
@@ -338,13 +406,54 @@ public static class BootstrapManifestAcceptanceStore
                 ?? throw new InvalidDataException("资源签名防降级状态为空");
             if (state.Sequence <= 0 ||
                 !Regex.IsMatch(state.ResourceVersion ?? string.Empty, "^[A-Za-z0-9._-]{1,128}$", RegexOptions.CultureInvariant) ||
-                !Regex.IsMatch(state.KeyId ?? string.Empty, "^[A-Za-z0-9._-]{1,64}$", RegexOptions.CultureInvariant))
+                !Regex.IsMatch(state.KeyId ?? string.Empty, "^[A-Za-z0-9._-]{1,64}$", RegexOptions.CultureInvariant) ||
+                !Regex.IsMatch(state.CanonicalPayloadSha256 ?? string.Empty, "^[0-9a-f]{64}$", RegexOptions.CultureInvariant) ||
+                string.IsNullOrWhiteSpace(state.ManifestJson))
                 throw new InvalidDataException("资源签名防降级状态内容无效");
+
+            BootstrapManifestVerificationResult stored = BootstrapManifestSignaturePolicy.Verify(
+                state.ManifestJson,
+                trustedKeys,
+                currentClientVersion);
+            if (!stored.IsValid ||
+                stored.Manifest.Sequence != state.Sequence ||
+                !string.Equals(stored.Manifest.ResourceVersion, state.ResourceVersion, StringComparison.Ordinal) ||
+                !string.Equals(stored.Manifest.KeyId, state.KeyId, StringComparison.Ordinal) ||
+                !string.Equals(HashPayload(stored.CanonicalPayload), state.CanonicalPayloadSha256, StringComparison.Ordinal))
+                throw new InvalidDataException("资源签名防降级状态与已验签清单不一致");
+            state.VerifiedManifest = stored.Manifest;
+            EnsureMarker(statePath);
             return state;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException)
         {
             throw new InvalidDataException("资源签名防降级状态无法读取", ex);
+        }
+    }
+
+    private static string HashPayload(byte[] payload) =>
+        Convert.ToHexString(SHA256.HashData(payload ?? Array.Empty<byte>())).ToLowerInvariant();
+
+    private static string GetMarkerPath(string statePath) => statePath + ".initialized";
+
+    private static void EnsureMarker(string statePath)
+    {
+        string markerPath = GetMarkerPath(statePath);
+        if (File.Exists(markerPath))
+        {
+            if (!string.Equals(File.ReadAllText(markerPath), MarkerContent, StringComparison.Ordinal))
+                throw new InvalidDataException("资源签名防降级安装标记无效");
+            return;
+        }
+        string temporaryPath = markerPath + ".tmp";
+        try
+        {
+            File.WriteAllText(temporaryPath, MarkerContent, Utf8NoBom);
+            File.Move(temporaryPath, markerPath, overwrite: true);
+        }
+        finally
+        {
+            if (File.Exists(temporaryPath)) File.Delete(temporaryPath);
         }
     }
 
@@ -369,7 +478,36 @@ public static class BootstrapManifestAcceptanceStore
         public long Sequence { get; set; }
         public string ResourceVersion { get; set; }
         public string KeyId { get; set; }
+        public string CanonicalPayloadSha256 { get; set; }
+        public string ManifestJson { get; set; }
         public string AcceptedAtUtc { get; set; }
+        [System.Text.Json.Serialization.JsonIgnore]
+        public BootstrapSignedManifest VerifiedManifest { get; set; }
+    }
+}
+
+public sealed class BootstrapManifestAuthorizedPackage
+{
+    public string Name { get; init; }
+    public string Sha256 { get; init; }
+}
+
+public static class BootstrapSignedPackageHashPolicy
+{
+    private static readonly Regex Sha256Pattern = new("^[0-9a-f]{64}$", RegexOptions.CultureInvariant);
+
+    public static string VerifyFile(string filePath, string expectedSha256)
+    {
+        if (string.IsNullOrWhiteSpace(filePath) || !File.Exists(filePath))
+            throw new FileNotFoundException("待校验资源包不存在", filePath);
+        if (!Sha256Pattern.IsMatch(expectedSha256 ?? string.Empty))
+            throw new InvalidDataException("已签名资源包 SHA-256 无效");
+
+        using FileStream stream = File.OpenRead(filePath);
+        string actualSha256 = Convert.ToHexString(SHA256.HashData(stream)).ToLowerInvariant();
+        if (!string.Equals(actualSha256, expectedSha256, StringComparison.Ordinal))
+            throw new InvalidDataException("资源包 SHA-256 与已签名清单不一致");
+        return actualSha256;
     }
 }
 
@@ -405,6 +543,7 @@ public sealed class BootstrapManifestAcceptedState
 {
     public long Sequence { get; init; }
     public string ResourceVersion { get; init; }
+    public string CanonicalPayloadSha256 { get; init; }
 }
 
 public sealed class BootstrapManifestVerificationResult

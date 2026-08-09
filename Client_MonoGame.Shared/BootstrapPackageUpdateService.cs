@@ -321,7 +321,8 @@ namespace MonoShare
                 json = json.TrimStart('\uFEFF'); // tolerate UTF-8 BOM
                 BootstrapSignedManifest signed = BootstrapManifestAcceptanceStore.VerifyAndAccept(
                     json,
-                    ClientResourceLayout.ManifestSecurityStatePath);
+                    ClientResourceLayout.ManifestSecurityStatePath,
+                    currentClientVersion: ClientResourceLayout.BootstrapClientCompatibilityVersion);
                 return new BootstrapPackageIndexView
                 {
                     GeneratedAtUtc = signed.GeneratedAtUtc,

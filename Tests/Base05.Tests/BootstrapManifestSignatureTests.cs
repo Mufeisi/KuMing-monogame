@@ -1,4 +1,5 @@
 using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using Shared.Security;
 using Xunit;
@@ -34,11 +35,7 @@ public sealed class BootstrapManifestSignatureTests
         Assert.True(Verify(beforeRotation, keys).IsValid);
 
         BootstrapSignedManifest duringRotation = Sign(CreateManifest(10, "resource-v10", "resource-2026-b"), next);
-        Assert.True(Verify(duringRotation, keys, new BootstrapManifestAcceptedState
-        {
-            Sequence = 9,
-            ResourceVersion = "resource-v9",
-        }).IsValid);
+        Assert.True(Verify(duringRotation, keys, AcceptedStateFor(beforeRotation)).IsValid);
 
         BootstrapSignedManifest expiredKey = Sign(CreateManifest(11, "resource-v11", "resource-2026-a"), current);
         Assert.Contains("轮换窗口", Verify(expiredKey, keys).Error);
@@ -73,10 +70,15 @@ public sealed class BootstrapManifestSignatureTests
         {
             ["resource-main"] = Trust("resource-main", signer),
         };
-        var accepted = new BootstrapManifestAcceptedState { Sequence = 10, ResourceVersion = "resource-v10" };
+        BootstrapSignedManifest acceptedManifest = CreateManifest(10, "resource-v10");
+        BootstrapManifestAcceptedState accepted = AcceptedStateFor(acceptedManifest);
 
         Assert.Contains("拒绝降级", Verify(Sign(CreateManifest(9, "resource-v9"), signer), keys, accepted).Error);
         Assert.Contains("资源版本不同", Verify(Sign(CreateManifest(10, "resource-v10-replaced"), signer), keys, accepted).Error);
+
+        BootstrapSignedManifest replacedPackages = CreateManifest(10, "resource-v10");
+        replacedPackages.Packages[0].Sha256 = new string('f', 64);
+        Assert.Contains("签名载荷不同", Verify(Sign(replacedPackages, signer), keys, accepted).Error);
         Assert.True(Verify(Sign(CreateManifest(10, "resource-v10"), signer), keys, accepted).IsValid);
     }
 
@@ -153,22 +155,76 @@ public sealed class BootstrapManifestSignatureTests
 
             Assert.True(File.Exists(statePath));
             Assert.Contains("\"Sequence\": 20", File.ReadAllText(statePath));
-            Assert.True(BootstrapManifestAcceptanceStore.IsAcceptedResourceVersion(statePath, "resource-v20"));
-            Assert.False(BootstrapManifestAcceptanceStore.IsAcceptedResourceVersion(statePath, "resource-v19"));
+            Assert.True(File.Exists(statePath + ".initialized"));
+            Assert.True(BootstrapManifestAcceptanceStore.IsAcceptedResourceVersion(
+                statePath, "resource-v20", keys, new Version(1, 0, 0)));
+            Assert.False(BootstrapManifestAcceptanceStore.IsAcceptedResourceVersion(
+                statePath, "resource-v19", keys, new Version(1, 0, 0)));
+            Assert.True(BootstrapManifestAcceptanceStore.IsAuthorizedUpdateQueue(
+                statePath,
+                "resource-v20",
+                new[] { new BootstrapManifestAuthorizedPackage { Name = "core-startup", Sha256 = new string('a', 64) } },
+                keys,
+                new Version(1, 0, 0)));
+            Assert.False(BootstrapManifestAcceptanceStore.IsAuthorizedUpdateQueue(
+                statePath,
+                "resource-v20",
+                new[] { new BootstrapManifestAuthorizedPackage { Name = "core-startup", Sha256 = new string('f', 64) } },
+                keys,
+                new Version(1, 0, 0)));
             Assert.Throws<InvalidDataException>(() => BootstrapManifestAcceptanceStore.VerifyAndAccept(
                 Serialize(Sign(CreateManifest(19, "resource-v19"), signer)),
                 statePath,
                 keys,
                 new Version(1, 0, 0)));
 
+            string validState = File.ReadAllText(statePath);
+            string validMarker = File.ReadAllText(statePath + ".initialized");
+            File.WriteAllText(statePath + ".initialized", "tampered");
+            Assert.False(BootstrapManifestAcceptanceStore.IsAcceptedResourceVersion(
+                statePath, "resource-v20", keys, new Version(1, 0, 0)));
+            File.WriteAllText(statePath + ".initialized", validMarker);
+
             File.WriteAllText(statePath, "{}");
-            Assert.False(BootstrapManifestAcceptanceStore.IsAcceptedResourceVersion(statePath, "resource-v20"));
+            Assert.False(BootstrapManifestAcceptanceStore.IsAcceptedResourceVersion(
+                statePath, "resource-v20", keys, new Version(1, 0, 0)));
             Assert.Throws<InvalidDataException>(() => BootstrapManifestAcceptanceStore.VerifyAndAccept(
                 Serialize(accepted), statePath, keys, new Version(1, 0, 0)));
+
+            File.WriteAllText(statePath, validState);
+            File.Delete(statePath);
+            Assert.Throws<InvalidDataException>(() => BootstrapManifestAcceptanceStore.VerifyAndAccept(
+                Serialize(Sign(CreateManifest(19, "resource-v19"), signer)),
+                statePath,
+                keys,
+                new Version(1, 0, 0)));
         }
         finally
         {
             if (Directory.Exists(root)) Directory.Delete(root, true);
+        }
+    }
+
+    [Fact]
+    public void 已签名资源包哈希不可省略且拒绝篡改文件()
+    {
+        string root = Path.Combine(Path.GetTempPath(), "LyoCrystalSignedPackageHash-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        try
+        {
+            string packagePath = Path.Combine(root, "core-startup.zip");
+            File.WriteAllBytes(packagePath, Encoding.UTF8.GetBytes("signed-package"));
+            string expected = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(packagePath))).ToLowerInvariant();
+
+            Assert.Equal(expected, BootstrapSignedPackageHashPolicy.VerifyFile(packagePath, expected));
+            Assert.Throws<InvalidDataException>(() => BootstrapSignedPackageHashPolicy.VerifyFile(packagePath, string.Empty));
+
+            File.AppendAllText(packagePath, "tampered", Encoding.UTF8);
+            Assert.Throws<InvalidDataException>(() => BootstrapSignedPackageHashPolicy.VerifyFile(packagePath, expected));
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
         }
     }
 
@@ -177,6 +233,14 @@ public sealed class BootstrapManifestSignatureTests
         IReadOnlyDictionary<string, BootstrapManifestTrustedKey> keys,
         BootstrapManifestAcceptedState state = null) =>
         BootstrapManifestSignaturePolicy.Verify(Serialize(manifest), keys, new Version(1, 0, 0), state);
+
+    private static BootstrapManifestAcceptedState AcceptedStateFor(BootstrapSignedManifest manifest) => new()
+    {
+        Sequence = manifest.Sequence,
+        ResourceVersion = manifest.ResourceVersion,
+        CanonicalPayloadSha256 = Convert.ToHexString(SHA256.HashData(
+            BootstrapManifestSignaturePolicy.BuildCanonicalPayload(manifest))).ToLowerInvariant(),
+    };
 
     private static BootstrapSignedManifest CreateManifest(long sequence, string resourceVersion, string keyId = "resource-main") => new()
     {
