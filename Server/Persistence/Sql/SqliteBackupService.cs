@@ -46,6 +46,8 @@ internal sealed class SqliteBackupOptions
 
         string source = Path.GetFullPath(SourcePath);
         string local = Path.GetFullPath(BackupDirectory);
+        if (File.Exists(local))
+            throw new InvalidOperationException("SQLite 本地备份目录不能是现有文件");
         if (IsFileSystemRoot(local))
             throw new InvalidOperationException("SQLite 本地备份目录不得是文件系统根目录");
         if (string.Equals(source, local, StringComparison.OrdinalIgnoreCase))
@@ -54,12 +56,21 @@ internal sealed class SqliteBackupOptions
         if (!string.IsNullOrWhiteSpace(OffsiteDirectory))
         {
             string offsite = Path.GetFullPath(OffsiteDirectory);
+            if (File.Exists(offsite))
+                throw new InvalidOperationException("SQLite 异地副本目录不能是现有文件");
             if (IsFileSystemRoot(offsite))
                 throw new InvalidOperationException("SQLite 异地副本目录不得是文件系统根目录");
             if (IsSameOrNested(local, offsite) || IsSameOrNested(offsite, local))
                 throw new InvalidOperationException("SQLite 本地备份目录与异地副本目录不能相同或互相嵌套");
+            if (requireOffsite && !IsUncPath(OffsiteDirectory) &&
+                string.Equals(Path.GetPathRoot(local), Path.GetPathRoot(offsite), StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException("正式服 SQLite 异地副本必须使用 UNC 路径或与本地备份不同的存储卷");
         }
     }
+
+    private static bool IsUncPath(string path) =>
+        !string.IsNullOrWhiteSpace(path) &&
+        (path.StartsWith(@"\\", StringComparison.Ordinal) || path.StartsWith("//", StringComparison.Ordinal));
 
     private static bool IsSameOrNested(string parent, string candidate)
     {
@@ -98,18 +109,23 @@ internal sealed class SqliteBackupService : IDisposable
     private readonly object _gate = new object();
     private readonly ManualResetEventSlim _idle = new ManualResetEventSlim(initialState: true);
     private readonly SqliteBackupOptions _options;
+    private readonly Action<FileInfo> _deleteBackup;
     private Timer _timer;
     private bool _running;
     private bool _disposed;
     private long _backupSequence;
     private SqliteBackupStatus _status;
 
-    internal SqliteBackupService(SqliteBackupOptions options)
+    internal SqliteBackupService(SqliteBackupOptions options, Action<FileInfo> deleteBackup = null)
     {
         _options = options ?? throw new ArgumentNullException(nameof(options));
         _options.Validate(requireOffsite: false);
+        _deleteBackup = deleteBackup ?? (file => file.Delete());
+        EnsureDirectoryWritable(Path.GetFullPath(_options.BackupDirectory), "本地备份目录");
+        if (!string.IsNullOrWhiteSpace(_options.OffsiteDirectory))
+            EnsureDirectoryWritable(Path.GetFullPath(_options.OffsiteDirectory), "异地副本目录");
         _status = LoadStatus() ?? new SqliteBackupStatus { State = SqliteBackupState.Idle };
-        PersistStatus(_status);
+        PersistStatus(_status, throwOnFailure: true);
     }
 
     internal SqliteBackupStatus GetStatus()
@@ -238,6 +254,7 @@ internal sealed class SqliteBackupService : IDisposable
             BackupDatabase(sourcePath, partialPath);
             ValidateIntegrity(partialPath);
             File.Move(partialPath, localPath);
+            RecordRunningPaths(localPath, string.Empty);
         }
         finally
         {
@@ -245,7 +262,6 @@ internal sealed class SqliteBackupService : IDisposable
         }
 
         ApplyRetention(localDirectory);
-        RecordRunningPaths(localPath, string.Empty);
 
         string offsitePath = string.Empty;
         if (!string.IsNullOrWhiteSpace(_options.OffsiteDirectory))
@@ -327,7 +343,7 @@ internal sealed class SqliteBackupService : IDisposable
             .OrderByDescending(file => file.Name, StringComparer.Ordinal)
             .ToArray();
         for (int i = _options.RetentionCount; i < backups.Length; i++)
-            backups[i].Delete();
+            _deleteBackup(backups[i]);
     }
 
     private void Complete(SqliteBackupStatus status)
@@ -367,6 +383,8 @@ internal sealed class SqliteBackupService : IDisposable
             SqliteBackupStatus status = File.Exists(path)
                 ? JsonSerializer.Deserialize<SqliteBackupStatus>(File.ReadAllText(path))
                 : null;
+            if (File.Exists(path) && status == null)
+                throw new InvalidDataException("备份状态文件内容为空");
             if (status?.State != SqliteBackupState.Running) return status;
             return new SqliteBackupStatus
             {
@@ -381,13 +399,18 @@ internal sealed class SqliteBackupService : IDisposable
                 LastError = "Interrupted: 上次备份在进程退出前未完成",
             };
         }
-        catch
+        catch (Exception ex)
         {
-            return null;
+            return new SqliteBackupStatus
+            {
+                State = SqliteBackupState.Failed,
+                IntegrityResult = "unknown",
+                LastError = "StatusCorrupted: 备份状态文件读取失败：" + ex.GetType().Name + ": " + ex.Message,
+            };
         }
     }
 
-    private void PersistStatus(SqliteBackupStatus status)
+    private void PersistStatus(SqliteBackupStatus status, bool throwOnFailure = false)
     {
         try
         {
@@ -400,7 +423,37 @@ internal sealed class SqliteBackupService : IDisposable
         }
         catch (Exception ex)
         {
+            if (throwOnFailure)
+                throw new IOException("SQLite 备份状态文件无法写入", ex);
             MessageQueue.Instance.Enqueue($"[SQLite备份] 状态文件写入失败：{ex.Message}");
+        }
+    }
+
+    private static void EnsureDirectoryWritable(string directory, string displayName)
+    {
+        if (File.Exists(directory))
+            throw new InvalidOperationException($"{displayName}不能是现有文件");
+        Directory.CreateDirectory(directory);
+        string probe = Path.Combine(directory, ".lyocrystal-backup-write-probe-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            using var stream = new FileStream(
+                probe,
+                FileMode.CreateNew,
+                FileAccess.Write,
+                FileShare.None,
+                bufferSize: 1,
+                FileOptions.WriteThrough);
+            stream.WriteByte(1);
+            stream.Flush(flushToDisk: true);
+        }
+        catch (Exception ex)
+        {
+            throw new IOException($"{displayName}不可写", ex);
+        }
+        finally
+        {
+            TryDelete(probe);
         }
     }
 

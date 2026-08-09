@@ -160,10 +160,127 @@ public sealed class SqliteBackupServiceTests
         Assert.Equal(string.Empty, status.LastOffsitePath);
         SqliteBackupService.ValidateIntegrity(status.LastLocalPath);
 
+        File.Delete(fixture.OffsiteDirectory);
+        Directory.CreateDirectory(fixture.OffsiteDirectory);
         using var reloaded = new SqliteBackupService(fixture.Options);
         SqliteBackupStatus persisted = reloaded.GetStatus();
         Assert.Equal(SqliteBackupState.Failed, persisted.State);
         Assert.Equal(status.LastLocalPath, persisted.LastLocalPath);
+    }
+
+    [Fact]
+    public void 保留清理失败时状态仍指向本次已验证副本()
+    {
+        using var fixture = new BackupFixture(retentionCount: 1, withOffsite: false);
+        fixture.InitializeSource();
+        SqliteBackupStatus first = fixture.Service.RunNow("retention-base");
+
+        using var failing = new SqliteBackupService(
+            fixture.Options,
+            _ => throw new IOException("模拟保留清理失败"));
+        SqliteBackupStatus failed = failing.RunNow("retention-failure");
+
+        Assert.Equal(SqliteBackupState.Failed, failed.State);
+        Assert.NotEqual(first.LastLocalPath, failed.LastLocalPath);
+        Assert.True(File.Exists(failed.LastLocalPath));
+        SqliteBackupService.ValidateIntegrity(failed.LastLocalPath);
+    }
+
+    [Fact]
+    public void 损坏状态文件恢复为失败且目录文件冲突阻止服务构造()
+    {
+        using var fixture = new BackupFixture(retentionCount: 2, withOffsite: false);
+        fixture.Service.Dispose();
+        string statusPath = Path.Combine(fixture.LocalDirectory, "backup-status.json");
+        File.WriteAllText(statusPath, "{not-json");
+
+        using (var reloaded = new SqliteBackupService(fixture.Options))
+        {
+            SqliteBackupStatus status = reloaded.GetStatus();
+            Assert.Equal(SqliteBackupState.Failed, status.State);
+            Assert.Contains("StatusCorrupted", status.LastError, StringComparison.Ordinal);
+        }
+
+        string fileInsteadOfDirectory = Path.Combine(Path.GetDirectoryName(fixture.LocalDirectory)!, "not-a-directory");
+        File.WriteAllText(fileInsteadOfDirectory, "x");
+        var invalid = new SqliteBackupOptions
+        {
+            SourcePath = fixture.SourcePath,
+            BackupDirectory = fileInsteadOfDirectory,
+            RetentionCount = 1,
+            Interval = TimeSpan.FromHours(1),
+        };
+        Assert.Throws<InvalidOperationException>(() => new SqliteBackupService(invalid));
+    }
+
+    [Fact]
+    public void 正式异地门禁拒绝同卷兄弟目录并在可用第二卷执行真实复制()
+    {
+        string primaryRoot = Path.GetPathRoot(Path.GetTempPath()) ?? string.Empty;
+        string secondRoot = DriveInfo.GetDrives()
+            .Where(drive => drive.IsReady && drive.DriveType != DriveType.CDRom)
+            .Select(drive => drive.RootDirectory.FullName)
+            .FirstOrDefault(root => !string.Equals(root, primaryRoot, StringComparison.OrdinalIgnoreCase));
+        string root = Path.Combine(Path.GetTempPath(), "base05-db03-offsite-policy-" + Guid.NewGuid().ToString("N"));
+        string source = Path.Combine(root, "source.db");
+        string local = Path.Combine(root, "local");
+        string sameVolume = Path.Combine(root, "offsite");
+        var sameVolumeOptions = new SqliteBackupOptions
+        {
+            SourcePath = source,
+            BackupDirectory = local,
+            OffsiteDirectory = sameVolume,
+            RetentionCount = 1,
+            Interval = TimeSpan.FromHours(1),
+        };
+        Assert.Throws<InvalidOperationException>(() => sameVolumeOptions.Validate(requireOffsite: true));
+
+        if (string.IsNullOrEmpty(secondRoot))
+        {
+            var unc = new SqliteBackupOptions
+            {
+                SourcePath = source,
+                BackupDirectory = local,
+                OffsiteDirectory = @"\\backup-server\LyoCrystalTests\SQLite",
+                RetentionCount = 1,
+                Interval = TimeSpan.FromHours(1),
+            };
+            unc.Validate(requireOffsite: true);
+            return;
+        }
+
+        string offsite = Path.Combine(secondRoot, "LyoCrystalDb03Tests", Guid.NewGuid().ToString("N"));
+        try
+        {
+            Directory.CreateDirectory(root);
+            using (var connection = new SqliteConnection($"Data Source={source};Pooling=False"))
+            {
+                connection.Open();
+                using var command = connection.CreateCommand();
+                command.CommandText = "CREATE TABLE proof(value INTEGER NOT NULL); INSERT INTO proof(value) VALUES (3);";
+                command.ExecuteNonQuery();
+            }
+            var options = new SqliteBackupOptions
+            {
+                SourcePath = source,
+                BackupDirectory = local,
+                OffsiteDirectory = offsite,
+                RetentionCount = 1,
+                Interval = TimeSpan.FromHours(1),
+            };
+            options.Validate(requireOffsite: true);
+            using var service = new SqliteBackupService(options);
+            SqliteBackupStatus status = service.RunNow("different-volume-proof");
+            Assert.Equal(SqliteBackupState.Succeeded, status.State);
+            Assert.NotEqual(Path.GetPathRoot(status.LastLocalPath), Path.GetPathRoot(status.LastOffsitePath));
+            SqliteBackupService.ValidateIntegrity(status.LastOffsitePath);
+        }
+        finally
+        {
+            SqliteConnection.ClearAllPools();
+            try { Directory.Delete(root, recursive: true); } catch { }
+            try { Directory.Delete(offsite, recursive: true); } catch { }
+        }
     }
 
     private static long[] ReadValues(string path)
