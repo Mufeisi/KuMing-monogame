@@ -137,7 +137,7 @@ GATE-P0 ──► GATE-P1 ──► GATE-P2 ──► GATE-P3 ──► GATE-P4 
 | P1-VERIFY-A | 旧预验收已审核并合并：`70d1787`；后续设备闭环由 P1-RUNTIME 接管 | `Docs/Evidence/GATE-P1/android-01-03/`；验收时不改生产代码 | 商城/师徒/关系的截图、日志、APK/设备信息归档 | 已停止独立领取，避免与 P1-RUNTIME 重复 |
 | P1-VERIFY-B | 旧预验收已审核并合并：`e417e0a`；后续设备闭环由 P1-RUNTIME 接管 | `Docs/Evidence/GATE-P1/android-04-07/`；验收时不改生产代码 | 坐骑/封印租赁/钓鱼/活动的截图、日志、APK/设备信息归档 | 已停止独立领取，避免与 P1-RUNTIME 重复 |
 | P1-EVIDENCE | 已审核并合并：`ff0b436` | `Docs/Evidence/GATE-P1/proto-base-perf/`；只读复核现有清单/测试入口 | 清单可读、兼容/资源/性能专项绿，证据归档 | 可与两组真机验收并行 |
-| P1-RUNTIME | 需修正：首轮审核发现双币默认扣点券风险，已改为明确选择并补测试，等待复审 | `Client_MonoGame.Shared/UI/FairyGui/`、Bootstrap 默认配置、`Docs/Evidence/GATE-P1/runtime-20260809/` | 本地服务、资源、账号、APK、设备证据归档；发现的真实缺口转为后续修正 | 独占移动 FairyGUI 运行时文件；其他会话不得重复领取 |
+| P1-RUNTIME | 已审核并合并：`2c5ecc5`；首轮双币默认扣点券风险已修正，复审无阻塞项 | `Client_MonoGame.Shared/UI/FairyGui/`、Bootstrap 默认配置、`Docs/Evidence/GATE-P1/runtime-20260809/` | 本地服务、资源、账号、APK、设备证据归档；发现的真实缺口转为后续修正 | 已释放文件所有权；后续按坐骑、活动和商城闭环拆分新任务领取 |
 | P1-INTEGRATE | 阻塞：等待 P1-RUNTIME 审核及七项业务闭环完成 | `Docs/Evidence/GATE-P1/integration/` 与本文 §4.3 | P1 成果已合并，完整测试/远程 CI 绿，§4.3 快照更新 | 被 P1-RUNTIME 和七项闭环阻塞，不并行合并 |
 
 GATE-P1 关闭后，P2 的 SEC-03、SEC-04、SEC-05、SEC-06 各为独立任务；只有依赖已满足且文件所有权不冲突的任务才能并行。
