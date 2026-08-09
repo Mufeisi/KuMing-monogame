@@ -113,7 +113,7 @@ GATE-P0 ──► GATE-P1 ──► GATE-P2 ──► GATE-P3 ──► GATE-P4 
 |---|---|---|
 | GATE-P0 | **已完成**；远程 CI 证据见 §P0 | 无 |
 | GATE-P1 | **已完成**：ANDROID-01 商城逍遥端到端通过；ANDROID-02..07 按本轮替代口径完成真实协议/门控/权威响应/UI 投影使用探针并复核通过；PROTO-01、BASE-10、PERF-00 证据已归档；Base05 集成 223/223 通过；远程 CI `31313826844` 的 Windows、通用测试、Android Release arm64 AOT 全绿 | 无 |
-| GATE-P2 | SEC-01、SEC-02、SEC-03 已完成；SEC-04..06 未完成；**门禁未关闭** | 继续 SEC-04～06，不将单项完成误报为整个门禁关闭 |
+| GATE-P2 | SEC-01～SEC-04 已完成；SEC-05、SEC-06 未完成；**门禁未关闭** | 继续 SEC-05、SEC-06，不将单项完成误报为整个门禁关闭 |
 | GATE-P3 | 未开始 | 等待 GATE-P2 |
 | GATE-P4 | PERF-00 采集基建已完成，真实基线/PERF-01..05 未开始 | 等待 GATE-P3 与真实 S1/S2/S3 输入 |
 | GATE-P5 | 未开始 | 等待 GATE-P4 |
@@ -222,6 +222,8 @@ GATE-P1 关闭后，P2 的 SEC-03、SEC-04、SEC-05、SEC-06 各为独立任务�
 **SEC-03 收口记录（2026-08-10）**：新增单一 `LoginProtection` 策略，PC 游戏登录与服务主线程 `HTTPLogin` 统一接入账号/IP 双维度的全请求窗口限流、失败指数退避和临时封禁。默认账号/IP 请求上限分别为 `30/60s`、`120/60s`，失败窗口 `300s`，第 `6/20` 次失败分别封账号/IP `15min`，退避 `500ms` 起、最高 `30s`；成功登录清失败状态但不清当前请求窗口。账号封禁复用可保存的 `Banned/BanReason/ExpiryDate`，IP 封禁复用 `IPBlocks`；跟踪键容量有界，不新增线程、协议或数据库表。真实服务主线程脚本已跨 IP 触发账号封禁、跨账号触发 IP 封禁，高频成功登录限流专项已通过；登录安全与 SEC-01 合并专项 `13/13`，基于已合入 SEC-02 C6 的最新主线复验 Base05 全量 `238/238`。证据见 `Docs/Evidence/GATE-P2/sec03-login-protection-20260809/`。SEC-03 完成不代表 GATE-P2 关闭。
 
 **SEC-02 C7 证书固定收口记录（2026-08-10）**：共享 `TlsClientPolicy` 新增 `sha256/<Base64>` SPKI 固定校验，PC、Mono 与 Android 正式连接从 `[Network] TlsSpkiSha256Pins` 读取；最多支持 4 项，允许当前/下一证书双固定值平滑轮换。固定值是系统信任链、域名、有效期和在线吊销检查之外的附加条件，任何系统证书错误都不能被固定值绕过；空配置保留分阶段发布能力，正式发布要求至少配置当前证书固定值。真实 `SslStream` 正确固定值握手与 Packet 往返、错误值、格式边界和系统证书错误拒绝均已验证；TLS 专项 `20/20`、Base05 全量 `239/239`，PC、Mono 多目标与 Android Release 构建均 0 错误。证据见 `Docs/Evidence/GATE-P2/sec02-c7-cert-pinning-20260810/`。SEC-02 至此完成；SEC-04～06 仍阻塞 GATE-P2。
+
+**SEC-04 管理端安全收口记录（2026-08-10）**：现有 `HttpServer` 的管理端点新增独立 Bearer 凭据，不再以游戏 `GMPassword` 或仅来源 IP 作为授权。`Administrator` 可访问状态、广播、开户和名单维护，`Operator` 仅可访问状态与广播；比较使用固定长度 SHA-256 摘要和固定时间比较。回环可使用 HTTP，明确内网 IP 必须使用 HTTPS，公网 IP、通配地址、主机名和内网明文 HTTP 在启动前拒绝；`HTTPTrustedIPAddress` 继续限制来源。每次来源拒绝、鉴权失败、越权和成功均通过现有日志写入无秘密 `ADMIN_AUDIT`，HTTP 运行日志不再记录查询串。专项 `4/4` 含真实 `HttpListener` 的 401/403/成功路径；证据见 `Docs/Evidence/GATE-P2/sec04-admin-security-20260810/`。环境变量令牌是 SEC-05 受保护密钥存储接入前过渡；SEC-05、SEC-06 仍阻塞 GATE-P2。
 
 **GATE-P2 退出条件**：公开测试前安全项全部完成；凭据不通过未加密网络传输；公网无 V1 明文登录。
 

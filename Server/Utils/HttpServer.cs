@@ -2,6 +2,7 @@
 using Server.MirEnvir;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using Server.Security;
 using S = ServerPackets;
 
 namespace Server.Library.Utils
@@ -29,6 +30,7 @@ namespace Server.Library.Utils
 
         public void Start()
         {
+            AdminSecurityPolicy.ValidateListener(Host);
             _thread = new Thread(Listen);
             _thread.Start(tokenSource.Token);
         }
@@ -57,6 +59,9 @@ namespace Server.Library.Utils
                 }
 
                 if (!IsTrustedClient(request, response))
+                    return;
+
+                if (!AuthorizeAdminRequest(request, response, path))
                     return;
 
                 switch (path.ToLowerInvariant())
@@ -127,14 +132,55 @@ namespace Server.Library.Utils
         private bool IsTrustedClient(HttpListenerRequest request, HttpListenerResponse response)
         {
             if (request.RemoteEndPoint == null)
-                return true;
+            {
+                Audit(request, new AdminAuthorizationResult(
+                    AdminAuthorizationStatus.Unauthorized, AdminRole.None, "source-check"), "unknown");
+                WriteStatusResponse(response, HttpStatusCode.Forbidden, "forbidden");
+                return false;
+            }
 
             var clientIp = request.RemoteEndPoint.Address.ToString();
             if (clientIp == Settings.HTTPTrustedIPAddress)
                 return true;
 
-            WriteStatusResponse(response, HttpStatusCode.Forbidden, "notrusted:" + clientIp);
+            Audit(request, new AdminAuthorizationResult(
+                AdminAuthorizationStatus.Unauthorized, AdminRole.None, "source-check"), clientIp);
+            WriteStatusResponse(response, HttpStatusCode.Forbidden, "forbidden");
             return false;
+        }
+
+        private bool AuthorizeAdminRequest(HttpListenerRequest request, HttpListenerResponse response, string path)
+        {
+            var authorization = AdminSecurityPolicy.Authorize(
+                request.Headers["Authorization"],
+                path,
+                Environment.GetEnvironmentVariable(AdminSecurityPolicy.AdministratorTokenEnvironmentVariable),
+                Environment.GetEnvironmentVariable(AdminSecurityPolicy.OperatorTokenEnvironmentVariable));
+            Audit(request, authorization, request.RemoteEndPoint?.Address.ToString());
+            if (authorization.Status == AdminAuthorizationStatus.Authorized)
+                return true;
+
+            if (authorization.Status == AdminAuthorizationStatus.Unconfigured)
+            {
+                WriteStatusResponse(response, HttpStatusCode.ServiceUnavailable, "admin credentials not configured");
+                return false;
+            }
+
+            if (authorization.Status == AdminAuthorizationStatus.Unauthorized)
+                response.AddHeader("WWW-Authenticate", "Bearer");
+            WriteStatusResponse(response,
+                authorization.Status == AdminAuthorizationStatus.Forbidden
+                    ? HttpStatusCode.Forbidden
+                    : HttpStatusCode.Unauthorized,
+                authorization.Status == AdminAuthorizationStatus.Forbidden ? "forbidden" : "unauthorized");
+            return false;
+        }
+
+        private static void Audit(HttpListenerRequest request, AdminAuthorizationResult authorization, string clientIp)
+        {
+            string line = AdminSecurityPolicy.BuildAuditLine(
+                DateTimeOffset.UtcNow, clientIp, request?.HttpMethod, authorization);
+            Logger.GetLogger(LogType.Server).Info(line);
         }
 
         private void HandleMicroApi(HttpListenerRequest request, HttpListenerResponse response, string absolutePath)
@@ -716,7 +762,7 @@ namespace Server.Library.Utils
 
         public override void OnPostRequest(HttpListenerRequest request, HttpListenerResponse response)
         {
-            Console.WriteLine("POST request: {0}", request.Url);
+            WriteStatusResponse(response, HttpStatusCode.MethodNotAllowed, "method not allowed");
         }
     }
 
