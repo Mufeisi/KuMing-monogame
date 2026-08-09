@@ -53,6 +53,11 @@ internal static class MobileMainHudFallbackLayout
     internal static MobileMainHudFallbackBounds Activity(float rootWidth, float rootHeight) =>
         Create(rootWidth, rootHeight, bottomOffset: 298F);
 
+    // 商店是 Android GATE-P1 的必达入口；当 publish 未暴露可匹配按钮时，
+    // 放在活动/赏金上方，继续沿用右侧安全区按钮列。
+    internal static MobileMainHudFallbackBounds Shop(float rootWidth, float rootHeight) =>
+        Create(rootWidth, rootHeight, bottomOffset: 354F);
+
     private static MobileMainHudFallbackBounds Create(float rootWidth, float rootHeight, float bottomOffset)
     {
         float x = Math.Max(12F, rootWidth - ButtonWidth - 16F);
