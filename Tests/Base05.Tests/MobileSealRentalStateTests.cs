@@ -39,6 +39,8 @@ public sealed class MobileSealRentalStateTests
 
         var rentalRequest = new ClientPackets.ItemRentalRequest();
         Assert.Equal((short)ClientPacketIds.ItemRentalRequest, rentalRequest.Index);
+        Assert.True(state.BeginRentalRequest(20_000));
+        Assert.Equal(MobileSealRentalState.RentalOperation.Request, state.PendingRentalOperation);
         var rentalResponse = new ServerPackets.ItemRentalRequest
         {
             Name = "探针租客",
