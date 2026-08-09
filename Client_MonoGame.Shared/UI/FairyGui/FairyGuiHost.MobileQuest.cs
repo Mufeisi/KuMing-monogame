@@ -54,6 +54,12 @@ namespace MonoShare
             public string[] ListOverrideKeywords;
             public ListItemRenderer Renderer;
             public readonly List<GButton> FallbackListRows = new List<GButton>();
+            public int FallbackPage;
+            public GButton FallbackPrevious;
+            public GButton FallbackNext;
+            public GTextField FallbackPageLabel;
+            public EventCallback0 FallbackPreviousClick;
+            public EventCallback0 FallbackNextClick;
 
             public GTextField Title;
             public string TitleResolveInfo;
@@ -160,6 +166,8 @@ namespace MonoShare
                     try { if (binding.Abandon != null && binding.AbandonClick != null) binding.Abandon.onClick.Remove(binding.AbandonClick); } catch { }
                     try { if (binding.Share != null && binding.ShareClick != null) binding.Share.onClick.Remove(binding.ShareClick); } catch { }
                     try { if (binding.Track != null && binding.TrackClick != null) binding.Track.onClick.Remove(binding.TrackClick); } catch { }
+                    try { if (binding.FallbackPrevious != null && binding.FallbackPreviousClick != null) binding.FallbackPrevious.onClick.Remove(binding.FallbackPreviousClick); } catch { }
+                    try { if (binding.FallbackNext != null && binding.FallbackNextClick != null) binding.FallbackNext.onClick.Remove(binding.FallbackNextClick); } catch { }
                     try { if (binding.List != null && !binding.List._disposed) binding.List.itemRenderer = null; } catch { }
                     try
                     {
@@ -253,6 +261,10 @@ namespace MonoShare
                         }
                         catch { }
                     }
+                    try { _mobileQuestBinding.FallbackPrevious = window.GetChild("activity_page_previous") as GButton; } catch { }
+                    try { _mobileQuestBinding.FallbackNext = window.GetChild("activity_page_next") as GButton; } catch { }
+                    try { _mobileQuestBinding.FallbackPageLabel = window.GetChild("activity_page_label") as GTextField; } catch { }
+                    AttachMobileActivityFallbackPaging(_mobileQuestBinding);
                 }
             }
 
@@ -914,8 +926,18 @@ namespace MonoShare
 
             if (binding.FallbackListRows.Count > 0)
             {
+                int count = quests?.Count ?? 0;
+                int pageSize = binding.FallbackListRows.Count;
+                binding.FallbackPage = MobileQuestBindingPolicy.ClampPage(binding.FallbackPage, count, pageSize);
                 for (int i = 0; i < binding.FallbackListRows.Count; i++)
-                    RenderQuestListItem(i, binding.FallbackListRows[i], quests, selectedQuestIndex);
+                {
+                    int itemIndex = MobileQuestBindingPolicy.PageItemIndex(binding.FallbackPage, i, count, pageSize);
+                    RenderQuestListItem(itemIndex, binding.FallbackListRows[i], quests, selectedQuestIndex);
+                }
+                int pageCount = MobileQuestBindingPolicy.PageCount(count, pageSize);
+                try { if (binding.FallbackPageLabel != null) binding.FallbackPageLabel.text = $"{binding.FallbackPage + 1}/{pageCount}"; } catch { }
+                SetMobileActivityPageButtonState(binding.FallbackPrevious, binding.FallbackPage > 0);
+                SetMobileActivityPageButtonState(binding.FallbackNext, binding.FallbackPage + 1 < pageCount);
                 return;
             }
 
@@ -970,6 +992,24 @@ namespace MonoShare
                         rowTitle.SetSize(rowWidth, 50F);
                 }
 
+                GButton previous = CreateMobileQuestActionButton(component, "activity_page_previous", "上一页");
+                previous.SetPosition(24F, 430F);
+                previous.SetSize(86F, 38F);
+                if (previous.GetChild("background") is GGraph previousBackground)
+                    previousBackground.SetSize(86F, 38F);
+                if (previous.GetChild("title") is GTextField previousTitle)
+                    previousTitle.SetSize(86F, 38F);
+
+                AddMobileActivityFallbackText(component, "activity_page_label", "1/1", 118F, 430F, 72F, 38F, 17, Color.White, true);
+
+                GButton next = CreateMobileQuestActionButton(component, "activity_page_next", "下一页");
+                next.SetPosition(198F, 430F);
+                next.SetSize(86F, 38F);
+                if (next.GetChild("background") is GGraph nextBackground)
+                    nextBackground.SetSize(86F, 38F);
+                if (next.GetChild("title") is GTextField nextTitle)
+                    nextTitle.SetSize(86F, 38F);
+
                 GButton close = CreateMobileQuestActionButton(component, "closeButton", "关闭");
                 close.SetPosition(width - 84F, 16F);
                 close.SetSize(60F, 38F);
@@ -988,6 +1028,49 @@ namespace MonoShare
                 resolveInfo = null;
                 return false;
             }
+        }
+
+        private static void AttachMobileActivityFallbackPaging(MobileQuestWindowBinding binding)
+        {
+            if (binding == null)
+                return;
+
+            if (binding.FallbackPrevious != null && binding.FallbackPreviousClick == null)
+            {
+                binding.FallbackPreviousClick = () =>
+                {
+                    if (binding.FallbackPage <= 0)
+                        return;
+                    binding.FallbackPage--;
+                    _mobileQuestDirty = true;
+                    TryRefreshMobileQuestIfDue(force: true);
+                };
+                binding.FallbackPrevious.onClick.Add(binding.FallbackPreviousClick);
+            }
+
+            if (binding.FallbackNext != null && binding.FallbackNextClick == null)
+            {
+                binding.FallbackNextClick = () =>
+                {
+                    int count = BuildMobileQuestList(_mobileQuestContext.NpcObjectId).Count;
+                    int pageSize = Math.Max(1, binding.FallbackListRows.Count);
+                    if (binding.FallbackPage + 1 >= MobileQuestBindingPolicy.PageCount(count, pageSize))
+                        return;
+                    binding.FallbackPage++;
+                    _mobileQuestDirty = true;
+                    TryRefreshMobileQuestIfDue(force: true);
+                };
+                binding.FallbackNext.onClick.Add(binding.FallbackNextClick);
+            }
+        }
+
+        private static void SetMobileActivityPageButtonState(GButton button, bool enabled)
+        {
+            if (button == null || button._disposed)
+                return;
+
+            try { button.touchable = enabled; } catch { }
+            try { button.grayed = !enabled; } catch { }
         }
 
         private static GTextField AddMobileActivityFallbackText(

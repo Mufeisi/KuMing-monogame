@@ -101,6 +101,34 @@ internal static class MobileQuestBindingPolicy
         return activityMode && string.Equals(windowKey, "Quest", StringComparison.OrdinalIgnoreCase);
     }
 
+    public static bool ShouldReplaceExistingQuestWindow(string windowKey, bool activityMode, bool existingIsActivityFallback)
+    {
+        return string.Equals(windowKey, "Quest", StringComparison.OrdinalIgnoreCase) &&
+               activityMode != existingIsActivityFallback;
+    }
+
+    public static int PageCount(int itemCount, int pageSize)
+    {
+        if (itemCount <= 0 || pageSize <= 0)
+            return 1;
+
+        return (itemCount + pageSize - 1) / pageSize;
+    }
+
+    public static int ClampPage(int page, int itemCount, int pageSize)
+    {
+        return Math.Clamp(page, 0, PageCount(itemCount, pageSize) - 1);
+    }
+
+    public static int PageItemIndex(int page, int row, int itemCount, int pageSize)
+    {
+        if (row < 0 || pageSize <= 0 || row >= pageSize)
+            return -1;
+
+        int index = ClampPage(page, itemCount, pageSize) * pageSize + row;
+        return index >= 0 && index < itemCount ? index : -1;
+    }
+
     public static IReadOnlyList<string> MissingOperationTargets(IEnumerable<string> reliableOperationKeys)
     {
         var reliable = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
