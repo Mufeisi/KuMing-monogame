@@ -96,6 +96,11 @@ internal static class MobileQuestBindingPolicy
         return activityMode && visibleCandidateCount > 1;
     }
 
+    public static bool ShouldUseWindowFallback(string windowKey, bool activityMode)
+    {
+        return activityMode && string.Equals(windowKey, "Quest", StringComparison.OrdinalIgnoreCase);
+    }
+
     public static IReadOnlyList<string> MissingOperationTargets(IEnumerable<string> reliableOperationKeys)
     {
         var reliable = new HashSet<string>(StringComparer.OrdinalIgnoreCase);

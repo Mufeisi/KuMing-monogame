@@ -22,6 +22,7 @@ namespace MonoShare
         private const string MobileQuestAbandonConfigKey = "MobileQuest.Abandon";
         private const string MobileQuestShareConfigKey = "MobileQuest.Share";
         private const string MobileQuestTrackConfigKey = "MobileQuest.Track";
+        private const string MobileActivityFallbackName = "__codex_mobile_activity_fallback";
 
         private static readonly string[] DefaultQuestListKeywords = { "DA2EGrid3", "任务_DA2EWindow1UI", "任务", "quest", "diary", "log", "list" };
         private static readonly string[] DefaultQuestTitleKeywords = { "任务", "quest", "title", "name", "标题", "名称" };
@@ -52,6 +53,7 @@ namespace MonoShare
             public string ListOverrideSpec;
             public string[] ListOverrideKeywords;
             public ListItemRenderer Renderer;
+            public readonly List<GButton> FallbackListRows = new List<GButton>();
 
             public GTextField Title;
             public string TitleResolveInfo;
@@ -161,6 +163,16 @@ namespace MonoShare
                     try { if (binding.List != null && !binding.List._disposed) binding.List.itemRenderer = null; } catch { }
                     try
                     {
+                        for (int i = 0; i < binding.FallbackListRows.Count; i++)
+                        {
+                            GButton row = binding.FallbackListRows[i];
+                            if (row?.data is MobileQuestItemView view && view.Click != null)
+                                row.onClick.Remove(view.Click);
+                        }
+                    }
+                    catch { }
+                    try
+                    {
                         for (int i = 0; i < binding.RewardSelectionButtons.Count; i++)
                         {
                             GButton button = binding.RewardSelectionButtons[i];
@@ -227,6 +239,21 @@ namespace MonoShare
                     Window = window,
                     ResolveInfo = resolveInfo,
                 };
+
+                if (string.Equals(window.name, MobileActivityFallbackName, StringComparison.Ordinal))
+                {
+                    try { _mobileQuestBinding.Title = window.GetChild("activity_title") as GTextField; } catch { }
+                    try { _mobileQuestBinding.Content = window.GetChild("activity_content") as GTextField; } catch { }
+                    for (int i = 0; i < 6; i++)
+                    {
+                        try
+                        {
+                            if (window.GetChild("activity_row_" + i) is GButton row && !row._disposed)
+                                _mobileQuestBinding.FallbackListRows.Add(row);
+                        }
+                        catch { }
+                    }
+                }
             }
 
             if (DateTime.UtcNow < _nextMobileQuestBindAttemptUtc)
@@ -236,7 +263,7 @@ namespace MonoShare
             if (binding == null)
                 return;
 
-            bool listBound = binding.List != null && !binding.List._disposed;
+            bool listBound = (binding.List != null && !binding.List._disposed) || binding.FallbackListRows.Count > 0;
             if (listBound && binding.Accept != null && !binding.Accept._disposed && binding.Finish != null && !binding.Finish._disposed)
                 return;
 
@@ -299,7 +326,7 @@ namespace MonoShare
             var usedButtonTargets = new HashSet<GObject>();
 
             // List
-            if (binding.List == null || binding.List._disposed)
+            if ((binding.List == null || binding.List._disposed) && binding.FallbackListRows.Count == 0)
             {
                 string[] keywordsUsed = DefaultQuestListKeywords;
                 GList list = null;
@@ -882,7 +909,17 @@ namespace MonoShare
 
         private static void TryRefreshQuestList(MobileQuestWindowBinding binding, List<ClientQuestProgress> quests, int selectedQuestIndex)
         {
-            if (binding == null || binding.List == null || binding.List._disposed)
+            if (binding == null)
+                return;
+
+            if (binding.FallbackListRows.Count > 0)
+            {
+                for (int i = 0; i < binding.FallbackListRows.Count; i++)
+                    RenderQuestListItem(i, binding.FallbackListRows[i], quests, selectedQuestIndex);
+                return;
+            }
+
+            if (binding.List == null || binding.List._disposed)
                 return;
 
             try
@@ -894,6 +931,98 @@ namespace MonoShare
             catch
             {
             }
+        }
+
+        private static bool TryCreateMobileActivityFallbackWindow(out GComponent component, out string resolveInfo)
+        {
+            component = null;
+            resolveInfo = null;
+
+            try
+            {
+                float width = Math.Max(720F, GRoot.inst?.width ?? 720F);
+                float height = Math.Max(640F, GRoot.inst?.height ?? 1280F);
+                component = new GComponent
+                {
+                    name = MobileActivityFallbackName,
+                    touchable = true,
+                    opaque = true,
+                };
+                component.SetSize(width, height);
+
+                var background = new GGraph { name = "activity_background", touchable = false };
+                background.DrawRect(width, height, 2, new Color(90, 110, 150, 255), new Color(22, 28, 42, 248));
+                component.AddChild(background);
+
+                AddMobileActivityFallbackText(component, "activity_heading", "活动 / 赏金", 24F, 14F, width - 96F, 48F, 26, Color.White, true);
+                AddMobileActivityFallbackText(component, "activity_title", string.Empty, width * 0.38F, 70F, width * 0.58F, 40F, 21, Color.White, true);
+                AddMobileActivityFallbackText(component, "activity_content", string.Empty, width * 0.38F, 116F, width * 0.58F, Math.Max(220F, height - 210F), 17, Color.LightGray, false);
+
+                float rowWidth = width * 0.32F;
+                for (int i = 0; i < 6; i++)
+                {
+                    GButton row = CreateMobileQuestActionButton(component, "activity_row_" + i, string.Empty);
+                    row.SetPosition(24F, 76F + i * 58F);
+                    row.SetSize(rowWidth, 50F);
+                    if (row.GetChild("background") is GGraph rowBackground)
+                        rowBackground.SetSize(rowWidth, 50F);
+                    if (row.GetChild("title") is GTextField rowTitle)
+                        rowTitle.SetSize(rowWidth, 50F);
+                }
+
+                GButton close = CreateMobileQuestActionButton(component, "closeButton", "关闭");
+                close.SetPosition(width - 84F, 16F);
+                close.SetSize(60F, 38F);
+                if (close.GetChild("background") is GGraph closeBackground)
+                    closeBackground.SetSize(60F, 38F);
+                if (close.GetChild("title") is GTextField closeTitle)
+                    closeTitle.SetSize(60F, 38F);
+
+                resolveInfo = "fallback(activity)";
+                return true;
+            }
+            catch
+            {
+                try { component?.Dispose(); } catch { }
+                component = null;
+                resolveInfo = null;
+                return false;
+            }
+        }
+
+        private static GTextField AddMobileActivityFallbackText(
+            GComponent parent,
+            string name,
+            string text,
+            float x,
+            float y,
+            float width,
+            float height,
+            int size,
+            Color color,
+            bool bold)
+        {
+            var field = new GTextField
+            {
+                name = name,
+                text = text ?? string.Empty,
+                touchable = false,
+                align = AlignType.Left,
+                verticalAlign = VertAlignType.Top,
+                autoSize = AutoSizeType.None,
+                singleLine = false,
+            };
+            field.SetPosition(x, y);
+            field.SetSize(width, height);
+            try
+            {
+                field.textFormat.size = size;
+                field.textFormat.color = color;
+                field.textFormat.bold = bold;
+            }
+            catch { }
+            parent.AddChild(field);
+            return field;
         }
 
         private static void RenderQuestListItem(int index, GObject obj, List<ClientQuestProgress> quests, int selectedQuestIndex)

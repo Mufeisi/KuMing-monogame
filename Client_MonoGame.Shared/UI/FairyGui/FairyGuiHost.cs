@@ -1717,7 +1717,11 @@ namespace MonoShare
                     return true;
                 }
 
-                if (!TryCreateMobileWindowComponent(windowKey, keywords, out GComponent component, out string resolveInfo))
+                bool useActivityFallback = MobileQuestBindingPolicy.ShouldUseWindowFallback(windowKey, _mobileQuestContext.IsActivityMode);
+                bool created = useActivityFallback
+                    ? TryCreateMobileActivityFallbackWindow(out GComponent component, out string resolveInfo)
+                    : TryCreateMobileWindowComponent(windowKey, keywords, out component, out resolveInfo);
+                if (!created)
                 {
                     // NPC 对话框：某些资源包可能缺失/命名不一致，提供兜底窗口保证交互链路可用
                     if (string.Equals(windowKey, "Npc", StringComparison.OrdinalIgnoreCase))
@@ -1823,7 +1827,11 @@ namespace MonoShare
                     return true;
                 }
 
-                if (!TryCreateMobileWindowComponent(windowKey, keywords, out GComponent component, out string resolveInfo))
+                bool useActivityFallback = MobileQuestBindingPolicy.ShouldUseWindowFallback(windowKey, _mobileQuestContext.IsActivityMode);
+                bool created = useActivityFallback
+                    ? TryCreateMobileActivityFallbackWindow(out GComponent component, out string resolveInfo)
+                    : TryCreateMobileWindowComponent(windowKey, keywords, out component, out resolveInfo);
+                if (!created)
                 {
                     bool createdFallback = false;
                     if (string.Equals(windowKey, "Mentor", StringComparison.OrdinalIgnoreCase))

@@ -55,6 +55,9 @@ public sealed class MobileActivityStateTests
         Assert.False(MobileQuestBindingPolicy.ShouldCreateFallback(activityMode: false, reliableOperationCount: 4));
         Assert.True(MobileQuestBindingPolicy.ShouldCreateRewardBar(activityMode: true, visibleCandidateCount: 2));
         Assert.False(MobileQuestBindingPolicy.ShouldCreateRewardBar(activityMode: false, visibleCandidateCount: 2));
+        Assert.True(MobileQuestBindingPolicy.ShouldUseWindowFallback("Quest", activityMode: true));
+        Assert.False(MobileQuestBindingPolicy.ShouldUseWindowFallback("Quest", activityMode: false));
+        Assert.False(MobileQuestBindingPolicy.ShouldUseWindowFallback("Npc", activityMode: true));
     }
 
     [Fact]
