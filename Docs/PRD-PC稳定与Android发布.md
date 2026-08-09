@@ -114,7 +114,7 @@ GATE-P0 ──► GATE-P1 ──► GATE-P2 ──► GATE-P3 ──► GATE-P4 
 | GATE-P0 | **已完成**；远程 CI 证据见 §P0 | 无 |
 | GATE-P1 | **已完成**：ANDROID-01 商城逍遥端到端通过；ANDROID-02..07 按本轮替代口径完成真实协议/门控/权威响应/UI 投影使用探针并复核通过；PROTO-01、BASE-10、PERF-00 证据已归档；Base05 集成 223/223 通过；远程 CI `31313826844` 的 Windows、通用测试、Android Release arm64 AOT 全绿 | 无 |
 | GATE-P2 | **已完成**：SEC-01～SEC-06 全部完成；签名私钥与发布流水线按边界留在 RELEASE-01/02 | 按门禁顺序进入 GATE-P3 |
-| GATE-P3 | **进行中**：DB-01～03 已完成，DB-04～06 未开始 | 按依赖进入 DB-04 |
+| GATE-P3 | **进行中**：DB-01～04、DB-06 已完成；DB-05 的真实最坏崩溃点故障注入仍待完成 | 返回 DB-05 并关闭 T-10 |
 | GATE-P4 | PERF-00 采集基建已完成，真实基线/PERF-01..05 未开始 | 等待 GATE-P3 与真实 S1/S2/S3 输入 |
 | GATE-P5 | 未开始 | 等待 GATE-P4 |
 
@@ -235,9 +235,9 @@ GATE-P1 关闭后，P2 的 SEC-03、SEC-04、SEC-05、SEC-06 各为独立任务�
 
 **DB-03 SQLite 在线备份收口记录（2026-08-10）**：正式宿主在 SQLite 资源加载后启动独立备份服务，启动即后台首备并按配置周期执行；使用 Microsoft.Data.Sqlite 在线 Backup API 从 WAL 源库生成一致副本，本地和异地副本均经 `integrity_check=ok` 后从 `.partial` 原子发布。保留策略只清理 `lyocrystal-sqlite-*.db` 受管文件；根目录、文件占位、相同或嵌套目录被拒绝。正式服 SQLite 不允许关闭自动备份，异地目录只接受 UNC 或不同卷，且本地状态目录和异地目录必须在进入 Ready 前真实可写。Administrator 可经受鉴权、审计的 `POST /backup/run` 一键触发，Operator 可查询 `GET /backup/status`；最近状态同时原子持久化，运行中断或状态损坏在重启后转为失败。本地副本发布后先记录有效路径再执行保留，清理失败不会隐藏已生成副本。WAL 未提交事务隔离、本地/异地可读性、当前 Windows `C:`→`D:` 真实跨卷复制、损坏拒绝、自动首备、保留、状态恢复与真实端点角色边界均有专项验证；最终计数与构建证据见 `Docs/Evidence/GATE-P3/db03-online-backup-20260810/`，运维说明见 `Docs/DB-03-SQLite在线备份与状态监控.md`。DB-03 不替代 DB-04 的空环境/强停恢复演练，GATE-P3 仍未关闭。
 
-**DB-06 MySQL 切换门槛收口记录（2026-08-10）**：SQLite 保持默认数据库；只有峰值在线玩家连续 7 天达到 500、主库连续 3 天达到 10 GiB、`SaveTransactionCommit` P95 连续 3 天达到 750ms，或保存失败连续 3 小时达到每小时 3 次中的任一项，才进入 MySQL 迁移规划。单次尖峰、窗口不足或没有触发项均明确返回继续 SQLite。迁移前门禁直接重新判定原始指标，要求备份服务源库与当前 `Settings.SqlitePath` 一致，以唯一触发标识复用 DB-03 服务现场生成新本地/异地副本，强制异地为 UNC/不同卷，再次检查两份数据库完整性，并将格式版本、规范化源路径、指标、路径和 SHA-256 作为 Windows DPAPI `CurrentUser` 受保护授权原子保存。正式 `CreateFromSettings()` 选择 MySQL 前必须解密记录、核对当前源库、重新计算门槛并复验完整性与摘要；仅修改 provider、手写 JSON、使用其他源库/同卷目录或篡改副本均失败关闭。DB-06 不实现实际迁移、双写、Schema 映射或回切；说明见 `Docs/DB-06-MySQL切换门槛与迁移前备份.md`，证据见 `Docs/Evidence/GATE-P3/db06-mysql-threshold-20260810/`。DB-04 与 DB-05 仍未完成，GATE-P3 保持开启。
+**DB-06 MySQL 切换门槛收口记录（2026-08-10）**：SQLite 保持默认数据库；只有峰值在线玩家连续 7 天达到 500、主库连续 3 天达到 10 GiB、`SaveTransactionCommit` P95 连续 3 天达到 750ms，或保存失败连续 3 小时达到每小时 3 次中的任一项，才进入 MySQL 迁移规划。单次尖峰、窗口不足或没有触发项均明确返回继续 SQLite。迁移前门禁直接重新判定原始指标，要求备份服务源库与当前 `Settings.SqlitePath` 一致，以唯一触发标识复用 DB-03 服务现场生成新本地/异地副本，强制异地为 UNC/不同卷，再次检查两份数据库完整性，并将格式版本、规范化源路径、指标、路径和 SHA-256 作为 Windows DPAPI `CurrentUser` 受保护授权原子保存。正式 `CreateFromSettings()` 选择 MySQL 前必须解密记录、核对当前源库、重新计算门槛并复验完整性与摘要；仅修改 provider、手写 JSON、使用其他源库/同卷目录或篡改副本均失败关闭。DB-06 不实现实际迁移、双写、Schema 映射或回切；说明见 `Docs/DB-06-MySQL切换门槛与迁移前备份.md`，证据见 `Docs/Evidence/GATE-P3/db06-mysql-threshold-20260810/`。DB-05 仍未完成，GATE-P3 保持开启。
 
-**DB-04 SQLite 恢复演练收口记录（2026-08-10）**：现有 `Server.MirForms` 宿主增加离线 `--restore-sqlite` 模式，复用 Server 库恢复接缝；来源副本和目标目录 `.partial` 均通过 `integrity_check` 后才同目录原子发布，正在使用的目标库失败关闭。已有主库及强停遗留 WAL/SHM 被保留为同代次 `.pre-restore` 回滚组，损坏副本不会覆盖原库。当前版本真实进程演练先用与 DB-03 相同的 `BackupDatabase` API 从 WAL 源库生成副本：空环境恢复到读取验证完成 1161ms；另一个 WAL 事务进程被强制终止并确认 WAL/SHM 后，从在线备份产物恢复到读取验证完成 1157ms，备份年龄 2.224 秒，满足 RPO≤5 分钟、RTO≤30 分钟。实现说明和每版本演练步骤见 `Docs/DB-04-SQLite恢复演练.md`，证据见 `Docs/Evidence/GATE-P3/db04-restore-drill-20260810/`。DB-04 不替代 DB-05 的生产保存间隔强校验及故障注入，GATE-P3 仍未关闭。
+**DB-04 SQLite 恢复演练收口记录（2026-08-10）**：现有 `Server.MirForms` 宿主提供离线 `--restore-sqlite` 模式，复用 Server 库恢复接缝；来源必须是 DB-03 独立主库副本，来源或目标目录 `.partial` 任一 `integrity_check` 失败都不会覆盖原库。强停目标先在离线独占条件下 checkpoint 已提交 WAL、切换 DELETE journal，并复制刷新为已验证单文件 `.pre-restore` 回滚工件，再以同目录 `File.Replace` 原子发布；任一进程中断点上正式目标都是独立可读的旧库或新库。发布后校验失败会原子回滚，回滚步骤失败则汇总报告不完整。当前 Windows Release 真实演练使用 DB-03 正式服务生成 C: 本地和 D: 异卷同哈希副本；备份后提交账号金币 777，在 WAL/SHM 存在时强停 PID 1156，正式 CLI 返回 0，恢复后五个业务域复读成功且宿主进入 `Ready`。可复算 RPO 为 303ms，恢复命令到 Ready 的 RTO 为 600ms，故障到 Ready 为 625ms，满足 RPO≤5 分钟、RTO≤30 分钟。原始命令、时间、PID、文件/hash、stdout/stderr 和退出码见 `Docs/Evidence/GATE-P3/db04-restore-drill-20260810/raw-powershell-transcript.txt`。DB-04 不替代 DB-05 的生产保存间隔及最坏崩溃点故障注入，GATE-P3 仍未关闭。
 
 **GATE-P2 退出条件**：公开测试前安全项全部完成；凭据不通过未加密网络传输；公网无 V1 明文登录。
 

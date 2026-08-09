@@ -1,4 +1,6 @@
 using System.Diagnostics;
+using System.Runtime.ExceptionServices;
+using Microsoft.Data.Sqlite;
 
 namespace Server.Persistence.Sql;
 
@@ -13,12 +15,20 @@ public sealed class SqliteRestoreResult
 }
 
 /// <summary>
-/// SQLite 离线恢复接缝：校验副本、同目录原子替换，并保留被替换数据库及强停 sidecar 作为回滚工件。
+/// SQLite 离线恢复接缝：先把强停 WAL 安全收敛为单文件旧库，再原子替换主库。
+/// 任一进程中断点上的正式目标都保持为可独立打开的旧库或新库。
 /// </summary>
 public static class SqliteRestoreService
 {
     public static SqliteRestoreResult Restore(string backupPath, string targetPath)
+        => Restore(backupPath, targetPath, new SqliteRestoreOperations());
+
+    internal static SqliteRestoreResult Restore(
+        string backupPath,
+        string targetPath,
+        SqliteRestoreOperations operations)
     {
+        ArgumentNullException.ThrowIfNull(operations);
         var stopwatch = Stopwatch.StartNew();
         if (string.IsNullOrWhiteSpace(backupPath))
             throw new InvalidOperationException("SQLite 恢复副本路径未提供");
@@ -30,8 +40,10 @@ public static class SqliteRestoreService
             throw new FileNotFoundException("SQLite 恢复副本不存在", backup);
         if (string.Equals(backup, target, StringComparison.OrdinalIgnoreCase))
             throw new InvalidOperationException("SQLite 恢复副本不能与目标数据库相同");
+        if (File.Exists(backup + "-wal") || File.Exists(backup + "-shm"))
+            throw new InvalidOperationException("SQLite 恢复副本必须是 DB-03 生成的独立主库文件，不能携带 WAL/SHM");
 
-        SqliteBackupService.ValidateIntegrity(backup);
+        operations.ValidateIntegrity(backup);
 
         string targetDirectory = Path.GetDirectoryName(target)
             ?? throw new InvalidOperationException("SQLite 目标数据库目录无效");
@@ -42,71 +54,109 @@ public static class SqliteRestoreService
         string operationId = DateTimeOffset.UtcNow.ToString("yyyyMMddHHmmssfff") + "-" + Guid.NewGuid().ToString("N")[..8];
         string partial = Path.Combine(targetDirectory, "." + Path.GetFileName(target) + ".restore-" + operationId + ".partial");
         string rollback = File.Exists(target) ? target + ".pre-restore-" + operationId : string.Empty;
-        string wal = target + "-wal";
-        string shm = target + "-shm";
-        string rollbackWal = File.Exists(wal) ? wal + ".pre-restore-" + operationId : string.Empty;
-        string rollbackShm = File.Exists(shm) ? shm + ".pre-restore-" + operationId : string.Empty;
+        string rollbackPartial = string.IsNullOrEmpty(rollback) ? string.Empty : rollback + ".partial";
         bool targetPublished = false;
-        bool walMoved = false;
-        bool shmMoved = false;
 
         try
         {
-            CopyAndFlush(backup, partial);
-            SqliteBackupService.ValidateIntegrity(partial);
+            operations.CopyAndFlush(backup, partial);
+            operations.ValidateIntegrity(partial);
             EnsureTargetOffline(target);
 
-            if (!string.IsNullOrEmpty(rollbackWal))
+            if (!string.IsNullOrEmpty(rollback))
             {
-                File.Move(wal, rollbackWal);
-                walMoved = true;
-            }
-            if (!string.IsNullOrEmpty(rollbackShm))
-            {
-                File.Move(shm, rollbackShm);
-                shmMoved = true;
+                operations.PrepareStandaloneTarget(target);
+                operations.ValidateIntegrity(target);
+                operations.CopyAndFlush(target, rollback);
+                operations.ValidateIntegrity(rollback);
+                DeleteStrict(target + "-wal", operations);
+                DeleteStrict(target + "-shm", operations);
             }
 
+            operations.BeforePublish();
             if (!string.IsNullOrEmpty(rollback))
-                File.Replace(partial, target, rollback, ignoreMetadataErrors: true);
+                operations.Replace(partial, target, null);
             else
-                File.Move(partial, target);
+                operations.Move(partial, target);
             targetPublished = true;
 
-            SqliteBackupService.ValidateIntegrity(target);
+            operations.ValidateIntegrity(target);
             stopwatch.Stop();
             return new SqliteRestoreResult
             {
                 BackupPath = backup,
                 TargetPath = target,
                 RollbackPath = rollback,
-                RollbackWalPath = rollbackWal,
-                RollbackShmPath = rollbackShm,
                 DurationMilliseconds = stopwatch.ElapsedMilliseconds,
             };
         }
-        catch
+        catch (Exception restoreFailure)
         {
+            var rollbackFailures = new List<Exception>();
             if (targetPublished)
             {
                 if (!string.IsNullOrEmpty(rollback) && File.Exists(rollback))
-                    File.Replace(rollback, target, destinationBackupFileName: null, ignoreMetadataErrors: true);
+                {
+                    TryRollbackStep(
+                        "主库",
+                        () =>
+                        {
+                            operations.CopyAndFlush(rollback, rollbackPartial);
+                            operations.ValidateIntegrity(rollbackPartial);
+                            operations.Replace(rollbackPartial, target, null);
+                            operations.ValidateIntegrity(target);
+                        },
+                        rollbackFailures);
+                }
                 else
-                    TryDelete(target);
+                {
+                    TryRollbackStep("空环境目标库", () => DeleteStrict(target, operations), rollbackFailures);
+                }
             }
-            if (shmMoved && File.Exists(rollbackShm) && !File.Exists(shm))
-                File.Move(rollbackShm, shm);
-            if (walMoved && File.Exists(rollbackWal) && !File.Exists(wal))
-                File.Move(rollbackWal, wal);
+            if (rollbackFailures.Count > 0)
+            {
+                var failures = new List<Exception> { restoreFailure };
+                failures.AddRange(rollbackFailures);
+                throw new AggregateException("SQLite 恢复失败且回滚不完整", failures);
+            }
+            ExceptionDispatchInfo.Capture(restoreFailure).Throw();
             throw;
         }
         finally
         {
             TryDelete(partial);
+            TryDelete(rollbackPartial);
         }
     }
 
-    private static void CopyAndFlush(string source, string destination)
+    internal static void PrepareStandaloneTarget(string target)
+    {
+        var builder = new SqliteConnectionStringBuilder
+        {
+            DataSource = target,
+            Mode = SqliteOpenMode.ReadWrite,
+            Cache = SqliteCacheMode.Private,
+            Pooling = false,
+        };
+        using var connection = new SqliteConnection(builder.ConnectionString);
+        connection.Open();
+        using (SqliteCommand checkpoint = connection.CreateCommand())
+        {
+            checkpoint.CommandText = "PRAGMA wal_checkpoint(TRUNCATE);";
+            using SqliteDataReader reader = checkpoint.ExecuteReader();
+            if (!reader.Read() || reader.GetInt32(0) != 0)
+                throw new IOException("SQLite WAL checkpoint 未能排空，恢复中止");
+        }
+        using (SqliteCommand journal = connection.CreateCommand())
+        {
+            journal.CommandText = "PRAGMA journal_mode=DELETE;";
+            string mode = Convert.ToString(journal.ExecuteScalar()) ?? string.Empty;
+            if (!string.Equals(mode, "delete", StringComparison.OrdinalIgnoreCase))
+                throw new IOException("SQLite 目标库未能切换为独立 DELETE journal 模式");
+        }
+    }
+
+    internal static void CopyAndFlush(string source, string destination)
     {
         using var input = new FileStream(source, FileMode.Open, FileAccess.Read, FileShare.Read);
         using var output = new FileStream(
@@ -133,14 +183,40 @@ public static class SqliteRestoreService
         }
     }
 
-    private static void TryDelete(string path)
+    private static void DeleteStrict(string path, SqliteRestoreOperations operations)
+    {
+        if (!File.Exists(path)) return;
+        operations.Delete(path);
+        if (File.Exists(path))
+            throw new IOException($"SQLite 文件删除后仍然存在：{path}");
+    }
+
+    private static void TryRollbackStep(string name, Action action, ICollection<Exception> failures)
     {
         try
         {
-            if (File.Exists(path)) File.Delete(path);
+            action();
         }
-        catch
+        catch (Exception ex)
         {
+            failures.Add(new IOException($"SQLite {name}回滚失败", ex));
         }
     }
+
+    private static void TryDelete(string path)
+    {
+        try { if (!string.IsNullOrEmpty(path) && File.Exists(path)) File.Delete(path); } catch { }
+    }
+}
+
+internal sealed class SqliteRestoreOperations
+{
+    internal Action<string> ValidateIntegrity { get; init; } = SqliteBackupService.ValidateIntegrity;
+    internal Action<string> PrepareStandaloneTarget { get; init; } = SqliteRestoreService.PrepareStandaloneTarget;
+    internal Action<string, string> CopyAndFlush { get; init; } = SqliteRestoreService.CopyAndFlush;
+    internal Action BeforePublish { get; init; } = () => { };
+    internal Action<string, string> Move { get; init; } = (source, destination) => File.Move(source, destination);
+    internal Action<string, string, string> Replace { get; init; } =
+        (source, destination, backup) => File.Replace(source, destination, backup, ignoreMetadataErrors: true);
+    internal Action<string> Delete { get; init; } = File.Delete;
 }

@@ -51,22 +51,42 @@ public sealed class SqliteRestoreServiceTests
     }
 
     [Fact]
-    public void 强停遗留库和Sidecar被替换并保留为回滚工件()
+    public void 真实WAL强停副本先收敛为单文件回滚库再原子恢复()
     {
         using var fixture = new RestoreFixture();
         fixture.CreateDatabase(fixture.BackupPath, 99);
-        fixture.CreateDatabase(fixture.TargetPath, 7);
-        File.WriteAllText(fixture.TargetPath + "-wal", "forced-stop-wal");
-        File.WriteAllText(fixture.TargetPath + "-shm", "forced-stop-shm");
+        fixture.CreateForcedStopCopy(fixture.TargetPath, initialValue: 7, committedWalValue: 8);
+        Assert.True(File.Exists(fixture.TargetPath + "-wal"));
+        Assert.True(File.Exists(fixture.TargetPath + "-shm"));
 
         SqliteRestoreResult result = SqliteRestoreService.Restore(fixture.BackupPath, fixture.TargetPath);
 
         Assert.Equal(99, fixture.ReadValue(fixture.TargetPath));
-        Assert.Equal(7, fixture.ReadValue(result.RollbackPath));
-        Assert.Equal("forced-stop-wal", File.ReadAllText(result.RollbackWalPath));
-        Assert.Equal("forced-stop-shm", File.ReadAllText(result.RollbackShmPath));
+        Assert.Equal(8, fixture.ReadValue(result.RollbackPath));
         Assert.False(File.Exists(fixture.TargetPath + "-wal"));
         Assert.False(File.Exists(fixture.TargetPath + "-shm"));
+        Assert.Equal(string.Empty, result.RollbackWalPath);
+        Assert.Equal(string.Empty, result.RollbackShmPath);
+    }
+
+    [Fact]
+    public void 原子发布前中断时旧库已独立且提交WAL数据不丢失()
+    {
+        using var fixture = new RestoreFixture();
+        fixture.CreateDatabase(fixture.BackupPath, 99);
+        fixture.CreateForcedStopCopy(fixture.TargetPath, initialValue: 7, committedWalValue: 8);
+        var operations = new SqliteRestoreOperations
+        {
+            BeforePublish = () => throw new IOException("模拟原子发布前进程中断点"),
+        };
+
+        Assert.Throws<IOException>(() =>
+            SqliteRestoreService.Restore(fixture.BackupPath, fixture.TargetPath, operations));
+
+        Assert.Equal(8, fixture.ReadValue(fixture.TargetPath));
+        Assert.False(File.Exists(fixture.TargetPath + "-wal"));
+        Assert.False(File.Exists(fixture.TargetPath + "-shm"));
+        Assert.Single(Directory.GetFiles(fixture.TargetDirectory, "*.pre-restore-*"));
     }
 
     [Fact]
@@ -85,7 +105,21 @@ public sealed class SqliteRestoreServiceTests
     }
 
     [Fact]
-    public void 正在使用的目标库拒绝恢复且不移动强停Sidecar()
+    public void 携带Sidecar的来源副本在复制前拒绝()
+    {
+        using var fixture = new RestoreFixture();
+        fixture.CreateDatabase(fixture.BackupPath, 12);
+        File.WriteAllText(fixture.BackupPath + "-wal", "unexpected");
+
+        InvalidOperationException error = Assert.Throws<InvalidOperationException>(() =>
+            SqliteRestoreService.Restore(fixture.BackupPath, fixture.TargetPath));
+
+        Assert.Contains("独立主库文件", error.Message);
+        Assert.False(File.Exists(fixture.TargetPath));
+    }
+
+    [Fact]
+    public void 正在使用的目标库拒绝恢复且不处理Sidecar()
     {
         using var fixture = new RestoreFixture();
         fixture.CreateDatabase(fixture.BackupPath, 12);
@@ -98,6 +132,87 @@ public sealed class SqliteRestoreServiceTests
 
         Assert.Contains("服务器停止后执行", error.Message, StringComparison.Ordinal);
         Assert.Equal("keep-wal", File.ReadAllText(fixture.TargetPath + "-wal"));
+    }
+
+    [Fact]
+    public void 发布后最终校验失败会从独立回滚库恢复旧值()
+    {
+        using var fixture = new RestoreFixture();
+        fixture.CreateDatabase(fixture.BackupPath, 99);
+        fixture.CreateDatabase(fixture.TargetPath, 7);
+        int targetValidations = 0;
+        var operations = new SqliteRestoreOperations
+        {
+            ValidateIntegrity = path =>
+            {
+                if (string.Equals(Path.GetFullPath(path), Path.GetFullPath(fixture.TargetPath), StringComparison.OrdinalIgnoreCase) &&
+                    ++targetValidations == 2)
+                    throw new InvalidDataException("模拟发布后最终校验失败");
+                SqliteBackupService.ValidateIntegrity(path);
+            },
+        };
+
+        Assert.Throws<InvalidDataException>(() =>
+            SqliteRestoreService.Restore(fixture.BackupPath, fixture.TargetPath, operations));
+
+        Assert.Equal(7, fixture.ReadValue(fixture.TargetPath));
+        Assert.Single(Directory.GetFiles(fixture.TargetDirectory, "*.pre-restore-*"));
+    }
+
+    [Fact]
+    public void 发布失败且回滚失败时明确报告不完整()
+    {
+        using var fixture = new RestoreFixture();
+        fixture.CreateDatabase(fixture.BackupPath, 99);
+        fixture.CreateDatabase(fixture.TargetPath, 7);
+        int targetValidations = 0;
+        var operations = new SqliteRestoreOperations
+        {
+            ValidateIntegrity = path =>
+            {
+                if (string.Equals(Path.GetFullPath(path), Path.GetFullPath(fixture.TargetPath), StringComparison.OrdinalIgnoreCase) &&
+                    ++targetValidations == 2)
+                    throw new InvalidDataException("模拟发布后最终校验失败");
+                SqliteBackupService.ValidateIntegrity(path);
+            },
+            Replace = (source, destination, backup) =>
+            {
+                if (source.Contains(".pre-restore-", StringComparison.Ordinal))
+                    throw new IOException("模拟主库回滚失败");
+                File.Replace(source, destination, backup, ignoreMetadataErrors: true);
+            },
+        };
+
+        AggregateException error = Assert.Throws<AggregateException>(() =>
+            SqliteRestoreService.Restore(fixture.BackupPath, fixture.TargetPath, operations));
+
+        Assert.Contains("回滚不完整", error.Message, StringComparison.Ordinal);
+        Assert.Equal(2, error.InnerExceptions.Count);
+        Assert.Equal(99, fixture.ReadValue(fixture.TargetPath));
+    }
+
+    [Fact]
+    public void 空环境发布后失败且目标删除失败时明确报告回滚不完整()
+    {
+        using var fixture = new RestoreFixture();
+        fixture.CreateDatabase(fixture.BackupPath, 21);
+        var operations = new SqliteRestoreOperations
+        {
+            ValidateIntegrity = path =>
+            {
+                if (string.Equals(Path.GetFullPath(path), Path.GetFullPath(fixture.TargetPath), StringComparison.OrdinalIgnoreCase))
+                    throw new InvalidDataException("模拟发布后最终校验失败");
+                SqliteBackupService.ValidateIntegrity(path);
+            },
+            Delete = _ => throw new UnauthorizedAccessException("模拟目标删除失败"),
+        };
+
+        AggregateException error = Assert.Throws<AggregateException>(() =>
+            SqliteRestoreService.Restore(fixture.BackupPath, fixture.TargetPath, operations));
+
+        Assert.Contains("回滚不完整", error.Message, StringComparison.Ordinal);
+        Assert.True(File.Exists(fixture.TargetPath));
+        Assert.Contains(error.InnerExceptions, ex => ex.Message.Contains("空环境目标库回滚失败", StringComparison.Ordinal));
     }
 
     private sealed class RestoreFixture : IDisposable
@@ -125,6 +240,39 @@ public sealed class SqliteRestoreServiceTests
             command.CommandText = "CREATE TABLE restore_proof(value INTEGER NOT NULL); INSERT INTO restore_proof(value) VALUES ($value);";
             command.Parameters.AddWithValue("$value", value);
             command.ExecuteNonQuery();
+        }
+
+        internal void CreateForcedStopCopy(string targetPath, long initialValue, long committedWalValue)
+        {
+            string livePath = Path.Combine(_root, "forced-live", "server.db");
+            Directory.CreateDirectory(Path.GetDirectoryName(livePath)!);
+            using (var connection = new SqliteConnection($"Data Source={livePath};Pooling=False"))
+            {
+                connection.Open();
+                using (SqliteCommand setup = connection.CreateCommand())
+                {
+                    setup.CommandText = "PRAGMA journal_mode=WAL; PRAGMA wal_autocheckpoint=0; CREATE TABLE restore_proof(value INTEGER NOT NULL); INSERT INTO restore_proof VALUES($value);";
+                    setup.Parameters.AddWithValue("$value", initialValue);
+                    setup.ExecuteNonQuery();
+                }
+                using (SqliteCommand checkpoint = connection.CreateCommand())
+                {
+                    checkpoint.CommandText = "PRAGMA wal_checkpoint(TRUNCATE);";
+                    checkpoint.ExecuteNonQuery();
+                }
+                using (SqliteCommand update = connection.CreateCommand())
+                {
+                    update.CommandText = "UPDATE restore_proof SET value=$value;";
+                    update.Parameters.AddWithValue("$value", committedWalValue);
+                    update.ExecuteNonQuery();
+                }
+                Assert.True(File.Exists(livePath + "-wal"));
+                Assert.True(new FileInfo(livePath + "-wal").Length > 0);
+                Directory.CreateDirectory(Path.GetDirectoryName(targetPath)!);
+                File.Copy(livePath, targetPath);
+                File.Copy(livePath + "-wal", targetPath + "-wal");
+                File.Copy(livePath + "-shm", targetPath + "-shm");
+            }
         }
 
         internal long ReadValue(string path)

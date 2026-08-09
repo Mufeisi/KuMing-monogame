@@ -2,28 +2,31 @@
 
 ## 结论
 
-当前版本已完成空环境与强制停止两条真实恢复演练。副本由与 DB-03 相同的 Microsoft.Data.Sqlite `BackupDatabase` API 从 WAL 源库生成；正式 `Server.dll` 命令对备份和目标 `.partial` 分别执行完整性检查，原子发布新库并保留旧主库/WAL/SHM 回滚组。强停演练 RPO 2.224 秒、完整 RTO 1157ms，满足 RPO≤5 分钟和 RTO≤30 分钟。DB-05 仍需完成生产保存间隔强校验及故障注入，GATE-P3 尚未关闭。
+当前版本已完成空环境、真实 WAL 强停、原子发布、失败回滚和正式 CLI 恢复闭环。恢复前把强停目标收敛为已验证单文件旧库，再原子发布新库，消除了移动主库/WAL/SHM 时再次中断造成跨代次的窗口。
+
+真实演练使用 DB-03 正式备份服务生成 C: 本地与 D: 异卷副本；强停进程 PID、UTC 时间、三文件状态、SHA-256、正式 CLI 输出/退出码、五域读取值和 `Ready` 状态均在 `raw-powershell-transcript.txt` 中。可复算结果：RPO 303ms，恢复命令到 Ready 的 RTO 600ms，故障到 Ready 625ms，满足 RPO≤5 分钟、RTO≤30 分钟。
 
 ## 自动化与构建
 
-1. DB-04 专项：`dotnet test Tests/Base05.Tests/Base05.Tests.csproj -c Release --filter "FullyQualifiedName~SqliteRestoreServiceTests"`。
-   结果：6/6 通过，0 失败，0 跳过。
-2. Base05 全量：288/288 通过，0 失败，0 跳过。
-3. `dotnet build Server/Server.Library.csproj -c Release --no-restore`：0 错误，2 条仓库既有包漏洞警告。
-4. `dotnet build Server.MirForms/Server.csproj -c Release --no-restore`：0 错误，4 条仓库既有包漏洞警告。
-5. 未知 CLI 命令返回退出码 `2` 并输出中文用法。
+1. DB-04 专项：`SqliteRestoreServiceTests`，11/11 通过。
+2. Base05 全量：最终合并基线上 306/306 通过。
+3. `Server.Library` Release：0 错误。
+4. `Server.MirForms` Release：0 错误。
+5. 正式 `Server.dll --restore-sqlite`：退出码 0；未知 CLI 命令测试覆盖退出码 2。
 6. `git diff --check`：通过。
 
-证据文件：`db04-targeted.trx` 为专项 6/6；`db04-base05-full.trx` 为全量 288/288。
+`db04-targeted.trx` 与 `db04-base05-full.trx` 是最终测试原始结果；两份构建日志保留完整输出。
 
 ## 真实进程演练
 
-准备程序只在 `TestResults` 中生成一次性 SQLite 数据，不纳入产品或提交。正式被测入口为 Release 构建的 `Server.dll --restore-sqlite`。
+- 数据：非空账号 `db04-account`、角色 `DB04Character`、行会 `DB04Guild`、商品 `45001.msd`、攻城 `DB04Conquest`，均通过现有 SQL/legacy 接缝写入。
+- 备份：DB-03 `SqliteBackupService.RunNow("db04-real-drill")`；本地与异地副本均为 675840 字节、SHA-256 `99BCCCC54FA82C56C8B632A3E49D3055F0A074621EF764C62FE0FB9F5FE2D69C`、完整性 `ok`。
+- 强停：PID 1156 在提交 `GOLD=777` 后保持 WAL；强停前后均确认主库、4152 字节 WAL 与 32768 字节 SHM 存在。
+- 恢复：正式 Release `Server.dll` 返回 0，报告恢复耗时 101ms；五域复读、完整性检查及宿主 `Ready` 完成后总 RTO 为 600ms。
+- 数据损失边界：恢复后 `GOLD=100`，准确回到 303ms 前的最后成功备份；故障后的 777 不会伪装为已备份数据。
 
-- 空环境：在线 Backup API 产物作为来源，退出码 0，恢复后读取值 `20260810`，从恢复启动到读取验证完成 1161ms。
-- 强停：另一个 WAL 事务进程被强制终止，确认 WAL/SHM 存在；正式入口从在线 Backup API 产物恢复，退出码 0，恢复后读取值 `20260810`；从终止到读取验证完成 1157ms，备份年龄 2.224 秒。
-- 原始输出摘要见 `cli-drill.txt`。
+`cli-drill.txt` 是便于阅读的摘要；审计以 `raw-powershell-transcript.txt` 原始记录为准。一次性演练驱动器位于被忽略的 `TestResults`，不纳入产品或提交。
 
 ## 阶段边界
 
-本记录只证明当前版本完成一次真实演练。每个后续拟发布版本仍需按 `Docs/DB-04-SQLite恢复演练.md` 重新归档。DB-05 的 1～5 分钟生产配置强校验和故障注入不在本任务内。
+DB-04 只证明当前版本的一次真实恢复。DB-05 仍需独立证明生产自动保存最坏崩溃点 RPO；后续拟发布版本必须重新演练。
