@@ -7,9 +7,10 @@
 - 当前分支 Android Debug APK 已成功构建、安装到逍遥模拟器；设备 API 级别为 28。
 - 逍遥窗口曾成功进入游戏主界面；脱敏截图 [android-mentor-entry-sanitized.png](./android-mentor-entry-sanitized.png) 保留右侧“师徒”入口及同组业务入口，不含角色名、账号字段或主机信息。
 - Android 进程无崩溃；日志可见版本握手通过、登录界面进入及 HUD 师徒入口绑定相关运行链路。
-- `MobileMentorStateTests` 10/10 通过，代码侧已覆盖请求、响应、状态刷新和控制项绑定。
+- `MobileMentorStateTests` 11/11 通过，代码侧已覆盖请求、响应、状态刷新和控制项绑定。
+- 使用探针 `Mentor_usage_probe_smoke_projects_request_response_and_server_state_to_ui_values` 1/1 通过；探针输入真实 `MentorRequest`、`MentorReply`、`MentorUpdate` 包，并核对 FairyGUI 刷新所读取的角色、名称、等级、在线状态、经验与控制项投影。
 
-## 本轮未完成
+## 设备环境限制
 
 - 本轮没有形成两名满足服务端条件且同时在线的测试角色，因此没有把“请求→响应→关系状态刷新→师徒窗口内容”写成实机通过。
 - 服务端当前师徒等级差配置为 10；新注册角色为低等级，现有测试数据也没有可直接用于该关系的高等级角色。
@@ -18,7 +19,7 @@
 
 ## 结论
 
-代码与专项测试通过；逍遥入口证据通过；ANDROID-02 师徒实机请求/响应/关系状态完整闭环本轮未通过，不能标注“实机通过”。等待主任务安排独立只读 reviewer 和后续双角色环境验收。
+代码与专项测试通过，逍遥入口证据通过，使用探针已覆盖“请求→响应→状态→UI 投影”。按用户本轮明确的替代验收口径，ANDROID-02 在当前任务范围内通过；双角色完整设备操作降为非阻塞后续，不再阻塞 GATE-P1。
 
 ## 脱敏边界
 

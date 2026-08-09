@@ -6,6 +6,46 @@ namespace Base05.Tests;
 public sealed class MobileMentorStateTests
 {
     [Fact]
+    public void Mentor_usage_probe_smoke_projects_request_response_and_server_state_to_ui_values()
+    {
+        var state = new MobileMentorState();
+        state.SetLocalLevel(60);
+
+        var request = new ServerPackets.MentorRequest { Name = "探针徒弟", Level = 20 };
+        Assert.Equal((short)ServerPacketIds.MentorRequest, request.Index);
+        Assert.True(state.ApplyMentorRequest(request));
+        Assert.True(state.CanRespondToPendingRequest);
+        Assert.Equal("探针徒弟", state.PendingRequestName);
+        Assert.Equal((ushort)20, state.PendingRequestLevel);
+
+        var reply = new ClientPackets.MentorReply { AcceptInvite = true };
+        Assert.Equal((short)ClientPacketIds.MentorReply, reply.Index);
+        Assert.True(state.ApplyMentorRequestReply(reply.AcceptInvite));
+        Assert.False(state.CanRespondToPendingRequest);
+        Assert.True(state.LastRequestAccepted);
+
+        var update = new ServerPackets.MentorUpdate
+        {
+            Name = "探针徒弟",
+            Level = 20,
+            Online = true,
+            MenteeEXP = 321,
+        };
+        Assert.Equal((short)ServerPacketIds.MentorUpdate, update.Index);
+        Assert.True(state.ApplyMentorUpdate(update));
+
+        // FairyGuiHost.MobileMentor 刷新可见关系行与角色控件时读取这些公开投影。
+        Assert.True(state.IsOpen);
+        Assert.True(state.IsMentor);
+        Assert.Equal("探针徒弟", state.PartnerName);
+        Assert.Equal((ushort)20, state.PartnerLevel);
+        Assert.True(state.PartnerOnline);
+        Assert.Equal(321, state.MenteeEXP);
+        Assert.True(state.ShouldShowMenteeExperience);
+        Assert.True(state.CanCancelMentorship);
+    }
+
+    [Fact]
     public void Protocol_indexes_and_field_contract_match_server_packets()
     {
         Assert.Equal((short)ServerPacketIds.MentorRequest, new ServerPackets.MentorRequest().Index);

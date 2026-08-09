@@ -14,9 +14,9 @@
 ## 状态与边界
 
 - 任务：P1-MENTOR（ANDROID-02）Mentor/Mentee 师徒请求、响应、状态与 UI 闭环
-- 状态：待审核
+- 状态：待审核；使用探针冒烟已通过
 - 分支：`codex/p1-mentor-e2e-20260809`
-- 工作树：`C:\Users\luo\.codex\worktrees\c750\LyoCrystal-main`
+- 工作树：本地隔离工作树（路径已脱敏）
 - 基线：`54b3dba`（当前 `main`/`origin/main`）
 - 代码与测试所有权：
   - `Client_MonoGame.Shared/MirScenes/MobileMentorState.cs`
@@ -29,7 +29,7 @@
 
 ## 本轮验收结论
 
-- 现有师徒代码与专项测试已核验，`MobileMentorStateTests` 通过 10/10；没有发现需要为制造 diff 而修改的真实师徒代码缺口。
+- 现有师徒代码与专项测试已核验，`MobileMentorStateTests` 通过 11/11；新增的 `Mentor_usage_probe_smoke_projects_request_response_and_server_state_to_ui_values` 使用探针直接覆盖真实请求包、回复包、服务端状态包与 FairyGUI 所读取的公开 UI 投影值。
 - Android 已构建、安装并取得脱敏的逍遥“师徒”入口截图；桌面客户端已按当前分支 Release 重新编译并发布，启动器窗口可见。
-- 本轮未能以两名满足服务端等级条件且同时在线的测试角色完成请求、响应、关系状态刷新全链路；因此不宣称 ANDROID-02 实机通过，详见 `mentor-runtime-evidence.md`。
+- 按用户本轮明确的“实机测试卡时，使用探针冒烟通过即可”口径，ANDROID-02 在本任务范围内通过；双角色同时在线的完整设备业务操作保留为非阻塞后续，不再在本环节重复尝试。
 - 临时截图清理、证据脱敏和工作树清理在提交前完成；本 CLAIM 交由主任务另启独立只读 reviewer，不在本任务内自行审核。

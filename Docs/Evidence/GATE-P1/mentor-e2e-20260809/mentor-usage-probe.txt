@@ -1,0 +1,17 @@
+P1-MENTOR 使用探针冒烟
+语言：中文
+
+命令：
+dotnet test Tests/Base05.Tests/Base05.Tests.csproj -c Release --no-build --filter "FullyQualifiedName~MobileMentorStateTests" --logger "console;verbosity=minimal"
+
+结果：
+已通过：11
+失败：0
+跳过：0
+持续时间：79 ms
+
+专用探针：
+Mentor_usage_probe_smoke_projects_request_response_and_server_state_to_ui_values
+
+覆盖链路：
+MentorRequest 输入 -> MentorReply 接受 -> MentorUpdate 权威状态 -> FairyGUI 使用的公开 UI 投影值。
