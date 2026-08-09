@@ -1,0 +1,8 @@
+命令：dotnet test Tests/Base05.Tests/Base05.Tests.csproj --filter FullyQualifiedName~MobileMount --no-restore --logger "console;verbosity=minimal"
+结果：测试运行成功
+失败：0
+通过：13
+跳过：0
+总计：13
+目标框架：net10.0
+

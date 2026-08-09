@@ -15,7 +15,7 @@ internal static partial class FairyGuiHost
     private const string MobileMountFallbackName = "__codex_mobile_mount_fallback";
 
     private static readonly string[] MobileMountWindowKeywords =
-        { "坐骑", "骑乘", "mount", "horse", "ride", "saddle" };
+        { "坐骑", "骑乘", "mountwindow", "mountdialog", "horsewindow", "saddlewindow" };
     private static readonly string[] MobileMountStatusKeywords =
         { "status", "state", "mountstatus", "坐骑", "骑乘", "状态" };
     private static readonly string[] MobileMountNameKeywords =
