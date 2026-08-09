@@ -7,6 +7,42 @@ namespace Base05.Tests;
 public sealed class MobileFishingStateTests
 {
     [Fact]
+    public void Fishing_usage_probe_smoke_projects_cast_request_and_server_update_to_ui_values()
+    {
+        var state = new MobileFishingState();
+        Assert.True(state.SetEquipmentSnapshot(42, hasFishingRod: true, hasReel: true, fishingRodUniqueId: 1001));
+
+        var request = new ClientPackets.FishingCast { CastOut = true };
+        Assert.Equal((short)ClientPacketIds.FishingCast, request.Index);
+        Assert.True(state.BeginCastRequest(request.CastOut, nowMs: 10_000));
+        Assert.True(state.CastRequestPending);
+
+        var update = new ServerPackets.FishingUpdate
+        {
+            ObjectID = 42,
+            Fishing = true,
+            ProgressPercent = 65,
+            ChancePercent = 37,
+            FishingPoint = new Point(11, 12),
+            FoundFish = true,
+        };
+        Assert.Equal((short)ServerPacketIds.FishingUpdate, update.Index);
+        Assert.True(state.ApplyFishingUpdate(update, localObjectId: 42));
+
+        // FairyGuiHost.MobileFishing 刷新钓鱼窗口时读取这些公开投影。
+        Assert.True(state.IsOpen);
+        Assert.True(state.HasFishingRod);
+        Assert.True(state.HasReel);
+        Assert.True(state.Fishing);
+        Assert.Equal(65, state.ProgressPercent);
+        Assert.Equal(37, state.ChancePercent);
+        Assert.Equal(new Point(11, 12), state.FishingPoint);
+        Assert.True(state.FoundFish);
+        Assert.False(state.CastRequestPending);
+        Assert.Null(state.Error);
+    }
+
+    [Fact]
     public void Protocol_contract_exposes_fishing_packets_and_five_slots()
     {
         Assert.Equal((short)ServerPacketIds.FishingUpdate, new ServerPackets.FishingUpdate().Index);

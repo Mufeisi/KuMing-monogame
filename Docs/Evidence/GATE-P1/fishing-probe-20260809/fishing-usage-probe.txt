@@ -1,0 +1,14 @@
+P1-FISHING 使用探针冒烟
+语言：中文
+
+命令：
+dotnet test Tests/Base05.Tests/Base05.Tests.csproj -c Release --filter "FullyQualifiedName~MobileFishingStateTests" --logger "console;verbosity=minimal"
+
+结果：
+已通过：12
+失败：0
+跳过：0
+持续时间：96 ms
+
+覆盖链路：
+FishingCast 抛竿请求 -> 请求门控 -> FishingUpdate 权威响应 -> FairyGUI 使用的公开 UI 投影值。
