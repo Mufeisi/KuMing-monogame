@@ -113,7 +113,7 @@ GATE-P0 ──► GATE-P1 ──► GATE-P2 ──► GATE-P3 ──► GATE-P4 
 |---|---|---|
 | GATE-P0 | **已完成**；远程 CI 证据见 §P0 | 无 |
 | GATE-P1 | **已完成**：ANDROID-01 商城逍遥端到端通过；ANDROID-02..07 按本轮替代口径完成真实协议/门控/权威响应/UI 投影使用探针并复核通过；PROTO-01、BASE-10、PERF-00 证据已归档；Base05 集成 223/223 通过；远程 CI `31313826844` 的 Windows、通用测试、Android Release arm64 AOT 全绿 | 无 |
-| GATE-P2 | SEC-01 核心改造已实现；SEC-02 已有 TLS 和连接生命周期成果，但仍未完成；SEC-03..06 未完成；**门禁未关闭** | 按依赖先补齐 SEC-01 的 HTTPLogin 主线程事务边界与真实 PC/移动 Settings-登录集成测试 |
+| GATE-P2 | SEC-01 已完成；SEC-02 已有 TLS 和连接生命周期成果，但仍未完成；SEC-03..06 未完成；**门禁未关闭** | 按依赖进入 SEC-02 剩余项，不将 SEC-01 完成误报为整个门禁关闭 |
 | GATE-P3 | 未开始 | 等待 GATE-P2 |
 | GATE-P4 | PERF-00 采集基建已完成，真实基线/PERF-01..05 未开始 | 等待 GATE-P3 与真实 S1/S2/S3 输入 |
 | GATE-P5 | 未开始 | 等待 GATE-P4 |
@@ -213,7 +213,7 @@ GATE-P1 关闭后，P2 的 SEC-03、SEC-04、SEC-05、SEC-06 各为独立任务�
 
 **SEC-02 C4.3 收口记录（2026-08-09）**：PC/Mono `Connect` 在 `_connectionGate` 内以局部 `TcpClient` 原子安装连接代次、写门闩与 TLS 状态，锁外仅对捕获 client 调用 `BeginConnect`；已有连接只释放局部 client 并返回。连接失败回调移除无条件重连，交由现有 `Process` 主循环重试；旧代失败不会摘除新代，EOF/Receive 逻辑保持。未构造完整客户端宿主，采用源代码静态接线与 TLS 专项 17/17、Base05 全量 198/198、PC/Mono/Android Release 构建证据；生产代码净增 13 行。SEC-02/GATE-P2 状态不变。
 
-**SEC-01 后续（P2 独立任务）**：HTTPLogin 的线程事务边界（工作线程进入主线程、认证/账户状态提交及失败回滚）与真实 PC/移动 Settings-登录集成测试仍未实现；待 GATE-P1 关闭后按依赖自动进入开发队列，不再逐项等待人工操作确认。
+**SEC-01 P2 收口记录（2026-08-09）**：`HTTPLogin` 的完整账户事务统一投递到服务端主线程；排队超时使用原子取消，已开始执行则等待真实结果，停服后禁止回退到调用线程。认证或提交异常会恢复密码哈希/盐、封禁状态、错误次数与自动保存请求。PC 与移动端登录统一通过实际 `Settings.Load/Save` 接缝，PC 集成测试从真实 `Network` 发送队列取回同一登录包；Android 使用显式 Intent 触发的有界宿主探针，真实执行 `Settings.Save → Network.Enqueue`，验证队列增加且配置无密码后恢复原账号状态。专项 `5/5`、Windows 宿主 `1/1`、Android Release arm64 AOT 与逍遥日志 `SEC01_HOST_PROBE:PASS` 均通过；证据见 `Docs/Evidence/GATE-P2/sec01-http-login-20260809/`。SEC-01 完成不代表 GATE-P2 或 SEC-02 完成。
 
 **GATE-P2 退出条件**：公开测试前安全项全部完成；凭据不通过未加密网络传输；公网无 V1 明文登录。
 

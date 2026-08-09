@@ -329,9 +329,9 @@ namespace Client
 
 
             //Game
-            Shared.Security.PasswordStoragePolicy.ClearStoredCredentials(Reader, "Game");
-            AccountID = Reader.ReadString("Game", "AccountID", AccountID);
-            Password = string.Empty;
+            var loginCredentials = Client.Security.LoginSettingsIntegration.Load(Reader, AccountID);
+            AccountID = loginCredentials.AccountId;
+            Password = loginCredentials.Password;
 
             SkillMode = Reader.ReadBoolean("Game", "SkillMode", SkillMode);
             SkillBar = Reader.ReadBoolean("Game", "SkillBar", SkillBar);

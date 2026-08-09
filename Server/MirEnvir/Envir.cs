@@ -241,11 +241,13 @@ namespace Server.MirEnvir
             public Exception Exception;
             public ManualResetEventSlim Done { get; } = new ManualResetEventSlim(initialState: false);
             public abstract void Execute();
+            public abstract bool TryCancel();
         }
 
         private sealed class MainThreadWorkItem<T> : MainThreadWorkItem
         {
             private readonly Func<T> _func;
+            private int _state;
             public T Result;
 
             public MainThreadWorkItem(Func<T> func)
@@ -255,6 +257,12 @@ namespace Server.MirEnvir
 
             public override void Execute()
             {
+                if (Interlocked.CompareExchange(ref _state, 1, 0) != 0)
+                {
+                    Done.Set();
+                    return;
+                }
+
                 try
                 {
                     Result = _func();
@@ -265,8 +273,18 @@ namespace Server.MirEnvir
                 }
                 finally
                 {
+                    Volatile.Write(ref _state, 2);
                     Done.Set();
                 }
+            }
+
+            public override bool TryCancel()
+            {
+                if (Interlocked.CompareExchange(ref _state, 2, 0) != 0)
+                    return false;
+
+                Done.Set();
+                return true;
             }
         }
 
@@ -284,12 +302,19 @@ namespace Server.MirEnvir
 
         public T InvokeOnMainThread<T>(Func<T> func, int timeoutMs = 5000)
         {
+            return InvokeOnMainThread(func, timeoutMs, true);
+        }
+
+        internal T InvokeOnMainThread<T>(Func<T> func, int timeoutMs, bool allowInlineWithoutMainThread)
+        {
             if (func == null) throw new ArgumentNullException(nameof(func));
 
             if (IsMainThread) return func();
 
-            // 主线程尚未建立（或服务已停止）时，避免死锁：直接返回默认值或执行。
-            if (Volatile.Read(ref _mainThreadId) == 0) return func();
+            // 普通启动辅助调用在主线程尚未建立时仍可沿用内联行为；
+            // 账户事务必须显式禁止内联，避免停服竞态把写操作落到调用线程。
+            if (Volatile.Read(ref _mainThreadId) == 0)
+                return allowInlineWithoutMainThread ? func() : default;
             if (!Running) return default;
 
             var item = new MainThreadWorkItem<T>(func);
@@ -297,8 +322,15 @@ namespace Server.MirEnvir
 
             if (!item.Done.Wait(timeoutMs))
             {
-                MessageQueue.Enqueue($"[Scripts] 投递到主线程执行超时（{timeoutMs}ms）。");
-                return default;
+                if (item.TryCancel())
+                {
+                    MessageQueue.Enqueue($"[Scripts] 投递到主线程执行超时并已取消（{timeoutMs}ms）。");
+                    return default;
+                }
+
+                // 已经在主线程开始执行的工作不能安全撤销；等待其完成并返回真实结果，
+                // 避免调用方先收到失败、账户事务随后又延迟提交。
+                item.Done.Wait();
             }
 
             if (item.Exception != null) throw item.Exception;
@@ -5048,6 +5080,27 @@ namespace Server.MirEnvir
 
         public int HTTPLogin(string AccountID, string Password)
         {
+            return HTTPLogin(AccountID, Password, 5000);
+        }
+
+        internal int HTTPLogin(string AccountID, string Password, int mainThreadTimeoutMs)
+        {
+            if (!IsMainThread)
+            {
+                if (Volatile.Read(ref _mainThreadId) == 0 || !Running)
+                    return 0;
+
+                return InvokeOnMainThread(
+                    () => HTTPLoginOnMainThread(AccountID, Password),
+                    mainThreadTimeoutMs,
+                    allowInlineWithoutMainThread: false);
+            }
+
+            return HTTPLoginOnMainThread(AccountID, Password);
+        }
+
+        private int HTTPLoginOnMainThread(string AccountID, string Password)
+        {
             if (!Settings.AllowLogin)
             {
                 return 0;
@@ -5070,29 +5123,60 @@ namespace Server.MirEnvir
                 return 3;
             }
 
-            if (account.Banned)
+            return ExecuteHttpLoginTransaction(account, () =>
             {
-                if (account.ExpiryDate > Now)
+                if (account.Banned)
                 {
-                    return 4;
+                    if (account.ExpiryDate > Now)
+                    {
+                        return 4;
+                    }
+                    account.Banned = false;
                 }
-                account.Banned = false;
-            }
-            account.BanReason = string.Empty;
-            account.ExpiryDate = DateTime.MinValue;
-            if (VerifyAccountPassword(account, Password) == Utils.PasswordVerificationResult.Invalid)
+                account.BanReason = string.Empty;
+                account.ExpiryDate = DateTime.MinValue;
+                if (VerifyAccountPasswordOnMainThread(account, Password) == Utils.PasswordVerificationResult.Invalid)
+                {
+                    if (account.WrongPasswordCount++ >= 5)
+                    {
+                        account.Banned = true;
+                        account.BanReason = "登录错误次数太多";
+                        account.ExpiryDate = Now.AddMinutes(2);
+                        return 5;
+                    }
+                    return 6;
+                }
+                account.WrongPasswordCount = 0;
+                return 7;
+            });
+        }
+
+        internal int ExecuteHttpLoginTransaction(AccountInfo account, Func<int> action)
+        {
+            if (account == null) throw new ArgumentNullException(nameof(account));
+            if (action == null) throw new ArgumentNullException(nameof(action));
+
+            var password = account.Password;
+            var salt = account.Salt == null ? Array.Empty<byte>() : (byte[])account.Salt.Clone();
+            var banned = account.Banned;
+            var banReason = account.BanReason;
+            var expiryDate = account.ExpiryDate;
+            var wrongPasswordCount = account.WrongPasswordCount;
+            var autoSaveRequested = Volatile.Read(ref _autoSaveRequested);
+            try
             {
-                if (account.WrongPasswordCount++ >= 5)
-                {
-                    account.Banned = true;
-                    account.BanReason = "登录错误次数太多";
-                    account.ExpiryDate = Now.AddMinutes(2);
-                    return 5;
-                }
-                return 6;
+                return action();
             }
-            account.WrongPasswordCount = 0;
-            return 7;
+            catch
+            {
+                account.SetPasswordHashAndSalt(password, salt);
+                account.Banned = banned;
+                account.BanReason = banReason;
+                account.ExpiryDate = expiryDate;
+                account.WrongPasswordCount = wrongPasswordCount;
+                Interlocked.Exchange(ref _autoSaveRequested, autoSaveRequested);
+                throw;
+            }
         }
 
         public void NewCharacter(ClientPackets.NewCharacter p, MirConnection c, bool IsGm)

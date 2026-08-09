@@ -47,6 +47,8 @@ namespace MonoShare.MirNetwork
         private static ConcurrentQueue<Packet> _receiveList;
         private static ConcurrentQueue<Packet> _sendList;
         private static readonly ConcurrentQueue<Packet> _preSendList = new ConcurrentQueue<Packet>();
+
+        internal static int PendingSendCount => (_sendList?.Count ?? 0) + _preSendList.Count;
         private static PerformanceQueueTracker _receiveQueueMetrics = new PerformanceQueueTracker();
         private static PerformanceQueueTracker _sendQueueMetrics = new PerformanceQueueTracker();
         private static PerformanceQueueTracker _networkQueueMetrics = new PerformanceQueueTracker();

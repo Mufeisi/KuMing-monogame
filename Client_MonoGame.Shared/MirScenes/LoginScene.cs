@@ -492,7 +492,7 @@ namespace MonoShare.MirScenes
 	            if (Settings.LogErrors)
 	                CMain.SaveLog($"SmokeTest 自动登录发起：Account={account}（PasswordLen={password.Length}）。");
 
-	            Network.Enqueue(new C.Login { AccountID = account, Password = password });
+	            MonoShare.Security.LoginSettingsIntegration.Submit(account, password);
 	        }
         private void NewAccount(S.NewAccount p)
         {
@@ -907,20 +907,8 @@ namespace MonoShare.MirScenes
             {
                 OKButton.Enabled = false;
 
-                string account = AccountIDTextBox?.Text ?? string.Empty;
-                string password = PasswordTextBox?.Text ?? string.Empty;
-
-                if (string.IsNullOrWhiteSpace(account))
-                    account = Settings.AccountID;
-
-                if (string.IsNullOrWhiteSpace(password))
-                    password = Settings.Password;
-
-                Settings.AccountID = account ?? string.Empty;
-                Settings.Password = password ?? string.Empty;
-                Settings.Save();
-
-                Network.Enqueue(new C.Login { AccountID = Settings.AccountID, Password = Settings.Password });
+                MonoShare.Security.LoginSettingsIntegration.Submit(
+                    AccountIDTextBox?.Text, PasswordTextBox?.Text);
             }
 
             //public override void Show()

@@ -16,6 +16,7 @@
 
   <ItemGroup>
     <Compile Include="..\Shared\Transport\StreamWriteGate.cs" Link="Transport\StreamWriteGate.cs" />
+    <Compile Include="Security\LoginSettingsIntegration.cs" />
   </ItemGroup>
 
   <PropertyGroup Condition="'$(TargetFramework)' == 'net10.0-android'">

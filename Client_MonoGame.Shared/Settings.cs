@@ -566,10 +566,10 @@ namespace MonoShare
             SoundOverLap = Reader.ReadInt32("Sound", "SoundOverLap", SoundOverLap);
             MusicVolume = Reader.ReadByte("Sound", "Music", MusicVolume);
 
-            PasswordStoragePolicy.ClearStoredCredentials(Reader, "Game");
-            AccountID = Reader.ReadString("Game", "AccountID", AccountID);
-            RememberPassword = PasswordStoragePolicy.RememberPassword;
-            Password = string.Empty;
+            var loginCredentials = MonoShare.Security.LoginSettingsIntegration.Load(Reader, AccountID);
+            AccountID = loginCredentials.AccountId;
+            RememberPassword = loginCredentials.RememberPassword;
+            Password = loginCredentials.Password;
 
             SkillMode = Reader.ReadBoolean("Game", "SkillMode", SkillMode);
             SkillBar = Reader.ReadBoolean("Game", "SkillBar", SkillBar);
