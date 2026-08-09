@@ -1,0 +1,148 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="5de1c369-4d25-4c46-a158-0651699792d2" name="luo@DESKTOP-4J13TH0 2026-08-10 00:17:19" runUser="DESKTOP-4J13TH0\luo" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-08-10T00:17:19.6430498+08:00" queuing="2026-08-10T00:17:19.6430501+08:00" start="2026-08-10T00:17:17.8430789+08:00" finish="2026-08-10T00:17:20.4934636+08:00" />
+  <TestSettings name="default" id="8a8d154f-f3fd-476b-8358-8841cfac0c70">
+    <Deployment runDeploymentRoot="luo_DESKTOP-4J13TH0_2026-08-10_00_17_19" />
+  </TestSettings>
+  <Results>
+    <UnitTestResult executionId="73d69fb8-a69a-4984-a86b-0b34a0ffa1cd" testId="c19d57b1-3892-fd7a-3e34-765ccbc4e228" testName="Base05.Tests.TlsTransportTests.旧TLS代次释放不修改新代计数" computerName="DESKTOP-4J13TH0" duration="00:00:00.0006383" startTime="2026-08-10T00:17:20.3605820+08:00" endTime="2026-08-10T00:17:20.3610053+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="73d69fb8-a69a-4984-a86b-0b34a0ffa1cd" />
+    <UnitTestResult executionId="53a44a28-ed6a-4189-8871-f75348a64620" testId="7ae1b15f-f628-45f7-cd37-a8e54c9a758c" testName="Base05.Tests.TlsTransportTests.客户端TLS失败探针区分端点吊销与证书验证" computerName="DESKTOP-4J13TH0" duration="00:00:00.0015326" startTime="2026-08-10T00:17:20.1653385+08:00" endTime="2026-08-10T00:17:20.1666138+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="53a44a28-ed6a-4189-8871-f75348a64620" />
+    <UnitTestResult executionId="f7fdb2c1-cbca-4b62-8426-03350a7b53b3" testId="e7ef547b-60a6-53fa-3277-d57a3d86a3e7" testName="Base05.Tests.TlsTransportTests.TLS配置表单策略仅在启用时要求有效端口与现有证书文件" computerName="DESKTOP-4J13TH0" duration="00:00:00.1028256" startTime="2026-08-10T00:17:20.1695145+08:00" endTime="2026-08-10T00:17:20.2722370+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="f7fdb2c1-cbca-4b62-8426-03350a7b53b3" />
+    <UnitTestResult executionId="fcd73978-bcf4-42f4-8af8-b01e6dfa6699" testId="66141843-9aa9-a625-f4b9-c6ae5a1b9881" testName="Base05.Tests.TlsTransportTests.TLS连接失败提示包含排障线索" computerName="DESKTOP-4J13TH0" duration="00:00:00.0118433" startTime="2026-08-10T00:17:20.3615280+08:00" endTime="2026-08-10T00:17:20.3731891+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="fcd73978-bcf4-42f4-8af8-b01e6dfa6699" />
+    <UnitTestResult executionId="45ba4090-3a3b-4be6-87f9-c845202b01c7" testId="ea87e41d-8d2f-9c0f-959a-624e12b8b781" testName="Base05.Tests.TlsTransportTests.临时证书SslStream握手并完成现有Packet往返" computerName="DESKTOP-4J13TH0" duration="00:00:00.1273799" startTime="2026-08-10T00:17:19.3710471+08:00" endTime="2026-08-10T00:17:19.4986017+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="45ba4090-3a3b-4be6-87f9-c845202b01c7" />
+    <UnitTestResult executionId="4b1efd58-9317-4d98-ab04-7ca952655db8" testId="72c02dd2-4165-4749-da55-971b717220e2" testName="Base05.Tests.TlsTransportTests.TLS异步握手支持取消并释放慢连接" computerName="DESKTOP-4J13TH0" duration="00:00:00.2489944" startTime="2026-08-10T00:17:18.7315951+08:00" endTime="2026-08-10T00:17:18.9712978+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="4b1efd58-9317-4d98-ab04-7ca952655db8" />
+    <UnitTestResult executionId="4bc2b7cf-a185-408e-8d06-5d487e1435d4" testId="52e6f15a-397a-aa72-9a52-6eee3014e6ef" testName="Base05.Tests.TlsTransportTests.证书密码只从运行时环境读取而不写入配置" computerName="DESKTOP-4J13TH0" duration="00:00:00.0879490" startTime="2026-08-10T00:17:20.2724743+08:00" endTime="2026-08-10T00:17:20.3602975+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="4bc2b7cf-a185-408e-8d06-5d487e1435d4" />
+    <UnitTestResult executionId="c70712a4-b62a-402d-9561-cb0cb85b6a38" testId="286184d1-6853-d753-fb1b-fd6e23e3d185" testName="Base05.Tests.TlsTransportTests.客户端拒绝过期证书" computerName="DESKTOP-4J13TH0" duration="00:00:00.0453102" startTime="2026-08-10T00:17:20.3752604+08:00" endTime="2026-08-10T00:17:20.4189220+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="c70712a4-b62a-402d-9561-cb0cb85b6a38" />
+    <UnitTestResult executionId="04a4115b-aba8-4f44-a032-8be319ec28fc" testId="21c55acd-263c-2691-c3f6-ea287eb41501" testName="Base05.Tests.TlsTransportTests.无证书或过期证书拒绝启动" computerName="DESKTOP-4J13TH0" duration="00:00:00.0775712" startTime="2026-08-10T00:17:19.4996016+08:00" endTime="2026-08-10T00:17:19.5770385+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="04a4115b-aba8-4f44-a032-8be319ec28fc" />
+    <UnitTestResult executionId="03def902-5490-4b68-a488-b8396e18a88b" testId="e5f87a27-58f6-7cde-cb47-8dca800c9c81" testName="Base05.Tests.TlsTransportTests.TLS端口必须有效且不能与V1冲突" computerName="DESKTOP-4J13TH0" duration="00:00:00.0006119" startTime="2026-08-10T00:17:19.4988665+08:00" endTime="2026-08-10T00:17:19.4993427+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="03def902-5490-4b68-a488-b8396e18a88b" />
+    <UnitTestResult executionId="de07d6cf-dc62-4ae3-8cdc-e98748a62fe1" testId="ed5f7810-32ea-e240-387b-8e4de8cc5c72" testName="Base05.Tests.TlsTransportTests.非回环默认拒绝明文监听而回环或显式开发开关允许" computerName="DESKTOP-4J13TH0" duration="00:00:00.0026188" startTime="2026-08-10T00:17:20.1668276+08:00" endTime="2026-08-10T00:17:20.1693163+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="de07d6cf-dc62-4ae3-8cdc-e98748a62fe1" />
+    <UnitTestResult executionId="78b9a2e2-abf6-4efa-a6d2-15cdde7f3a3a" testId="913c3bb3-893f-0227-3c5d-ec0a0ce8a459" testName="Base05.Tests.TlsTransportTests.TLS监听存在时网络绑定状态为真" computerName="DESKTOP-4J13TH0" duration="00:00:00.0351025" startTime="2026-08-10T00:17:18.6725575+08:00" endTime="2026-08-10T00:17:18.7182943+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="78b9a2e2-abf6-4efa-a6d2-15cdde7f3a3a" />
+    <UnitTestResult executionId="84882e0a-ef40-4028-bdff-e118106947b8" testId="a77e0108-8dda-7656-9d32-fbcec5aea725" testName="Base05.Tests.TlsTransportTests.停止网络取消TLS握手代次且不改动旧代计数" computerName="DESKTOP-4J13TH0" duration="00:00:00.0041956" startTime="2026-08-10T00:17:19.1566570+08:00" endTime="2026-08-10T00:17:19.1606844+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="84882e0a-ef40-4028-bdff-e118106947b8" />
+    <UnitTestResult executionId="40c580f0-c1c5-4d1c-ba31-32dde01f732c" testId="bf732b4b-7058-8d2f-70cd-63e9284f76f8" testName="Base05.Tests.TlsTransportTests.慢TLS握手不阻塞第二个合法握手" computerName="DESKTOP-4J13TH0" duration="00:00:00.3843426" startTime="2026-08-10T00:17:19.7817978+08:00" endTime="2026-08-10T00:17:20.1650175+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="40c580f0-c1c5-4d1c-ba31-32dde01f732c" />
+    <UnitTestResult executionId="402ab8c0-38c5-4e61-af01-015019093768" testId="f5ca7763-3671-3918-36b8-bb7fd994cbf8" testName="Base05.Tests.TlsTransportTests.客户端TLS策略要求目标主机并默认严格校验证书" computerName="DESKTOP-4J13TH0" duration="00:00:00.0030989" startTime="2026-08-10T00:17:20.4192533+08:00" endTime="2026-08-10T00:17:20.4221237+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="402ab8c0-38c5-4e61-af01-015019093768" />
+    <UnitTestResult executionId="8ce97a21-90e6-46d8-ad24-e14759bd3c5e" testId="83b200c1-d086-d079-2aa0-bfa32db43f21" testName="Base05.Tests.TlsTransportTests.客户端拒绝错误主机名" computerName="DESKTOP-4J13TH0" duration="00:00:00.2096488" startTime="2026-08-10T00:17:19.1609064+08:00" endTime="2026-08-10T00:17:19.3707675+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="8ce97a21-90e6-46d8-ad24-e14759bd3c5e" />
+    <UnitTestResult executionId="df0fa17d-51ca-4445-9abc-c9c306cd0732" testId="babaa9f6-2c3b-5e04-d2d6-4823df78cc5d" testName="Base05.Tests.TlsTransportTests.停止网络同时释放V1和V2监听器" computerName="DESKTOP-4J13TH0" duration="00:00:00.0012930" startTime="2026-08-10T00:17:19.1553305+08:00" endTime="2026-08-10T00:17:19.1564234+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="df0fa17d-51ca-4445-9abc-c9c306cd0732" />
+    <UnitTestResult executionId="5850daf6-dab6-44d9-b176-09c17996a577" testId="bc2d0b1c-79de-2ca7-2276-c0271bf358e5" testName="Base05.Tests.TlsTransportTests.非回环地址禁止V1且回环允许开发连接" computerName="DESKTOP-4J13TH0" duration="00:00:00.0001873" startTime="2026-08-10T00:17:20.3612179+08:00" endTime="2026-08-10T00:17:20.3612894+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="5850daf6-dab6-44d9-b176-09c17996a577" />
+    <UnitTestResult executionId="4c8b584d-10fc-4542-b583-4f8fffa24e7e" testId="39617192-7186-fb87-e4c7-9febb962cb3e" testName="Base05.Tests.TlsTransportTests.客户端拒绝不受信任证书" computerName="DESKTOP-4J13TH0" duration="00:00:00.2017693" startTime="2026-08-10T00:17:19.6114223+08:00" endTime="2026-08-10T00:17:19.7800882+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="4c8b584d-10fc-4542-b583-4f8fffa24e7e" />
+    <UnitTestResult executionId="8e61d1df-c3bf-487b-bf4a-c9c66b7e3b1b" testId="c0ee9917-f5d0-b443-7105-6560bca45411" testName="Base05.Tests.TlsTransportTests.客户端SPKI固定值严格校验并支持双固定值轮换" computerName="DESKTOP-4J13TH0" duration="00:00:00.1820038" startTime="2026-08-10T00:17:18.9729450+08:00" endTime="2026-08-10T00:17:19.1550435+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="8e61d1df-c3bf-487b-bf4a-c9c66b7e3b1b" />
+  </Results>
+  <TestDefinitions>
+    <UnitTest name="Base05.Tests.TlsTransportTests.非回环默认拒绝明文监听而回环或显式开发开关允许" storage="c:\users\luo\.codex\worktrees\p2-sec02-c7-cert-pinning-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="ed5f7810-32ea-e240-387b-8e4de8cc5c72">
+      <Execution id="de07d6cf-dc62-4ae3-8cdc-e98748a62fe1" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p2-sec02-c7-cert-pinning-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.TlsTransportTests" name="非回环默认拒绝明文监听而回环或显式开发开关允许" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.TlsTransportTests.客户端SPKI固定值严格校验并支持双固定值轮换" storage="c:\users\luo\.codex\worktrees\p2-sec02-c7-cert-pinning-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="c0ee9917-f5d0-b443-7105-6560bca45411">
+      <Execution id="8e61d1df-c3bf-487b-bf4a-c9c66b7e3b1b" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p2-sec02-c7-cert-pinning-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.TlsTransportTests" name="客户端SPKI固定值严格校验并支持双固定值轮换" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.TlsTransportTests.客户端拒绝过期证书" storage="c:\users\luo\.codex\worktrees\p2-sec02-c7-cert-pinning-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="286184d1-6853-d753-fb1b-fd6e23e3d185">
+      <Execution id="c70712a4-b62a-402d-9561-cb0cb85b6a38" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p2-sec02-c7-cert-pinning-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.TlsTransportTests" name="客户端拒绝过期证书" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.TlsTransportTests.证书密码只从运行时环境读取而不写入配置" storage="c:\users\luo\.codex\worktrees\p2-sec02-c7-cert-pinning-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="52e6f15a-397a-aa72-9a52-6eee3014e6ef">
+      <Execution id="4bc2b7cf-a185-408e-8d06-5d487e1435d4" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p2-sec02-c7-cert-pinning-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.TlsTransportTests" name="证书密码只从运行时环境读取而不写入配置" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.TlsTransportTests.旧TLS代次释放不修改新代计数" storage="c:\users\luo\.codex\worktrees\p2-sec02-c7-cert-pinning-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="c19d57b1-3892-fd7a-3e34-765ccbc4e228">
+      <Execution id="73d69fb8-a69a-4984-a86b-0b34a0ffa1cd" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p2-sec02-c7-cert-pinning-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.TlsTransportTests" name="旧TLS代次释放不修改新代计数" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.TlsTransportTests.非回环地址禁止V1且回环允许开发连接" storage="c:\users\luo\.codex\worktrees\p2-sec02-c7-cert-pinning-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="bc2d0b1c-79de-2ca7-2276-c0271bf358e5">
+      <Execution id="5850daf6-dab6-44d9-b176-09c17996a577" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p2-sec02-c7-cert-pinning-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.TlsTransportTests" name="非回环地址禁止V1且回环允许开发连接" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.TlsTransportTests.TLS配置表单策略仅在启用时要求有效端口与现有证书文件" storage="c:\users\luo\.codex\worktrees\p2-sec02-c7-cert-pinning-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="e7ef547b-60a6-53fa-3277-d57a3d86a3e7">
+      <Execution id="f7fdb2c1-cbca-4b62-8426-03350a7b53b3" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p2-sec02-c7-cert-pinning-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.TlsTransportTests" name="TLS配置表单策略仅在启用时要求有效端口与现有证书文件" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.TlsTransportTests.TLS连接失败提示包含排障线索" storage="c:\users\luo\.codex\worktrees\p2-sec02-c7-cert-pinning-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="66141843-9aa9-a625-f4b9-c6ae5a1b9881">
+      <Execution id="fcd73978-bcf4-42f4-8af8-b01e6dfa6699" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p2-sec02-c7-cert-pinning-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.TlsTransportTests" name="TLS连接失败提示包含排障线索" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.TlsTransportTests.客户端拒绝不受信任证书" storage="c:\users\luo\.codex\worktrees\p2-sec02-c7-cert-pinning-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="39617192-7186-fb87-e4c7-9febb962cb3e">
+      <Execution id="4c8b584d-10fc-4542-b583-4f8fffa24e7e" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p2-sec02-c7-cert-pinning-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.TlsTransportTests" name="客户端拒绝不受信任证书" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.TlsTransportTests.TLS异步握手支持取消并释放慢连接" storage="c:\users\luo\.codex\worktrees\p2-sec02-c7-cert-pinning-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="72c02dd2-4165-4749-da55-971b717220e2">
+      <Execution id="4b1efd58-9317-4d98-ab04-7ca952655db8" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p2-sec02-c7-cert-pinning-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.TlsTransportTests" name="TLS异步握手支持取消并释放慢连接" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.TlsTransportTests.临时证书SslStream握手并完成现有Packet往返" storage="c:\users\luo\.codex\worktrees\p2-sec02-c7-cert-pinning-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="ea87e41d-8d2f-9c0f-959a-624e12b8b781">
+      <Execution id="45ba4090-3a3b-4be6-87f9-c845202b01c7" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p2-sec02-c7-cert-pinning-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.TlsTransportTests" name="临时证书SslStream握手并完成现有Packet往返" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.TlsTransportTests.停止网络同时释放V1和V2监听器" storage="c:\users\luo\.codex\worktrees\p2-sec02-c7-cert-pinning-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="babaa9f6-2c3b-5e04-d2d6-4823df78cc5d">
+      <Execution id="df0fa17d-51ca-4445-9abc-c9c306cd0732" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p2-sec02-c7-cert-pinning-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.TlsTransportTests" name="停止网络同时释放V1和V2监听器" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.TlsTransportTests.客户端TLS失败探针区分端点吊销与证书验证" storage="c:\users\luo\.codex\worktrees\p2-sec02-c7-cert-pinning-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="7ae1b15f-f628-45f7-cd37-a8e54c9a758c">
+      <Execution id="53a44a28-ed6a-4189-8871-f75348a64620" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p2-sec02-c7-cert-pinning-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.TlsTransportTests" name="客户端TLS失败探针区分端点吊销与证书验证" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.TlsTransportTests.TLS监听存在时网络绑定状态为真" storage="c:\users\luo\.codex\worktrees\p2-sec02-c7-cert-pinning-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="913c3bb3-893f-0227-3c5d-ec0a0ce8a459">
+      <Execution id="78b9a2e2-abf6-4efa-a6d2-15cdde7f3a3a" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p2-sec02-c7-cert-pinning-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.TlsTransportTests" name="TLS监听存在时网络绑定状态为真" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.TlsTransportTests.无证书或过期证书拒绝启动" storage="c:\users\luo\.codex\worktrees\p2-sec02-c7-cert-pinning-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="21c55acd-263c-2691-c3f6-ea287eb41501">
+      <Execution id="04a4115b-aba8-4f44-a032-8be319ec28fc" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p2-sec02-c7-cert-pinning-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.TlsTransportTests" name="无证书或过期证书拒绝启动" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.TlsTransportTests.慢TLS握手不阻塞第二个合法握手" storage="c:\users\luo\.codex\worktrees\p2-sec02-c7-cert-pinning-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="bf732b4b-7058-8d2f-70cd-63e9284f76f8">
+      <Execution id="40c580f0-c1c5-4d1c-ba31-32dde01f732c" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p2-sec02-c7-cert-pinning-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.TlsTransportTests" name="慢TLS握手不阻塞第二个合法握手" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.TlsTransportTests.客户端拒绝错误主机名" storage="c:\users\luo\.codex\worktrees\p2-sec02-c7-cert-pinning-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="83b200c1-d086-d079-2aa0-bfa32db43f21">
+      <Execution id="8ce97a21-90e6-46d8-ad24-e14759bd3c5e" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p2-sec02-c7-cert-pinning-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.TlsTransportTests" name="客户端拒绝错误主机名" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.TlsTransportTests.停止网络取消TLS握手代次且不改动旧代计数" storage="c:\users\luo\.codex\worktrees\p2-sec02-c7-cert-pinning-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="a77e0108-8dda-7656-9d32-fbcec5aea725">
+      <Execution id="84882e0a-ef40-4028-bdff-e118106947b8" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p2-sec02-c7-cert-pinning-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.TlsTransportTests" name="停止网络取消TLS握手代次且不改动旧代计数" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.TlsTransportTests.TLS端口必须有效且不能与V1冲突" storage="c:\users\luo\.codex\worktrees\p2-sec02-c7-cert-pinning-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="e5f87a27-58f6-7cde-cb47-8dca800c9c81">
+      <Execution id="03def902-5490-4b68-a488-b8396e18a88b" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p2-sec02-c7-cert-pinning-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.TlsTransportTests" name="TLS端口必须有效且不能与V1冲突" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.TlsTransportTests.客户端TLS策略要求目标主机并默认严格校验证书" storage="c:\users\luo\.codex\worktrees\p2-sec02-c7-cert-pinning-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="f5ca7763-3671-3918-36b8-bb7fd994cbf8">
+      <Execution id="402ab8c0-38c5-4e61-af01-015019093768" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p2-sec02-c7-cert-pinning-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.TlsTransportTests" name="客户端TLS策略要求目标主机并默认严格校验证书" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestEntries>
+    <TestEntry testId="c19d57b1-3892-fd7a-3e34-765ccbc4e228" executionId="73d69fb8-a69a-4984-a86b-0b34a0ffa1cd" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="7ae1b15f-f628-45f7-cd37-a8e54c9a758c" executionId="53a44a28-ed6a-4189-8871-f75348a64620" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="e7ef547b-60a6-53fa-3277-d57a3d86a3e7" executionId="f7fdb2c1-cbca-4b62-8426-03350a7b53b3" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="66141843-9aa9-a625-f4b9-c6ae5a1b9881" executionId="fcd73978-bcf4-42f4-8af8-b01e6dfa6699" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="ea87e41d-8d2f-9c0f-959a-624e12b8b781" executionId="45ba4090-3a3b-4be6-87f9-c845202b01c7" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="72c02dd2-4165-4749-da55-971b717220e2" executionId="4b1efd58-9317-4d98-ab04-7ca952655db8" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="52e6f15a-397a-aa72-9a52-6eee3014e6ef" executionId="4bc2b7cf-a185-408e-8d06-5d487e1435d4" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="286184d1-6853-d753-fb1b-fd6e23e3d185" executionId="c70712a4-b62a-402d-9561-cb0cb85b6a38" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="21c55acd-263c-2691-c3f6-ea287eb41501" executionId="04a4115b-aba8-4f44-a032-8be319ec28fc" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="e5f87a27-58f6-7cde-cb47-8dca800c9c81" executionId="03def902-5490-4b68-a488-b8396e18a88b" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="ed5f7810-32ea-e240-387b-8e4de8cc5c72" executionId="de07d6cf-dc62-4ae3-8cdc-e98748a62fe1" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="913c3bb3-893f-0227-3c5d-ec0a0ce8a459" executionId="78b9a2e2-abf6-4efa-a6d2-15cdde7f3a3a" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="a77e0108-8dda-7656-9d32-fbcec5aea725" executionId="84882e0a-ef40-4028-bdff-e118106947b8" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="bf732b4b-7058-8d2f-70cd-63e9284f76f8" executionId="40c580f0-c1c5-4d1c-ba31-32dde01f732c" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="f5ca7763-3671-3918-36b8-bb7fd994cbf8" executionId="402ab8c0-38c5-4e61-af01-015019093768" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="83b200c1-d086-d079-2aa0-bfa32db43f21" executionId="8ce97a21-90e6-46d8-ad24-e14759bd3c5e" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="babaa9f6-2c3b-5e04-d2d6-4823df78cc5d" executionId="df0fa17d-51ca-4445-9abc-c9c306cd0732" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="bc2d0b1c-79de-2ca7-2276-c0271bf358e5" executionId="5850daf6-dab6-44d9-b176-09c17996a577" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="39617192-7186-fb87-e4c7-9febb962cb3e" executionId="4c8b584d-10fc-4542-b583-4f8fffa24e7e" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="c0ee9917-f5d0-b443-7105-6560bca45411" executionId="8e61d1df-c3bf-487b-bf4a-c9c66b7e3b1b" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+  </TestEntries>
+  <TestLists>
+    <TestList name="列表中未列出的结果" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="所有已加载的结果" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Completed">
+    <Counters total="20" executed="20" passed="20" failed="0" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <Output>
+      <StdOut>[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.0.2+dd36e86129 (64-bit .NET 10.0.4)&#xD;
+[xUnit.net 00:00:00.11]   Discovering: Base05.Tests&#xD;
+[xUnit.net 00:00:00.19]   Discovered:  Base05.Tests&#xD;
+[xUnit.net 00:00:00.22]   Starting:    Base05.Tests&#xD;
+[xUnit.net 00:00:02.00]   Finished:    Base05.Tests&#xD;
+</StdOut>
+    </Output>
+  </ResultSummary>
+</TestRun>

@@ -139,6 +139,7 @@ namespace Client
         public static bool UseTlsV2 = false;
         public static int TlsPort = 7001;
         public static string TlsServerName = "localhost";
+        public static string TlsSpkiSha256Pins = string.Empty;
         public const int TimeOut = 5000;
         public static string MicroBaseUrl = string.Empty;
         public static string MicroUser = string.Empty;
@@ -300,6 +301,7 @@ namespace Client
                 UseTlsV2 = Reader.ReadBoolean("Network", "UseTlsV2", UseTlsV2);
                 TlsPort = Reader.ReadInt32("Network", "TlsPort", TlsPort);
                 TlsServerName = Reader.ReadString("Network", "TlsServerName", TlsServerName);
+                TlsSpkiSha256Pins = Reader.ReadString("Network", "TlsSpkiSha256Pins", TlsSpkiSha256Pins);
             }
 
             MicroBaseUrl = Reader.ReadString("Micro", "BaseUrl", MicroBaseUrl)?.Trim() ?? string.Empty;
@@ -429,6 +431,7 @@ namespace Client
             Reader.Write("Network", "UseTlsV2", UseTlsV2);
             Reader.Write("Network", "TlsPort", TlsPort);
             Reader.Write("Network", "TlsServerName", TlsServerName ?? string.Empty);
+            Reader.Write("Network", "TlsSpkiSha256Pins", TlsSpkiSha256Pins ?? string.Empty);
 
             //Sound
             Reader.Write("Sound", "Volume", Volume);

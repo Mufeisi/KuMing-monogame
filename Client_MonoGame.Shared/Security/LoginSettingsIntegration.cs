@@ -33,13 +33,15 @@ public static class LoginSettingsIntegration
 
     public static bool RunTlsHostProbe(string host = null, int tlsPort = 0, string serverName = null)
     {
-        var original = (Settings.IPAddress, Settings.UseTlsV2, Settings.TlsPort, Settings.TlsServerName);
+        var original = (Settings.IPAddress, Settings.UseTlsV2, Settings.TlsPort,
+            Settings.TlsServerName, Settings.TlsSpkiSha256Pins);
 
         try
         {
             if (!string.IsNullOrWhiteSpace(host)) Settings.IPAddress = host.Trim();
             if (tlsPort > 0) Settings.TlsPort = tlsPort;
             if (!string.IsNullOrWhiteSpace(serverName)) Settings.TlsServerName = serverName.Trim();
+            Settings.TlsSpkiSha256Pins = string.Empty;
             Settings.UseTlsV2 = true;
             if (Settings.TlsPort is < 1 or > 65535 || string.IsNullOrWhiteSpace(Settings.TlsServerName))
                 return false;
@@ -58,7 +60,8 @@ public static class LoginSettingsIntegration
         finally
         {
             MonoShare.MirNetwork.Network.Disconnect();
-            (Settings.IPAddress, Settings.UseTlsV2, Settings.TlsPort, Settings.TlsServerName) = original;
+            (Settings.IPAddress, Settings.UseTlsV2, Settings.TlsPort,
+                Settings.TlsServerName, Settings.TlsSpkiSha256Pins) = original;
         }
     }
 

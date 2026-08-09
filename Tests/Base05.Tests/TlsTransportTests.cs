@@ -170,6 +170,29 @@ public sealed class TlsTransportTests
     }
 
     [Fact]
+    public void 客户端SPKI固定值严格校验并支持双固定值轮换()
+    {
+        using var current = CreateCertificate("localhost", DateTimeOffset.UtcNow.AddMinutes(-1), DateTimeOffset.UtcNow.AddHours(1));
+        using var next = CreateCertificate("localhost", DateTimeOffset.UtcNow.AddMinutes(-1), DateTimeOffset.UtcNow.AddHours(2));
+        using var unexpected = CreateCertificate("localhost", DateTimeOffset.UtcNow.AddMinutes(-1), DateTimeOffset.UtcNow.AddHours(3));
+        string currentPin = TlsClientPolicy.ComputeSpkiSha256Pin(current);
+        string nextPin = TlsClientPolicy.ComputeSpkiSha256Pin(next);
+        var options = TlsClientPolicy.CreateOptions("localhost", $"{currentPin};{nextPin}");
+        RemoteCertificateValidationCallback callback = options.RemoteCertificateValidationCallback!;
+
+        Assert.True(callback(null!, current, null!, SslPolicyErrors.None));
+        Assert.True(callback(null!, next, null!, SslPolicyErrors.None));
+        Assert.False(callback(null!, unexpected, null!, SslPolicyErrors.None));
+        Assert.False(callback(null!, current, null!, SslPolicyErrors.RemoteCertificateNameMismatch));
+
+        Assert.Throws<ArgumentException>(() => TlsClientPolicy.CreateOptions("localhost", "sha1/invalid"));
+        Assert.Throws<ArgumentException>(() => TlsClientPolicy.CreateOptions("localhost", "sha256/not-base64"));
+        Assert.Throws<ArgumentException>(() => TlsClientPolicy.CreateOptions("localhost", "sha256/AA=="));
+        Assert.Throws<ArgumentException>(() => TlsClientPolicy.CreateOptions("localhost",
+            string.Join(';', Enumerable.Repeat(currentPin, 5))));
+    }
+
+    [Fact]
     public void 客户端TLS失败探针区分端点吊销与证书验证()
     {
         Assert.StartsWith("网络端点;", TlsClientPolicy.ClassifyFailure(new SocketException()));
@@ -186,6 +209,7 @@ public sealed class TlsTransportTests
         string message = TlsClientPolicy.FormatFailure(new AuthenticationException("test"), "game.example", 7001);
         Assert.Contains("系统时间", message);
         Assert.Contains("TlsServerName", message);
+        Assert.Contains("TlsSpkiSha256Pins", message);
         Assert.Contains("证书 SAN", message);
         Assert.Contains("证书链和有效期", message);
     }
@@ -279,7 +303,8 @@ public sealed class TlsTransportTests
             using var client = new TcpClient();
             await client.ConnectAsync(IPAddress.Loopback, ((IPEndPoint)listener.LocalEndpoint).Port);
             using var ssl = new SslStream(client.GetStream(), false);
-            var options = TlsClientPolicy.CreateOptions("localhost");
+            var options = TlsClientPolicy.CreateOptions(
+                "localhost", TlsClientPolicy.ComputeSpkiSha256Pin(certificate));
             options.CertificateChainPolicy = new X509ChainPolicy
             {
                 TrustMode = X509ChainTrustMode.CustomRootTrust,
