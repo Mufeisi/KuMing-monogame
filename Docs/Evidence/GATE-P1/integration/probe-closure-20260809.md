@@ -27,4 +27,8 @@
 
 ## 当前状态
 
-本地退出条件已满足；GATE-P1 仍等待本轮集成提交的远程 CI，成功后再标记完全关闭。
+GATE-P1 已关闭。实现提交 `2567e2c0a915ee3f3b2dfe1b715f30ba0becd1e3` 的远程 [BASE-03 CI 31313826844](https://github.com/Mufeisi/KuMing-monogame/actions/runs/31313826844) 全绿：
+
+- Windows build (solution filter)：通过。
+- General tests (discovered projects)：通过。
+- Android Release arm64 AOT publish：通过，发布物上传成功。
