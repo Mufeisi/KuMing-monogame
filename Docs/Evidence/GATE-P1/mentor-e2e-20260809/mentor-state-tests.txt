@@ -1,0 +1,20 @@
+# P1-MENTOR 专项测试输出
+
+语言：中文
+
+## 命令
+
+```text
+dotnet test Tests/Base05.Tests/Base05.Tests.csproj --filter FullyQualifiedName~MobileMentorStateTests --nologo
+```
+
+## 结果
+
+```text
+失败: 0，通过: 10，已跳过: 0，总计: 10
+耗时: 124 ms
+```
+
+说明：首次使用 `--no-restore` 的快检因本地缺少 `project.assets.json` 未执行；随后按标准恢复并重跑，专项测试通过。构建过程中仅有既有依赖漏洞提示和可空/XML 文档警告，没有测试错误。
+
+覆盖边界：请求/响应包索引与字段契约、接收同意/拒绝、发起请求保持态、聊天失败后可重试、师徒状态更新/移除、取消确认单次消费、角色控制项、非法更新保护及会话重置。

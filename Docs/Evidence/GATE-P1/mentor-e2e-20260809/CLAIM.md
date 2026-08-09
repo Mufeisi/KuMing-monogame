@@ -14,7 +14,7 @@
 ## 状态与边界
 
 - 任务：P1-MENTOR（ANDROID-02）Mentor/Mentee 师徒请求、响应、状态与 UI 闭环
-- 状态：进行中
+- 状态：待审核
 - 分支：`codex/p1-mentor-e2e-20260809`
 - 工作树：`C:\Users\luo\.codex\worktrees\c750\LyoCrystal-main`
 - 基线：`54b3dba`（当前 `main`/`origin/main`）
@@ -26,3 +26,10 @@
 - 证据所有权：`Docs/Evidence/GATE-P1/mentor-e2e-20260809/`
 - 外部测试目录：`D:\ChuanQi\Crystal_monogame`；只启动现有服务、创建临时测试账号/角色并保留既有运行数据，不清理或覆盖既有账号数据。
 - 设备定义：按 2026-08-09 PRD/ADR 决定，逍遥模拟器为 Android 实机等效设备；完整步骤通过后才可标注“实机通过”。
+
+## 本轮验收结论
+
+- 现有师徒代码与专项测试已核验，`MobileMentorStateTests` 通过 10/10；没有发现需要为制造 diff 而修改的真实师徒代码缺口。
+- Android 已构建、安装并取得脱敏的逍遥“师徒”入口截图；桌面客户端已按当前分支 Release 重新编译并发布，启动器窗口可见。
+- 本轮未能以两名满足服务端等级条件且同时在线的测试角色完成请求、响应、关系状态刷新全链路；因此不宣称 ANDROID-02 实机通过，详见 `mentor-runtime-evidence.md`。
+- 临时截图清理、证据脱敏和工作树清理在提交前完成；本 CLAIM 交由主任务另启独立只读 reviewer，不在本任务内自行审核。
