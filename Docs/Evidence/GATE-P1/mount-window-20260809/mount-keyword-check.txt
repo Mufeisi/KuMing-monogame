@@ -1,0 +1,6 @@
+检查对象：Client_MonoGame.Shared/UI/FairyGui/FairyGuiHost.MobileMount.cs
+检查项：MobileMountWindowKeywords
+当前值：{ "坐骑", "骑乘", "mountwindow", "mountdialog", "horsewindow", "saddlewindow" };
+禁止宽泛词："ride"、"mount"、"horse"、"saddle"
+结果：通过：未含宽泛英文词
+

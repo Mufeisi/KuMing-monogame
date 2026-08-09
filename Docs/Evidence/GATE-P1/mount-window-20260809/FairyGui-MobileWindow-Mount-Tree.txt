@@ -1,0 +1,36 @@
+FairyGUI 窗口树（用于关闭按钮/排障）
+WindowKey=Mount
+Resolved=fallback
+GeneratedAtUtc=2026-08-09T03:54:45.1418857Z
+说明：idx/path 均相对窗口 Root，可用于 Mir2Config.ini 的 [FairyGUI] MobileWindowClose.<WindowKey> 覆盖关闭按钮。
+
+idx=- path=- GComponent name=__codex_mobile_mount_fallback
+  idx=0 path=mount_fallback_panel GComponent name=mount_fallback_panel
+    idx=0/0 path=mount_fallback_panel/mount_fallback_background GGraph name=mount_fallback_background touchable=false
+    idx=0/1 path=mount_fallback_panel/mount_title GTextField name=mount_title touchable=false
+    idx=0/2 path=mount_fallback_panel/mount_status GTextField name=mount_status touchable=false
+    idx=0/3 path=mount_fallback_panel/mount_name GTextField name=mount_name touchable=false
+    idx=0/4 path=mount_fallback_panel/mount_loyalty GTextField name=mount_loyalty touchable=false
+    idx=0/5 path=mount_fallback_panel/mount_error GTextField name=mount_error touchable=false
+    idx=0/6 path=mount_fallback_panel/mount_hint GTextField name=mount_hint touchable=false
+    idx=0/7 path=mount_fallback_panel/mount_slot_0 GButton name=mount_slot_0 title=缰绳
+      idx=0/7/0 path=mount_fallback_panel/mount_slot_0/mount_slot_0_background GGraph name=mount_slot_0_background touchable=false
+      idx=0/7/1 path=mount_fallback_panel/mount_slot_0/title GTextField name=title touchable=false
+    idx=0/8 path=mount_fallback_panel/mount_slot_1 GButton name=mount_slot_1 title=铃铛
+      idx=0/8/0 path=mount_fallback_panel/mount_slot_1/mount_slot_1_background GGraph name=mount_slot_1_background touchable=false
+      idx=0/8/1 path=mount_fallback_panel/mount_slot_1/title GTextField name=title touchable=false
+    idx=0/9 path=mount_fallback_panel/mount_slot_2 GButton name=mount_slot_2 title=马鞍
+      idx=0/9/0 path=mount_fallback_panel/mount_slot_2/mount_slot_2_background GGraph name=mount_slot_2_background touchable=false
+      idx=0/9/1 path=mount_fallback_panel/mount_slot_2/title GTextField name=title touchable=false
+    idx=0/10 path=mount_fallback_panel/mount_slot_3 GButton name=mount_slot_3 title=蝴蝶结
+      idx=0/10/0 path=mount_fallback_panel/mount_slot_3/mount_slot_3_background GGraph name=mount_slot_3_background touchable=false
+      idx=0/10/1 path=mount_fallback_panel/mount_slot_3/title GTextField name=title touchable=false
+    idx=0/11 path=mount_fallback_panel/mount_slot_4 GButton name=mount_slot_4 title=面甲
+      idx=0/11/0 path=mount_fallback_panel/mount_slot_4/mount_slot_4_background GGraph name=mount_slot_4_background touchable=false
+      idx=0/11/1 path=mount_fallback_panel/mount_slot_4/title GTextField name=title touchable=false
+    idx=0/12 path=mount_fallback_panel/mount_ride GButton name=mount_ride title=上马/下马
+      idx=0/12/0 path=mount_fallback_panel/mount_ride/mount_ride_background GGraph name=mount_ride_background touchable=false
+      idx=0/12/1 path=mount_fallback_panel/mount_ride/title GTextField name=title touchable=false
+    idx=0/13 path=mount_fallback_panel/closeButton GButton name=closeButton title=关闭
+      idx=0/13/0 path=mount_fallback_panel/closeButton/closeButton_background GGraph name=closeButton_background touchable=false
+      idx=0/13/1 path=mount_fallback_panel/closeButton/title GTextField name=title touchable=false
