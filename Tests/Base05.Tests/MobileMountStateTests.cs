@@ -6,6 +6,38 @@ namespace Base05.Tests;
 public sealed class MobileMountStateTests
 {
     [Fact]
+    public void Mount_usage_probe_smoke_projects_ride_request_and_server_update_to_ui_values()
+    {
+        var state = new MobileMountState();
+        Assert.True(state.SetLocalSnapshot(42, mountType: 7, ridingMount: false));
+
+        var request = new ClientPackets.Chat { Message = MobileMountState.RideCommand };
+        Assert.Equal((short)ClientPacketIds.Chat, request.Index);
+        Assert.Equal("@ride", request.Message);
+        Assert.True(state.BeginToggleRide(10_000));
+        Assert.True(state.HasPendingToggleRequest);
+        Assert.False(state.CanRequestToggle);
+
+        var update = new ServerPackets.MountUpdate
+        {
+            ObjectID = 42,
+            MountType = 7,
+            RidingMount = true,
+        };
+        Assert.Equal((short)ServerPacketIds.MountUpdate, update.Index);
+        Assert.True(state.ApplyMountUpdate(update, localObjectId: 42));
+
+        // FairyGuiHost.MobileMount 刷新坐骑窗口时读取这些公开投影。
+        Assert.True(state.IsOpen);
+        Assert.True(state.HasMount);
+        Assert.Equal((short)7, state.MountType);
+        Assert.True(state.RidingMount);
+        Assert.False(state.HasPendingToggleRequest);
+        Assert.True(state.CanRequestToggle);
+        Assert.True(state.LastRidingMount);
+    }
+
+    [Fact]
     public void Protocol_indexes_and_ride_command_fields_match_existing_mount_contract()
     {
         Assert.Equal((short)ServerPacketIds.MountUpdate, new ServerPackets.MountUpdate().Index);
