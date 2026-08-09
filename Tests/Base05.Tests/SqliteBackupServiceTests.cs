@@ -214,6 +214,33 @@ public sealed class SqliteBackupServiceTests
     }
 
     [Fact]
+    public void 探针无法删除时服务构造失败关闭且不遗留探针()
+    {
+        string root = Path.Combine(Path.GetTempPath(), "base05-db03-probe-delete-" + Guid.NewGuid().ToString("N"));
+        string local = Path.Combine(root, "local");
+        var options = new SqliteBackupOptions
+        {
+            SourcePath = Path.Combine(root, "source.db"),
+            BackupDirectory = local,
+            RetentionCount = 1,
+            Interval = TimeSpan.FromHours(1),
+        };
+
+        try
+        {
+            IOException error = Assert.Throws<IOException>(() => new SqliteBackupService(
+                options,
+                deleteProbe: _ => throw new UnauthorizedAccessException("模拟目录禁止删除")));
+            Assert.Contains("不可写或不可删除", error.Message, StringComparison.Ordinal);
+            Assert.Empty(Directory.GetFiles(local, ".lyocrystal-backup-write-probe-*"));
+        }
+        finally
+        {
+            try { Directory.Delete(root, recursive: true); } catch { }
+        }
+    }
+
+    [Fact]
     public void 正式异地门禁拒绝同卷兄弟目录并在可用第二卷执行真实复制()
     {
         string primaryRoot = Path.GetPathRoot(Path.GetTempPath()) ?? string.Empty;

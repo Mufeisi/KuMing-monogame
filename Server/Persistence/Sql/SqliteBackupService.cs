@@ -110,17 +110,22 @@ internal sealed class SqliteBackupService : IDisposable
     private readonly ManualResetEventSlim _idle = new ManualResetEventSlim(initialState: true);
     private readonly SqliteBackupOptions _options;
     private readonly Action<FileInfo> _deleteBackup;
+    private readonly Action<string> _deleteProbe;
     private Timer _timer;
     private bool _running;
     private bool _disposed;
     private long _backupSequence;
     private SqliteBackupStatus _status;
 
-    internal SqliteBackupService(SqliteBackupOptions options, Action<FileInfo> deleteBackup = null)
+    internal SqliteBackupService(
+        SqliteBackupOptions options,
+        Action<FileInfo> deleteBackup = null,
+        Action<string> deleteProbe = null)
     {
         _options = options ?? throw new ArgumentNullException(nameof(options));
         _options.Validate(requireOffsite: false);
         _deleteBackup = deleteBackup ?? (file => file.Delete());
+        _deleteProbe = deleteProbe ?? File.Delete;
         EnsureDirectoryWritable(Path.GetFullPath(_options.BackupDirectory), "本地备份目录");
         if (!string.IsNullOrWhiteSpace(_options.OffsiteDirectory))
             EnsureDirectoryWritable(Path.GetFullPath(_options.OffsiteDirectory), "异地副本目录");
@@ -429,7 +434,7 @@ internal sealed class SqliteBackupService : IDisposable
         }
     }
 
-    private static void EnsureDirectoryWritable(string directory, string displayName)
+    private void EnsureDirectoryWritable(string directory, string displayName)
     {
         if (File.Exists(directory))
             throw new InvalidOperationException($"{displayName}不能是现有文件");
@@ -437,23 +442,25 @@ internal sealed class SqliteBackupService : IDisposable
         string probe = Path.Combine(directory, ".lyocrystal-backup-write-probe-" + Guid.NewGuid().ToString("N"));
         try
         {
-            using var stream = new FileStream(
-                probe,
-                FileMode.CreateNew,
-                FileAccess.Write,
-                FileShare.None,
-                bufferSize: 1,
-                FileOptions.WriteThrough);
-            stream.WriteByte(1);
-            stream.Flush(flushToDisk: true);
+            using (var stream = new FileStream(
+                       probe,
+                       FileMode.CreateNew,
+                       FileAccess.Write,
+                       FileShare.None,
+                       bufferSize: 1,
+                       FileOptions.WriteThrough))
+            {
+                stream.WriteByte(1);
+                stream.Flush(flushToDisk: true);
+            }
+            _deleteProbe(probe);
+            if (File.Exists(probe))
+                throw new IOException("探针文件删除后仍然存在");
         }
         catch (Exception ex)
         {
-            throw new IOException($"{displayName}不可写", ex);
-        }
-        finally
-        {
             TryDelete(probe);
+            throw new IOException($"{displayName}不可写或不可删除", ex);
         }
     }
 

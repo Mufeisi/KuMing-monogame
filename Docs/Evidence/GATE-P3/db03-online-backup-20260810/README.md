@@ -10,13 +10,13 @@ DB-03 退出条件已满足：运行中的 SQLite WAL 数据库通过在线 Back
 
    `dotnet test Tests/Base05.Tests/Base05.Tests.csproj -c Release --no-restore --filter "FullyQualifiedName~SqliteBackupServiceTests|FullyQualifiedName~SqliteBackupAdminTests|FullyQualifiedName~ProductionSecurityTests|FullyQualifiedName~AdminSecurityTests" --logger "trx;LogFileName=db03-targeted.trx" --results-directory TestResults/DB03-targeted`
 
-   结果：22/22 通过，0 失败，0 跳过。
+   结果：23/23 通过，0 失败，0 跳过。
 
 2. Base05 全量：
 
    `dotnet test Tests/Base05.Tests/Base05.Tests.csproj -c Release --no-build --logger "trx;LogFileName=db03-base05-full.trx" --results-directory TestResults/DB03-base05-full`
 
-   结果：281/281 通过，0 失败，0 跳过。
+   结果：282/282 通过，0 失败，0 跳过。
 
 3. 服务库 Release 构建：`dotnet build Server/Server.Library.csproj -c Release --no-restore`，0 错误，2 条仓库既有包漏洞警告。
 
@@ -26,8 +26,8 @@ DB-03 退出条件已满足：运行中的 SQLite WAL 数据库通过在线 Back
 
 ## 证据文件
 
-- `db03-targeted.trx`：DB-03 专项及关联安全测试 22/22。
-- `db03-base05-full.trx`：Base05 全量测试 281/281。
+- `db03-targeted.trx`：DB-03 专项及关联安全测试 23/23。
+- `db03-base05-full.trx`：Base05 全量测试 282/282。
 
 ## 已知非本任务项
 
