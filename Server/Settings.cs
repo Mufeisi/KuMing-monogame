@@ -87,6 +87,9 @@ namespace Server
         public static string HTTPTrustedIPAddress = "127.0.0.1";
 
         //Login protection
+        public static int LoginAccountAttemptLimit = 30;
+        public static int LoginIpAttemptLimit = 120;
+        public static int LoginAttemptWindowSeconds = 60;
         public static int LoginAccountFailureLimit = 6;
         public static int LoginIpFailureLimit = 20;
         public static int LoginFailureWindowSeconds = 300;
@@ -490,6 +493,9 @@ namespace Server
             HTTPTrustedIPAddress = Reader.ReadString("Network", "HTTPTrustedIPAddress", HTTPTrustedIPAddress);
 
             //Login protection
+            LoginAccountAttemptLimit = Math.Max(1, Reader.ReadInt32("Security", "LoginAccountAttemptLimit", LoginAccountAttemptLimit));
+            LoginIpAttemptLimit = Math.Max(1, Reader.ReadInt32("Security", "LoginIpAttemptLimit", LoginIpAttemptLimit));
+            LoginAttemptWindowSeconds = Math.Max(1, Reader.ReadInt32("Security", "LoginAttemptWindowSeconds", LoginAttemptWindowSeconds));
             LoginAccountFailureLimit = Math.Max(1, Reader.ReadInt32("Security", "LoginAccountFailureLimit", LoginAccountFailureLimit));
             LoginIpFailureLimit = Math.Max(1, Reader.ReadInt32("Security", "LoginIpFailureLimit", LoginIpFailureLimit));
             LoginFailureWindowSeconds = Math.Max(1, Reader.ReadInt32("Security", "LoginFailureWindowSeconds", LoginFailureWindowSeconds));
@@ -801,6 +807,9 @@ namespace Server
             Reader.Write("Network", "HTTPTrustedIPAddress", HTTPTrustedIPAddress);
 
             //Login protection
+            Reader.Write("Security", "LoginAccountAttemptLimit", LoginAccountAttemptLimit);
+            Reader.Write("Security", "LoginIpAttemptLimit", LoginIpAttemptLimit);
+            Reader.Write("Security", "LoginAttemptWindowSeconds", LoginAttemptWindowSeconds);
             Reader.Write("Security", "LoginAccountFailureLimit", LoginAccountFailureLimit);
             Reader.Write("Security", "LoginIpFailureLimit", LoginIpFailureLimit);
             Reader.Write("Security", "LoginFailureWindowSeconds", LoginFailureWindowSeconds);

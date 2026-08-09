@@ -5221,7 +5221,9 @@ namespace Server.MirEnvir
             connection.Enqueue(new ServerPackets.LoginBanned
             {
                 Reason = decision.IpBlocked ? "来源地址登录失败次数过多" :
-                    decision.AccountBlocked ? "账号登录失败次数过多" : "登录失败退避中",
+                    decision.AccountBlocked ? "账号登录失败次数过多" :
+                    decision.IpRateLimited ? "来源地址登录请求过于频繁" :
+                    decision.AccountRateLimited ? "账号登录请求过于频繁" : "登录失败退避中",
                 ExpiryDate = decision.RetryAfterUtc.ToLocalTime()
             });
         }

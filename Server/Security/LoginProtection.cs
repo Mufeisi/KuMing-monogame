@@ -1,6 +1,9 @@
 namespace Server.Security;
 
 internal sealed record LoginProtectionOptions(
+    int AccountAttemptLimit,
+    int IpAttemptLimit,
+    TimeSpan AttemptWindow,
     int AccountFailureLimit,
     int IpFailureLimit,
     TimeSpan FailureWindow,
@@ -12,6 +15,9 @@ internal sealed record LoginProtectionOptions(
     public static LoginProtectionOptions FromSettings()
     {
         return new LoginProtectionOptions(
+            Math.Max(1, Settings.LoginAccountAttemptLimit),
+            Math.Max(1, Settings.LoginIpAttemptLimit),
+            TimeSpan.FromSeconds(Math.Max(1, Settings.LoginAttemptWindowSeconds)),
             Math.Max(1, Settings.LoginAccountFailureLimit),
             Math.Max(1, Settings.LoginIpFailureLimit),
             TimeSpan.FromSeconds(Math.Max(1, Settings.LoginFailureWindowSeconds)),
@@ -27,6 +33,8 @@ internal readonly record struct LoginProtectionDecision(
     DateTime RetryAfterUtc,
     bool AccountBlocked,
     bool IpBlocked,
+    bool AccountRateLimited,
+    bool IpRateLimited,
     DateTime AccountBlockedUntilUtc,
     DateTime IpBlockedUntilUtc);
 
@@ -37,7 +45,8 @@ internal sealed class LoginProtection
 
     private sealed class FailureState
     {
-        public Queue<DateTime> Attempts { get; } = new();
+        public Queue<DateTime> LoginAttempts { get; } = new();
+        public Queue<DateTime> FailureAttempts { get; } = new();
         public int ConsecutiveFailures;
         public DateTime BackoffUntilUtc;
         public DateTime BlockedUntilUtc;
@@ -59,24 +68,60 @@ internal sealed class LoginProtection
     {
         lock (_gate)
         {
-            _accounts.TryGetValue(NormalizeAccount(accountId), out var account);
-            _ips.TryGetValue(NormalizeIp(ipAddress), out var ip);
-            if (account != null) Prepare(account, utcNow);
-            if (ip != null) Prepare(ip, utcNow);
+            var account = GetOrCreate(
+                _accounts,
+                _accountOrder,
+                MaxTrackedAccounts,
+                NormalizeAccount(accountId));
+            var ip = GetOrCreate(
+                _ips,
+                _ipOrder,
+                MaxTrackedIps,
+                NormalizeIp(ipAddress));
+            Prepare(account, utcNow);
+            Prepare(ip, utcNow);
 
-            var accountBlocked = account != null && account.BlockedUntilUtc > utcNow;
-            var ipBlocked = ip != null && ip.BlockedUntilUtc > utcNow;
+            var accountBlocked = account.BlockedUntilUtc > utcNow;
+            var ipBlocked = ip.BlockedUntilUtc > utcNow;
             var retryAfter = Max(
-                accountBlocked ? account.BlockedUntilUtc : account?.BackoffUntilUtc ?? DateTime.MinValue,
-                ipBlocked ? ip.BlockedUntilUtc : ip?.BackoffUntilUtc ?? DateTime.MinValue);
+                accountBlocked ? account.BlockedUntilUtc : account.BackoffUntilUtc,
+                ipBlocked ? ip.BlockedUntilUtc : ip.BackoffUntilUtc);
+
+            if (retryAfter > utcNow)
+            {
+                return new LoginProtectionDecision(
+                    false,
+                    retryAfter,
+                    accountBlocked,
+                    ipBlocked,
+                    false,
+                    false,
+                    account.BlockedUntilUtc,
+                    ip.BlockedUntilUtc);
+            }
+
+            var accountRateLimited = account.LoginAttempts.Count >= _options.AccountAttemptLimit;
+            var ipRateLimited = ip.LoginAttempts.Count >= _options.IpAttemptLimit;
+            if (accountRateLimited)
+                retryAfter = Max(retryAfter, account.LoginAttempts.Peek().Add(_options.AttemptWindow));
+            if (ipRateLimited)
+                retryAfter = Max(retryAfter, ip.LoginAttempts.Peek().Add(_options.AttemptWindow));
+
+            if (!accountRateLimited && !ipRateLimited)
+            {
+                account.LoginAttempts.Enqueue(utcNow);
+                ip.LoginAttempts.Enqueue(utcNow);
+            }
 
             return new LoginProtectionDecision(
-                retryAfter <= utcNow,
+                !accountRateLimited && !ipRateLimited,
                 retryAfter,
                 accountBlocked,
                 ipBlocked,
-                account?.BlockedUntilUtc ?? DateTime.MinValue,
-                ip?.BlockedUntilUtc ?? DateTime.MinValue);
+                accountRateLimited,
+                ipRateLimited,
+                account.BlockedUntilUtc,
+                ip.BlockedUntilUtc);
         }
     }
 
@@ -111,6 +156,8 @@ internal sealed class LoginProtection
                 retryAfter,
                 accountBlocked,
                 ipBlocked,
+                false,
+                false,
                 account.BlockedUntilUtc,
                 ip.BlockedUntilUtc);
         }
@@ -120,7 +167,16 @@ internal sealed class LoginProtection
     {
         lock (_gate)
         {
-            _accounts.Remove(NormalizeAccount(accountId));
+            var accountKey = NormalizeAccount(accountId);
+            if (_accounts.TryGetValue(accountKey, out var account))
+            {
+                Prepare(account, utcNow);
+                account.FailureAttempts.Clear();
+                account.ConsecutiveFailures = 0;
+                account.BackoffUntilUtc = DateTime.MinValue;
+                account.BlockedUntilUtc = DateTime.MinValue;
+            }
+
             var ipKey = NormalizeIp(ipAddress);
             if (!_ips.TryGetValue(ipKey, out var ip)) return;
 
@@ -132,14 +188,14 @@ internal sealed class LoginProtection
 
     private void RegisterFailure(FailureState state, int limit, TimeSpan blockDuration, DateTime utcNow)
     {
-        state.Attempts.Enqueue(utcNow);
+        state.FailureAttempts.Enqueue(utcNow);
         state.ConsecutiveFailures++;
         state.BackoffUntilUtc = utcNow.Add(BackoffFor(state.ConsecutiveFailures));
-        if (state.Attempts.Count < limit) return;
+        if (state.FailureAttempts.Count < limit) return;
 
         state.BlockedUntilUtc = utcNow.Add(blockDuration);
         state.BackoffUntilUtc = state.BlockedUntilUtc;
-        state.Attempts.Clear();
+        state.FailureAttempts.Clear();
         state.ConsecutiveFailures = 0;
     }
 
@@ -155,8 +211,10 @@ internal sealed class LoginProtection
 
     private void Prepare(FailureState state, DateTime utcNow)
     {
-        while (state.Attempts.TryPeek(out var attempt) && utcNow - attempt >= _options.FailureWindow)
-            state.Attempts.Dequeue();
+        while (state.LoginAttempts.TryPeek(out var loginAttempt) && utcNow - loginAttempt >= _options.AttemptWindow)
+            state.LoginAttempts.Dequeue();
+        while (state.FailureAttempts.TryPeek(out var failureAttempt) && utcNow - failureAttempt >= _options.FailureWindow)
+            state.FailureAttempts.Dequeue();
 
         if (state.BlockedUntilUtc > utcNow) return;
         if (state.BlockedUntilUtc != DateTime.MinValue)
@@ -164,10 +222,10 @@ internal sealed class LoginProtection
             state.BlockedUntilUtc = DateTime.MinValue;
             state.BackoffUntilUtc = DateTime.MinValue;
             state.ConsecutiveFailures = 0;
-            state.Attempts.Clear();
+            state.FailureAttempts.Clear();
         }
 
-        if (state.Attempts.Count == 0 && state.BackoffUntilUtc <= utcNow)
+        if (state.FailureAttempts.Count == 0 && state.BackoffUntilUtc <= utcNow)
         {
             state.ConsecutiveFailures = 0;
             state.BackoffUntilUtc = DateTime.MinValue;

@@ -113,7 +113,7 @@ GATE-P0 ──► GATE-P1 ──► GATE-P2 ──► GATE-P3 ──► GATE-P4 
 |---|---|---|
 | GATE-P0 | **已完成**；远程 CI 证据见 §P0 | 无 |
 | GATE-P1 | **已完成**：ANDROID-01 商城逍遥端到端通过；ANDROID-02..07 按本轮替代口径完成真实协议/门控/权威响应/UI 投影使用探针并复核通过；PROTO-01、BASE-10、PERF-00 证据已归档；Base05 集成 223/223 通过；远程 CI `31313826844` 的 Windows、通用测试、Android Release arm64 AOT 全绿 | 无 |
-| GATE-P2 | SEC-01 已完成；SEC-02 已有 TLS 和连接生命周期成果，但仍未完成；SEC-03..06 未完成；**门禁未关闭** | 按依赖进入 SEC-02 剩余项，不将 SEC-01 完成误报为整个门禁关闭 |
+| GATE-P2 | SEC-01、SEC-03 已完成；SEC-02 已有 TLS 和连接生命周期成果，但仍未完成；SEC-04..06 未完成；**门禁未关闭** | SEC-02 C6 已由独立任务占用；其余按依赖推进，不将单项完成误报为整个门禁关闭 |
 | GATE-P3 | 未开始 | 等待 GATE-P2 |
 | GATE-P4 | PERF-00 采集基建已完成，真实基线/PERF-01..05 未开始 | 等待 GATE-P3 与真实 S1/S2/S3 输入 |
 | GATE-P5 | 未开始 | 等待 GATE-P4 |
@@ -218,6 +218,8 @@ GATE-P1 关闭后，P2 的 SEC-03、SEC-04、SEC-05、SEC-06 各为独立任务�
 **SEC-02 C6 客户端宿主收口记录（2026-08-09）**：PC Windows 宿主直接调用正式客户端 `Network.Connect`，验证不受信证书拒绝后连接状态清空且不降级 V1。Android 增加显式 `sec02TlsHostProbe` Intent，只在内存中临时覆盖 host/port/serverName，12 秒内验证正式 `Settings → Network → SslStream` 握手后恢复原设置，不发送账号或游戏包；失败输出有界分类和异常类型链，不记录秘密，迟到旧代回调不能覆盖超时分类。逍遥实机以旧端点复现 `FAIL:网络端点;SocketException:Connection refused`，黑洞/抖动端点稳定分类为“握手超时”，随后对受信 `www.cloudflare.com:443` 返回 `SEC02_TLS_HOST_PROBE:PASS`，排除 Android 证书链及在线吊销兼容性问题。TLS 专项 19/19、PC 宿主 1/1、Base05 全量 230/230、Android Release arm64 AOT 构建通过；证据见 `Docs/Evidence/GATE-P2/sec02-c6-client-host-20260809/`。证书固定及 SEC-03～06 仍未完成，SEC-02/GATE-P2 状态不变。
 
 **SEC-01 P2 收口记录（2026-08-09）**：`HTTPLogin` 的完整账户事务统一投递到服务端主线程；排队超时使用原子取消，已开始执行则等待真实结果，停服后禁止回退到调用线程。认证或提交异常会恢复密码哈希/盐、封禁状态、错误次数与自动保存请求。PC 与移动端登录统一通过实际 `Settings.Load/Save` 接缝，PC 集成测试从真实 `Network` 发送队列取回同一登录包；Android 使用显式 Intent 触发的有界宿主探针，真实执行 `Settings.Save → Network.Enqueue`，验证队列增加且配置无密码后恢复原账号状态。专项 `5/5`、Windows 宿主 `1/1`、Android Release arm64 AOT 与逍遥日志 `SEC01_HOST_PROBE:PASS` 均通过；证据见 `Docs/Evidence/GATE-P2/sec01-http-login-20260809/`。SEC-01 完成不代表 GATE-P2 或 SEC-02 完成。
+
+**SEC-03 收口记录（2026-08-10）**：新增单一 `LoginProtection` 策略，PC 游戏登录与服务主线程 `HTTPLogin` 统一接入账号/IP 双维度的全请求窗口限流、失败指数退避和临时封禁。默认账号/IP 请求上限分别为 `30/60s`、`120/60s`，失败窗口 `300s`，第 `6/20` 次失败分别封账号/IP `15min`，退避 `500ms` 起、最高 `30s`；成功登录清失败状态但不清当前请求窗口。账号封禁复用可保存的 `Banned/BanReason/ExpiryDate`，IP 封禁复用 `IPBlocks`；跟踪键容量有界，不新增线程、协议或数据库表。真实服务主线程脚本已跨 IP 触发账号封禁、跨账号触发 IP 封禁，高频成功登录限流专项已通过；登录安全与 SEC-01 合并专项 `13/13`、Base05 全量 `237/237`。证据见 `Docs/Evidence/GATE-P2/sec03-login-protection-20260809/`。SEC-03 完成不代表 GATE-P2 关闭。
 
 **GATE-P2 退出条件**：公开测试前安全项全部完成；凭据不通过未加密网络传输；公网无 V1 明文登录。
 

@@ -9,6 +9,9 @@ namespace Base05.Tests;
 public sealed class LoginProtectionTests
 {
     private static readonly LoginProtectionOptions Options = new(
+        AccountAttemptLimit: 10,
+        IpAttemptLimit: 20,
+        AttemptWindow: TimeSpan.FromMinutes(1),
         AccountFailureLimit: 3,
         IpFailureLimit: 4,
         FailureWindow: TimeSpan.FromMinutes(5),
@@ -110,6 +113,32 @@ public sealed class LoginProtectionTests
     }
 
     [Fact]
+    public void 高频成功登录同样受账号窗口限流()
+    {
+        var options = Options with
+        {
+            AccountAttemptLimit = 3,
+            IpAttemptLimit = 99,
+            AttemptWindow = TimeSpan.FromMinutes(1),
+        };
+        var protection = new LoginProtection(options);
+        var now = new DateTime(2026, 8, 10, 1, 2, 3, DateTimeKind.Utc);
+
+        for (var i = 0; i < 3; i++)
+        {
+            var ip = $"10.0.1.{i + 1}";
+            Assert.True(protection.TryBegin("success1", ip, now.AddSeconds(i)).Allowed);
+            protection.RecordSuccess("success1", ip, now.AddSeconds(i));
+        }
+
+        var limited = protection.TryBegin("success1", "10.0.1.99", now.AddSeconds(3));
+        Assert.False(limited.Allowed);
+        Assert.True(limited.AccountRateLimited);
+        Assert.False(limited.AccountBlocked);
+        Assert.Equal(now.AddMinutes(1), limited.RetryAfterUtc);
+    }
+
+    [Fact]
     public async Task HTTP登录可跨来源地址触发账号封禁并请求保存()
     {
         using var settings = new LoginProtectionSettingsScope(accountLimit: 3, ipLimit: 99);
@@ -195,6 +224,9 @@ public sealed class LoginProtectionTests
     {
         private readonly int _accountLimit = Server.Settings.LoginAccountFailureLimit;
         private readonly int _ipLimit = Server.Settings.LoginIpFailureLimit;
+        private readonly int _accountAttemptLimit = Server.Settings.LoginAccountAttemptLimit;
+        private readonly int _ipAttemptLimit = Server.Settings.LoginIpAttemptLimit;
+        private readonly int _attemptWindow = Server.Settings.LoginAttemptWindowSeconds;
         private readonly int _window = Server.Settings.LoginFailureWindowSeconds;
         private readonly int _baseBackoff = Server.Settings.LoginBaseBackoffMilliseconds;
         private readonly int _maxBackoff = Server.Settings.LoginMaxBackoffSeconds;
@@ -205,6 +237,9 @@ public sealed class LoginProtectionTests
         {
             Server.Settings.LoginAccountFailureLimit = accountLimit;
             Server.Settings.LoginIpFailureLimit = ipLimit;
+            Server.Settings.LoginAccountAttemptLimit = 99;
+            Server.Settings.LoginIpAttemptLimit = 999;
+            Server.Settings.LoginAttemptWindowSeconds = 60;
             Server.Settings.LoginFailureWindowSeconds = 300;
             Server.Settings.LoginBaseBackoffMilliseconds = 0;
             Server.Settings.LoginMaxBackoffSeconds = 0;
@@ -216,6 +251,9 @@ public sealed class LoginProtectionTests
         {
             Server.Settings.LoginAccountFailureLimit = _accountLimit;
             Server.Settings.LoginIpFailureLimit = _ipLimit;
+            Server.Settings.LoginAccountAttemptLimit = _accountAttemptLimit;
+            Server.Settings.LoginIpAttemptLimit = _ipAttemptLimit;
+            Server.Settings.LoginAttemptWindowSeconds = _attemptWindow;
             Server.Settings.LoginFailureWindowSeconds = _window;
             Server.Settings.LoginBaseBackoffMilliseconds = _baseBackoff;
             Server.Settings.LoginMaxBackoffSeconds = _maxBackoff;
