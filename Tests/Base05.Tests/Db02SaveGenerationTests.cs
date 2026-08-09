@@ -62,6 +62,50 @@ public sealed class Db02SaveGenerationTests
         }
     }
 
+    [Fact]
+    public void 账户快照深拷贝密码盐且交接后原地修改不影响后台提交()
+    {
+        string databasePath = Path.Combine(Path.GetTempPath(), $"base05-db02-salt-{Guid.NewGuid():N}.db");
+        var options = new SqlDatabaseOptions { SqlitePath = databasePath };
+        var persistence = new SqlServerPersistence(DatabaseProviderKind.Sqlite, options);
+        var source = new Envir();
+        var account = new AccountInfo
+        {
+            Index = 502,
+            AccountID = "db02-salt",
+            UserName = "DB02 Salt",
+            Salt = new byte[] { 1, 2, 3, 4 },
+        };
+        source.AccountList.Add(account);
+
+        try
+        {
+            persistence.SaveAccounts(source);
+            ((IPendingSaveCoordinator)persistence).DrainPendingSaves();
+
+            account.Salt = new byte[] { 10, 20, 30, 40 };
+            using var blocker = new SqliteConnection($"Data Source={databasePath};Mode=ReadWrite;Cache=Private;Default Timeout=5");
+            blocker.Open();
+            using var begin = blocker.CreateCommand();
+            begin.CommandText = "BEGIN IMMEDIATE;";
+            begin.ExecuteNonQuery();
+
+            persistence.SaveAccounts(source);
+            account.Salt[0] = 99;
+
+            using var commit = blocker.CreateCommand();
+            commit.CommandText = "COMMIT;";
+            commit.ExecuteNonQuery();
+            ((IPendingSaveCoordinator)persistence).DrainPendingSaves();
+
+            Assert.Equal(new byte[] { 10, 20, 30, 40 }, LoadSingleAccount(persistence).Salt);
+        }
+        finally
+        {
+            DeleteSqliteFiles(databasePath);
+        }
+    }
+
     private static AccountInfo LoadSingleAccount(SqlServerPersistence persistence)
     {
         var restored = new Envir();

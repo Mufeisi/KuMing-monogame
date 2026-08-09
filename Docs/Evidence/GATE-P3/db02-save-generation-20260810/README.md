@@ -10,13 +10,13 @@ DB-02 退出条件已满足：SQLite 保存使用脱离游戏可变状态的独�
 
    `dotnet test Tests/Base05.Tests/Base05.Tests.csproj -c Release --no-restore --filter "FullyQualifiedName~Db02SaveGenerationTests|FullyQualifiedName~SqliteSingleWriterTests|FullyQualifiedName~SqlPersistenceRoundTripTests" --logger "trx;LogFileName=db02-targeted.trx" --results-directory TestResults/DB02-targeted`
 
-   结果：11/11 通过，0 失败，0 跳过。
+   结果：12/12 通过，0 失败，0 跳过。
 
 2. Base05 全量：
 
    `dotnet test Tests/Base05.Tests/Base05.Tests.csproj -c Release --no-build --logger "trx;LogFileName=db02-base05-full.trx" --results-directory TestResults/DB02-base05-full`
 
-   结果：268/268 通过，0 失败，0 跳过。
+   结果：269/269 通过，0 失败，0 跳过。
 
 3. 服务库 Release 构建：
 
@@ -34,8 +34,8 @@ DB-02 退出条件已满足：SQLite 保存使用脱离游戏可变状态的独�
 
 ## 证据文件
 
-- `db02-targeted.trx`：专项 11/11。
-- `db02-base05-full.trx`：全量 268/268。
+- `db02-targeted.trx`：专项 12/12。
+- `db02-base05-full.trx`：全量 269/269。
 
 ## 已知非本任务项
 

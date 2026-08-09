@@ -1357,7 +1357,9 @@ namespace Server.Persistence.Sql
                         AccountId = account.Index,
                         AccountName = account.AccountID ?? string.Empty,
                         PasswordHash = account.Password ?? string.Empty,
-                        PasswordSalt = account.Salt ?? Array.Empty<byte>(),
+                        PasswordSalt = account.Salt == null
+                            ? Array.Empty<byte>()
+                            : (byte[])account.Salt.Clone(),
                         RequirePasswordChange = account.RequirePasswordChange ? 1 : 0,
                         UserName = account.UserName ?? string.Empty,
                         BirthUtcMs = ToUtcMs(account.BirthDate),
