@@ -18,7 +18,7 @@ internal static class ProductionSecurityPolicy
     internal static void ValidateAndApply()
     {
         ImportTransientSecrets();
-        ProductionRpoPolicy.ValidateSaveDelay(Settings.SaveDelay, enforceProductionMaximum: true);
+        ProductionRpoPolicy.ValidateConfiguredSaveDelay();
 
         string gameMasterPassword = Require(ProtectedSecretStore.GameMasterPassword, "游戏 GM 口令");
         if (gameMasterPassword == "@123456" || gameMasterPassword.Length < 12)

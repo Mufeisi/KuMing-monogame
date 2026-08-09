@@ -1,123 +1,139 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<TestRun id="32c17fd4-10fa-45e2-9cbe-57948ad05ad0" name="luo@DESKTOP-4J13TH0 2026-08-10 03:42:25" runUser="DESKTOP-4J13TH0\luo" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
-  <Times creation="2026-08-10T03:42:25.9735465+08:00" queuing="2026-08-10T03:42:25.9735468+08:00" start="2026-08-10T03:42:25.0665223+08:00" finish="2026-08-10T03:42:28.3333708+08:00" />
-  <TestSettings name="default" id="c2159710-b6cd-405d-839c-68850062d743">
-    <Deployment runDeploymentRoot="luo_DESKTOP-4J13TH0_2026-08-10_03_42_25" />
+<TestRun id="69f952ac-d2a4-4d7b-9c53-39c524d9aff2" name="luo@DESKTOP-4J13TH0 2026-08-10 04:42:22" runUser="DESKTOP-4J13TH0\luo" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-08-10T04:42:22.9613637+08:00" queuing="2026-08-10T04:42:22.9613640+08:00" start="2026-08-10T04:42:20.9104169+08:00" finish="2026-08-10T04:42:26.4953130+08:00" />
+  <TestSettings name="default" id="02172855-5184-4a80-a8ba-996c2a595f1d">
+    <Deployment runDeploymentRoot="luo_DESKTOP-4J13TH0_2026-08-10_04_42_22" />
   </TestSettings>
   <Results>
-    <UnitTestResult executionId="c9193752-cbf0-4e0e-93a9-0237f99edd18" testId="a17bcd6d-3680-f3b3-ab3f-14350a5860c8" testName="Base05.Tests.ProductionSecurityTests.正式启动策略拒绝默认口令公网明文管理与缺失秘密" computerName="DESKTOP-4J13TH0" duration="00:00:00.0275299" startTime="2026-08-10T03:42:25.8888508+08:00" endTime="2026-08-10T03:42:25.9082232+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="c9193752-cbf0-4e0e-93a9-0237f99edd18" />
-    <UnitTestResult executionId="a8366399-1929-4de6-bd40-c16beb1d0f6b" testId="9bf081af-f7f1-6dd8-8e67-8f7f95d51cda" testName="Base05.Tests.ProductionRpoPolicyTests.正式保存间隔拒绝越界值(minutes: 0)" computerName="DESKTOP-4J13TH0" duration="00:00:00.0041453" startTime="2026-08-10T03:42:25.8577862+08:00" endTime="2026-08-10T03:42:25.8708322+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="a8366399-1929-4de6-bd40-c16beb1d0f6b" />
-    <UnitTestResult executionId="04f2d689-abc6-41ad-b7e6-dbe5d8f60c9c" testId="c7ff7162-1582-5a76-58b9-4c29816eabcb" testName="Base05.Tests.ProductionSecurityTests.完整受保护配置覆盖运行时明文占位并通过门禁" computerName="DESKTOP-4J13TH0" duration="00:00:00.0426390" startTime="2026-08-10T03:42:28.2093914+08:00" endTime="2026-08-10T03:42:28.2517262+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="04f2d689-abc6-41ad-b7e6-dbe5d8f60c9c" />
-    <UnitTestResult executionId="ab887c6a-d261-4f83-a5e7-d4cb4acaacd4" testId="0cd4df65-e037-5e51-b41b-8a01c22b3288" testName="Base05.Tests.ProductionSecurityTests.正式启动策略拒绝越界保存间隔并接受边界值" computerName="DESKTOP-4J13TH0" duration="00:00:00.0081032" startTime="2026-08-10T03:42:28.2011247+08:00" endTime="2026-08-10T03:42:28.2089794+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="ab887c6a-d261-4f83-a5e7-d4cb4acaacd4" />
-    <UnitTestResult executionId="138cec87-80d7-456a-a9f7-2531c181a4d2" testId="f4b3c55e-e7db-dbf2-5480-41d025655bcd" testName="Base05.Tests.ProductionRpoPolicyTests.正式保存间隔拒绝越界值(minutes: 60)" computerName="DESKTOP-4J13TH0" duration="00:00:00.0000086" startTime="2026-08-10T03:42:25.8845944+08:00" endTime="2026-08-10T03:42:25.8846669+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="138cec87-80d7-456a-a9f7-2531c181a4d2" />
-    <UnitTestResult executionId="7d6e22e3-c98e-4938-b631-8441b71ccc10" testId="d30c65a4-caaa-8fc9-fed8-e205a1db5703" testName="Base05.Tests.ProductionRpoPolicyTests.正式保存间隔接受一分钟和五分钟边界(minutes: 1)" computerName="DESKTOP-4J13TH0" duration="00:00:00.0001912" startTime="2026-08-10T03:42:25.8865104+08:00" endTime="2026-08-10T03:42:25.8865626+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="7d6e22e3-c98e-4938-b631-8441b71ccc10" />
-    <UnitTestResult executionId="d1223cde-1937-4d60-bbb4-70e6ecb4513a" testId="c7c32ec9-b74f-05ad-a67b-7907d9018c6d" testName="Base05.Tests.ProductionSecurityTests.DPAPI受保护存储往返且文件不含明文" computerName="DESKTOP-4J13TH0" duration="00:00:00.0102602" startTime="2026-08-10T03:42:28.2625096+08:00" endTime="2026-08-10T03:42:28.2685617+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="d1223cde-1937-4d60-bbb4-70e6ecb4513a" />
-    <UnitTestResult executionId="0f0e0dd5-15d9-4b34-ac57-2a46d2152fde" testId="8a183943-6145-fd43-1af5-d5a3a7fc3fe2" testName="Base05.Tests.ProductionSecurityTests.Envir在创建工作线程前拒绝正式服弱配置" computerName="DESKTOP-4J13TH0" duration="00:00:00.0108744" startTime="2026-08-10T03:42:25.9423065+08:00" endTime="2026-08-10T03:42:25.9424047+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="0f0e0dd5-15d9-4b34-ac57-2a46d2152fde" />
-    <UnitTestResult executionId="01bf2aab-5371-4d52-9763-81e72270dd3e" testId="a038dc4b-e361-c1c4-1449-e6a1516dd348" testName="Base05.Tests.ProductionSecurityTests.正式服SQLite拒绝关闭备份或缺少异地目录" computerName="DESKTOP-4J13TH0" duration="00:00:00.0161810" startTime="2026-08-10T03:42:28.1854250+08:00" endTime="2026-08-10T03:42:28.2007141+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="01bf2aab-5371-4d52-9763-81e72270dd3e" />
-    <UnitTestResult executionId="b12fd03a-6c9d-4a9d-8fce-50cf7bbc19c1" testId="3716e1ac-3210-dcb4-0e0f-81276bb98363" testName="Base05.Tests.ProductionSecurityTests.CI短暂导入后立即清除环境变量并应用秘密" computerName="DESKTOP-4J13TH0" duration="00:00:02.2650582" startTime="2026-08-10T03:42:25.9427057+08:00" endTime="2026-08-10T03:42:28.1844124+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="b12fd03a-6c9d-4a9d-8fce-50cf7bbc19c1" />
-    <UnitTestResult executionId="62e718c1-4c93-40f6-b6b3-cfbbe5b7d32b" testId="aa24d8d8-1f5e-985d-6161-d743b2537914" testName="Base05.Tests.ProductionRpoPolicyTests.故障注入在下一次保存前一毫秒崩溃时RPO仍小于五分钟" computerName="DESKTOP-4J13TH0" duration="00:00:00.0041357" startTime="2026-08-10T03:42:25.8869136+08:00" endTime="2026-08-10T03:42:25.8869624+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="62e718c1-4c93-40f6-b6b3-cfbbe5b7d32b" />
-    <UnitTestResult executionId="c62cbf2b-e6fc-41ea-b6e7-f6bfb6403177" testId="5b8869b2-8644-4192-f450-3b011b97d98e" testName="Base05.Tests.ProductionRpoPolicyTests.正式保存间隔拒绝越界值(minutes: 6)" computerName="DESKTOP-4J13TH0" duration="00:00:00.0000139" startTime="2026-08-10T03:42:25.8842322+08:00" endTime="2026-08-10T03:42:25.8843062+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="c62cbf2b-e6fc-41ea-b6e7-f6bfb6403177" />
-    <UnitTestResult executionId="a077f710-02ec-4a80-8f16-117b706a4e3f" testId="2f2b326a-cd17-27e0-2b64-725d585b819c" testName="Base05.Tests.ProductionSecurityTests.历史INI秘密键可严格删除且保留非秘密配置" computerName="DESKTOP-4J13TH0" duration="00:00:00.0063847" startTime="2026-08-10T03:42:28.2519574+08:00" endTime="2026-08-10T03:42:28.2582138+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="a077f710-02ec-4a80-8f16-117b706a4e3f" />
-    <UnitTestResult executionId="a7f00c72-ea19-472f-b3b0-3473726f65fa" testId="ec5cbaf7-1e84-bd50-12ae-9d2855700c22" testName="Base05.Tests.ProductionRpoPolicyTests.正式保存间隔拒绝越界值(minutes: -1)" computerName="DESKTOP-4J13TH0" duration="00:00:00.0002256" startTime="2026-08-10T03:42:25.8833775+08:00" endTime="2026-08-10T03:42:25.8835323+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="a7f00c72-ea19-472f-b3b0-3473726f65fa" />
-    <UnitTestResult executionId="3233ab65-aa13-4d3a-852a-8e50cfa53830" testId="06ca9e6f-1038-2f50-b5c8-c792f27fb757" testName="Base05.Tests.ProductionRpoPolicyTests.测试服只放宽上限但仍拒绝零和负数" computerName="DESKTOP-4J13TH0" duration="00:00:00.0002630" startTime="2026-08-10T03:42:25.8867416+08:00" endTime="2026-08-10T03:42:25.8867883+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="3233ab65-aa13-4d3a-852a-8e50cfa53830" />
-    <UnitTestResult executionId="e9bb3278-6b5a-40e8-b8aa-f623ccfb7a85" testId="bff506c4-4f75-055d-ac09-087ba720adcb" testName="Base05.Tests.ProductionRpoPolicyTests.正式保存间隔接受一分钟和五分钟边界(minutes: 5)" computerName="DESKTOP-4J13TH0" duration="00:00:00.0000551" startTime="2026-08-10T03:42:25.8863225+08:00" endTime="2026-08-10T03:42:25.8863839+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="e9bb3278-6b5a-40e8-b8aa-f623ccfb7a85" />
+    <UnitTestResult executionId="7271eba9-b748-4fb8-bfe3-9d1bbe6e05ac" testId="c7c32ec9-b74f-05ad-a67b-7907d9018c6d" testName="Base05.Tests.ProductionSecurityTests.DPAPI受保护存储往返且文件不含明文" computerName="DESKTOP-4J13TH0" duration="00:00:00.0046134" startTime="2026-08-10T04:42:26.3937115+08:00" endTime="2026-08-10T04:42:26.3982104+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="7271eba9-b748-4fb8-bfe3-9d1bbe6e05ac" />
+    <UnitTestResult executionId="438be4cc-1cb2-4b26-ad10-1849d8dcf1f0" testId="c7ff7162-1582-5a76-58b9-4c29816eabcb" testName="Base05.Tests.ProductionSecurityTests.完整受保护配置覆盖运行时明文占位并通过门禁" computerName="DESKTOP-4J13TH0" duration="00:00:00.0379791" startTime="2026-08-10T04:42:26.3494173+08:00" endTime="2026-08-10T04:42:26.3871576+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="438be4cc-1cb2-4b26-ad10-1849d8dcf1f0" />
+    <UnitTestResult executionId="4e53f089-fc4e-4664-b124-eddd301eceea" testId="ec5cbaf7-1e84-bd50-12ae-9d2855700c22" testName="Base05.Tests.ProductionRpoPolicyTests.正式保存间隔拒绝越界值(minutes: -1)" computerName="DESKTOP-4J13TH0" duration="00:00:00.0003582" startTime="2026-08-10T04:42:21.7434646+08:00" endTime="2026-08-10T04:42:21.7435530+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="4e53f089-fc4e-4664-b124-eddd301eceea" />
+    <UnitTestResult executionId="23b47871-971a-4f90-97c7-fbb624d0406d" testId="3716e1ac-3210-dcb4-0e0f-81276bb98363" testName="Base05.Tests.ProductionSecurityTests.CI短暂导入后立即清除环境变量并应用秘密" computerName="DESKTOP-4J13TH0" duration="00:00:02.2635949" startTime="2026-08-10T04:42:24.0643006+08:00" endTime="2026-08-10T04:42:26.3279029+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="23b47871-971a-4f90-97c7-fbb624d0406d" />
+    <UnitTestResult executionId="d3c70f12-ef3b-49af-81db-ce1bb92d41ba" testId="04209c1d-3dd0-4292-fe16-8f4118d76427" testName="Base05.Tests.ProductionRpoPolicyTests.配置上下文在载入与启动前使用同一正式或测试服口径" computerName="DESKTOP-4J13TH0" duration="00:00:00.0002871" startTime="2026-08-10T04:42:24.0396792+08:00" endTime="2026-08-10T04:42:24.0397617+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="d3c70f12-ef3b-49af-81db-ce1bb92d41ba" />
+    <UnitTestResult executionId="1885a83a-787b-481f-8dd0-954c9b41e0a6" testId="06ca9e6f-1038-2f50-b5c8-c792f27fb757" testName="Base05.Tests.ProductionRpoPolicyTests.测试服只放宽上限但仍拒绝零和负数" computerName="DESKTOP-4J13TH0" duration="00:00:00.0003277" startTime="2026-08-10T04:42:21.7460357+08:00" endTime="2026-08-10T04:42:21.7461078+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="1885a83a-787b-481f-8dd0-954c9b41e0a6" />
+    <UnitTestResult executionId="00ce2e6c-d465-434a-9381-01f390d9cead" testId="0cd4df65-e037-5e51-b41b-8a01c22b3288" testName="Base05.Tests.ProductionSecurityTests.正式启动策略拒绝越界保存间隔并接受边界值" computerName="DESKTOP-4J13TH0" duration="00:00:00.0079812" startTime="2026-08-10T04:42:26.3412624+08:00" endTime="2026-08-10T04:42:26.3490437+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="00ce2e6c-d465-434a-9381-01f390d9cead" />
+    <UnitTestResult executionId="89b63644-9dd3-41a5-ae14-ff80249d9818" testId="a038dc4b-e361-c1c4-1449-e6a1516dd348" testName="Base05.Tests.ProductionSecurityTests.正式服SQLite拒绝关闭备份或缺少异地目录" computerName="DESKTOP-4J13TH0" duration="00:00:00.0127403" startTime="2026-08-10T04:42:26.3306878+08:00" endTime="2026-08-10T04:42:26.3408784+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="89b63644-9dd3-41a5-ae14-ff80249d9818" />
+    <UnitTestResult executionId="121ea3e2-1f19-4718-970c-bb23087903f4" testId="bff506c4-4f75-055d-ac09-087ba720adcb" testName="Base05.Tests.ProductionRpoPolicyTests.正式保存间隔接受一分钟和五分钟边界(minutes: 5)" computerName="DESKTOP-4J13TH0" duration="00:00:00.0000604" startTime="2026-08-10T04:42:21.7455715+08:00" endTime="2026-08-10T04:42:21.7456343+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="121ea3e2-1f19-4718-970c-bb23087903f4" />
+    <UnitTestResult executionId="ce3a4906-d827-41c5-98a0-128a029cf4a9" testId="5b8869b2-8644-4192-f450-3b011b97d98e" testName="Base05.Tests.ProductionRpoPolicyTests.正式保存间隔拒绝越界值(minutes: 6)" computerName="DESKTOP-4J13TH0" duration="00:00:00.0000125" startTime="2026-08-10T04:42:21.7441273+08:00" endTime="2026-08-10T04:42:21.7441949+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="ce3a4906-d827-41c5-98a0-128a029cf4a9" />
+    <UnitTestResult executionId="7a8fb3cd-5e99-464d-bd03-d5227736e76f" testId="a17bcd6d-3680-f3b3-ab3f-14350a5860c8" testName="Base05.Tests.ProductionSecurityTests.正式启动策略拒绝默认口令公网明文管理与缺失秘密" computerName="DESKTOP-4J13TH0" duration="00:00:00.0194945" startTime="2026-08-10T04:42:24.0427051+08:00" endTime="2026-08-10T04:42:24.0626841+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="7a8fb3cd-5e99-464d-bd03-d5227736e76f" />
+    <UnitTestResult executionId="2a9eff91-1761-48d2-a14d-f0a4492d2f59" testId="f4b3c55e-e7db-dbf2-5480-41d025655bcd" testName="Base05.Tests.ProductionRpoPolicyTests.正式保存间隔拒绝越界值(minutes: 60)" computerName="DESKTOP-4J13TH0" duration="00:00:00.0000086" startTime="2026-08-10T04:42:21.7442991+08:00" endTime="2026-08-10T04:42:21.7443481+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="2a9eff91-1761-48d2-a14d-f0a4492d2f59" />
+    <UnitTestResult executionId="3f7b1426-beba-4936-80f2-e756e0a1c7f0" testId="d30c65a4-caaa-8fc9-fed8-e205a1db5703" testName="Base05.Tests.ProductionRpoPolicyTests.正式保存间隔接受一分钟和五分钟边界(minutes: 1)" computerName="DESKTOP-4J13TH0" duration="00:00:00.0001734" startTime="2026-08-10T04:42:21.7457569+08:00" endTime="2026-08-10T04:42:21.7458122+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="3f7b1426-beba-4936-80f2-e756e0a1c7f0" />
+    <UnitTestResult executionId="1fc4bd1a-9a99-4c8e-a20c-cff8bdcc8679" testId="8a183943-6145-fd43-1af5-d5a3a7fc3fe2" testName="Base05.Tests.ProductionSecurityTests.Envir在创建工作线程前拒绝正式服弱配置" computerName="DESKTOP-4J13TH0" duration="00:00:00.0015422" startTime="2026-08-10T04:42:24.0629942+08:00" endTime="2026-08-10T04:42:24.0640473+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="1fc4bd1a-9a99-4c8e-a20c-cff8bdcc8679" />
+    <UnitTestResult executionId="7774ed1e-25e4-4e75-b3d4-9ac6200bfa99" testId="9bf081af-f7f1-6dd8-8e67-8f7f95d51cda" testName="Base05.Tests.ProductionRpoPolicyTests.正式保存间隔拒绝越界值(minutes: 0)" computerName="DESKTOP-4J13TH0" duration="00:00:00.0043502" startTime="2026-08-10T04:42:21.7191439+08:00" endTime="2026-08-10T04:42:21.7328074+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="7774ed1e-25e4-4e75-b3d4-9ac6200bfa99" />
+    <UnitTestResult executionId="cd499c82-7668-4c22-9eab-f649a005b635" testId="2f2b326a-cd17-27e0-2b64-725d585b819c" testName="Base05.Tests.ProductionSecurityTests.历史INI秘密键可严格删除且保留非秘密配置" computerName="DESKTOP-4J13TH0" duration="00:00:00.0062192" startTime="2026-08-10T04:42:26.3873899+08:00" endTime="2026-08-10T04:42:26.3934853+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="cd499c82-7668-4c22-9eab-f649a005b635" />
+    <UnitTestResult executionId="e511c626-7ad0-4ac7-93b8-ec5589b35b7c" testId="29b916d7-2a0c-32bb-dc79-936a823e082b" testName="Base05.Tests.ProductionRpoPolicyTests.真实自动保存提交后在下一截止前一毫秒强停并重启只丢失未提交窗口" computerName="DESKTOP-4J13TH0" duration="00:00:02.3041172" startTime="2026-08-10T04:42:21.7462842+08:00" endTime="2026-08-10T04:42:24.0387344+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="e511c626-7ad0-4ac7-93b8-ec5589b35b7c">
+      <Output>
+        <StdOut>FAULT_PROCESS_ID=2288&#xD;
+FAULT_PROCESS_EXIT_CODE=-1&#xD;
+LAST_COMMITTED_LOGICAL_MS=300000&#xD;
+CRASH_LOGICAL_MS=599999&#xD;
+UNPERSISTED_WINDOW_MS=299999&#xD;
+RESTARTED_ACCOUNT_GOLD=100&#xD;
+COMMITTED_GENERATION=1</StdOut>
+      </Output>
+    </UnitTestResult>
   </Results>
   <TestDefinitions>
     <UnitTest name="Base05.Tests.ProductionSecurityTests.DPAPI受保护存储往返且文件不含明文" storage="c:\users\luo\.codex\worktrees\p3-db05-rpo-guard-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="c7c32ec9-b74f-05ad-a67b-7907d9018c6d">
-      <Execution id="d1223cde-1937-4d60-bbb4-70e6ecb4513a" />
+      <Execution id="7271eba9-b748-4fb8-bfe3-9d1bbe6e05ac" />
       <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p3-db05-rpo-guard-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.ProductionSecurityTests" name="DPAPI受保护存储往返且文件不含明文" />
     </UnitTest>
     <UnitTest name="Base05.Tests.ProductionSecurityTests.正式启动策略拒绝默认口令公网明文管理与缺失秘密" storage="c:\users\luo\.codex\worktrees\p3-db05-rpo-guard-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="a17bcd6d-3680-f3b3-ab3f-14350a5860c8">
-      <Execution id="c9193752-cbf0-4e0e-93a9-0237f99edd18" />
+      <Execution id="7a8fb3cd-5e99-464d-bd03-d5227736e76f" />
       <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p3-db05-rpo-guard-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.ProductionSecurityTests" name="正式启动策略拒绝默认口令公网明文管理与缺失秘密" />
     </UnitTest>
     <UnitTest name="Base05.Tests.ProductionRpoPolicyTests.正式保存间隔拒绝越界值(minutes: -1)" storage="c:\users\luo\.codex\worktrees\p3-db05-rpo-guard-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="ec5cbaf7-1e84-bd50-12ae-9d2855700c22">
-      <Execution id="a7f00c72-ea19-472f-b3b0-3473726f65fa" />
+      <Execution id="4e53f089-fc4e-4664-b124-eddd301eceea" />
       <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p3-db05-rpo-guard-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.ProductionRpoPolicyTests" name="正式保存间隔拒绝越界值" />
     </UnitTest>
+    <UnitTest name="Base05.Tests.ProductionRpoPolicyTests.配置上下文在载入与启动前使用同一正式或测试服口径" storage="c:\users\luo\.codex\worktrees\p3-db05-rpo-guard-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="04209c1d-3dd0-4292-fe16-8f4118d76427">
+      <Execution id="d3c70f12-ef3b-49af-81db-ce1bb92d41ba" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p3-db05-rpo-guard-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.ProductionRpoPolicyTests" name="配置上下文在载入与启动前使用同一正式或测试服口径" />
+    </UnitTest>
     <UnitTest name="Base05.Tests.ProductionRpoPolicyTests.正式保存间隔拒绝越界值(minutes: 60)" storage="c:\users\luo\.codex\worktrees\p3-db05-rpo-guard-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="f4b3c55e-e7db-dbf2-5480-41d025655bcd">
-      <Execution id="138cec87-80d7-456a-a9f7-2531c181a4d2" />
+      <Execution id="2a9eff91-1761-48d2-a14d-f0a4492d2f59" />
       <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p3-db05-rpo-guard-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.ProductionRpoPolicyTests" name="正式保存间隔拒绝越界值" />
     </UnitTest>
     <UnitTest name="Base05.Tests.ProductionSecurityTests.Envir在创建工作线程前拒绝正式服弱配置" storage="c:\users\luo\.codex\worktrees\p3-db05-rpo-guard-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="8a183943-6145-fd43-1af5-d5a3a7fc3fe2">
-      <Execution id="0f0e0dd5-15d9-4b34-ac57-2a46d2152fde" />
+      <Execution id="1fc4bd1a-9a99-4c8e-a20c-cff8bdcc8679" />
       <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p3-db05-rpo-guard-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.ProductionSecurityTests" name="Envir在创建工作线程前拒绝正式服弱配置" />
     </UnitTest>
     <UnitTest name="Base05.Tests.ProductionRpoPolicyTests.正式保存间隔拒绝越界值(minutes: 6)" storage="c:\users\luo\.codex\worktrees\p3-db05-rpo-guard-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="5b8869b2-8644-4192-f450-3b011b97d98e">
-      <Execution id="c62cbf2b-e6fc-41ea-b6e7-f6bfb6403177" />
+      <Execution id="ce3a4906-d827-41c5-98a0-128a029cf4a9" />
       <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p3-db05-rpo-guard-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.ProductionRpoPolicyTests" name="正式保存间隔拒绝越界值" />
     </UnitTest>
     <UnitTest name="Base05.Tests.ProductionSecurityTests.正式服SQLite拒绝关闭备份或缺少异地目录" storage="c:\users\luo\.codex\worktrees\p3-db05-rpo-guard-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="a038dc4b-e361-c1c4-1449-e6a1516dd348">
-      <Execution id="01bf2aab-5371-4d52-9763-81e72270dd3e" />
+      <Execution id="89b63644-9dd3-41a5-ae14-ff80249d9818" />
       <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p3-db05-rpo-guard-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.ProductionSecurityTests" name="正式服SQLite拒绝关闭备份或缺少异地目录" />
     </UnitTest>
     <UnitTest name="Base05.Tests.ProductionSecurityTests.正式启动策略拒绝越界保存间隔并接受边界值" storage="c:\users\luo\.codex\worktrees\p3-db05-rpo-guard-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="0cd4df65-e037-5e51-b41b-8a01c22b3288">
-      <Execution id="ab887c6a-d261-4f83-a5e7-d4cb4acaacd4" />
+      <Execution id="00ce2e6c-d465-434a-9381-01f390d9cead" />
       <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p3-db05-rpo-guard-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.ProductionSecurityTests" name="正式启动策略拒绝越界保存间隔并接受边界值" />
     </UnitTest>
     <UnitTest name="Base05.Tests.ProductionSecurityTests.CI短暂导入后立即清除环境变量并应用秘密" storage="c:\users\luo\.codex\worktrees\p3-db05-rpo-guard-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="3716e1ac-3210-dcb4-0e0f-81276bb98363">
-      <Execution id="b12fd03a-6c9d-4a9d-8fce-50cf7bbc19c1" />
+      <Execution id="23b47871-971a-4f90-97c7-fbb624d0406d" />
       <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p3-db05-rpo-guard-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.ProductionSecurityTests" name="CI短暂导入后立即清除环境变量并应用秘密" />
     </UnitTest>
+    <UnitTest name="Base05.Tests.ProductionRpoPolicyTests.真实自动保存提交后在下一截止前一毫秒强停并重启只丢失未提交窗口" storage="c:\users\luo\.codex\worktrees\p3-db05-rpo-guard-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="29b916d7-2a0c-32bb-dc79-936a823e082b">
+      <Execution id="e511c626-7ad0-4ac7-93b8-ec5589b35b7c" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p3-db05-rpo-guard-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.ProductionRpoPolicyTests" name="真实自动保存提交后在下一截止前一毫秒强停并重启只丢失未提交窗口" />
+    </UnitTest>
     <UnitTest name="Base05.Tests.ProductionRpoPolicyTests.正式保存间隔接受一分钟和五分钟边界(minutes: 5)" storage="c:\users\luo\.codex\worktrees\p3-db05-rpo-guard-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="bff506c4-4f75-055d-ac09-087ba720adcb">
-      <Execution id="e9bb3278-6b5a-40e8-b8aa-f623ccfb7a85" />
+      <Execution id="121ea3e2-1f19-4718-970c-bb23087903f4" />
       <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p3-db05-rpo-guard-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.ProductionRpoPolicyTests" name="正式保存间隔接受一分钟和五分钟边界" />
     </UnitTest>
     <UnitTest name="Base05.Tests.ProductionRpoPolicyTests.正式保存间隔拒绝越界值(minutes: 0)" storage="c:\users\luo\.codex\worktrees\p3-db05-rpo-guard-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="9bf081af-f7f1-6dd8-8e67-8f7f95d51cda">
-      <Execution id="a8366399-1929-4de6-bd40-c16beb1d0f6b" />
+      <Execution id="7774ed1e-25e4-4e75-b3d4-9ac6200bfa99" />
       <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p3-db05-rpo-guard-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.ProductionRpoPolicyTests" name="正式保存间隔拒绝越界值" />
     </UnitTest>
-    <UnitTest name="Base05.Tests.ProductionRpoPolicyTests.故障注入在下一次保存前一毫秒崩溃时RPO仍小于五分钟" storage="c:\users\luo\.codex\worktrees\p3-db05-rpo-guard-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="aa24d8d8-1f5e-985d-6161-d743b2537914">
-      <Execution id="62e718c1-4c93-40f6-b6b3-cfbbe5b7d32b" />
-      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p3-db05-rpo-guard-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.ProductionRpoPolicyTests" name="故障注入在下一次保存前一毫秒崩溃时RPO仍小于五分钟" />
-    </UnitTest>
     <UnitTest name="Base05.Tests.ProductionSecurityTests.历史INI秘密键可严格删除且保留非秘密配置" storage="c:\users\luo\.codex\worktrees\p3-db05-rpo-guard-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="2f2b326a-cd17-27e0-2b64-725d585b819c">
-      <Execution id="a077f710-02ec-4a80-8f16-117b706a4e3f" />
+      <Execution id="cd499c82-7668-4c22-9eab-f649a005b635" />
       <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p3-db05-rpo-guard-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.ProductionSecurityTests" name="历史INI秘密键可严格删除且保留非秘密配置" />
     </UnitTest>
     <UnitTest name="Base05.Tests.ProductionSecurityTests.完整受保护配置覆盖运行时明文占位并通过门禁" storage="c:\users\luo\.codex\worktrees\p3-db05-rpo-guard-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="c7ff7162-1582-5a76-58b9-4c29816eabcb">
-      <Execution id="04f2d689-abc6-41ad-b7e6-dbe5d8f60c9c" />
+      <Execution id="438be4cc-1cb2-4b26-ad10-1849d8dcf1f0" />
       <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p3-db05-rpo-guard-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.ProductionSecurityTests" name="完整受保护配置覆盖运行时明文占位并通过门禁" />
     </UnitTest>
     <UnitTest name="Base05.Tests.ProductionRpoPolicyTests.测试服只放宽上限但仍拒绝零和负数" storage="c:\users\luo\.codex\worktrees\p3-db05-rpo-guard-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="06ca9e6f-1038-2f50-b5c8-c792f27fb757">
-      <Execution id="3233ab65-aa13-4d3a-852a-8e50cfa53830" />
+      <Execution id="1885a83a-787b-481f-8dd0-954c9b41e0a6" />
       <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p3-db05-rpo-guard-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.ProductionRpoPolicyTests" name="测试服只放宽上限但仍拒绝零和负数" />
     </UnitTest>
     <UnitTest name="Base05.Tests.ProductionRpoPolicyTests.正式保存间隔接受一分钟和五分钟边界(minutes: 1)" storage="c:\users\luo\.codex\worktrees\p3-db05-rpo-guard-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="d30c65a4-caaa-8fc9-fed8-e205a1db5703">
-      <Execution id="7d6e22e3-c98e-4938-b631-8441b71ccc10" />
+      <Execution id="3f7b1426-beba-4936-80f2-e756e0a1c7f0" />
       <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p3-db05-rpo-guard-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.ProductionRpoPolicyTests" name="正式保存间隔接受一分钟和五分钟边界" />
     </UnitTest>
   </TestDefinitions>
   <TestEntries>
-    <TestEntry testId="a17bcd6d-3680-f3b3-ab3f-14350a5860c8" executionId="c9193752-cbf0-4e0e-93a9-0237f99edd18" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
-    <TestEntry testId="9bf081af-f7f1-6dd8-8e67-8f7f95d51cda" executionId="a8366399-1929-4de6-bd40-c16beb1d0f6b" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
-    <TestEntry testId="c7ff7162-1582-5a76-58b9-4c29816eabcb" executionId="04f2d689-abc6-41ad-b7e6-dbe5d8f60c9c" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
-    <TestEntry testId="0cd4df65-e037-5e51-b41b-8a01c22b3288" executionId="ab887c6a-d261-4f83-a5e7-d4cb4acaacd4" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
-    <TestEntry testId="f4b3c55e-e7db-dbf2-5480-41d025655bcd" executionId="138cec87-80d7-456a-a9f7-2531c181a4d2" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
-    <TestEntry testId="d30c65a4-caaa-8fc9-fed8-e205a1db5703" executionId="7d6e22e3-c98e-4938-b631-8441b71ccc10" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
-    <TestEntry testId="c7c32ec9-b74f-05ad-a67b-7907d9018c6d" executionId="d1223cde-1937-4d60-bbb4-70e6ecb4513a" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
-    <TestEntry testId="8a183943-6145-fd43-1af5-d5a3a7fc3fe2" executionId="0f0e0dd5-15d9-4b34-ac57-2a46d2152fde" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
-    <TestEntry testId="a038dc4b-e361-c1c4-1449-e6a1516dd348" executionId="01bf2aab-5371-4d52-9763-81e72270dd3e" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
-    <TestEntry testId="3716e1ac-3210-dcb4-0e0f-81276bb98363" executionId="b12fd03a-6c9d-4a9d-8fce-50cf7bbc19c1" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
-    <TestEntry testId="aa24d8d8-1f5e-985d-6161-d743b2537914" executionId="62e718c1-4c93-40f6-b6b3-cfbbe5b7d32b" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
-    <TestEntry testId="5b8869b2-8644-4192-f450-3b011b97d98e" executionId="c62cbf2b-e6fc-41ea-b6e7-f6bfb6403177" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
-    <TestEntry testId="2f2b326a-cd17-27e0-2b64-725d585b819c" executionId="a077f710-02ec-4a80-8f16-117b706a4e3f" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
-    <TestEntry testId="ec5cbaf7-1e84-bd50-12ae-9d2855700c22" executionId="a7f00c72-ea19-472f-b3b0-3473726f65fa" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
-    <TestEntry testId="06ca9e6f-1038-2f50-b5c8-c792f27fb757" executionId="3233ab65-aa13-4d3a-852a-8e50cfa53830" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
-    <TestEntry testId="bff506c4-4f75-055d-ac09-087ba720adcb" executionId="e9bb3278-6b5a-40e8-b8aa-f623ccfb7a85" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="c7c32ec9-b74f-05ad-a67b-7907d9018c6d" executionId="7271eba9-b748-4fb8-bfe3-9d1bbe6e05ac" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="c7ff7162-1582-5a76-58b9-4c29816eabcb" executionId="438be4cc-1cb2-4b26-ad10-1849d8dcf1f0" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="ec5cbaf7-1e84-bd50-12ae-9d2855700c22" executionId="4e53f089-fc4e-4664-b124-eddd301eceea" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="3716e1ac-3210-dcb4-0e0f-81276bb98363" executionId="23b47871-971a-4f90-97c7-fbb624d0406d" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="04209c1d-3dd0-4292-fe16-8f4118d76427" executionId="d3c70f12-ef3b-49af-81db-ce1bb92d41ba" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="06ca9e6f-1038-2f50-b5c8-c792f27fb757" executionId="1885a83a-787b-481f-8dd0-954c9b41e0a6" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="0cd4df65-e037-5e51-b41b-8a01c22b3288" executionId="00ce2e6c-d465-434a-9381-01f390d9cead" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="a038dc4b-e361-c1c4-1449-e6a1516dd348" executionId="89b63644-9dd3-41a5-ae14-ff80249d9818" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="bff506c4-4f75-055d-ac09-087ba720adcb" executionId="121ea3e2-1f19-4718-970c-bb23087903f4" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="5b8869b2-8644-4192-f450-3b011b97d98e" executionId="ce3a4906-d827-41c5-98a0-128a029cf4a9" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="a17bcd6d-3680-f3b3-ab3f-14350a5860c8" executionId="7a8fb3cd-5e99-464d-bd03-d5227736e76f" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="f4b3c55e-e7db-dbf2-5480-41d025655bcd" executionId="2a9eff91-1761-48d2-a14d-f0a4492d2f59" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="d30c65a4-caaa-8fc9-fed8-e205a1db5703" executionId="3f7b1426-beba-4936-80f2-e756e0a1c7f0" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="8a183943-6145-fd43-1af5-d5a3a7fc3fe2" executionId="1fc4bd1a-9a99-4c8e-a20c-cff8bdcc8679" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="9bf081af-f7f1-6dd8-8e67-8f7f95d51cda" executionId="7774ed1e-25e4-4e75-b3d4-9ac6200bfa99" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="2f2b326a-cd17-27e0-2b64-725d585b819c" executionId="cd499c82-7668-4c22-9eab-f649a005b635" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="29b916d7-2a0c-32bb-dc79-936a823e082b" executionId="e511c626-7ad0-4ac7-93b8-ec5589b35b7c" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
   </TestEntries>
   <TestLists>
     <TestList name="列表中未列出的结果" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
     <TestList name="所有已加载的结果" id="19431567-8539-422a-85d7-44ee4e166bda" />
   </TestLists>
   <ResultSummary outcome="Completed">
-    <Counters total="16" executed="16" passed="16" failed="0" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <Counters total="17" executed="17" passed="17" failed="0" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
     <Output>
       <StdOut>[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.0.2+dd36e86129 (64-bit .NET 10.0.4)&#xD;
-[xUnit.net 00:00:00.11]   Discovering: Base05.Tests&#xD;
-[xUnit.net 00:00:00.19]   Discovered:  Base05.Tests&#xD;
-[xUnit.net 00:00:00.22]   Starting:    Base05.Tests&#xD;
-[xUnit.net 00:00:02.66]   Finished:    Base05.Tests&#xD;
+[xUnit.net 00:00:00.12]   Discovering: Base05.Tests&#xD;
+[xUnit.net 00:00:00.20]   Discovered:  Base05.Tests&#xD;
+[xUnit.net 00:00:00.23]   Starting:    Base05.Tests&#xD;
+[xUnit.net 00:00:04.94]   Finished:    Base05.Tests&#xD;
 </StdOut>
     </Output>
   </ResultSummary>

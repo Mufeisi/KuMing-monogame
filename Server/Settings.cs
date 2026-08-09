@@ -587,7 +587,7 @@ namespace Server
 
             //Database
             SaveDelay = Reader.ReadInt32("Database", "SaveDelay", SaveDelay);
-            ProductionRpoPolicy.ValidateSaveDelay(SaveDelay, enforceProductionMaximum: !TestServer);
+            ProductionRpoPolicy.ValidateConfiguredSaveDelay();
             CredxGold = Reader.ReadInt16("Database", "CredxGold", CredxGold);
             DatabaseProvider = Reader.ReadString("Database", "Provider", DatabaseProvider);
             SqlitePath = Reader.ReadString("Database", "SqlitePath", SqlitePath);

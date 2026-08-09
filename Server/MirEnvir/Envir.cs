@@ -71,6 +71,7 @@ namespace Server.MirEnvir
         public bool SaveOnStop { get; init; } = true;
         public bool Multithreaded { get; init; } = true;
         public bool EnforceProductionSecurity { get; init; } = true;
+        internal Func<long> ElapsedMillisecondsProvider { get; init; }
 
         internal static EnvirStartOptions FromSettings()
         {
@@ -992,7 +993,7 @@ namespace Server.MirEnvir
             {
                 PerformanceMetrics.TryConfigureFromEnvironment(out _);
                 Volatile.Write(ref _mainThreadId, Thread.CurrentThread.ManagedThreadId);
-                Time = Stopwatch.ElapsedMilliseconds;
+                Time = options.ElapsedMillisecondsProvider?.Invoke() ?? Stopwatch.ElapsedMilliseconds;
 
                 var conTime = Time;
                 var saveTime = ProductionRpoPolicy.GetNextAutoSaveDeadline(Time, Settings.SaveDelay);
@@ -1068,7 +1069,7 @@ namespace Server.MirEnvir
                         using var performanceCpuScope = PerformanceMetrics.Begin(PerformanceMetricKind.Cpu);
                         using var performanceUpdateScope = PerformanceMetrics.Begin(PerformanceMetricKind.Update);
 
-                        Time = Stopwatch.ElapsedMilliseconds;
+                        Time = options.ElapsedMillisecondsProvider?.Invoke() ?? Stopwatch.ElapsedMilliseconds;
                         if (PerformanceMetrics.Enabled && Time >= metricsRuntimeSampleTime)
                         {
                             metricsRuntimeSampleTime = Time + 1000;

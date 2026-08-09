@@ -114,7 +114,7 @@ GATE-P0 ──► GATE-P1 ──► GATE-P2 ──► GATE-P3 ──► GATE-P4 
 | GATE-P0 | **已完成**；远程 CI 证据见 §P0 | 无 |
 | GATE-P1 | **已完成**：ANDROID-01 商城逍遥端到端通过；ANDROID-02..07 按本轮替代口径完成真实协议/门控/权威响应/UI 投影使用探针并复核通过；PROTO-01、BASE-10、PERF-00 证据已归档；Base05 集成 223/223 通过；远程 CI `31313826844` 的 Windows、通用测试、Android Release arm64 AOT 全绿 | 无 |
 | GATE-P2 | **已完成**：SEC-01～SEC-06 全部完成；签名私钥与发布流水线按边界留在 RELEASE-01/02 | 按门禁顺序进入 GATE-P3 |
-| GATE-P3 | **进行中**：DB-01～04、DB-06 已完成；DB-05 的真实最坏崩溃点故障注入仍待完成 | 返回 DB-05 并关闭 T-10 |
+| GATE-P3 | **已完成**：DB-01～06 全部完成；备份、恢复、RPO/RTO、配置门禁和真实强停故障注入均有证据 | 进入 GATE-P4，以 PERF-00 基线驱动性能任务 |
 | GATE-P4 | PERF-00 采集基建已完成，真实基线/PERF-01..05 未开始 | 等待 GATE-P3 与真实 S1/S2/S3 输入 |
 | GATE-P5 | 未开始 | 等待 GATE-P4 |
 
@@ -239,7 +239,7 @@ GATE-P1 关闭后，P2 的 SEC-03、SEC-04、SEC-05、SEC-06 各为独立任务�
 
 **DB-04 SQLite 恢复演练收口记录（2026-08-10）**：现有 `Server.MirForms` 宿主提供离线 `--restore-sqlite` 模式，复用 Server 库恢复接缝；来源必须是 DB-03 独立主库副本，来源或目标目录 `.partial` 任一 `integrity_check` 失败都不会覆盖原库。强停目标先在离线独占条件下 checkpoint 已提交 WAL、切换 DELETE journal，并复制刷新为已验证单文件 `.pre-restore` 回滚工件，再以同目录 `File.Replace` 原子发布；任一进程中断点上正式目标都是独立可读的旧库或新库。发布后校验失败会原子回滚，回滚步骤失败则汇总报告不完整。当前 Windows Release 真实演练使用 DB-03 正式服务生成 C: 本地和 D: 异卷同哈希副本；备份后提交账号金币 777，在 WAL/SHM 存在时强停 PID 1156，正式 CLI 返回 0，恢复后五个业务域复读成功且宿主进入 `Ready`。可复算 RPO 为 303ms；恢复命令到 Ready 的 UTC 端点差为 602.31ms，保守上取整按 RTO 603ms 报告（进程内 Stopwatch 为 600ms）；故障到 Ready 为 625ms，满足 RPO≤5 分钟、RTO≤30 分钟。原始命令、时间、PID、文件/hash、stdout/stderr 和退出码见 `Docs/Evidence/GATE-P3/db04-restore-drill-20260810/raw-powershell-transcript.txt`。DB-04 不替代 DB-05 的生产保存间隔及最坏崩溃点故障注入，GATE-P3 仍未关闭。
 
-**DB-05 RPO 配置强校验收口记录（2026-08-10）**：`ProductionRpoPolicy` 统一约束自动保存间隔，所有环境拒绝零和负数，正式环境只接受 1～5 分钟；`Settings.Load`、`ConfigForm.TrySave` 和 `ProductionSecurityPolicy` 分别在配置载入、界面保存和工作线程创建前失败关闭。Envir 首次保存截止时间和后续重新排期复用同一截止时间计算。T-10 以正式最坏值 5 分钟注入“下一次保存前 1ms 崩溃”，自上次成功提交起的窗口为 299999ms；边界与越界专项、全量和构建证据见 `Docs/Evidence/GATE-P3/db05-rpo-guard-20260810/`，说明见 `Docs/DB-05-RPO配置强校验.md`。磁盘或事务提交失败由既有保存韧性策略告警/保护，不能伪称仍满足时间 RPO。DB-04 仍在修正恢复原子性与真实演练证据，DB-06 尚未执行，GATE-P3 未关闭。
+**DB-05 RPO 配置强校验收口记录（2026-08-10）**：`ProductionRpoPolicy` 统一约束自动保存间隔，所有环境拒绝零和负数，正式环境只接受 1～5 分钟；`Settings.Load`、`ConfigForm.TrySave` 和 `ProductionSecurityPolicy` 分别在配置载入、界面保存和工作线程创建前失败关闭，并按同一 `TestServer` 状态决定是否放宽上限。Envir 首次保存截止时间和后续重新排期复用同一截止时间计算，正式默认仍使用现有 Stopwatch，internal 时间接缝只用于确定性测试。T-10 子进程在正式最坏值 5 分钟下启动真实 Envir 与 SQLite 持久化，在 300000ms 调度点等待账户域后台事务产生成功代次；随后把内存金币从 100 改为 777，在下一截止 600000ms 前 1ms 由父测试强停整个进程树，不执行 Stop/最终保存。新持久化实例重载仍读到最后成功提交值 100，可复算未提交窗口 299999ms，小于 5 分钟。PID、非零退出码、提交代次、逻辑时刻和重启值随 TRX 归档；说明与证据见 `Docs/DB-05-RPO配置强校验.md` 和 `Docs/Evidence/GATE-P3/db05-rpo-guard-20260810/`。磁盘、权限或事务失败仍由既有保存韧性策略告警/保护，不能伪称继续满足时间 RPO。DB-01～06 至此全部完成，GATE-P3 关闭，开发队列进入 GATE-P4。
 
 **GATE-P2 退出条件**：公开测试前安全项全部完成；凭据不通过未加密网络传输；公网无 V1 明文登录。
 

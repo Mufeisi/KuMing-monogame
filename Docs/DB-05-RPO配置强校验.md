@@ -2,22 +2,32 @@
 
 ## 正式门禁
 
-`Setup.ini` 的 `[Database] SaveDelay` 单位为分钟。所有环境都拒绝零和负数；`TestServer=False` 的正式环境只接受 1～5 分钟。
+`Setup.ini` 的 `[Database] SaveDelay` 单位为分钟。所有环境拒绝零和负数；`TestServer=False` 的正式环境只接受 1～5 分钟，测试服允许大于 5 分钟。
 
-同一 `ProductionRpoPolicy` 接入三个入口：
+`ProductionRpoPolicy.ValidateConfiguredSaveDelay` 根据同一个 `Settings.TestServer` 决定是否执行正式上限，并接入：
 
-- `Settings.Load`：读取配置时立即验证，正式越界配置不能继续启动宿主。
-- `ConfigForm.TrySave`：保存任何设置前先解析并验证，失败时停留在数据库页且不修改 `Settings.SaveDelay`。
-- `ProductionSecurityPolicy.ValidateAndApply`：正式服务器创建工作线程前再次失败关闭，覆盖程序内直接赋值或绕过界面的场景。
+- `Settings.Load`：配置载入时立即验证。
+- `ConfigForm.TrySave`：写入任何设置前验证候选值。
+- `ProductionSecurityPolicy.ValidateAndApply`：宿主创建工作线程前再次失败关闭。
 
-服务主循环的首次保存截止时间和每次重新排期都使用 `GetNextAutoSaveDeadline`，避免配置门禁与运行时分钟换算分叉。测试服可使用大于 5 分钟的间隔做开发验证，但仍不得使用零或负数。
+因此测试服在配置载入和正式宿主启动前采用同一放宽口径，正式服也不能靠绕过界面或程序内赋值逃过 1～5 分钟门禁。
 
-## RPO 故障模型
+## 自动保存与故障注入
 
-T-10 以生产允许的最坏配置 5 分钟计算真实运行时使用的下一保存截止时间，并把进程崩溃点注入到截止时间前 1ms。自上一次成功提交到故障点的未持久化窗口为 299999ms，小于 5 分钟；1 分钟和 5 分钟边界均通过，0、负数、6 和 60 分钟均被正式门禁拒绝。
+Envir 首次保存截止和每次重新排期均调用 `GetNextAutoSaveDeadline`。生产默认时间仍来自现有 `Stopwatch`；`EnvirStartOptions.ElapsedMillisecondsProvider` 是 internal 测试接缝，只用于在自动化中确定性推进真实主循环，不向正式配置暴露。
 
-该结论针对服务器进程/主机在正常持久化能力下突然终止。若磁盘、权限或 SQLite 提交本身失败，无法承诺继续满足时间 RPO；既有 `SqlSaveResilience` 会记录连续失败、进入冷却并按配置阻止关服。这类存储故障必须作为数据安全事故处理，不能用配置上限掩盖。
+T-10 不再只验证算术函数。Base05 的同一测试程序集以子进程模式执行以下闭环：
+
+1. 启动现有 `Envir`，注入真实 `SqlServerPersistence` SQLite 实例，设置正式最坏值 5 分钟。
+2. 将测试时钟推进到 300000ms，让现有主循环触发四域自动保存；等待 Accounts 的真实单写线程事务产生成功提交代次并排空。
+3. 把在线账号金币从已提交的 100 改为未提交的 777，再推进到下一截止 600000ms 前 1ms；重新读取数据库确认此时仍为 100。
+4. 父测试取得标记后用 `Process.Kill(entireProcessTree: true)` 强制终止 `dotnet test` 子进程树，不调用 `Envir.Stop` 或最终保存。
+5. 用新 `SqlServerPersistence` 实例模拟重启，确认账号金币仍为最后成功提交值 100；可复算未提交窗口为 299999ms，小于 5 分钟。
+
+测试同时记录故障进程 PID、非零退出码、最后成功提交代次、逻辑提交/崩溃时刻和重启读取值到 TRX 输出。它真实覆盖 Envir 调度、快照交接、SQLite 后台提交、进程强停和重载边界；仅用内部时钟压缩等待，不新造产品宿主或迁移工具。
+
+该结论针对服务器进程/主机在正常持久化能力下突然终止。磁盘、权限或 SQLite 事务失败时不能承诺继续满足时间 RPO；既有保存韧性策略会记录失败并执行关服保护，这类情况必须作为数据安全事故处理。
 
 ## 阶段边界
 
-DB-05 不改变 DB-01/02 的快照、单写线程、事务或失败策略，不实现 DB-04 的恢复流程，也不决定 DB-06 的 MySQL 切换门槛。
+DB-05 不改变 DB-01/02 的快照、单写线程、事务或失败策略，不实现 DB-04 恢复，也不改变 DB-06 MySQL 门槛。DB-01～06 均通过后，GATE-P3 才关闭。

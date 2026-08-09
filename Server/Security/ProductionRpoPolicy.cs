@@ -13,6 +13,9 @@ public static class ProductionRpoPolicy
             throw new InvalidOperationException("正式服自动保存间隔必须在 1～5 分钟之间");
     }
 
+    internal static void ValidateConfiguredSaveDelay() =>
+        ValidateSaveDelay(Settings.SaveDelay, enforceProductionMaximum: !Settings.TestServer);
+
     internal static long GetNextAutoSaveDeadline(long currentMilliseconds, int minutes)
     {
         ValidateSaveDelay(minutes, enforceProductionMaximum: false);
