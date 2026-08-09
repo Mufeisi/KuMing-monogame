@@ -1,0 +1,2 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<hierarchy rotation="0"><node package="com.lommir.client.monogame.android" class="android.view.View" input-mask="[REDACTED]" note="原始UI层级中的敏感属性名已脱敏" /></hierarchy>
