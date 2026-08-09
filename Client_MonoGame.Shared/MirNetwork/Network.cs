@@ -49,6 +49,16 @@ namespace MonoShare.MirNetwork
         private static readonly ConcurrentQueue<Packet> _preSendList = new ConcurrentQueue<Packet>();
 
         internal static int PendingSendCount => (_sendList?.Count ?? 0) + _preSendList.Count;
+#if REAL_ANDROID
+        internal static bool TlsTransportActive => _client?.Connected == true && _stream is SslStream && _usingTls;
+        internal static string LastTlsProbeFailure { get; private set; } = string.Empty;
+        internal static void RecordTlsProbeTimeout()
+        {
+            if (string.IsNullOrEmpty(LastTlsProbeFailure))
+                LastTlsProbeFailure = TlsClientPolicy.ClassifyFailure(
+                    new OperationCanceledException("12秒内未完成TLS握手"));
+        }
+#endif
         private static PerformanceQueueTracker _receiveQueueMetrics = new PerformanceQueueTracker();
         private static PerformanceQueueTracker _sendQueueMetrics = new PerformanceQueueTracker();
         private static PerformanceQueueTracker _networkQueueMetrics = new PerformanceQueueTracker();
@@ -106,6 +116,9 @@ namespace MonoShare.MirNetwork
 
         public static void Connect()
         {
+#if REAL_ANDROID
+            LastTlsProbeFailure = string.Empty;
+#endif
             if (!Settings.UseTlsV2 && !TlsClientPolicy.IsLoopbackHost(Settings.IPAddress))
             {
                 if (Settings.LogErrors) CMain.SaveError("已拒绝非回环V1明文连接");
@@ -200,14 +213,20 @@ namespace MonoShare.MirNetwork
 
                 BeginReceive(state.Client, state.Generation, stream);
             }
-            catch (SocketException)
+            catch (SocketException ex)
             {
-                FailIfCurrent(state.Client, state.Generation, "CONNECT SocketException");
+                bool failedCurrent = FailIfCurrent(state.Client, state.Generation, "CONNECT SocketException");
+#if REAL_ANDROID
+                if (state.UseTls && failedCurrent) LastTlsProbeFailure = TlsClientPolicy.ClassifyFailure(ex);
+#endif
             }
             catch (Exception ex)
             {
-                FailIfCurrent(state.Client, state.Generation, "CONNECT Failed",
-                    state.UseTls ? TlsClientPolicy.FormatFailure(ex, state.Host, state.Port) : ex.ToString());
+                string failure = state.UseTls ? TlsClientPolicy.FormatFailure(ex, state.Host, state.Port) : ex.ToString();
+                bool failedCurrent = FailIfCurrent(state.Client, state.Generation, "CONNECT Failed", failure);
+#if REAL_ANDROID
+                if (state.UseTls && failedCurrent) LastTlsProbeFailure = TlsClientPolicy.ClassifyFailure(ex);
+#endif
             }
             finally
             {

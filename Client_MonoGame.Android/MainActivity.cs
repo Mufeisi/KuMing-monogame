@@ -42,6 +42,19 @@ public sealed class MainActivity : AndroidGameActivity
             return;
         }
 
+        if (Intent?.GetBooleanExtra("sec02TlsHostProbe", false) == true)
+        {
+            var host = Intent.GetStringExtra("sec02TlsHostProbeHost");
+            var port = Intent.GetIntExtra("sec02TlsHostProbePort", 0);
+            var serverName = Intent.GetStringExtra("sec02TlsHostProbeServerName");
+            var passed = MonoShare.Security.LoginSettingsIntegration.RunTlsHostProbe(host, port, serverName);
+            var diagnostic = passed ? string.Empty : ":" + MonoShare.Security.LoginSettingsIntegration.LastTlsHostProbeFailure;
+            global::Android.Util.Log.Info("LomMir2", $"SEC02_TLS_HOST_PROBE:{(passed ? "PASS" : "FAIL")}{diagnostic}");
+            FinishAndRemoveTask();
+            global::Android.OS.Process.KillProcess(global::Android.OS.Process.MyPid());
+            return;
+        }
+
         _game = new CMain(FileSystem.AppDataDirectory)
         {
             IsMouseVisible = false,

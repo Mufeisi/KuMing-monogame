@@ -29,6 +29,39 @@ public static class LoginSettingsIntegration
     }
 
 #if REAL_ANDROID
+    public static string LastTlsHostProbeFailure => MonoShare.MirNetwork.Network.LastTlsProbeFailure;
+
+    public static bool RunTlsHostProbe(string host = null, int tlsPort = 0, string serverName = null)
+    {
+        var original = (Settings.IPAddress, Settings.UseTlsV2, Settings.TlsPort, Settings.TlsServerName);
+
+        try
+        {
+            if (!string.IsNullOrWhiteSpace(host)) Settings.IPAddress = host.Trim();
+            if (tlsPort > 0) Settings.TlsPort = tlsPort;
+            if (!string.IsNullOrWhiteSpace(serverName)) Settings.TlsServerName = serverName.Trim();
+            Settings.UseTlsV2 = true;
+            if (Settings.TlsPort is < 1 or > 65535 || string.IsNullOrWhiteSpace(Settings.TlsServerName))
+                return false;
+            MonoShare.MirNetwork.Network.Disconnect();
+            MonoShare.MirNetwork.Network.Connect();
+            var deadline = Environment.TickCount64 + 12_000;
+            while (Environment.TickCount64 < deadline)
+            {
+                if (MonoShare.MirNetwork.Network.TlsTransportActive)
+                    return true;
+                System.Threading.Thread.Sleep(100);
+            }
+            MonoShare.MirNetwork.Network.RecordTlsProbeTimeout();
+            return false;
+        }
+        finally
+        {
+            MonoShare.MirNetwork.Network.Disconnect();
+            (Settings.IPAddress, Settings.UseTlsV2, Settings.TlsPort, Settings.TlsServerName) = original;
+        }
+    }
+
     public static PasswordStoragePolicy.LoginCredentials Submit(string enteredAccountId, string enteredPassword)
     {
         var credentials = PrepareAndPersist(enteredAccountId, enteredPassword);

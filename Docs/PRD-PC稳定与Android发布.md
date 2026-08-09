@@ -215,6 +215,8 @@ GATE-P1 关闭后，P2 的 SEC-03、SEC-04、SEC-05、SEC-06 各为独立任务�
 
 **SEC-02 C5 配置界面收口记录（2026-08-09）**：服务端 `ConfigForm` 的现有网络页已接入 `TlsEnabled`、`TlsPort`、`AllowLegacyV1` 与 `TlsCertificatePath`，证书密码仍只从 `LYOCRYSTAL_TLS_CERT_PASSWORD` 读取，不进入界面或配置文件。启用 TLS 时统一复用 `TlsTransportPolicy.ValidateConfiguration`，端口为零/冲突、证书路径为空、文件不存在、PFX 损坏或证书不合格均阻止保存并停留在网络页；服务启动复用同一策略。策略专项 18/18、真实 Windows STA 表单宿主 1/1、Base05 全量 229/229、Server.MirForms Release 构建通过。证据见 `Docs/Evidence/GATE-P2/sec02-c5-configform-20260809/`；证书固定、完整客户端宿主及 SEC-03～06 仍未完成，SEC-02/GATE-P2 状态不变。
 
+**SEC-02 C6 客户端宿主收口记录（2026-08-09）**：PC Windows 宿主直接调用正式客户端 `Network.Connect`，验证不受信证书拒绝后连接状态清空且不降级 V1。Android 增加显式 `sec02TlsHostProbe` Intent，只在内存中临时覆盖 host/port/serverName，12 秒内验证正式 `Settings → Network → SslStream` 握手后恢复原设置，不发送账号或游戏包；失败输出有界分类和异常类型链，不记录秘密，迟到旧代回调不能覆盖超时分类。逍遥实机以旧端点复现 `FAIL:网络端点;SocketException:Connection refused`，黑洞/抖动端点稳定分类为“握手超时”，随后对受信 `www.cloudflare.com:443` 返回 `SEC02_TLS_HOST_PROBE:PASS`，排除 Android 证书链及在线吊销兼容性问题。TLS 专项 19/19、PC 宿主 1/1、Base05 全量 230/230、Android Release arm64 AOT 构建通过；证据见 `Docs/Evidence/GATE-P2/sec02-c6-client-host-20260809/`。证书固定及 SEC-03～06 仍未完成，SEC-02/GATE-P2 状态不变。
+
 **SEC-01 P2 收口记录（2026-08-09）**：`HTTPLogin` 的完整账户事务统一投递到服务端主线程；排队超时使用原子取消，已开始执行则等待真实结果，停服后禁止回退到调用线程。认证或提交异常会恢复密码哈希/盐、封禁状态、错误次数与自动保存请求。PC 与移动端登录统一通过实际 `Settings.Load/Save` 接缝，PC 集成测试从真实 `Network` 发送队列取回同一登录包；Android 使用显式 Intent 触发的有界宿主探针，真实执行 `Settings.Save → Network.Enqueue`，验证队列增加且配置无密码后恢复原账号状态。专项 `5/5`、Windows 宿主 `1/1`、Android Release arm64 AOT 与逍遥日志 `SEC01_HOST_PROBE:PASS` 均通过；证据见 `Docs/Evidence/GATE-P2/sec01-http-login-20260809/`。SEC-01 完成不代表 GATE-P2 或 SEC-02 完成。
 
 **GATE-P2 退出条件**：公开测试前安全项全部完成；凭据不通过未加密网络传输；公网无 V1 明文登录。

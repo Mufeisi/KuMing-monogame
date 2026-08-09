@@ -170,6 +170,17 @@ public sealed class TlsTransportTests
     }
 
     [Fact]
+    public void 客户端TLS失败探针区分端点吊销与证书验证()
+    {
+        Assert.StartsWith("网络端点;", TlsClientPolicy.ClassifyFailure(new SocketException()));
+        Assert.StartsWith("握手超时;", TlsClientPolicy.ClassifyFailure(new OperationCanceledException()));
+        Assert.StartsWith("在线吊销检查;", TlsClientPolicy.ClassifyFailure(
+            new AuthenticationException("certificate revocation check failed")));
+        Assert.StartsWith("证书链或域名;", TlsClientPolicy.ClassifyFailure(
+            new AuthenticationException("certificate name mismatch")));
+    }
+
+    [Fact]
     public void TLS连接失败提示包含排障线索()
     {
         string message = TlsClientPolicy.FormatFailure(new AuthenticationException("test"), "game.example", 7001);
