@@ -4394,10 +4394,13 @@ namespace Server.MirEnvir
             LoadConquests();
 
             bool gameListenerStarted = false;
+            TlsTransportPolicy.ValidateConfiguration(
+                Settings.TlsEnabled,
+                Settings.Port,
+                Settings.TlsPort,
+                Settings.TlsCertificatePath);
             if (Settings.TlsEnabled)
             {
-                TlsTransportPolicy.ValidateTlsPorts(Settings.Port, Settings.TlsPort);
-
                 _tlsCertificate = TlsTransportPolicy.LoadServerCertificate(Settings.TlsCertificatePath);
                 generation.Certificate = _tlsCertificate;
                 _tlsListener = CreateStartedListener(listenAddress, Settings.TlsPort, "TLS游戏端口");

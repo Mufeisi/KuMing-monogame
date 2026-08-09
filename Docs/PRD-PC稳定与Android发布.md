@@ -213,6 +213,8 @@ GATE-P1 关闭后，P2 的 SEC-03、SEC-04、SEC-05、SEC-06 各为独立任务�
 
 **SEC-02 C4.3 收口记录（2026-08-09）**：PC/Mono `Connect` 在 `_connectionGate` 内以局部 `TcpClient` 原子安装连接代次、写门闩与 TLS 状态，锁外仅对捕获 client 调用 `BeginConnect`；已有连接只释放局部 client 并返回。连接失败回调移除无条件重连，交由现有 `Process` 主循环重试；旧代失败不会摘除新代，EOF/Receive 逻辑保持。未构造完整客户端宿主，采用源代码静态接线与 TLS 专项 17/17、Base05 全量 198/198、PC/Mono/Android Release 构建证据；生产代码净增 13 行。SEC-02/GATE-P2 状态不变。
 
+**SEC-02 C5 配置界面收口记录（2026-08-09）**：服务端 `ConfigForm` 的现有网络页已接入 `TlsEnabled`、`TlsPort`、`AllowLegacyV1` 与 `TlsCertificatePath`，证书密码仍只从 `LYOCRYSTAL_TLS_CERT_PASSWORD` 读取，不进入界面或配置文件。启用 TLS 时统一复用 `TlsTransportPolicy.ValidateConfiguration`，端口为零/冲突、证书路径为空、文件不存在、PFX 损坏或证书不合格均阻止保存并停留在网络页；服务启动复用同一策略。策略专项 18/18、真实 Windows STA 表单宿主 1/1、Base05 全量 229/229、Server.MirForms Release 构建通过。证据见 `Docs/Evidence/GATE-P2/sec02-c5-configform-20260809/`；证书固定、完整客户端宿主及 SEC-03～06 仍未完成，SEC-02/GATE-P2 状态不变。
+
 **SEC-01 P2 收口记录（2026-08-09）**：`HTTPLogin` 的完整账户事务统一投递到服务端主线程；排队超时使用原子取消，已开始执行则等待真实结果，停服后禁止回退到调用线程。认证或提交异常会恢复密码哈希/盐、封禁状态、错误次数与自动保存请求。PC 与移动端登录统一通过实际 `Settings.Load/Save` 接缝，PC 集成测试从真实 `Network` 发送队列取回同一登录包；Android 使用显式 Intent 触发的有界宿主探针，真实执行 `Settings.Save → Network.Enqueue`，验证队列增加且配置无密码后恢复原账号状态。专项 `5/5`、Windows 宿主 `1/1`、Android Release arm64 AOT 与逍遥日志 `SEC01_HOST_PROBE:PASS` 均通过；证据见 `Docs/Evidence/GATE-P2/sec01-http-login-20260809/`。SEC-01 完成不代表 GATE-P2 或 SEC-02 完成。
 
 **GATE-P2 退出条件**：公开测试前安全项全部完成；凭据不通过未加密网络传输；公网无 V1 明文登录。

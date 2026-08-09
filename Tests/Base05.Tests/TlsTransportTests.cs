@@ -127,6 +127,37 @@ public sealed class TlsTransportTests
     }
 
     [Fact]
+    public void TLS配置表单策略仅在启用时要求有效端口与现有证书文件()
+    {
+        TlsTransportPolicy.ValidateConfiguration(false, 7000, 0, string.Empty);
+        Assert.Throws<InvalidOperationException>(() =>
+            TlsTransportPolicy.ValidateConfiguration(false, 0, 0, string.Empty));
+
+        Assert.Throws<InvalidOperationException>(() =>
+            TlsTransportPolicy.ValidateConfiguration(true, 7000, 7000, "server.pfx"));
+        Assert.Throws<InvalidOperationException>(() =>
+            TlsTransportPolicy.ValidateConfiguration(true, 7000, 7001, string.Empty));
+        Assert.Throws<FileNotFoundException>(() =>
+            TlsTransportPolicy.ValidateConfiguration(true, 7000, 7001, Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".pfx")));
+
+        string path = Path.GetTempFileName();
+        try
+        {
+            using var certificate = CreateCertificate("localhost", DateTimeOffset.UtcNow.AddDays(-1), DateTimeOffset.UtcNow.AddDays(1));
+            File.WriteAllBytes(path, certificate.Export(X509ContentType.Pkcs12, string.Empty));
+            TlsTransportPolicy.ValidateConfiguration(true, 7000, 7001, path);
+
+            File.WriteAllText(path, "not-a-pfx");
+            Assert.Throws<CryptographicException>(() =>
+                TlsTransportPolicy.ValidateConfiguration(true, 7000, 7001, path));
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
     public void 客户端TLS策略要求目标主机并默认严格校验证书()
     {
         Assert.Throws<ArgumentException>(() => TlsClientPolicy.CreateOptions(string.Empty));
