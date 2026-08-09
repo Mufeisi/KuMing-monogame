@@ -70,6 +70,7 @@ namespace Server.MirEnvir
         public bool StartHttp { get; init; } = true;
         public bool SaveOnStop { get; init; } = true;
         public bool Multithreaded { get; init; } = true;
+        public bool EnforceProductionSecurity { get; init; } = true;
 
         internal static EnvirStartOptions FromSettings()
         {
@@ -3683,6 +3684,9 @@ namespace Server.MirEnvir
             _startOptions = options;
             Volatile.Write(ref _startFailure, null);
             Volatile.Write(ref _startState, (int)EnvirStartState.Starting);
+
+            if (options.EnforceProductionSecurity)
+                ProductionSecurityPolicy.ValidateAndApply();
 
             if (options.StartScripts && Settings.CSharpScriptsEnabled)
             {

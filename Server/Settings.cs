@@ -146,7 +146,7 @@ namespace Server
         public static string AiScriptsApiBaseUrl = string.Empty;
         public static string AiScriptsModel = string.Empty;
         public static string AiScriptsApiKey = string.Empty;
-        public static string AiScriptsApiKeyEnvironmentVariable = "OPENAI_API_KEY";
+        public static string AiScriptsApiKeyEnvironmentVariable = string.Empty;
         public static int AiScriptsTimeoutSeconds = 60;
         public static int AiScriptsMaxRetries = 1;
         public static int AiScriptsRequestsPerMinute = 10;
@@ -449,12 +449,18 @@ namespace Server
         }
 
         public static void Load()
-        {            
+        {
+            // SEC-05：发现历史明文秘密时先从 INI 删除；写盘失败会阻止以不确定状态继续启动。
+            Reader.ClearKeys("General", "GMPassword");
+            Reader.ClearKeys("Micro", "MicroCode");
+            Reader.ClearKeys("AiScripts", "AiScriptsApiKey");
+            Reader.ClearKeys("Database", "MySqlConnectionString");
+
             //General
             VersionPath = Reader.ReadString("General", "VersionPath", VersionPath);
             CheckVersion = Reader.ReadBoolean("General", "CheckVersion", CheckVersion);
             RelogDelay = Reader.ReadUInt16("General", "RelogDelay", RelogDelay);
-            GMPassword = Reader.ReadString("General", "GMPassword", GMPassword);
+            GMPassword = string.Empty; // SEC-05：仅从受保护秘密存储读取。
             Multithreaded = Reader.ReadBoolean("General", "Multithreaded", Multithreaded);
             ThreadLimit = Reader.ReadInt32("General", "ThreadLimit", ThreadLimit);
             TestServer = Reader.ReadBoolean("General", "TestServer", TestServer);
@@ -508,7 +514,7 @@ namespace Server
             MicroServerActive = Reader.ReadBoolean("Micro", "MicroServerActive", MicroServerActive);
             MicroResourcePath = Reader.ReadString("Micro", "MicroResourcePath", MicroResourcePath);
             MicroAuthor = Reader.ReadString("Micro", "MicroAuthor", MicroAuthor);
-            MicroCode = Reader.ReadString("Micro", "MicroCode", MicroCode);
+            MicroCode = string.Empty; // SEC-05：仅从受保护秘密存储读取。
 
             //Permission
             AllowNewAccount = Reader.ReadBoolean("Permission", "AllowNewAccount", AllowNewAccount);
@@ -550,8 +556,8 @@ namespace Server
             AiScriptsProvider = Reader.ReadString("AiScripts", "AiScriptsProvider", AiScriptsProvider);
             AiScriptsApiBaseUrl = Reader.ReadString("AiScripts", "AiScriptsApiBaseUrl", AiScriptsApiBaseUrl);
             AiScriptsModel = Reader.ReadString("AiScripts", "AiScriptsModel", AiScriptsModel);
-            AiScriptsApiKey = Reader.ReadString("AiScripts", "AiScriptsApiKey", AiScriptsApiKey);
-            AiScriptsApiKeyEnvironmentVariable = Reader.ReadString("AiScripts", "AiScriptsApiKeyEnvironmentVariable", AiScriptsApiKeyEnvironmentVariable);
+            AiScriptsApiKey = string.Empty; // SEC-05：仅从受保护秘密存储读取。
+            AiScriptsApiKeyEnvironmentVariable = string.Empty;
             AiScriptsTimeoutSeconds = Reader.ReadInt32("AiScripts", "AiScriptsTimeoutSeconds", AiScriptsTimeoutSeconds);
             AiScriptsMaxRetries = Reader.ReadInt32("AiScripts", "AiScriptsMaxRetries", AiScriptsMaxRetries);
             AiScriptsRequestsPerMinute = Reader.ReadInt32("AiScripts", "AiScriptsRequestsPerMinute", AiScriptsRequestsPerMinute);
@@ -578,7 +584,7 @@ namespace Server
             CredxGold = Reader.ReadInt16("Database", "CredxGold", CredxGold);
             DatabaseProvider = Reader.ReadString("Database", "Provider", DatabaseProvider);
             SqlitePath = Reader.ReadString("Database", "SqlitePath", SqlitePath);
-            MySqlConnectionString = Reader.ReadString("Database", "MySqlConnectionString", MySqlConnectionString);
+            MySqlConnectionString = string.Empty; // SEC-05：仅从受保护秘密存储读取。
             MySqlPooling = Reader.ReadInt32("Database", "MySqlPooling", MySqlPooling);
             MySqlMinPoolSize = Reader.ReadInt32("Database", "MySqlMinPoolSize", MySqlMinPoolSize);
             MySqlMaxPoolSize = Reader.ReadInt32("Database", "MySqlMaxPoolSize", MySqlMaxPoolSize);
@@ -776,6 +782,7 @@ namespace Server
             Reader.Write("General", "VersionPath", VersionPath);
             Reader.Write("General", "CheckVersion", CheckVersion);
             Reader.Write("General", "RelogDelay", RelogDelay);
+            Reader.Write("General", "GMPassword", string.Empty);
             Reader.Write("General", "Multithreaded", Multithreaded);
             Reader.Write("General", "ThreadLimit", ThreadLimit);
             Reader.Write("General", "TestServer", TestServer);
@@ -822,7 +829,7 @@ namespace Server
             Reader.Write("Micro", "MicroServerActive", MicroServerActive);
             Reader.Write("Micro", "MicroResourcePath", MicroResourcePath);
             Reader.Write("Micro", "MicroAuthor", MicroAuthor);
-            Reader.Write("Micro", "MicroCode", MicroCode);
+            Reader.Write("Micro", "MicroCode", string.Empty);
 
             //Permission
             Reader.Write("Permission", "AllowNewAccount", AllowNewAccount);
@@ -865,7 +872,7 @@ namespace Server
             Reader.Write("AiScripts", "AiScriptsApiBaseUrl", AiScriptsApiBaseUrl);
             Reader.Write("AiScripts", "AiScriptsModel", AiScriptsModel);
             Reader.Write("AiScripts", "AiScriptsApiKey", string.Empty);
-            Reader.Write("AiScripts", "AiScriptsApiKeyEnvironmentVariable", AiScriptsApiKeyEnvironmentVariable);
+            Reader.Write("AiScripts", "AiScriptsApiKeyEnvironmentVariable", string.Empty);
             Reader.Write("AiScripts", "AiScriptsTimeoutSeconds", AiScriptsTimeoutSeconds);
             Reader.Write("AiScripts", "AiScriptsMaxRetries", AiScriptsMaxRetries);
             Reader.Write("AiScripts", "AiScriptsRequestsPerMinute", AiScriptsRequestsPerMinute);
@@ -892,7 +899,7 @@ namespace Server
             Reader.Write("Database", "CredxGold", CredxGold);
             Reader.Write("Database", "Provider", DatabaseProvider);
             Reader.Write("Database", "SqlitePath", SqlitePath);
-            Reader.Write("Database", "MySqlConnectionString", MySqlConnectionString);
+            Reader.Write("Database", "MySqlConnectionString", string.Empty);
             Reader.Write("Database", "MySqlPooling", MySqlPooling);
             Reader.Write("Database", "MySqlMinPoolSize", MySqlMinPoolSize);
             Reader.Write("Database", "MySqlMaxPoolSize", MySqlMaxPoolSize);

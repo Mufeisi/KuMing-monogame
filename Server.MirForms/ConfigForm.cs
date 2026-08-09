@@ -39,7 +39,9 @@ namespace Server
             MicroServerActiveCheckBox.Checked = Settings.MicroServerActive;
             MicroResourcePathTextBox.Text = Settings.MicroResourcePath;
             MicroAuthorTextBox.Text = Settings.MicroAuthor;
-            MicroCodeTextBox.Text = Settings.MicroCode;
+            MicroCodeTextBox.Text = string.Empty;
+            MicroCodeTextBox.Enabled = false;
+            MicroCodeTextBox.PlaceholderText = "由受保护秘密存储提供";
 
             AccountCheckBox.Checked = Settings.AllowNewAccount;
             PasswordCheckBox.Checked = Settings.AllowChangePassword;
@@ -127,7 +129,6 @@ namespace Server
             Settings.MicroServerActive = MicroServerActiveCheckBox.Checked;
             Settings.MicroResourcePath = MicroResourcePathTextBox.Text;
             Settings.MicroAuthor = MicroAuthorTextBox.Text;
-            Settings.MicroCode = MicroCodeTextBox.Text;
 
             ushort tempshort;
             int tempint;

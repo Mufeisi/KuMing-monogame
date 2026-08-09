@@ -4,12 +4,12 @@ using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
+using Server.Security;
 
 namespace Server.MirNetwork;
 
 public static class TlsTransportPolicy
 {
-    public const string CertificatePasswordEnvironmentVariable = "LYOCRYSTAL_TLS_CERT_PASSWORD";
     public const SslProtocols MinimumProtocols = SslProtocols.Tls12 | SslProtocols.Tls13;
 
     public static bool ShouldStartLegacyV1(IPAddress address, bool allowLegacyV1)
@@ -58,7 +58,7 @@ public static class TlsTransportPolicy
         if (string.IsNullOrWhiteSpace(path))
             throw new InvalidOperationException("TLS证书路径未配置");
 
-        var password = Environment.GetEnvironmentVariable(CertificatePasswordEnvironmentVariable) ?? string.Empty;
+        var password = ProtectedSecretStore.Read(ProtectedSecretStore.TlsCertificatePassword) ?? string.Empty;
         var certificate = X509CertificateLoader.LoadPkcs12FromFile(path, password, X509KeyStorageFlags.UserKeySet);
         try
         {

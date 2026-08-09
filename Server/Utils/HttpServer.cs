@@ -15,6 +15,8 @@ namespace Server.Library.Utils
         private const int MicroFileCopyBufferBytes = 256 * 1024;
         private static readonly ConcurrentDictionary<string, CachedSoundList> SoundListCache =
             new(StringComparer.OrdinalIgnoreCase);
+        private readonly string _administratorToken;
+        private readonly string _operatorToken;
 
         private sealed class CachedSoundList
         {
@@ -26,6 +28,8 @@ namespace Server.Library.Utils
         public HttpServer()
         {
             Host = Settings.HTTPIPAddress;
+            _administratorToken = ProtectedSecretStore.Read(ProtectedSecretStore.AdministratorToken);
+            _operatorToken = ProtectedSecretStore.Read(ProtectedSecretStore.OperatorToken);
         }
 
         public void Start()
@@ -154,8 +158,8 @@ namespace Server.Library.Utils
             var authorization = AdminSecurityPolicy.Authorize(
                 request.Headers["Authorization"],
                 path,
-                Environment.GetEnvironmentVariable(AdminSecurityPolicy.AdministratorTokenEnvironmentVariable),
-                Environment.GetEnvironmentVariable(AdminSecurityPolicy.OperatorTokenEnvironmentVariable));
+                _administratorToken,
+                _operatorToken);
             Audit(request, authorization, request.RemoteEndPoint?.Address.ToString());
             if (authorization.Status == AdminAuthorizationStatus.Authorized)
                 return true;

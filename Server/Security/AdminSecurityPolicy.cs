@@ -26,8 +26,6 @@ internal readonly record struct AdminAuthorizationResult(
 
 internal static class AdminSecurityPolicy
 {
-    internal const string AdministratorTokenEnvironmentVariable = "LYOCRYSTAL_ADMIN_TOKEN";
-    internal const string OperatorTokenEnvironmentVariable = "LYOCRYSTAL_OPERATOR_TOKEN";
     private const int MaxBearerTokenLength = 512;
 
     internal static void ValidateListener(string prefix)

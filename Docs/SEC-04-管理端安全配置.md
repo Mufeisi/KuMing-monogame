@@ -11,14 +11,14 @@
 
 ## 独立凭据与角色
 
-当前 SEC-04 过渡接缝从进程环境读取两个独立令牌：
+服务端从 Windows DPAPI 当前用户范围读取两个独立令牌：
 
 | 环境变量 | 角色 | 权限 |
 |---|---|---|
-| `LYOCRYSTAL_ADMIN_TOKEN` | `Administrator` | 状态、广播、开户、名单维护 |
-| `LYOCRYSTAL_OPERATOR_TOKEN` | `Operator` | 状态、广播 |
+| `administrator-token` | `Administrator` | 状态、广播、开户、名单维护 |
+| `operator-token` | `Operator` | 状态、广播 |
 
-请求使用 `Authorization: Bearer <令牌>`。两个令牌均未配置时返回 503；缺失或错误令牌返回 401；角色不足返回 403。令牌应使用密码学安全随机源生成，建议至少 32 个随机字节。环境变量只是 SEC-05 受保护密钥存储接入前的过渡，不能写入 INI、脚本、命令历史、日志或仓库。
+请求使用 `Authorization: Bearer <令牌>`。两个令牌均未配置时返回 503；缺失或错误令牌返回 401；角色不足返回 403。令牌应使用密码学安全随机源生成，正式服至少 32 个字符。首次部署分别通过一次性 `LYOCRYSTAL_IMPORT_ADMIN_TOKEN`、`LYOCRYSTAL_IMPORT_OPERATOR_TOKEN` 注入并启动；进程导入后清除自己的环境副本。令牌不能写入 INI、脚本、命令历史、日志或仓库。
 
 ## 审计
 

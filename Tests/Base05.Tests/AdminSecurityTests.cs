@@ -87,11 +87,9 @@ public sealed class AdminSecurityTests
         int port = GetFreePort();
         string originalAddress = Settings.HTTPIPAddress;
         string originalTrustedAddress = Settings.HTTPTrustedIPAddress;
-        string originalAdministrator = Environment.GetEnvironmentVariable(
-            AdminSecurityPolicy.AdministratorTokenEnvironmentVariable);
-        string originalOperator = Environment.GetEnvironmentVariable(
-            AdminSecurityPolicy.OperatorTokenEnvironmentVariable);
         string auditDirectory = Path.Combine(Path.GetTempPath(), "LyoCrystalAdminAudit-" + Guid.NewGuid().ToString("N"));
+        string secretDirectory = Path.Combine(Path.GetTempPath(), "LyoCrystalAdminSecrets-" + Guid.NewGuid().ToString("N"));
+        IDisposable secretScope = ProtectedSecretStore.UseTestRoot(secretDirectory);
         HttpServer server = null;
         try
         {
@@ -99,8 +97,8 @@ public sealed class AdminSecurityTests
             Logger.Configure(new LoggerOptions { Directory = auditDirectory, MaxFileSizeMB = 1, RetentionDays = 1 });
             Settings.HTTPIPAddress = $"http://127.0.0.1:{port}/";
             Settings.HTTPTrustedIPAddress = "127.0.0.1";
-            Environment.SetEnvironmentVariable(AdminSecurityPolicy.AdministratorTokenEnvironmentVariable, "administrator-secret-32-characters-minimum");
-            Environment.SetEnvironmentVariable(AdminSecurityPolicy.OperatorTokenEnvironmentVariable, "operator-secret-32-characters-minimum");
+            ProtectedSecretStore.Write(ProtectedSecretStore.AdministratorToken, "administrator-secret-32-characters-minimum");
+            ProtectedSecretStore.Write(ProtectedSecretStore.OperatorToken, "operator-secret-32-characters-minimum");
             server = new HttpServer();
             server.Start();
 
@@ -144,8 +142,6 @@ public sealed class AdminSecurityTests
             server?.Stop();
             Settings.HTTPIPAddress = originalAddress;
             Settings.HTTPTrustedIPAddress = originalTrustedAddress;
-            Environment.SetEnvironmentVariable(AdminSecurityPolicy.AdministratorTokenEnvironmentVariable, originalAdministrator);
-            Environment.SetEnvironmentVariable(AdminSecurityPolicy.OperatorTokenEnvironmentVariable, originalOperator);
             Logger.Flush(TimeSpan.FromSeconds(2));
             Logger.Configure(new LoggerOptions
             {
@@ -153,7 +149,9 @@ public sealed class AdminSecurityTests
                 MaxFileSizeMB = Settings.LogFileMaxSizeMB,
                 RetentionDays = Settings.LogRetentionDays,
             });
+            secretScope.Dispose();
             try { Directory.Delete(auditDirectory, true); } catch { }
+            try { Directory.Delete(secretDirectory, true); } catch { }
         }
     }
 

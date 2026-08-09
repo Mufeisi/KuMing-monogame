@@ -81,7 +81,7 @@ namespace Server.Scripting.Ai
                     Prompt = prompt,
                     GeneratedCode = string.Empty,
                     SuggestedRelativePath = BuildSuggestedRelativePath(targetKey),
-                    ErrorMessage = $"未配置 AiScriptsApiKey，且环境变量 {(_options.ApiKeyEnvironmentVariable ?? string.Empty).Trim()} 不存在或为空。",
+                    ErrorMessage = "未从受保护秘密存储加载 AI API Key。",
                     Warnings = warnings,
                 };
             }

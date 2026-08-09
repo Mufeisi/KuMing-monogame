@@ -8,20 +8,35 @@ using System.Security.Cryptography.X509Certificates;
 using Server;
 using Server.MirEnvir;
 using Server.MirNetwork;
+using Server.Security;
 using Shared.Security;
 using Xunit;
 
 namespace Base05.Tests;
 
 [Collection("TLS环境")]
-public sealed class ServerLifecycleSmokeTests
+public sealed class ServerLifecycleSmokeTests : IDisposable
 {
+    private readonly string _secretRoot = Path.Combine(Path.GetTempPath(), "LyoCrystalLifecycleSecrets-" + Guid.NewGuid().ToString("N"));
+    private readonly IDisposable _secretScope;
+
+    public ServerLifecycleSmokeTests()
+    {
+        _secretScope = ProtectedSecretStore.UseTestRoot(_secretRoot);
+    }
+
+    public void Dispose()
+    {
+        _secretScope.Dispose();
+        if (Directory.Exists(_secretRoot)) Directory.Delete(_secretRoot, true);
+    }
     [Fact]
     public void Minimal_server_start_stop_is_isolated_and_repeatable()
     {
         var envir = new Envir();
         var options = new EnvirStartOptions
         {
+            EnforceProductionSecurity = false,
             LoadResources = false,
             BindNetwork = false,
             StartScripts = false,
@@ -64,6 +79,7 @@ public sealed class ServerLifecycleSmokeTests
         var envir = new Envir();
         var failOptions = new EnvirStartOptions
         {
+            EnforceProductionSecurity = false,
             LoadResources = false,
             BindNetwork = true,
             StartScripts = false,
@@ -84,6 +100,7 @@ public sealed class ServerLifecycleSmokeTests
             envir.Stop();
             envir.Start(new EnvirStartOptions
             {
+                EnforceProductionSecurity = false,
                 LoadResources = false,
                 BindNetwork = false,
                 StartScripts = false,
@@ -229,7 +246,6 @@ public sealed class ServerLifecycleSmokeTests
         private readonly string _oldSqlitePath;
         private readonly bool _oldAutoApply;
         private readonly bool _oldAutoImport;
-        private readonly string _oldPassword;
         private readonly bool _oldPacketDirection;
         private readonly ushort _oldMaxUser;
         private readonly ushort _oldMaxIP;
@@ -255,7 +271,6 @@ public sealed class ServerLifecycleSmokeTests
             _oldSqlitePath = Settings.SqlitePath;
             _oldAutoApply = Settings.AutoApplySchemaOnStartup;
             _oldAutoImport = Settings.AutoImportLegacyOnEmpty;
-            _oldPassword = Environment.GetEnvironmentVariable(TlsTransportPolicy.CertificatePasswordEnvironmentVariable);
             _oldPacketDirection = Packet.IsServer;
             _oldMaxUser = Settings.MaxUser;
             _oldMaxIP = Settings.MaxIP;
@@ -281,6 +296,7 @@ public sealed class ServerLifecycleSmokeTests
 
         public EnvirStartOptions StartOptions => new EnvirStartOptions
         {
+            EnforceProductionSecurity = false,
             LoadResources = false,
             BindNetwork = true,
             StartScripts = false,
@@ -291,7 +307,7 @@ public sealed class ServerLifecycleSmokeTests
 
         public void SetCertificatePassword(string password)
         {
-            Environment.SetEnvironmentVariable(TlsTransportPolicy.CertificatePasswordEnvironmentVariable, password);
+            ProtectedSecretStore.Write(ProtectedSecretStore.TlsCertificatePassword, password);
         }
 
         public void Start() => ServerEnvironment.Start(StartOptions);
@@ -320,7 +336,6 @@ public sealed class ServerLifecycleSmokeTests
         public void Dispose()
         {
             ServerEnvironment.Stop();
-            Environment.SetEnvironmentVariable(TlsTransportPolicy.CertificatePasswordEnvironmentVariable, _oldPassword);
             Packet.IsServer = _oldPacketDirection;
             Settings.IPAddress = _oldAddress;
             Settings.Port = _oldPort;

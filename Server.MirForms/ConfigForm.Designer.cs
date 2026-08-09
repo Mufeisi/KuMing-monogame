@@ -465,7 +465,7 @@
             labelMicroHint.Name = "labelMicroHint";
             labelMicroHint.Size = new Size(432, 120);
             labelMicroHint.TabIndex = 7;
-            labelMicroHint.Text = "说明：\r\n- 微端接口：/api/*（移动端请求头：User/Code）\r\n- 资源根目录需包含 Data/Map/Sound 等子目录\r\n- 如需局域网访问，请在“网络”页将 HTTP 前缀改为 http://*:7777/ 并确保已添加 URLACL";
+            labelMicroHint.Text = "说明：\r\n- 微端接口：/api/*（移动端请求头：User/Code）\r\n- Code 由受保护秘密存储提供，不写入界面或 INI\r\n- 管理 HTTP 仅回环可明文；内网必须配置 HTTPS";
             // 
             // MicroCodeTextBox
             // 
@@ -484,7 +484,7 @@
             labelMicroCode.Name = "labelMicroCode";
             labelMicroCode.Size = new Size(84, 17);
             labelMicroCode.TabIndex = 5;
-            labelMicroCode.Text = "Code（可选）";
+            labelMicroCode.Text = "Code（受保护）";
             // 
             // MicroAuthorTextBox
             // 

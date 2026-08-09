@@ -15,7 +15,7 @@ AllowLegacyV1=false
 TlsCertificatePath=certs/server.pfx
 ```
 
-当前实现仍在启动进程中读取 `LYOCRYSTAL_TLS_CERT_PASSWORD`，仅作为 SEC-05 受保护密钥存储接入前的过渡；普通环境变量不是最终生产密钥存储，正式公网上线受 SEC-05 门禁阻塞。密码不写入 INI、日志或仓库。证书必须包含客户端使用的 DNS/IP SAN；客户端 `TlsServerName` 必须与 SAN 匹配。协议最低 TLS 1.2（可协商 TLS 1.3）。
+证书密码从 Windows DPAPI 当前用户范围的受保护秘密 `tls-certificate-password` 读取；首次部署或轮换时通过一次性 `LYOCRYSTAL_IMPORT_TLS_CERT_PASSWORD` 注入并启动，进程导入后立即清除自己的环境副本。旧 `LYOCRYSTAL_TLS_CERT_PASSWORD` 已停用，检测到会清除并阻止启动。密码不写入 INI、日志或仓库。证书必须包含客户端使用的 DNS/IP SAN；客户端 `TlsServerName` 必须与 SAN 匹配。协议最低 TLS 1.2（可协商 TLS 1.3）。
 
 ## PC 与 Android 客户端
 

@@ -7,14 +7,28 @@ using System.Security.Cryptography.X509Certificates;
 using System.Reflection;
 using Server.MirEnvir;
 using Server.MirNetwork;
+using Server.Security;
 using Shared.Security;
 using Xunit;
 
 namespace Base05.Tests;
 
 [Collection("TLS环境")]
-public sealed class TlsTransportTests
+public sealed class TlsTransportTests : IDisposable
 {
+    private readonly string _secretRoot = CreateTempDirectory();
+    private readonly IDisposable _secretScope;
+
+    public TlsTransportTests()
+    {
+        _secretScope = ProtectedSecretStore.UseTestRoot(_secretRoot);
+    }
+
+    public void Dispose()
+    {
+        _secretScope.Dispose();
+        Directory.Delete(_secretRoot, true);
+    }
     [Fact]
     public void 非回环默认拒绝明文监听而回环或显式开发开关允许()
     {
@@ -355,25 +369,23 @@ public sealed class TlsTransportTests
     }
 
     [Fact]
-    public void 证书密码只从运行时环境读取而不写入配置()
+    public void 证书密码只从受保护存储读取而不改写证书文件()
     {
         string directory = CreateTempDirectory();
         string path = Path.Combine(directory, "protected-server.pfx");
         const string password = "stage-a-test-password";
-        string previous = Environment.GetEnvironmentVariable(TlsTransportPolicy.CertificatePasswordEnvironmentVariable);
         try
         {
             using var source = CreateCertificate("localhost", DateTimeOffset.UtcNow.AddMinutes(-1), DateTimeOffset.UtcNow.AddHours(1));
             File.WriteAllBytes(path, source.Export(X509ContentType.Pfx, password));
             byte[] beforeLoad = File.ReadAllBytes(path);
-            Environment.SetEnvironmentVariable(TlsTransportPolicy.CertificatePasswordEnvironmentVariable, password);
+            ProtectedSecretStore.Write(ProtectedSecretStore.TlsCertificatePassword, password);
             using var certificate = TlsTransportPolicy.LoadServerCertificate(path);
             Assert.True(certificate.HasPrivateKey);
             Assert.Equal(beforeLoad, File.ReadAllBytes(path));
         }
         finally
         {
-            Environment.SetEnvironmentVariable(TlsTransportPolicy.CertificatePasswordEnvironmentVariable, previous);
             Directory.Delete(directory, true);
         }
     }

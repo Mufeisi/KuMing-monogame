@@ -206,6 +206,7 @@ public sealed class LoginProtectionTests
         var environment = new Envir();
         environment.Start(new EnvirStartOptions
         {
+            EnforceProductionSecurity = false,
             LoadResources = false,
             BindNetwork = false,
             StartScripts = false,

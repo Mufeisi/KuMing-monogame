@@ -174,6 +174,7 @@ public sealed class Sec01LoginTransactionTests
         var environment = new Envir();
         environment.Start(new EnvirStartOptions
         {
+            EnforceProductionSecurity = false,
             LoadResources = false,
             BindNetwork = false,
             StartScripts = false,
