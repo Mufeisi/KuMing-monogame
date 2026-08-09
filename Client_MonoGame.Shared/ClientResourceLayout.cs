@@ -74,6 +74,7 @@ namespace MonoShare
         public static string PackageStateSnapshotPath => Path.Combine(RuntimeRoot, "BootstrapPackageState.json");
         public static string PackageUpdateQueuePath => Path.Combine(RuntimeRoot, "BootstrapPackageUpdateQueue.json");
         public static string PackageVersionsPath => Path.Combine(RuntimeRoot, "BootstrapPackageVersions.json");
+        public static string ManifestSecurityStatePath => Path.Combine(RuntimeRoot, "BootstrapManifestSecurityState.json");
         public static string PackageDiagnosticsReportPath => Path.Combine(RuntimeRoot, "BootstrapPackageDiagnostics.txt");
         public static string BundleInboxRoot => Path.Combine(CacheRoot, "BundleInbox");
         public static string BundleInboxProcessedRoot => Path.Combine(BundleInboxRoot, "Processed");

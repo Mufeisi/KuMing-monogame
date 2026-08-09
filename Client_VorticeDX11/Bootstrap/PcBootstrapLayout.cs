@@ -35,6 +35,7 @@ namespace Client.Bootstrap
         public static string VersionsPath => Path.Combine(RuntimeRoot, "BootstrapPackageVersions.json");
         public static string UpdateQueuePath => Path.Combine(RuntimeRoot, "BootstrapPackageUpdateQueue.json");
         public static string RemoteIndexCachePath => Path.Combine(RuntimeRoot, "BootstrapRemotePackageIndex.json");
+        public static string ManifestSecurityStatePath => Path.Combine(RuntimeRoot, "BootstrapManifestSecurityState.json");
 
         public static string PreLoginUpdateLogPath => Path.Combine(RuntimeRoot, "BootstrapPreLoginUpdate.log");
 

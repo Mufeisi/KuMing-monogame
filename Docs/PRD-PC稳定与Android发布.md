@@ -113,7 +113,7 @@ GATE-P0 ──► GATE-P1 ──► GATE-P2 ──► GATE-P3 ──► GATE-P4 
 |---|---|---|
 | GATE-P0 | **已完成**；远程 CI 证据见 §P0 | 无 |
 | GATE-P1 | **已完成**：ANDROID-01 商城逍遥端到端通过；ANDROID-02..07 按本轮替代口径完成真实协议/门控/权威响应/UI 投影使用探针并复核通过；PROTO-01、BASE-10、PERF-00 证据已归档；Base05 集成 223/223 通过；远程 CI `31313826844` 的 Windows、通用测试、Android Release arm64 AOT 全绿 | 无 |
-| GATE-P2 | SEC-01～SEC-05 已完成；SEC-06 未完成；**门禁未关闭** | 继续 SEC-06，不将单项完成误报为整个门禁关闭 |
+| GATE-P2 | **已完成**：SEC-01～SEC-06 全部完成；签名私钥与发布流水线按边界留在 RELEASE-01/02 | 按门禁顺序进入 GATE-P3 |
 | GATE-P3 | 未开始 | 等待 GATE-P2 |
 | GATE-P4 | PERF-00 采集基建已完成，真实基线/PERF-01..05 未开始 | 等待 GATE-P3 与真实 S1/S2/S3 输入 |
 | GATE-P5 | 未开始 | 等待 GATE-P4 |
@@ -226,6 +226,8 @@ GATE-P1 关闭后，P2 的 SEC-03、SEC-04、SEC-05、SEC-06 各为独立任务�
 **SEC-04 管理端安全收口记录（2026-08-10）**：现有 `HttpServer` 的管理端点新增独立 Bearer 凭据，不再以游戏 `GMPassword` 或仅来源 IP 作为授权。`Administrator` 可访问状态、广播、开户和名单维护，`Operator` 仅可访问状态与广播；比较使用固定长度 SHA-256 摘要和固定时间比较，同值角色令牌按未配置失败关闭。回环可使用 HTTP，明确内网 IP 必须使用 HTTPS，公网 IP、通配地址、主机名和内网明文 HTTP 在启动前拒绝；`HTTPTrustedIPAddress` 继续限制来源。GET 与非 GET 管理请求统一经过来源、鉴权和审计；每次拒绝、失败、越权和成功均通过不可静默丢弃的警告级日志接缝写入 `ADMIN_AUDIT`，来源以确定性散列关联标识记录，且不记录 IP 明文、Authorization、令牌或查询串。专项 `4/4` 含真实 `HttpListener` 的 401/403/405/成功路径和真实日志落盘；证据见 `Docs/Evidence/GATE-P2/sec04-admin-security-20260810/`。环境变量令牌是 SEC-05 受保护密钥存储接入前过渡；SEC-05、SEC-06 仍阻塞 GATE-P2。
 
 **SEC-05 配置秘密治理收口记录（2026-08-10）**：服务端新增 Windows DPAPI `CurrentUser` 受保护秘密存储，TLS 证书密码、管理端角色令牌、游戏 GM 密码、MySQL 连接串、微端 Code 与 AI API Key 均不再从 INI 或常驻环境变量读取；历史明文键在 `Settings.Load` 时严格删除。CI/运维只允许通过专用 `LYOCRYSTAL_IMPORT_*` 变量短暂导入，进程读取后立即清空；旧 TLS、管理端和 AI 环境变量按迁移错误失败关闭。正式启动在脚本、监听器和服务线程之前统一校验：默认或短 GM 密码、缺失的已启用功能秘密、同值或过短管理令牌、公网/通配管理监听及内网明文 HTTP 均阻止启动。DPAPI 往返、文件无明文、短暂导入清理、旧 INI 删除、完整配置覆盖和启动前失败专项与关联安全/生命周期测试 `38/38`，Base05 全量 `249/249`；Server.Library 与 Server.MirForms Release 构建 0 错误。运维与恢复说明见 `Docs/SEC-05-受保护秘密与启动门禁.md`，证据见 `Docs/Evidence/GATE-P2/sec05-secret-governance-20260810/`。SEC-05 至此完成；SEC-06 仍阻塞 GATE-P2。
+
+**SEC-06 微端资源索引签名收口记录（2026-08-10）**：PC 与 Mono/Android 的现有远端 Bootstrap 更新接缝统一复用 `BootstrapManifestSignaturePolicy`，仅在严格 JSON 包装通过确定性二进制载荷、ECDSA P-256/SHA-256/P1363、编译期 SPKI Key ID 信任表、密钥序列窗口、最低客户端版本和持久化单调序列校验后生成更新队列。低序列、同序列异资源版本、未知/过期密钥、哈希或签名篡改、未知字段、重复包、非规范摘要及损坏防降级状态均失败关闭；没有已接受签名状态绑定的旧更新队列不再继续。签名载荷的字节级顺序、字段边界、轮换步骤与 RELEASE-01 接缝见 `Docs/SEC-06-微端资源索引签名格式.md`。SEC-06 不生成或托管私钥，生产公钥注入、CI 签名和事务发布仍按 PRD 留在 RELEASE-01/02；在生产公钥注入前，远端更新按设计拒绝。专项 `7/7`、Base05 全量 `256/256`，PC、Mono net10 与 Android arm64 Release/AOT 构建均 0 错误；证据见 `Docs/Evidence/GATE-P2/sec06-micro-signing-20260810/`。SEC-01～SEC-06 至此全部完成，GATE-P2 关闭，开发队列进入 GATE-P3。
 
 **GATE-P2 退出条件**：公开测试前安全项全部完成；凭据不通过未加密网络传输；公网无 V1 明文登录。
 

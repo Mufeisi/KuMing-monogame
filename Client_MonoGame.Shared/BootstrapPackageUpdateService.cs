@@ -9,6 +9,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Xna.Framework;
+using Shared.Security;
 
 namespace MonoShare
 {
@@ -318,7 +319,24 @@ namespace MonoShare
                     return null;
 
                 json = json.TrimStart('\uFEFF'); // tolerate UTF-8 BOM
-                return JsonSerializer.Deserialize<BootstrapPackageIndexView>(json, JsonReadOptions);
+                BootstrapSignedManifest signed = BootstrapManifestAcceptanceStore.VerifyAndAccept(
+                    json,
+                    ClientResourceLayout.ManifestSecurityStatePath);
+                return new BootstrapPackageIndexView
+                {
+                    GeneratedAtUtc = signed.GeneratedAtUtc,
+                    ResourceVersion = signed.ResourceVersion,
+                    Packages = signed.Packages.Select(package => new BootstrapPackageIndexPackageView
+                    {
+                        Name = package.Name,
+                        Sha256 = package.Sha256,
+                        Size = package.Size,
+                    }).ToList(),
+                };
+            }
+            catch (InvalidDataException)
+            {
+                throw;
             }
             catch (Exception ex)
             {

@@ -8,13 +8,13 @@ using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Shared.Security;
 
 namespace Client.Bootstrap
 {
     internal static class PcBootstrapHttp
     {
         private static readonly UTF8Encoding Utf8NoBom = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false);
-        private static readonly JsonSerializerOptions JsonReadOptions = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
         private static readonly JsonSerializerOptions JsonWriteOptions = new JsonSerializerOptions { WriteIndented = true };
 
         private static HttpClient _httpClient;
@@ -85,7 +85,24 @@ namespace Client.Bootstrap
                     return null;
 
                 json = json.TrimStart('\uFEFF'); // tolerate UTF-8 BOM
-                return JsonSerializer.Deserialize<PcBootstrapPackageIndexView>(json, JsonReadOptions);
+                BootstrapSignedManifest signed = BootstrapManifestAcceptanceStore.VerifyAndAccept(
+                    json,
+                    PcBootstrapLayout.ManifestSecurityStatePath);
+                return new PcBootstrapPackageIndexView
+                {
+                    GeneratedAtUtc = signed.GeneratedAtUtc,
+                    ResourceVersion = signed.ResourceVersion,
+                    Packages = signed.Packages.ConvertAll(package => new PcBootstrapPackageIndexPackageView
+                    {
+                        Name = package.Name,
+                        Sha256 = package.Sha256,
+                        Size = package.Size,
+                    }),
+                };
+            }
+            catch (InvalidDataException)
+            {
+                throw;
             }
             catch (Exception ex)
             {

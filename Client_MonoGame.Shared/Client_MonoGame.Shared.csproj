@@ -36,6 +36,7 @@
     <Compile Include="..\Shared\Security\PasswordStoragePolicy.cs" Link="Security\PasswordStoragePolicy.cs" />
     <Compile Include="..\Shared\Security\SensitiveIniSanitizer.cs" Link="Security\SensitiveIniSanitizer.cs" />
     <Compile Include="..\Shared\Security\TlsClientPolicy.cs" Link="Security\TlsClientPolicy.cs" />
+    <Compile Include="..\Shared\Security\BootstrapManifestSignaturePolicy.cs" Link="Security\BootstrapManifestSignaturePolicy.cs" />
     <Compile Include="InternalsVisibleTo.BootstrapRuntimeSmokeTest.cs" />
     <Compile Include="BootstrapPackageRuntime.cs" />
     <Compile Include="BootstrapPackageDownloader.cs" />
@@ -56,6 +57,7 @@
     <Compile Include="..\Shared\Security\PasswordStoragePolicy.cs" Link="Security\PasswordStoragePolicy.cs" />
     <Compile Include="..\Shared\Security\SensitiveIniSanitizer.cs" Link="Security\SensitiveIniSanitizer.cs" />
     <Compile Include="..\Shared\Security\TlsClientPolicy.cs" Link="Security\TlsClientPolicy.cs" />
+    <Compile Include="..\Shared\Security\BootstrapManifestSignaturePolicy.cs" Link="Security\BootstrapManifestSignaturePolicy.cs" />
     <Compile Include="InternalsVisibleTo.BootstrapRuntimeSmokeTest.cs" />
     <Compile Include="BootstrapPackageRuntime.cs" />
     <Compile Include="BootstrapPackageDownloader.cs" />
@@ -81,6 +83,7 @@
     <Compile Include="..\Shared\Diagnostics\PerformanceMetrics.cs" Link="Diagnostics\PerformanceMetrics.cs" />
     <Compile Include="..\Shared\Security\PasswordStoragePolicy.cs" Link="Security\PasswordStoragePolicy.cs" />
     <Compile Include="..\Shared\Security\SensitiveIniSanitizer.cs" Link="Security\SensitiveIniSanitizer.cs" />
+    <Compile Include="..\Shared\Security\BootstrapManifestSignaturePolicy.cs" Link="Security\BootstrapManifestSignaturePolicy.cs" />
     <Compile Include="InternalsVisibleTo.BootstrapRuntimeSmokeTest.cs" />
     <Compile Include="BootstrapPackageRuntime.cs" />
     <Compile Include="BootstrapPackageDownloader.cs" />

@@ -1,0 +1,70 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="85124e3c-e4bf-4831-b63e-a4e86e679c9d" name="luo@DESKTOP-4J13TH0 2026-08-10 01:28:22" runUser="DESKTOP-4J13TH0\luo" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-08-10T01:28:22.7602301+08:00" queuing="2026-08-10T01:28:22.7602304+08:00" start="2026-08-10T01:28:21.7019810+08:00" finish="2026-08-10T01:28:22.7666433+08:00" />
+  <TestSettings name="default" id="6881abed-d981-46a8-b4a7-351dd8be7d1b">
+    <Deployment runDeploymentRoot="luo_DESKTOP-4J13TH0_2026-08-10_01_28_22" />
+  </TestSettings>
+  <Results>
+    <UnitTestResult executionId="b97c144a-f48d-48d0-adec-00089a55d112" testId="4964dd4a-4cfa-7e28-64f2-4febcf82ad10" testName="Base05.Tests.BootstrapManifestSignatureTests.重复包非规范摘要和未知字段均拒绝" computerName="DESKTOP-4J13TH0" duration="00:00:00.0039176" startTime="2026-08-10T01:28:22.6212494+08:00" endTime="2026-08-10T01:28:22.6250757+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="b97c144a-f48d-48d0-adec-00089a55d112" />
+    <UnitTestResult executionId="5053352c-b997-47c2-93f0-89dd21315b5a" testId="d47871e1-47b2-6081-5bbb-326c0640a6e1" testName="Base05.Tests.BootstrapManifestSignatureTests.低序列与同序列不同资源版本均拒绝降级" computerName="DESKTOP-4J13TH0" duration="00:00:00.0041682" startTime="2026-08-10T01:28:22.6252817+08:00" endTime="2026-08-10T01:28:22.6293141+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="5053352c-b997-47c2-93f0-89dd21315b5a" />
+    <UnitTestResult executionId="43cfff5a-c614-4c9c-a6e9-d7bd4022371f" testId="edf48457-fbd8-a026-464e-4365407a31fb" testName="Base05.Tests.BootstrapManifestSignatureTests.当前与下一密钥按序列窗口平滑轮换" computerName="DESKTOP-4J13TH0" duration="00:00:00.0073088" startTime="2026-08-10T01:28:22.6102174+08:00" endTime="2026-08-10T01:28:22.6103211+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="43cfff5a-c614-4c9c-a6e9-d7bd4022371f" />
+    <UnitTestResult executionId="d9743b5b-2b6a-40bc-8241-579c55d91030" testId="58e674c8-a428-c31f-1d4a-b2771f2b4309" testName="Base05.Tests.BootstrapManifestSignatureTests.最低兼容版本高于当前客户端时拒绝更新" computerName="DESKTOP-4J13TH0" duration="00:00:00.0698698" startTime="2026-08-10T01:28:22.5194722+08:00" endTime="2026-08-10T01:28:22.5985561+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="d9743b5b-2b6a-40bc-8241-579c55d91030" />
+    <UnitTestResult executionId="2885efce-e093-43e5-9fe2-983f51d42a7d" testId="56840782-1a01-634d-7821-bad3bf2a8786" testName="Base05.Tests.BootstrapManifestSignatureTests.哈希篡改未知密钥和错误签名均失败关闭" computerName="DESKTOP-4J13TH0" duration="00:00:00.0066949" startTime="2026-08-10T01:28:22.6298676+08:00" endTime="2026-08-10T01:28:22.6365007+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="2885efce-e093-43e5-9fe2-983f51d42a7d" />
+    <UnitTestResult executionId="28130100-2cc9-432c-b6e1-fea21d94448c" testId="2e4af663-5554-5ed8-ff58-213dfba6f1d0" testName="Base05.Tests.BootstrapManifestSignatureTests.确定性二进制载荷不受资源包JSON顺序影响" computerName="DESKTOP-4J13TH0" duration="00:00:00.0003615" startTime="2026-08-10T01:28:22.6294707+08:00" endTime="2026-08-10T01:28:22.6297282+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="28130100-2cc9-432c-b6e1-fea21d94448c" />
+    <UnitTestResult executionId="26beb5b2-8967-47a7-aad3-c89a02396e09" testId="eea15db8-51a9-2f2b-d40c-f22a2540a81b" testName="Base05.Tests.BootstrapManifestSignatureTests.正式接受存储原子记录最高序列并在重启后拒绝降级" computerName="DESKTOP-4J13TH0" duration="00:00:00.0146217" startTime="2026-08-10T01:28:22.6110188+08:00" endTime="2026-08-10T01:28:22.6210592+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="26beb5b2-8967-47a7-aad3-c89a02396e09" />
+  </Results>
+  <TestDefinitions>
+    <UnitTest name="Base05.Tests.BootstrapManifestSignatureTests.确定性二进制载荷不受资源包JSON顺序影响" storage="c:\users\luo\.codex\worktrees\p2-sec06-micro-signing-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="2e4af663-5554-5ed8-ff58-213dfba6f1d0">
+      <Execution id="28130100-2cc9-432c-b6e1-fea21d94448c" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p2-sec06-micro-signing-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.BootstrapManifestSignatureTests" name="确定性二进制载荷不受资源包JSON顺序影响" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.BootstrapManifestSignatureTests.正式接受存储原子记录最高序列并在重启后拒绝降级" storage="c:\users\luo\.codex\worktrees\p2-sec06-micro-signing-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="eea15db8-51a9-2f2b-d40c-f22a2540a81b">
+      <Execution id="26beb5b2-8967-47a7-aad3-c89a02396e09" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p2-sec06-micro-signing-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.BootstrapManifestSignatureTests" name="正式接受存储原子记录最高序列并在重启后拒绝降级" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.BootstrapManifestSignatureTests.哈希篡改未知密钥和错误签名均失败关闭" storage="c:\users\luo\.codex\worktrees\p2-sec06-micro-signing-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="56840782-1a01-634d-7821-bad3bf2a8786">
+      <Execution id="2885efce-e093-43e5-9fe2-983f51d42a7d" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p2-sec06-micro-signing-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.BootstrapManifestSignatureTests" name="哈希篡改未知密钥和错误签名均失败关闭" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.BootstrapManifestSignatureTests.当前与下一密钥按序列窗口平滑轮换" storage="c:\users\luo\.codex\worktrees\p2-sec06-micro-signing-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="edf48457-fbd8-a026-464e-4365407a31fb">
+      <Execution id="43cfff5a-c614-4c9c-a6e9-d7bd4022371f" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p2-sec06-micro-signing-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.BootstrapManifestSignatureTests" name="当前与下一密钥按序列窗口平滑轮换" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.BootstrapManifestSignatureTests.最低兼容版本高于当前客户端时拒绝更新" storage="c:\users\luo\.codex\worktrees\p2-sec06-micro-signing-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="58e674c8-a428-c31f-1d4a-b2771f2b4309">
+      <Execution id="d9743b5b-2b6a-40bc-8241-579c55d91030" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p2-sec06-micro-signing-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.BootstrapManifestSignatureTests" name="最低兼容版本高于当前客户端时拒绝更新" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.BootstrapManifestSignatureTests.低序列与同序列不同资源版本均拒绝降级" storage="c:\users\luo\.codex\worktrees\p2-sec06-micro-signing-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="d47871e1-47b2-6081-5bbb-326c0640a6e1">
+      <Execution id="5053352c-b997-47c2-93f0-89dd21315b5a" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p2-sec06-micro-signing-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.BootstrapManifestSignatureTests" name="低序列与同序列不同资源版本均拒绝降级" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.BootstrapManifestSignatureTests.重复包非规范摘要和未知字段均拒绝" storage="c:\users\luo\.codex\worktrees\p2-sec06-micro-signing-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="4964dd4a-4cfa-7e28-64f2-4febcf82ad10">
+      <Execution id="b97c144a-f48d-48d0-adec-00089a55d112" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p2-sec06-micro-signing-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.BootstrapManifestSignatureTests" name="重复包非规范摘要和未知字段均拒绝" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestEntries>
+    <TestEntry testId="4964dd4a-4cfa-7e28-64f2-4febcf82ad10" executionId="b97c144a-f48d-48d0-adec-00089a55d112" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="d47871e1-47b2-6081-5bbb-326c0640a6e1" executionId="5053352c-b997-47c2-93f0-89dd21315b5a" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="edf48457-fbd8-a026-464e-4365407a31fb" executionId="43cfff5a-c614-4c9c-a6e9-d7bd4022371f" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="58e674c8-a428-c31f-1d4a-b2771f2b4309" executionId="d9743b5b-2b6a-40bc-8241-579c55d91030" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="56840782-1a01-634d-7821-bad3bf2a8786" executionId="2885efce-e093-43e5-9fe2-983f51d42a7d" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="2e4af663-5554-5ed8-ff58-213dfba6f1d0" executionId="28130100-2cc9-432c-b6e1-fea21d94448c" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="eea15db8-51a9-2f2b-d40c-f22a2540a81b" executionId="26beb5b2-8967-47a7-aad3-c89a02396e09" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+  </TestEntries>
+  <TestLists>
+    <TestList name="列表中未列出的结果" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="所有已加载的结果" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Completed">
+    <Counters total="7" executed="7" passed="7" failed="0" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <Output>
+      <StdOut>[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.0.2+dd36e86129 (64-bit .NET 10.0.4)&#xD;
+[xUnit.net 00:00:00.12]   Discovering: Base05.Tests&#xD;
+[xUnit.net 00:00:00.20]   Discovered:  Base05.Tests&#xD;
+[xUnit.net 00:00:00.23]   Starting:    Base05.Tests&#xD;
+[xUnit.net 00:00:00.37]   Finished:    Base05.Tests&#xD;
+</StdOut>
+    </Output>
+  </ResultSummary>
+</TestRun>

@@ -39,6 +39,14 @@ namespace MonoShare
                         .OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
                         .ToList();
 
+                    if (queue.Packages.Count > 0 &&
+                        !Shared.Security.BootstrapManifestAcceptanceStore.IsAcceptedResourceVersion(
+                            ClientResourceLayout.ManifestSecurityStatePath,
+                            queue.ResourceVersion))
+                    {
+                        return new BootstrapPackageUpdateQueueView();
+                    }
+
                     return queue;
                 }
                 catch (Exception)
