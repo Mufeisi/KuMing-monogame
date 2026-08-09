@@ -8,6 +8,45 @@ namespace Base05.Tests;
 public sealed class MobileActivityStateTests
 {
     [Fact]
+    public void Activity_usage_probe_smoke_projects_accept_request_and_server_change_to_ui_values()
+    {
+        ClientQuestInfo daily = Info(51, QuestType.每日);
+        var state = new MobileActivityState();
+        state.SyncSnapshot(new[] { daily }, null, null);
+        Assert.True(state.Select(51));
+
+        var request = new ClientPackets.AcceptQuest
+        {
+            NPCIndex = daily.NPCIndex,
+            QuestIndex = daily.Index,
+        };
+        Assert.Equal((short)ClientPacketIds.AcceptQuest, request.Index);
+        Assert.True(state.BeginRequest(MobileActivityOperation.Accept, request.QuestIndex, 10_000));
+        Assert.True(state.RequestPending);
+        Assert.Equal(MobileActivityOperation.Accept, state.PendingOperation);
+
+        var response = new ServerPackets.ChangeQuest
+        {
+            Quest = Progress(daily, taken: true),
+            QuestState = QuestState.Add,
+            TrackQuest = true,
+        };
+        Assert.Equal((short)ServerPacketIds.ChangeQuest, response.Index);
+        Assert.True(state.ApplyQuestChange(response.Quest, response.QuestState));
+
+        // FairyGuiHost.MobileQuest 刷新活动窗口时读取这些公开投影。
+        Assert.True(state.IsOpen);
+        Assert.True(state.HasActivities);
+        Assert.False(state.RequestPending);
+        Assert.Equal(MobileActivityOperation.None, state.PendingOperation);
+        Assert.NotNull(state.SelectedQuest);
+        Assert.Equal(51, state.SelectedQuest.Id);
+        Assert.True(state.SelectedQuest.Taken);
+        Assert.Equal("每日活动", MobileActivityState.TypeLabel(state.SelectedQuest.QuestInfo));
+        Assert.Null(state.Error);
+    }
+
+    [Fact]
     public void Quest_context_keeps_activity_mode_across_rebind_but_close_returns_to_ordinary()
     {
         var context = new MobileQuestContextState();

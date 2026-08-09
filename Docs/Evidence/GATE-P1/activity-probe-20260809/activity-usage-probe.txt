@@ -1,0 +1,14 @@
+P1-ACTIVITY 使用探针冒烟
+语言：中文
+
+命令：
+dotnet test Tests/Base05.Tests/Base05.Tests.csproj -c Release --no-restore --filter "FullyQualifiedName~MobileActivityStateTests" --logger "console;verbosity=minimal"
+
+结果：
+已通过：16
+失败：0
+跳过：0
+持续时间：94 ms
+
+覆盖链路：
+AcceptQuest 请求 -> 请求门控 -> ChangeQuest(Add) 权威响应 -> FairyGUI 使用的公开 UI 投影值。
