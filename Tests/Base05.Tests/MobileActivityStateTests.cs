@@ -55,6 +55,23 @@ public sealed class MobileActivityStateTests
         Assert.False(MobileQuestBindingPolicy.ShouldCreateFallback(activityMode: false, reliableOperationCount: 4));
         Assert.True(MobileQuestBindingPolicy.ShouldCreateRewardBar(activityMode: true, visibleCandidateCount: 2));
         Assert.False(MobileQuestBindingPolicy.ShouldCreateRewardBar(activityMode: false, visibleCandidateCount: 2));
+        Assert.True(MobileQuestBindingPolicy.ShouldUseWindowFallback("Quest", activityMode: true));
+        Assert.False(MobileQuestBindingPolicy.ShouldUseWindowFallback("Quest", activityMode: false));
+        Assert.False(MobileQuestBindingPolicy.ShouldUseWindowFallback("Npc", activityMode: true));
+        Assert.True(MobileQuestBindingPolicy.ShouldReplaceExistingQuestWindow("Quest", activityMode: true, existingIsActivityFallback: false));
+        Assert.True(MobileQuestBindingPolicy.ShouldReplaceExistingQuestWindow("Quest", activityMode: false, existingIsActivityFallback: true));
+        Assert.False(MobileQuestBindingPolicy.ShouldReplaceExistingQuestWindow("Quest", activityMode: true, existingIsActivityFallback: true));
+        Assert.False(MobileQuestBindingPolicy.ShouldReplaceExistingQuestWindow("Npc", activityMode: true, existingIsActivityFallback: false));
+    }
+
+    [Fact]
+    public void Activity_fallback_paging_exposes_items_after_the_first_six_rows()
+    {
+        Assert.Equal(1, MobileQuestBindingPolicy.PageCount(itemCount: 0, pageSize: 6));
+        Assert.Equal(2, MobileQuestBindingPolicy.PageCount(itemCount: 7, pageSize: 6));
+        Assert.Equal(6, MobileQuestBindingPolicy.PageItemIndex(page: 1, row: 0, itemCount: 7, pageSize: 6));
+        Assert.Equal(-1, MobileQuestBindingPolicy.PageItemIndex(page: 1, row: 1, itemCount: 7, pageSize: 6));
+        Assert.Equal(1, MobileQuestBindingPolicy.ClampPage(page: 9, itemCount: 7, pageSize: 6));
     }
 
     [Fact]

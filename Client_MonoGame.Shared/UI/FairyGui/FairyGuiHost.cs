@@ -1710,14 +1710,38 @@ namespace MonoShare
             {
                 if (MobileWindows.TryGetValue(windowKey, out GComponent existing) && existing != null && !existing._disposed)
                 {
-                    existing.visible = true;
-                    BringToFront(existing);
-                    TryBindMobileWindowCloseButton(windowKey, existing);
-                    TryBindMobileWindowIfDue(windowKey, existing, resolveInfo: null);
-                    return true;
+                    bool replaceQuestWindow = MobileQuestBindingPolicy.ShouldReplaceExistingQuestWindow(
+                        windowKey,
+                        _mobileQuestContext.IsActivityMode,
+                        string.Equals(existing.name, MobileActivityFallbackName, StringComparison.Ordinal));
+                    if (replaceQuestWindow)
+                    {
+                        ResetMobileQuestBindings(clearContext: false);
+                        MobileWindows.Remove(windowKey);
+                        try
+                        {
+                            if (existing.parent != null)
+                                existing.parent.RemoveChild(existing, dispose: true);
+                            else
+                                existing.Dispose();
+                        }
+                        catch { }
+                    }
+                    else
+                    {
+                        existing.visible = true;
+                        BringToFront(existing);
+                        TryBindMobileWindowCloseButton(windowKey, existing);
+                        TryBindMobileWindowIfDue(windowKey, existing, resolveInfo: null);
+                        return true;
+                    }
                 }
 
-                if (!TryCreateMobileWindowComponent(windowKey, keywords, out GComponent component, out string resolveInfo))
+                bool useActivityFallback = MobileQuestBindingPolicy.ShouldUseWindowFallback(windowKey, _mobileQuestContext.IsActivityMode);
+                bool created = useActivityFallback
+                    ? TryCreateMobileActivityFallbackWindow(out GComponent component, out string resolveInfo)
+                    : TryCreateMobileWindowComponent(windowKey, keywords, out component, out resolveInfo);
+                if (!created)
                 {
                     // NPC 对话框：某些资源包可能缺失/命名不一致，提供兜底窗口保证交互链路可用
                     if (string.Equals(windowKey, "Npc", StringComparison.OrdinalIgnoreCase))
@@ -1788,42 +1812,66 @@ namespace MonoShare
             {
                 if (MobileWindows.TryGetValue(windowKey, out GComponent existing) && existing != null && !existing._disposed)
                 {
-                    existing.visible = !existing.visible;
-                    nowVisible = existing.visible;
-                    if (nowVisible)
-                        BringToFront(existing);
-                    if (nowVisible)
-                        TryBindMobileWindowCloseButton(windowKey, existing);
-                    if (nowVisible)
-                        TryBindMobileWindowIfDue(windowKey, existing, resolveInfo: null);
-                    if (!nowVisible && string.Equals(windowKey, "Fishing", StringComparison.OrdinalIgnoreCase))
+                    bool replaceQuestWindow = MobileQuestBindingPolicy.ShouldReplaceExistingQuestWindow(
+                        windowKey,
+                        _mobileQuestContext.IsActivityMode,
+                        string.Equals(existing.name, MobileActivityFallbackName, StringComparison.Ordinal));
+                    if (replaceQuestWindow)
                     {
-                        TryCancelMobileFishingBeforeUserClose();
-                        ResetMobileFishingBindings();
-                    }
-                    if (!nowVisible && string.Equals(windowKey, "Quest", StringComparison.OrdinalIgnoreCase))
-                        ResetMobileQuestBindings();
-                    if (nowVisible)
-                        TryApplyMobileWindowLayoutIfNeeded(windowKey, existing, existing.parent, resolveInfo: null);
-                    if (Settings.LogErrors && string.Equals(windowKey, "State", StringComparison.OrdinalIgnoreCase))
-                    {
+                        ResetMobileQuestBindings(clearContext: false);
+                        MobileWindows.Remove(windowKey);
                         try
                         {
-                            string pkg = existing.packageItem?.owner?.name ?? "(null)";
-                            string item = existing.packageItem?.name ?? existing.name ?? "(null)";
-                            CMain.SaveLog("FairyGUI: State 窗口切换：" +
-                                          " nowVisible=" + nowVisible +
-                                          " component=" + pkg + "/" + item +
-                                          $" pos=({existing.x:0.##},{existing.y:0.##}) size=({existing.width:0.##},{existing.height:0.##}) alpha={existing.alpha:0.##}");
+                            if (existing.parent != null)
+                                existing.parent.RemoveChild(existing, dispose: true);
+                            else
+                                existing.Dispose();
                         }
-                        catch
-                        {
-                        }
+                        catch { }
                     }
-                    return true;
+                    else
+                    {
+                        existing.visible = !existing.visible;
+                        nowVisible = existing.visible;
+                        if (nowVisible)
+                            BringToFront(existing);
+                        if (nowVisible)
+                            TryBindMobileWindowCloseButton(windowKey, existing);
+                        if (nowVisible)
+                            TryBindMobileWindowIfDue(windowKey, existing, resolveInfo: null);
+                        if (!nowVisible && string.Equals(windowKey, "Fishing", StringComparison.OrdinalIgnoreCase))
+                        {
+                            TryCancelMobileFishingBeforeUserClose();
+                            ResetMobileFishingBindings();
+                        }
+                        if (!nowVisible && string.Equals(windowKey, "Quest", StringComparison.OrdinalIgnoreCase))
+                            ResetMobileQuestBindings();
+                        if (nowVisible)
+                            TryApplyMobileWindowLayoutIfNeeded(windowKey, existing, existing.parent, resolveInfo: null);
+                        if (Settings.LogErrors && string.Equals(windowKey, "State", StringComparison.OrdinalIgnoreCase))
+                        {
+                            try
+                            {
+                                string pkg = existing.packageItem?.owner?.name ?? "(null)";
+                                string item = existing.packageItem?.name ?? existing.name ?? "(null)";
+                                CMain.SaveLog("FairyGUI: State 窗口切换：" +
+                                              " nowVisible=" + nowVisible +
+                                              " component=" + pkg + "/" + item +
+                                              $" pos=({existing.x:0.##},{existing.y:0.##}) size=({existing.width:0.##},{existing.height:0.##}) alpha={existing.alpha:0.##}");
+                            }
+                            catch
+                            {
+                            }
+                        }
+                        return true;
+                    }
                 }
 
-                if (!TryCreateMobileWindowComponent(windowKey, keywords, out GComponent component, out string resolveInfo))
+                bool useActivityFallback = MobileQuestBindingPolicy.ShouldUseWindowFallback(windowKey, _mobileQuestContext.IsActivityMode);
+                bool created = useActivityFallback
+                    ? TryCreateMobileActivityFallbackWindow(out GComponent component, out string resolveInfo)
+                    : TryCreateMobileWindowComponent(windowKey, keywords, out component, out resolveInfo);
+                if (!created)
                 {
                     bool createdFallback = false;
                     if (string.Equals(windowKey, "Mentor", StringComparison.OrdinalIgnoreCase))
