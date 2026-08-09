@@ -270,7 +270,6 @@ public static class BootstrapManifestAcceptanceStore
 {
     private static readonly object Gate = new();
     private static readonly UTF8Encoding Utf8NoBom = new(false);
-    private const string MarkerContent = "lyocrystal-bootstrap-manifest-state-v1\n";
     private static readonly JsonSerializerOptions StateJsonOptions = new()
     {
         PropertyNameCaseInsensitive = false,
@@ -308,7 +307,7 @@ public static class BootstrapManifestAcceptanceStore
             if (!result.IsValid)
                 throw new InvalidDataException(result.Error);
 
-            WriteState(statePath, new BootstrapManifestSecurityState
+            var nextState = new BootstrapManifestSecurityState
             {
                 Sequence = result.Manifest.Sequence,
                 ResourceVersion = result.Manifest.ResourceVersion,
@@ -316,8 +315,9 @@ public static class BootstrapManifestAcceptanceStore
                 CanonicalPayloadSha256 = HashPayload(result.CanonicalPayload),
                 ManifestJson = json.TrimStart('\uFEFF'),
                 AcceptedAtUtc = DateTime.UtcNow.ToString("o"),
-            });
-            EnsureMarker(statePath);
+            };
+            WriteState(statePath, nextState);
+            EnsureMarker(statePath, nextState);
             return result.Manifest;
         }
     }
@@ -422,7 +422,7 @@ public static class BootstrapManifestAcceptanceStore
                 !string.Equals(HashPayload(stored.CanonicalPayload), state.CanonicalPayloadSha256, StringComparison.Ordinal))
                 throw new InvalidDataException("资源签名防降级状态与已验签清单不一致");
             state.VerifiedManifest = stored.Manifest;
-            EnsureMarker(statePath);
+            EnsureMarker(statePath, state);
             return state;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException)
@@ -436,19 +436,42 @@ public static class BootstrapManifestAcceptanceStore
 
     private static string GetMarkerPath(string statePath) => statePath + ".initialized";
 
-    private static void EnsureMarker(string statePath)
+    private static void EnsureMarker(string statePath, BootstrapManifestSecurityState state)
     {
         string markerPath = GetMarkerPath(statePath);
         if (File.Exists(markerPath))
         {
-            if (!string.Equals(File.ReadAllText(markerPath), MarkerContent, StringComparison.Ordinal))
+            using JsonDocument document = JsonDocument.Parse(File.ReadAllText(markerPath));
+            if (BootstrapManifestSignaturePolicy.ContainsDuplicateProperty(document.RootElement))
+                throw new InvalidDataException("资源签名防降级安装标记包含重复字段");
+            BootstrapManifestInstallMarker marker = document.RootElement.Deserialize<BootstrapManifestInstallMarker>(StateJsonOptions)
+                ?? throw new InvalidDataException("资源签名防降级安装标记为空");
+            if (marker.Sequence <= 0 ||
+                !Regex.IsMatch(marker.CanonicalPayloadSha256 ?? string.Empty, "^[0-9a-f]{64}$", RegexOptions.CultureInvariant))
                 throw new InvalidDataException("资源签名防降级安装标记无效");
-            return;
+            if (marker.Sequence > state.Sequence)
+                throw new InvalidDataException("资源签名防降级状态低于当前安装版本地板");
+            if (marker.Sequence == state.Sequence)
+            {
+                if (!string.Equals(marker.CanonicalPayloadSha256, state.CanonicalPayloadSha256, StringComparison.Ordinal))
+                    throw new InvalidDataException("资源签名防降级状态与安装标记摘要不一致");
+                return;
+            }
         }
+
+        WriteMarker(markerPath, state);
+    }
+
+    private static void WriteMarker(string markerPath, BootstrapManifestSecurityState state)
+    {
         string temporaryPath = markerPath + ".tmp";
         try
         {
-            File.WriteAllText(temporaryPath, MarkerContent, Utf8NoBom);
+            File.WriteAllText(temporaryPath, JsonSerializer.Serialize(new BootstrapManifestInstallMarker
+            {
+                Sequence = state.Sequence,
+                CanonicalPayloadSha256 = state.CanonicalPayloadSha256,
+            }, StateJsonOptions), Utf8NoBom);
             File.Move(temporaryPath, markerPath, overwrite: true);
         }
         finally
@@ -483,6 +506,12 @@ public static class BootstrapManifestAcceptanceStore
         public string AcceptedAtUtc { get; set; }
         [System.Text.Json.Serialization.JsonIgnore]
         public BootstrapSignedManifest VerifiedManifest { get; set; }
+    }
+
+    private sealed class BootstrapManifestInstallMarker
+    {
+        public long Sequence { get; set; }
+        public string CanonicalPayloadSha256 { get; set; }
     }
 }
 

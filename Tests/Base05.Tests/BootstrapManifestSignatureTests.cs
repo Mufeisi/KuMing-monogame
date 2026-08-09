@@ -178,16 +178,36 @@ public sealed class BootstrapManifestSignatureTests
                 keys,
                 new Version(1, 0, 0)));
 
+            string oldValidState = File.ReadAllText(statePath);
+            string oldValidMarker = File.ReadAllText(statePath + ".initialized");
+            BootstrapManifestAcceptanceStore.VerifyAndAccept(
+                Serialize(Sign(CreateManifest(21, "resource-v21"), signer)),
+                statePath,
+                keys,
+                new Version(1, 0, 0));
             string validState = File.ReadAllText(statePath);
             string validMarker = File.ReadAllText(statePath + ".initialized");
-            File.WriteAllText(statePath + ".initialized", "tampered");
+
+            File.WriteAllText(statePath + ".initialized", oldValidMarker);
+            Assert.True(BootstrapManifestAcceptanceStore.IsAcceptedResourceVersion(
+                statePath, "resource-v21", keys, new Version(1, 0, 0)));
+            Assert.Equal(validMarker, File.ReadAllText(statePath + ".initialized"));
+
+            File.WriteAllText(statePath, oldValidState);
             Assert.False(BootstrapManifestAcceptanceStore.IsAcceptedResourceVersion(
                 statePath, "resource-v20", keys, new Version(1, 0, 0)));
+            Assert.Throws<InvalidDataException>(() => BootstrapManifestAcceptanceStore.VerifyAndAccept(
+                Serialize(accepted), statePath, keys, new Version(1, 0, 0)));
+            File.WriteAllText(statePath, validState);
+
+            File.WriteAllText(statePath + ".initialized", "tampered");
+            Assert.False(BootstrapManifestAcceptanceStore.IsAcceptedResourceVersion(
+                statePath, "resource-v21", keys, new Version(1, 0, 0)));
             File.WriteAllText(statePath + ".initialized", validMarker);
 
             File.WriteAllText(statePath, "{}");
             Assert.False(BootstrapManifestAcceptanceStore.IsAcceptedResourceVersion(
-                statePath, "resource-v20", keys, new Version(1, 0, 0)));
+                statePath, "resource-v21", keys, new Version(1, 0, 0)));
             Assert.Throws<InvalidDataException>(() => BootstrapManifestAcceptanceStore.VerifyAndAccept(
                 Serialize(accepted), statePath, keys, new Version(1, 0, 0)));
 
