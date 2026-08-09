@@ -995,7 +995,7 @@ namespace Server.MirEnvir
                 Time = Stopwatch.ElapsedMilliseconds;
 
                 var conTime = Time;
-                var saveTime = Time + Settings.SaveDelay * Settings.Minute;
+                var saveTime = ProductionRpoPolicy.GetNextAutoSaveDeadline(Time, Settings.SaveDelay);
                 var userTime = Time + Settings.Minute * 5;
                 var lineMessageTime = Time + Settings.Minute * Settings.LineMessageTimer;
                 var processTime = Time + 1000;
@@ -1180,7 +1180,7 @@ namespace Server.MirEnvir
 
                         if (options.SaveOnStop && (Time >= saveTime || forceAutoSave))
                         {
-                            saveTime = Time + Settings.SaveDelay * Settings.Minute;
+                            saveTime = ProductionRpoPolicy.GetNextAutoSaveDeadline(Time, Settings.SaveDelay);
                             TryAutoSave(SqlSaveDomain.Accounts, BeginSaveAccounts);
                             TryAutoSave(SqlSaveDomain.Guilds, () => SaveGuilds());
                             TryAutoSave(SqlSaveDomain.Goods, () => SaveGoods());

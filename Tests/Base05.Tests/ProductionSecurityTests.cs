@@ -189,9 +189,26 @@ public sealed class ProductionSecurityTests : IDisposable
         ProductionSecurityPolicy.ValidateAndApply();
     }
 
+    [Fact]
+    public void 正式启动策略拒绝越界保存间隔并接受边界值()
+    {
+        ProtectedSecretStore.Write(ProtectedSecretStore.GameMasterPassword, "safe-game-master-password-123456");
+
+        Settings.SaveDelay = 0;
+        Assert.Throws<InvalidOperationException>(() => ProductionSecurityPolicy.ValidateAndApply());
+        Settings.SaveDelay = 6;
+        Assert.Throws<InvalidOperationException>(() => ProductionSecurityPolicy.ValidateAndApply());
+
+        Settings.SaveDelay = 1;
+        ProductionSecurityPolicy.ValidateAndApply();
+        Settings.SaveDelay = 5;
+        ProductionSecurityPolicy.ValidateAndApply();
+    }
+
     private sealed class ProductionSettingsScope : IDisposable
     {
         private readonly bool _testServer = Settings.TestServer;
+        private readonly int _saveDelay = Settings.SaveDelay;
         private readonly string _gmPassword = Settings.GMPassword;
         private readonly bool _tlsEnabled = Settings.TlsEnabled;
         private readonly bool _startHttp = Settings.StartHTTPService;
@@ -212,6 +229,7 @@ public sealed class ProductionSecurityTests : IDisposable
         public void Dispose()
         {
             Settings.TestServer = _testServer;
+            Settings.SaveDelay = _saveDelay;
             Settings.GMPassword = _gmPassword;
             Settings.TlsEnabled = _tlsEnabled;
             Settings.StartHTTPService = _startHttp;

@@ -1,6 +1,7 @@
 ﻿using System.Net;
 using System.Text.RegularExpressions;
 using Server.MirNetwork;
+using Server.Security;
 
 namespace Server
 {
@@ -75,7 +76,7 @@ namespace Server
             if (!TrySave(out string error))
             {
                 configTabs.SelectedTab = tabPage2;
-                MessageBox.Show(this, error, "TLS 配置无效", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show(this, error, "配置无效", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
             Close();
@@ -97,6 +98,21 @@ namespace Server
             }
             if (!_tlsEnabledCheckBox.Checked && ushort.TryParse(_tlsPortTextBox.Text, out ushort disabledTlsPort))
                 tlsPort = disabledTlsPort;
+
+            if (!int.TryParse(SaveDelayTextBox.Text, out int saveDelay))
+            {
+                error = "自动保存间隔必须是整数分钟。";
+                return false;
+            }
+            try
+            {
+                ProductionRpoPolicy.ValidateSaveDelay(saveDelay, enforceProductionMaximum: !Settings.TestServer);
+            }
+            catch (InvalidOperationException ex)
+            {
+                error = ex.Message;
+                return false;
+            }
 
             try
             {
@@ -148,8 +164,7 @@ namespace Server
             if (ushort.TryParse(RelogDelayTextBox.Text, out tempshort))
                 Settings.RelogDelay = tempshort;
 
-            if (ushort.TryParse(SaveDelayTextBox.Text, out tempshort))
-                Settings.SaveDelay = tempshort;
+            Settings.SaveDelay = saveDelay;
 
             Settings.AllowNewAccount = AccountCheckBox.Checked;
             Settings.AllowChangePassword = PasswordCheckBox.Checked;

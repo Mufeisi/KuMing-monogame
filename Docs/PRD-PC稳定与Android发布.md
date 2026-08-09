@@ -239,6 +239,8 @@ GATE-P1 关闭后，P2 的 SEC-03、SEC-04、SEC-05、SEC-06 各为独立任务�
 
 **DB-04 SQLite 恢复演练收口记录（2026-08-10）**：现有 `Server.MirForms` 宿主提供离线 `--restore-sqlite` 模式，复用 Server 库恢复接缝；来源必须是 DB-03 独立主库副本，来源或目标目录 `.partial` 任一 `integrity_check` 失败都不会覆盖原库。强停目标先在离线独占条件下 checkpoint 已提交 WAL、切换 DELETE journal，并复制刷新为已验证单文件 `.pre-restore` 回滚工件，再以同目录 `File.Replace` 原子发布；任一进程中断点上正式目标都是独立可读的旧库或新库。发布后校验失败会原子回滚，回滚步骤失败则汇总报告不完整。当前 Windows Release 真实演练使用 DB-03 正式服务生成 C: 本地和 D: 异卷同哈希副本；备份后提交账号金币 777，在 WAL/SHM 存在时强停 PID 1156，正式 CLI 返回 0，恢复后五个业务域复读成功且宿主进入 `Ready`。可复算 RPO 为 303ms；恢复命令到 Ready 的 UTC 端点差为 602.31ms，保守上取整按 RTO 603ms 报告（进程内 Stopwatch 为 600ms）；故障到 Ready 为 625ms，满足 RPO≤5 分钟、RTO≤30 分钟。原始命令、时间、PID、文件/hash、stdout/stderr 和退出码见 `Docs/Evidence/GATE-P3/db04-restore-drill-20260810/raw-powershell-transcript.txt`。DB-04 不替代 DB-05 的生产保存间隔及最坏崩溃点故障注入，GATE-P3 仍未关闭。
 
+**DB-05 RPO 配置强校验收口记录（2026-08-10）**：`ProductionRpoPolicy` 统一约束自动保存间隔，所有环境拒绝零和负数，正式环境只接受 1～5 分钟；`Settings.Load`、`ConfigForm.TrySave` 和 `ProductionSecurityPolicy` 分别在配置载入、界面保存和工作线程创建前失败关闭。Envir 首次保存截止时间和后续重新排期复用同一截止时间计算。T-10 以正式最坏值 5 分钟注入“下一次保存前 1ms 崩溃”，自上次成功提交起的窗口为 299999ms；边界与越界专项、全量和构建证据见 `Docs/Evidence/GATE-P3/db05-rpo-guard-20260810/`，说明见 `Docs/DB-05-RPO配置强校验.md`。磁盘或事务提交失败由既有保存韧性策略告警/保护，不能伪称仍满足时间 RPO。DB-04 仍在修正恢复原子性与真实演练证据，DB-06 尚未执行，GATE-P3 未关闭。
+
 **GATE-P2 退出条件**：公开测试前安全项全部完成；凭据不通过未加密网络传输；公网无 V1 明文登录。
 
 ### P3 SQLite 生产化（3~5 周）

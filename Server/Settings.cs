@@ -2,6 +2,7 @@
 using Server.MirDatabase;
 using Server.MirEnvir;
 using Server.MirObjects;
+using Server.Security;
 
 namespace Server
 {
@@ -586,6 +587,7 @@ namespace Server
 
             //Database
             SaveDelay = Reader.ReadInt32("Database", "SaveDelay", SaveDelay);
+            ProductionRpoPolicy.ValidateSaveDelay(SaveDelay, enforceProductionMaximum: !TestServer);
             CredxGold = Reader.ReadInt16("Database", "CredxGold", CredxGold);
             DatabaseProvider = Reader.ReadString("Database", "Provider", DatabaseProvider);
             SqlitePath = Reader.ReadString("Database", "SqlitePath", SqlitePath);
