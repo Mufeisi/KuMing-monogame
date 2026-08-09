@@ -180,7 +180,7 @@ namespace Server.Library.Utils
         {
             string line = AdminSecurityPolicy.BuildAuditLine(
                 DateTimeOffset.UtcNow, clientIp, request?.HttpMethod, authorization);
-            Logger.GetLogger(LogType.Server).Info(line);
+            Logger.GetLogger(LogType.Server).Warn(line);
         }
 
         private void HandleMicroApi(HttpListenerRequest request, HttpListenerResponse response, string absolutePath)
@@ -762,6 +762,12 @@ namespace Server.Library.Utils
 
         public override void OnPostRequest(HttpListenerRequest request, HttpListenerResponse response)
         {
+            string path = request.Url?.AbsolutePath ?? "/";
+            if (!path.StartsWith("/api/", StringComparison.OrdinalIgnoreCase))
+            {
+                if (!IsTrustedClient(request, response) || !AuthorizeAdminRequest(request, response, path))
+                    return;
+            }
             WriteStatusResponse(response, HttpStatusCode.MethodNotAllowed, "method not allowed");
         }
     }

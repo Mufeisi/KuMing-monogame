@@ -55,6 +55,10 @@ internal static class AdminSecurityPolicy
         string action = MapAction(absolutePath);
         if (string.IsNullOrWhiteSpace(administratorToken) && string.IsNullOrWhiteSpace(operatorToken))
             return new AdminAuthorizationResult(AdminAuthorizationStatus.Unconfigured, AdminRole.None, action);
+        if (!string.IsNullOrWhiteSpace(administratorToken) &&
+            !string.IsNullOrWhiteSpace(operatorToken) &&
+            FixedTimeEquals(administratorToken, operatorToken))
+            return new AdminAuthorizationResult(AdminAuthorizationStatus.Unconfigured, AdminRole.None, action);
 
         if (!TryReadBearerToken(authorizationHeader, out string suppliedToken))
             return new AdminAuthorizationResult(AdminAuthorizationStatus.Unauthorized, AdminRole.None, action);
@@ -77,8 +81,8 @@ internal static class AdminSecurityPolicy
         string clientAddress,
         string method,
         AdminAuthorizationResult authorization) =>
-        $"ADMIN_AUDIT time={timestamp:O} client={Safe(clientAddress)} method={Safe(method)} " +
-        $"action={authorization.Action} role={authorization.Role} result={authorization.Status}";
+        $"ADMIN_AUDIT time={timestamp:O} client_ref={HashReference(clientAddress)} method={Safe(method)} " +
+        $"action={authorization.Action} principal={authorization.Role} result={authorization.Status}";
 
     private static string MapAction(string absolutePath) => (absolutePath ?? string.Empty).ToLowerInvariant() switch
     {
@@ -125,5 +129,11 @@ internal static class AdminSecurityPolicy
         if (string.IsNullOrWhiteSpace(value)) return "unknown";
         string safe = value.Replace('\r', '_').Replace('\n', '_').Replace(' ', '_');
         return safe.Length <= 96 ? safe : safe[..96];
+    }
+
+    private static string HashReference(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return "unknown";
+        return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(value)))[..16];
     }
 }

@@ -50,6 +50,9 @@ public sealed class AdminSecurityTests
         Assert.Equal(AdminAuthorizationStatus.Forbidden,
             AdminSecurityPolicy.Authorize(
                 "Bearer " + operatorToken, "/newaccount", administrator, operatorToken).Status);
+        Assert.Equal(AdminAuthorizationStatus.Unconfigured,
+            AdminSecurityPolicy.Authorize(
+                "Bearer " + operatorToken, "/", operatorToken, operatorToken).Status);
 
         var administratorProvisioning = AdminSecurityPolicy.Authorize(
             "Bearer " + administrator, "/newaccount", administrator, operatorToken);
@@ -66,12 +69,14 @@ public sealed class AdminSecurityTests
             DateTimeOffset.UnixEpoch, "127.0.0.1\r\nforged=true", "GET", authorization);
 
         Assert.Contains("ADMIN_AUDIT", audit);
-        Assert.Contains("client=127.0.0.1__forged=true", audit);
+        Assert.Contains("client_ref=", audit);
         Assert.Contains("action=new-account", audit);
-        Assert.Contains("role=Administrator", audit);
+        Assert.Contains("principal=Administrator", audit);
         Assert.Contains("result=Authorized", audit);
         Assert.DoesNotContain("administrator-secret", audit);
         Assert.DoesNotContain("Bearer", audit);
+        Assert.DoesNotContain("127.0.0.1", audit);
+        Assert.DoesNotContain("forged", audit);
         Assert.DoesNotContain('\r', audit);
         Assert.DoesNotContain('\n', audit);
     }
@@ -86,13 +91,16 @@ public sealed class AdminSecurityTests
             AdminSecurityPolicy.AdministratorTokenEnvironmentVariable);
         string originalOperator = Environment.GetEnvironmentVariable(
             AdminSecurityPolicy.OperatorTokenEnvironmentVariable);
+        string auditDirectory = Path.Combine(Path.GetTempPath(), "LyoCrystalAdminAudit-" + Guid.NewGuid().ToString("N"));
         HttpServer server = null;
         try
         {
+            Logger.Flush(TimeSpan.FromSeconds(2));
+            Logger.Configure(new LoggerOptions { Directory = auditDirectory, MaxFileSizeMB = 1, RetentionDays = 1 });
             Settings.HTTPIPAddress = $"http://127.0.0.1:{port}/";
             Settings.HTTPTrustedIPAddress = "127.0.0.1";
-            Environment.SetEnvironmentVariable(AdminSecurityPolicy.AdministratorTokenEnvironmentVariable, "administrator-secret");
-            Environment.SetEnvironmentVariable(AdminSecurityPolicy.OperatorTokenEnvironmentVariable, "operator-secret");
+            Environment.SetEnvironmentVariable(AdminSecurityPolicy.AdministratorTokenEnvironmentVariable, "administrator-secret-32-characters-minimum");
+            Environment.SetEnvironmentVariable(AdminSecurityPolicy.OperatorTokenEnvironmentVariable, "operator-secret-32-characters-minimum");
             server = new HttpServer();
             server.Start();
 
@@ -102,20 +110,34 @@ public sealed class AdminSecurityTests
             Assert.Equal(HttpStatusCode.Unauthorized, missing.StatusCode);
 
             using var wrong = new HttpRequestMessage(HttpMethod.Get, "/");
-            wrong.Headers.Authorization = new AuthenticationHeaderValue("Bearer", "wrong");
+            wrong.Headers.Authorization = new AuthenticationHeaderValue("Bearer", "wrong-secret-32-characters-minimum");
             Assert.Equal(HttpStatusCode.Unauthorized, (await client.SendAsync(wrong)).StatusCode);
 
             using var operatorStatus = new HttpRequestMessage(HttpMethod.Get, "/");
-            operatorStatus.Headers.Authorization = new AuthenticationHeaderValue("Bearer", "operator-secret");
+            operatorStatus.Headers.Authorization = new AuthenticationHeaderValue("Bearer", "operator-secret-32-characters-minimum");
             Assert.Equal(HttpStatusCode.OK, (await client.SendAsync(operatorStatus)).StatusCode);
 
             using var operatorProvision = new HttpRequestMessage(HttpMethod.Get, "/newaccount");
-            operatorProvision.Headers.Authorization = new AuthenticationHeaderValue("Bearer", "operator-secret");
+            operatorProvision.Headers.Authorization = new AuthenticationHeaderValue("Bearer", "operator-secret-32-characters-minimum");
             Assert.Equal(HttpStatusCode.Forbidden, (await client.SendAsync(operatorProvision)).StatusCode);
 
             using var administratorUnknown = new HttpRequestMessage(HttpMethod.Get, "/unknown");
-            administratorUnknown.Headers.Authorization = new AuthenticationHeaderValue("Bearer", "administrator-secret");
+            administratorUnknown.Headers.Authorization = new AuthenticationHeaderValue("Bearer", "administrator-secret-32-characters-minimum");
             Assert.Equal(HttpStatusCode.OK, (await client.SendAsync(administratorUnknown)).StatusCode);
+
+            using var postMissing = new HttpRequestMessage(HttpMethod.Post, "/broadcast");
+            Assert.Equal(HttpStatusCode.Unauthorized, (await client.SendAsync(postMissing)).StatusCode);
+            using var postOperator = new HttpRequestMessage(HttpMethod.Post, "/broadcast");
+            postOperator.Headers.Authorization = new AuthenticationHeaderValue("Bearer", "operator-secret-32-characters-minimum");
+            Assert.Equal(HttpStatusCode.MethodNotAllowed, (await client.SendAsync(postOperator)).StatusCode);
+
+            Logger.Flush(TimeSpan.FromSeconds(2));
+            string auditText = string.Join('\n', Directory.GetFiles(auditDirectory, "*.log", SearchOption.AllDirectories)
+                .Select(File.ReadAllText));
+            Assert.Contains("ADMIN_AUDIT", auditText);
+            Assert.Contains("principal=Operator", auditText);
+            Assert.DoesNotContain("operator-secret", auditText);
+            Assert.DoesNotContain("127.0.0.1", auditText);
         }
         finally
         {
@@ -124,6 +146,14 @@ public sealed class AdminSecurityTests
             Settings.HTTPTrustedIPAddress = originalTrustedAddress;
             Environment.SetEnvironmentVariable(AdminSecurityPolicy.AdministratorTokenEnvironmentVariable, originalAdministrator);
             Environment.SetEnvironmentVariable(AdminSecurityPolicy.OperatorTokenEnvironmentVariable, originalOperator);
+            Logger.Flush(TimeSpan.FromSeconds(2));
+            Logger.Configure(new LoggerOptions
+            {
+                Directory = Settings.LogDirectory,
+                MaxFileSizeMB = Settings.LogFileMaxSizeMB,
+                RetentionDays = Settings.LogRetentionDays,
+            });
+            try { Directory.Delete(auditDirectory, true); } catch { }
         }
     }
 
