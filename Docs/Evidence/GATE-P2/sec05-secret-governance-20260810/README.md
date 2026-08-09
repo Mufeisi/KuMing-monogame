@@ -13,6 +13,7 @@
 - `sec05-base05.trx`：Base05 全量，`249/249` 通过。
 - `dotnet build Server/Server.Library.csproj -c Release --no-restore`：0 错误。
 - `dotnet build Server.MirForms/Server.csproj -c Release --no-restore`：0 错误。
+- `git check-ignore -v --no-index Configs/ProtectedSecrets/example.dpapi`：命中 `**/Configs/ProtectedSecrets/`，生产密文不会被普通 Git 暂存收集。
 
 构建中的 NuGet 漏洞提示和既有可空性警告未由本任务引入，不属于 SEC-05 退出条件；已保留在后续依赖治理范围。
 

@@ -34,6 +34,10 @@ bld/
 *.sqlite3-wal
 *.sqlite3-shm
 
+# SEC-05 受保护服务端秘密属于绑定机器与账号的运行时数据。
+**/Configs/ProtectedSecrets/
+*.dpapi
+
 # .NET Core
 project.lock.json
 project.fragment.lock.json
