@@ -24,6 +24,11 @@ namespace MonoShare.MirScenes
             return MobileShopPaymentOptions.None;
         }
 
+        public static bool ShouldOpenPurchasePrompt(bool promptExists, bool promptDisposed)
+        {
+            return !promptExists || promptDisposed;
+        }
+
         public static int GetLastPage(int itemCount, int pageSize)
         {
             if (itemCount <= 0 || pageSize <= 0)
