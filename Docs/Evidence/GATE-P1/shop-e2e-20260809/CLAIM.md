@@ -1,7 +1,7 @@
 # P1-SHOP 商城端到端任务领取声明
 
 - 任务：P1-SHOP（ANDROID-01）商城商品渲染、分页、支付选择与单次购买闭环
-- 状态：领取中
+- 状态：待审核
 - 分支：`codex/p1-shop-clean-20260809`
 - 工作树：`D:/ChuanQi/Kmyq/LyoCrystal-p1-shop-clean-20260809`
 - 基线：`79783e840dcd8b269a867c525b3b286f0c5d71ce`
