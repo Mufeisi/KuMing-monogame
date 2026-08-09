@@ -8,6 +8,8 @@
 - 文件所有权：`Tests/Base05.Tests/MobileMarriageStateTests.cs` 与本证据目录。
 - 做：复用真实 `MarriageRequest`、`MarriageReply`、`LoverUpdate` 协议类型和 `MobileMarriageState` 公开 UI 投影。
 - 不做：不改生产协议、服务端、FairyGUI、PRD，不构造双账号设备环境。
+- 方法约束：必须复用现有状态/UI 接缝；禁止新增通用探针框架或修改生产逻辑；同一问题两次无进展立即停止。
+- 预估时间：不超过 30 分钟；超过 2 倍预算停止报告。
 - 完成定义：使用探针与关系专项通过，证据归档，独立只读复核无阻塞。
 - 语言：中文；代码标识符、命令和原始报错除外。
 
