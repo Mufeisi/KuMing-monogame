@@ -235,6 +235,8 @@ GATE-P1 关闭后，P2 的 SEC-03、SEC-04、SEC-05、SEC-06 各为独立任务�
 
 **DB-03 SQLite 在线备份收口记录（2026-08-10）**：正式宿主在 SQLite 资源加载后启动独立备份服务，启动即后台首备并按配置周期执行；使用 Microsoft.Data.Sqlite 在线 Backup API 从 WAL 源库生成一致副本，本地和异地副本均经 `integrity_check=ok` 后从 `.partial` 原子发布。保留策略只清理 `lyocrystal-sqlite-*.db` 受管文件；根目录、文件占位、相同或嵌套目录被拒绝。正式服 SQLite 不允许关闭自动备份，异地目录只接受 UNC 或不同卷，且本地状态目录和异地目录必须在进入 Ready 前真实可写。Administrator 可经受鉴权、审计的 `POST /backup/run` 一键触发，Operator 可查询 `GET /backup/status`；最近状态同时原子持久化，运行中断或状态损坏在重启后转为失败。本地副本发布后先记录有效路径再执行保留，清理失败不会隐藏已生成副本。WAL 未提交事务隔离、本地/异地可读性、当前 Windows `C:`→`D:` 真实跨卷复制、损坏拒绝、自动首备、保留、状态恢复与真实端点角色边界均有专项验证；最终计数与构建证据见 `Docs/Evidence/GATE-P3/db03-online-backup-20260810/`，运维说明见 `Docs/DB-03-SQLite在线备份与状态监控.md`。DB-03 不替代 DB-04 的空环境/强停恢复演练，GATE-P3 仍未关闭。
 
+**DB-06 MySQL 切换门槛收口记录（2026-08-10）**：SQLite 保持默认数据库；只有峰值在线玩家连续 7 天达到 500、主库连续 3 天达到 10 GiB、`SaveTransactionCommit` P95 连续 3 天达到 750ms，或保存失败连续 3 小时达到每小时 3 次中的任一项，才进入 MySQL 迁移规划。单次尖峰、窗口不足或没有触发项均明确返回继续 SQLite。迁移前门禁直接重新判定原始指标，要求备份服务源库与当前 `Settings.SqlitePath` 一致，以唯一触发标识复用 DB-03 服务现场生成新本地/异地副本，强制异地为 UNC/不同卷，再次检查两份数据库完整性，并将格式版本、规范化源路径、指标、路径和 SHA-256 作为 Windows DPAPI `CurrentUser` 受保护授权原子保存。正式 `CreateFromSettings()` 选择 MySQL 前必须解密记录、核对当前源库、重新计算门槛并复验完整性与摘要；仅修改 provider、手写 JSON、使用其他源库/同卷目录或篡改副本均失败关闭。DB-06 不实现实际迁移、双写、Schema 映射或回切；说明见 `Docs/DB-06-MySQL切换门槛与迁移前备份.md`，证据见 `Docs/Evidence/GATE-P3/db06-mysql-threshold-20260810/`。DB-04 与 DB-05 仍未完成，GATE-P3 保持开启。
+
 **GATE-P2 退出条件**：公开测试前安全项全部完成；凭据不通过未加密网络传输；公网无 V1 明文登录。
 
 ### P3 SQLite 生产化（3~5 周）

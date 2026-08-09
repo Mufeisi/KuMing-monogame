@@ -62,10 +62,22 @@ internal sealed class SqliteBackupOptions
                 throw new InvalidOperationException("SQLite 异地副本目录不得是文件系统根目录");
             if (IsSameOrNested(local, offsite) || IsSameOrNested(offsite, local))
                 throw new InvalidOperationException("SQLite 本地备份目录与异地副本目录不能相同或互相嵌套");
-            if (requireOffsite && !IsUncPath(OffsiteDirectory) &&
-                string.Equals(Path.GetPathRoot(local), Path.GetPathRoot(offsite), StringComparison.OrdinalIgnoreCase))
-                throw new InvalidOperationException("正式服 SQLite 异地副本必须使用 UNC 路径或与本地备份不同的存储卷");
+            if (requireOffsite)
+                ValidateOffsiteSeparation(local, offsite);
         }
+    }
+
+    internal static void ValidateOffsiteSeparation(string localPath, string offsitePath)
+    {
+        if (string.IsNullOrWhiteSpace(localPath) || string.IsNullOrWhiteSpace(offsitePath))
+            throw new InvalidOperationException("SQLite 本地与异地副本路径必须完整提供");
+        string local = Path.GetFullPath(localPath);
+        string offsite = Path.GetFullPath(offsitePath);
+        if (IsSameOrNested(local, offsite) || IsSameOrNested(offsite, local))
+            throw new InvalidOperationException("SQLite 本地备份与异地副本不能相同或互相嵌套");
+        if (!IsUncPath(offsitePath) &&
+            string.Equals(Path.GetPathRoot(local), Path.GetPathRoot(offsite), StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException("正式服 SQLite 异地副本必须使用 UNC 路径或与本地备份不同的存储卷");
     }
 
     private static bool IsUncPath(string path) =>
@@ -116,6 +128,7 @@ internal sealed class SqliteBackupService : IDisposable
     private bool _disposed;
     private long _backupSequence;
     private SqliteBackupStatus _status;
+    internal string SourcePath => Path.GetFullPath(_options.SourcePath);
 
     internal SqliteBackupService(
         SqliteBackupOptions options,
