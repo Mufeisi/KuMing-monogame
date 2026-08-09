@@ -29,7 +29,7 @@ dotnet test Tests\Base05.Tests\Base05.Tests.csproj -c Release --no-restore --log
 结果：
 
 - `LoginProtectionTests` 与 `Sec01LoginTransactionTests` 合并专项：13/13 通过。
-- Base05 完整测试：237/237 通过，0 失败，0 跳过，用时约 63 秒。
+- 基于已合入 SEC-02 C6 的最新主线复验：Base05 完整测试 238/238 通过，0 失败，0 跳过，用时约 62 秒。
 - 机器可读结果：`sec03-base05.trx`。
 - `git diff --check`：通过。
 
