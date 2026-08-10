@@ -37,9 +37,37 @@ public sealed class KillSwitchServiceTests
             Assert.Equal(1, changed.Revision);
             Assert.False(reloaded.IsEnabled(KillSwitchFeature.GameShop));
             Assert.True(reloaded.IsEnabled(KillSwitchFeature.ResourceUpdate));
+            Assert.Single(reloaded.GetSnapshot().AuditTrail);
+            Assert.Equal("商城异常紧急止损", reloaded.GetSnapshot().AuditTrail[0].Reason);
             Assert.DoesNotContain(Directory.GetFiles(root), file => file.Contains(".partial-", StringComparison.Ordinal));
             Assert.Contains(audits, line => line.Contains("OPS_KILL_SWITCH") && line.Contains("feature=GameShop"));
             Assert.DoesNotContain(audits, line => line.Contains("商城异常紧急止损", StringComparison.Ordinal));
+        }
+        finally
+        {
+            TryDelete(root);
+        }
+    }
+
+    [Fact]
+    public void 运行日志失败不伪报变更失败且原子状态保留完整审计()
+    {
+        string root = NewRoot();
+        string path = Path.Combine(root, "kill-switches.json");
+        try
+        {
+            var service = new KillSwitchService(path, auditSink: _ => throw new IOException("日志目录不可写"));
+            KillSwitchSnapshot changed = service.Set(
+                KillSwitchFeature.HighRiskOperations, false, "账户异常紧急止损", "Administrator");
+            var reloaded = new KillSwitchService(path, auditSink: _ => { });
+
+            Assert.False(changed.HighRiskOperationsEnabled);
+            Assert.False(reloaded.IsEnabled(KillSwitchFeature.HighRiskOperations));
+            KillSwitchAuditEntry audit = Assert.Single(reloaded.GetSnapshot().AuditTrail);
+            Assert.Equal(1, audit.Revision);
+            Assert.Equal(KillSwitchFeature.HighRiskOperations, audit.Feature);
+            Assert.False(audit.Enabled);
+            Assert.Equal("账户异常紧急止损", audit.Reason);
         }
         finally
         {
@@ -84,6 +112,9 @@ public sealed class KillSwitchServiceTests
             var player = new PlayerObject();
             Envir.Main.GameShopList.Add(new GameShopItem { Stock = 1 });
             player.GetGameShop();
+            player.MarketPanelType = MarketPanelType.GameShop;
+            player.MarketPage(0);
+            player.GameShopStock(new GameShopItem { Stock = 1 });
 
             var dragonInfo = new DragonInfo { Experience = 10 };
             var dragon = new Dragon(dragonInfo);

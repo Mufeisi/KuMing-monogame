@@ -9717,6 +9717,14 @@ namespace Server.MirObjects
 
         public void MarketPage(int page)
         {
+            if (MarketPanelType == MarketPanelType.GameShop &&
+                Envir.KillSwitches?.IsEnabled(KillSwitchFeature.GameShop) == false)
+            {
+                Search.Clear();
+                Enqueue(new S.NPCMarketPage { Listings = new List<ClientAuction>() });
+                return;
+            }
+
             if (Dead || Envir.Time < SearchTime) return;
 
             if (MarketPanelType != MarketPanelType.GameShop)
@@ -15020,6 +15028,9 @@ namespace Server.MirObjects
 
         public void GameShopStock(GameShopItem item)
         {
+            if (Envir.KillSwitches?.IsEnabled(KillSwitchFeature.GameShop) == false)
+                return;
+
             int purchased;
             int StockLevel;
 

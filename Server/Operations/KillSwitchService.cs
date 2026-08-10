@@ -33,6 +33,24 @@ internal sealed class KillSwitchSnapshot
     public bool ActivitiesEnabled { get; init; } = true;
     [JsonRequired]
     public bool HighRiskOperationsEnabled { get; init; } = true;
+    [JsonRequired]
+    public IReadOnlyList<KillSwitchAuditEntry> AuditTrail { get; init; } = Array.Empty<KillSwitchAuditEntry>();
+}
+
+internal sealed class KillSwitchAuditEntry
+{
+    [JsonRequired]
+    public long Revision { get; init; }
+    [JsonRequired]
+    public DateTimeOffset ChangedAtUtc { get; init; }
+    [JsonRequired]
+    public string Principal { get; init; } = string.Empty;
+    [JsonRequired]
+    public KillSwitchFeature Feature { get; init; }
+    [JsonRequired]
+    public bool Enabled { get; init; }
+    [JsonRequired]
+    public string Reason { get; init; } = string.Empty;
 }
 
 internal sealed class KillSwitchChangeRequest
@@ -88,25 +106,46 @@ internal sealed class KillSwitchService
         lock (_gate)
         {
             KillSwitchSnapshot current = _snapshot;
+            long nextRevision = checked(current.Revision + 1);
+            DateTimeOffset changedAtUtc = _clock();
+            var auditTrail = new List<KillSwitchAuditEntry>(current.AuditTrail.Count + 1);
+            auditTrail.AddRange(current.AuditTrail.Select(Copy));
+            auditTrail.Add(new KillSwitchAuditEntry
+            {
+                Revision = nextRevision,
+                ChangedAtUtc = changedAtUtc,
+                Principal = safePrincipal,
+                Feature = feature,
+                Enabled = enabled,
+                Reason = safeReason,
+            });
             var candidate = new KillSwitchSnapshot
             {
                 FormatVersion = CurrentFormatVersion,
-                Revision = checked(current.Revision + 1),
-                UpdatedAtUtc = _clock(),
+                Revision = nextRevision,
+                UpdatedAtUtc = changedAtUtc,
                 UpdatedBy = safePrincipal,
                 Reason = safeReason,
                 GameShopEnabled = feature == KillSwitchFeature.GameShop ? enabled : current.GameShopEnabled,
                 ResourceUpdateEnabled = feature == KillSwitchFeature.ResourceUpdate ? enabled : current.ResourceUpdateEnabled,
                 ActivitiesEnabled = feature == KillSwitchFeature.Activities ? enabled : current.ActivitiesEnabled,
                 HighRiskOperationsEnabled = feature == KillSwitchFeature.HighRiskOperations ? enabled : current.HighRiskOperationsEnabled,
+                AuditTrail = auditTrail,
             };
 
             Persist(candidate);
             Volatile.Write(ref _snapshot, candidate);
             string reasonReference = Convert.ToHexString(
                 System.Security.Cryptography.SHA256.HashData(Encoding.UTF8.GetBytes(safeReason)))[..16];
-            _auditSink($"OPS_KILL_SWITCH feature={feature} enabled={enabled.ToString().ToLowerInvariant()} " +
-                       $"revision={candidate.Revision} principal={safePrincipal} reason_ref={reasonReference}");
+            try
+            {
+                _auditSink($"OPS_KILL_SWITCH feature={feature} enabled={enabled.ToString().ToLowerInvariant()} " +
+                           $"revision={candidate.Revision} principal={safePrincipal} reason_ref={reasonReference}");
+            }
+            catch
+            {
+                // 完整审计已与状态原子持久化；运行日志只是检索副本，失败不能伪报变更失败。
+            }
             return Copy(candidate);
         }
     }
@@ -180,6 +219,25 @@ internal sealed class KillSwitchService
         if (snapshot.UpdatedAtUtc == default || string.IsNullOrWhiteSpace(snapshot.UpdatedBy) ||
             string.IsNullOrWhiteSpace(snapshot.Reason) || snapshot.Reason.Length > MaxReasonCharacters)
             throw new InvalidOperationException("Kill Switch 状态审计字段无效");
+        if (snapshot.AuditTrail == null || snapshot.AuditTrail.Count != snapshot.Revision)
+            throw new InvalidOperationException("Kill Switch 审计代次与状态不一致");
+
+        for (int index = 0; index < snapshot.AuditTrail.Count; index++)
+        {
+            KillSwitchAuditEntry entry = snapshot.AuditTrail[index];
+            if (entry == null || entry.Revision != index + 1 || entry.ChangedAtUtc == default ||
+                string.IsNullOrWhiteSpace(entry.Principal) || string.IsNullOrWhiteSpace(entry.Reason) ||
+                entry.Reason.Length > MaxReasonCharacters || !Enum.IsDefined(entry.Feature))
+                throw new InvalidOperationException("Kill Switch 审计历史损坏");
+        }
+
+        if (snapshot.Revision > 0)
+        {
+            KillSwitchAuditEntry latest = snapshot.AuditTrail[^1];
+            if (latest.ChangedAtUtc != snapshot.UpdatedAtUtc || latest.Principal != snapshot.UpdatedBy ||
+                latest.Reason != snapshot.Reason)
+                throw new InvalidOperationException("Kill Switch 最新审计与状态不一致");
+        }
     }
 
     private static string NormalizeReason(string reason)
@@ -213,6 +271,17 @@ internal sealed class KillSwitchService
         ResourceUpdateEnabled = source.ResourceUpdateEnabled,
         ActivitiesEnabled = source.ActivitiesEnabled,
         HighRiskOperationsEnabled = source.HighRiskOperationsEnabled,
+        AuditTrail = source.AuditTrail.Select(Copy).ToArray(),
+    };
+
+    private static KillSwitchAuditEntry Copy(KillSwitchAuditEntry source) => new()
+    {
+        Revision = source.Revision,
+        ChangedAtUtc = source.ChangedAtUtc,
+        Principal = source.Principal,
+        Feature = source.Feature,
+        Enabled = source.Enabled,
+        Reason = source.Reason,
     };
 
     private static JsonSerializerOptions JsonOptions() => new()
