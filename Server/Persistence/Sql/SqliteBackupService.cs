@@ -167,9 +167,14 @@ internal sealed class SqliteBackupService : IDisposable
                 catch (ObjectDisposedException)
                 {
                 }
-            }, null, TimeSpan.Zero, _options.Interval);
+            }, null, _options.Interval, _options.Interval);
+
+            // 首份备份是 StartAutomatic 的启动语义，不能依赖线程池何时调度零延迟 Timer。
+            TryQueueBackup("automatic");
         }
     }
+
+    internal bool WaitForIdle(TimeSpan timeout) => _idle.Wait(timeout);
 
     internal bool TryQueueBackup(string trigger)
     {

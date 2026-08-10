@@ -132,12 +132,8 @@ public sealed class SqliteBackupServiceTests
         fixture.InitializeSource();
 
         fixture.Service.StartAutomatic();
+        Assert.True(fixture.Service.WaitForIdle(TimeSpan.FromSeconds(10)));
         SqliteBackupStatus status = fixture.Service.GetStatus();
-        for (int attempt = 0; attempt < 100 && status.State != SqliteBackupState.Succeeded; attempt++)
-        {
-            Thread.Sleep(20);
-            status = fixture.Service.GetStatus();
-        }
 
         Assert.Equal(SqliteBackupState.Succeeded, status.State);
         Assert.Equal("automatic", status.Trigger);
