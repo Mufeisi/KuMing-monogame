@@ -1,0 +1,17 @@
+RELEASE-01 Android 独立签名命令记录
+工作目录：REPOSITORY_ROOT
+
+命令：
+dotnet run --project Tools/ReleaseSigningTool/ReleaseSigningTool.csproj -c Release --no-build -- publish-signed-android Client_MonoGame.Android/Client_MonoGame.Android.csproj Configs/ReleaseSecrets/lyocrystal-android-2026-r2.keystore Configs/ReleaseSecrets/lyocrystal-android-2026-r2-password.dpapi android-apk-2026 lyocrystal-release-2026 Docs/Evidence/GATE-P5/release01-signing-20260810/android-production-signing-build.log
+退出码：0
+工具输出：Android 独立 keystore Release 签名构建完成；口令未写入命令或日志。
+
+复验命令：
+apksigner verify --verbose --print-certs com.lommir.client.monogame.android-Signed.apk
+退出码：0
+结果：Verifies；v2=true；v3=true；signers=1；RSA 4096
+APK SHA-256：205B3BF494442433B6D471B7DA0DD3D10D743622E479B1D6F4E6C028BA695360
+证书 SHA-256：2d9f4b2e165407f7e781146f4cf0323aab9980b185c0002fd328ec89ec3bd670
+公钥 SHA-256：41f7d37c240a309e2d6145a00df91bc319dd739f6e6cfb162af62319b1429347
+
+说明：命令只包含受保护文件路径和用途标签，不含 keystore 口令。实际口令由工具在内存中以 DPAPI CurrentUser 解密，并只放入 Android 构建子进程环境。

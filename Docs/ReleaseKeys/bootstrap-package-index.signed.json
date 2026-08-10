@@ -1,0 +1,1317 @@
+{
+  "Format": "lyocrystal-bootstrap-index-v1",
+  "Algorithm": "ECDSA_P256_SHA256_P1363",
+  "KeyId": "resource-2026-a",
+  "Sequence": 1,
+  "GeneratedAtUtc": "2026-08-10T04:36:55.8118186Z",
+  "ResourceVersion": "content-988b1bb85432df58363d3b307b7971157680b207fcd3213f12eb520c032176c9",
+  "MinimumClientVersion": "1.0.0",
+  "Packages": [
+    {
+      "Name": "core-startup",
+      "Sha256": "efaabc7a65f5ce77f1a5da7b58cbc47b4060f80786603956c5b62af9be9b09e3",
+      "Size": 54555646
+    },
+    {
+      "Name": "data-background",
+      "Sha256": "bcec9c9ba5d1aed794e00e396d8d10dc14131a4a9582d5030d0f38aeb4404ca1",
+      "Size": 20448142
+    },
+    {
+      "Name": "data-bufficon",
+      "Sha256": "e9dee1df7573f4ce5689e5294ba8edfa5cbc1d7d7758e382b5efc37b17cf62b8",
+      "Size": 205325
+    },
+    {
+      "Name": "data-items",
+      "Sha256": "f4277a4d0778a21116645d7d703ab1ab0b9cc1ff1b35947677fecccc210b5582",
+      "Size": 3857637
+    },
+    {
+      "Name": "data-magicon",
+      "Sha256": "7953cdc3a0e7418f72beb8bfeab2336d2d0fbe22015787278a2c9de5a634d5fe",
+      "Size": 121201
+    },
+    {
+      "Name": "data-magicon2",
+      "Sha256": "cc0efbf1b3f66003923317ae0432e8eb928666019d89aaf1f825d4eb9e8c4905",
+      "Size": 402855
+    },
+    {
+      "Name": "data-mmap",
+      "Sha256": "17d07c661a050f22f2c8f367a30a175d74d04b03d84a2c31de358ad018cb68fa",
+      "Size": 27637325
+    },
+    {
+      "Name": "data-prguse2",
+      "Sha256": "6af7613001a3de61449bd03f3b22e1e69f2a2c44b088407e1b4f0bc8fae84314",
+      "Size": 5065096
+    },
+    {
+      "Name": "data-prguse3",
+      "Sha256": "447a71bdbd5a50e2191f2c16f138ea12c9c92e91ea8ef63da68d3ebd3dbba718",
+      "Size": 198827
+    },
+    {
+      "Name": "fui-retro",
+      "Sha256": "1b090df55e5f1b05a98093baaba6347a557691e2fc612f5cf195903139ea5f4b",
+      "Size": 57613270
+    },
+    {
+      "Name": "lib-objects",
+      "Sha256": "3babfd43207a118f22b8fcdb880854e233e420dd4ac88c0e8faca9d89aa631d2",
+      "Size": 44322404
+    },
+    {
+      "Name": "lib-objects10",
+      "Sha256": "ec83ea22ce0bf63805a1bda1a9bd04f5e89eaeaebfa63f2f36bd560d9b260578",
+      "Size": 17739610
+    },
+    {
+      "Name": "lib-objects11",
+      "Sha256": "bb5ad19af545c07d09e4866a8b7622562dd5d8f989d1f42106257626a2597aeb",
+      "Size": 9753547
+    },
+    {
+      "Name": "lib-objects12",
+      "Sha256": "ea9424e760089d01110cc06d21730ae702d67edda42775576ffa936fc817e19a",
+      "Size": 10261836
+    },
+    {
+      "Name": "lib-objects13",
+      "Sha256": "2dbc287e60bfe3e966ac954c964b8e5c80b7e6ccd302f7e6de963a9160a2f04a",
+      "Size": 17754283
+    },
+    {
+      "Name": "lib-objects14",
+      "Sha256": "ff213ec691bac5f898fbf796476cb93cbb666486ec396415ca84b4309a208b8f",
+      "Size": 5065157
+    },
+    {
+      "Name": "lib-objects15",
+      "Sha256": "a373ccfb9e1005b70d35893b715b45037531bbd380df4a5903a0bad38552c50d",
+      "Size": 11215961
+    },
+    {
+      "Name": "lib-objects16",
+      "Sha256": "38d7a9980dd4e4373d93657e480379f8693b166daa2d58f0b9ee3734ec90210a",
+      "Size": 11386430
+    },
+    {
+      "Name": "lib-objects17",
+      "Sha256": "eaa4e7ad23da2d6a0b8ef57eac0638559c1b83bad2764ccd2cebb7486f2dae78",
+      "Size": 32133809
+    },
+    {
+      "Name": "lib-objects18",
+      "Sha256": "39e840cf7a7c675ce021da4aded9c165f845218f639713663d4251dd31f460e2",
+      "Size": 18519659
+    },
+    {
+      "Name": "lib-objects19",
+      "Sha256": "60ff2e8700f1eaba5bdb61fa15de9c83758f57c627669d4b593a9390a699f638",
+      "Size": 17614222
+    },
+    {
+      "Name": "lib-objects2",
+      "Sha256": "4266f66c505e3bc87842827a009b60f0c8788e1b4d263e94686dbf46a91b5efa",
+      "Size": 19183930
+    },
+    {
+      "Name": "lib-objects20",
+      "Sha256": "420f87036de942914905636b62dda1934819b87884ae747017abeee67f028b3d",
+      "Size": 20080756
+    },
+    {
+      "Name": "lib-objects21",
+      "Sha256": "6428a52839d66a25e4397385527e1de43b25c7221583cf6ab56972dfd719b52a",
+      "Size": 32384516
+    },
+    {
+      "Name": "lib-objects22",
+      "Sha256": "d06a217e6f0b021da52af56bf137f51de688145c19958b532f895ffdd82f82c9",
+      "Size": 25197746
+    },
+    {
+      "Name": "lib-objects23",
+      "Sha256": "4b64ba59147b2aa1b58afb2fecf7afc1c6fc4be2d799e472c1a7dfce97b4f5a4",
+      "Size": 35886825
+    },
+    {
+      "Name": "lib-objects24",
+      "Sha256": "6d76934c2880c53da55ce10cce7d00a3e7a0212b031ad26e0a9874ef29885fb7",
+      "Size": 38205401
+    },
+    {
+      "Name": "lib-objects25",
+      "Sha256": "b6fc77c75e41cf26b25ab118f090ed679e94413eb9990aad2dbf181dced96c4d",
+      "Size": 38770815
+    },
+    {
+      "Name": "lib-objects26",
+      "Sha256": "c37b6dc6dd5fcfb50c4fe5acf1953fcb4017b8b8055c139dc2648dadc132cb77",
+      "Size": 27321478
+    },
+    {
+      "Name": "lib-objects3",
+      "Sha256": "8c9af425dd6ca0077342356b9d76a3fea740142aaf704d4766a5da7a0ac19bd3",
+      "Size": 20772659
+    },
+    {
+      "Name": "lib-objects4",
+      "Sha256": "938d99363b0a33fcea45fad904a4cb70a21823bb0e32b824ea66581f8d1acad3",
+      "Size": 19524525
+    },
+    {
+      "Name": "lib-objects5",
+      "Sha256": "0d4701a83f4db05cdadcc670a4d287fe5c4fa4fbda01080c5c5afc25fe0b632c",
+      "Size": 17066861
+    },
+    {
+      "Name": "lib-objects6",
+      "Sha256": "fd18e58d025c2a6ee0f78f27794b1e522533177b845ea2510fe858ab9f771b30",
+      "Size": 15385764
+    },
+    {
+      "Name": "lib-objects7",
+      "Sha256": "949d10693794b808d0aeb0f65ad329748b7bc5633ad13d8876b956da464cebd3",
+      "Size": 17906848
+    },
+    {
+      "Name": "lib-objects8",
+      "Sha256": "8ac8b20bcc200428b899afc2446fe0d4e85439da561e4948a67750930fcfb7f2",
+      "Size": 17007581
+    },
+    {
+      "Name": "lib-objects9",
+      "Sha256": "ff7307eaee252e3ad38f1c91bcdedfa9b3f2aec394d57e46d37b491f22874cf1",
+      "Size": 12304620
+    },
+    {
+      "Name": "lib-smtiles",
+      "Sha256": "5069bb7d7b488c9a1c88126b652bcb7ff50fc9a6ac8e393f6f47b542c9c49597",
+      "Size": 608460
+    },
+    {
+      "Name": "lib-tiles",
+      "Sha256": "232bb351b9702727fb2d10a1013a98555bbbabc460d3d3e7f72a6b7e2c898b2b",
+      "Size": 438326773
+    },
+    {
+      "Name": "lib-tiles4",
+      "Sha256": "dcc88a548f3b09f7d856014481da2f1828721b243ce0326c609c48c08364e809",
+      "Size": 69338835
+    },
+    {
+      "Name": "maps-0122-rebuild",
+      "Sha256": "60ae1b9a0738c8ccdb2c896298fe7ad2c06cce79c1ed4abbe8ad2bc4061f0734",
+      "Size": 2153
+    },
+    {
+      "Name": "maps-10yearsfarm",
+      "Sha256": "23ee1b8cc40facbb87a556039629b6d5b1c94632647b76d0c0019d75bf909f5c",
+      "Size": 27808
+    },
+    {
+      "Name": "maps-12chusuk-mrabbit",
+      "Sha256": "27db810db1afe6ec19560fdae0e6dc71db10414d070ee86d7c4f64a67db0ec72",
+      "Size": 9298
+    },
+    {
+      "Name": "maps-14chusuk-moon",
+      "Sha256": "733a257c3b64ba11746aaaa1569a6589f5b979f9c89b83537077b7040190f43b",
+      "Size": 55618
+    },
+    {
+      "Name": "maps-16ani-catchme",
+      "Sha256": "bfd88497d06972f2fa2845d495fb7529ab32c6442eb28275452a93161fac6d11",
+      "Size": 10939
+    },
+    {
+      "Name": "maps-16ani-doggabibull",
+      "Sha256": "2bbdfcc294a2a0a362e5fc184175e70b841846796ee263e42abf63cb52dfac4e",
+      "Size": 10953
+    },
+    {
+      "Name": "maps-2013-choosuk",
+      "Sha256": "662c00df28e4b4b6cc4f0a6f4f499c5be3af9f1e38a57906628213bb6b91a9de",
+      "Size": 198572
+    },
+    {
+      "Name": "maps-2017e-friroom",
+      "Sha256": "0684063e57e2a9ce7a8653cd34d831df962e07392ac47b9671aa5680360f0f76",
+      "Size": 700
+    },
+    {
+      "Name": "maps-2017e-monroom",
+      "Sha256": "4c2786a6938980560974a5ac8c3544a937bdc686d3f75c11d55e8b3b10eb4ed0",
+      "Size": 2256
+    },
+    {
+      "Name": "maps-2017e-satroom",
+      "Sha256": "c8ee1968d14ed14510ac7f4b74dcc1508d8f77ce4ac53340fd1506ebf65f2005",
+      "Size": 2047
+    },
+    {
+      "Name": "maps-2017e-sunroom",
+      "Sha256": "997b544fdce215ce1e3fa882ae4307159044523db7e1fc2b1fd01e898fa9c181",
+      "Size": 2544
+    },
+    {
+      "Name": "maps-2017e-thurroom",
+      "Sha256": "8f204e498ef724604b7c0c98db8d3344038a4588cea8f13574bba28cf04ea021",
+      "Size": 432
+    },
+    {
+      "Name": "maps-2017e-tueroom",
+      "Sha256": "84fa414cd8e322b1ab30cc4cd0fe36110fa6f1bb1ab71a978bee34e655880c9e",
+      "Size": 746
+    },
+    {
+      "Name": "maps-2017e-wedroom",
+      "Sha256": "62dcbb36fe337d5fcf9cf3f3ccd7a450054e98cd6c75bf0ecf16b26fac744f6b",
+      "Size": 2167
+    },
+    {
+      "Name": "maps-anny2nd",
+      "Sha256": "51bd97f7125b32ed972016ffe0f502aa025f80cac840c967fdfb01e7e0f44e30",
+      "Size": 4502
+    },
+    {
+      "Name": "maps-b",
+      "Sha256": "90e8e735ec75675060cbb49e6663a0e4f1c14fea860557829304149312ab72f5",
+      "Size": 86288
+    },
+    {
+      "Name": "maps-b011-21th-ev",
+      "Sha256": "e525123ec00a774cc28e0306765e111d4672e6801e86d867add24fbb535f4495",
+      "Size": 1328
+    },
+    {
+      "Name": "maps-b101-21th-ev",
+      "Sha256": "df8bce70cf32755005dcd0e9068b32fa5e833b1332119cccd75babd04c89f277",
+      "Size": 1218
+    },
+    {
+      "Name": "maps-b102-21th-ev",
+      "Sha256": "d8f7119b99b27268b8795f0a87b0e3bb3ba15fbd7ecda11e7382d68f3bc28c0e",
+      "Size": 1218
+    },
+    {
+      "Name": "maps-b103-21th-ev",
+      "Sha256": "aabaea4c34d18637e8948559f6b4338fb06cac43f37d2415b03583fda20dea00",
+      "Size": 1218
+    },
+    {
+      "Name": "maps-b104-21th-ev",
+      "Sha256": "19781f2d6831da53acfb8679b1bdff2ecdeca6e241f9b4a52706483ac54a90ac",
+      "Size": 1218
+    },
+    {
+      "Name": "maps-b105-21th-ev",
+      "Sha256": "8f8039afba1efa425ce52ceae81619e721c0e982ba080bfa5c345d134b0d07c5",
+      "Size": 1218
+    },
+    {
+      "Name": "maps-b106-21th-ev",
+      "Sha256": "01057e1a5e2cbca670818fbe54cbc3ec600dd403528eb28ca72b090cd11a888a",
+      "Size": 1218
+    },
+    {
+      "Name": "maps-b107-21th-ev",
+      "Sha256": "c6664cc1c9d2361054a7092a19fc60d2968d8405d42fc841e3d45cd37565e378",
+      "Size": 1218
+    },
+    {
+      "Name": "maps-b108-21th-ev",
+      "Sha256": "5d4a3751ad5515a53ac25e10a3e22397fa1bb869dc013b396acd321993d7017a",
+      "Size": 1218
+    },
+    {
+      "Name": "maps-b109-21th-ev",
+      "Sha256": "bdea40d8d45db908cf68c144379c3ad4cf6a58be41e536a6750615c3f35e4266",
+      "Size": 1218
+    },
+    {
+      "Name": "maps-b110-21th-ev",
+      "Sha256": "c5a19fab3dfef794860bc34ef9700177fbbb684b781e411c44e1adc814f9bef3",
+      "Size": 1218
+    },
+    {
+      "Name": "maps-b111-21th-ev",
+      "Sha256": "e20a5cd47b8a52b5fe445c15bc3e2ff27a9af66576cc44de7a174295c9be7fe3",
+      "Size": 1218
+    },
+    {
+      "Name": "maps-b112-21th-ev",
+      "Sha256": "de2ec77859c132f6ce076e051757253dc9b144baaf010cdb055b857092299af7",
+      "Size": 1218
+    },
+    {
+      "Name": "maps-b113-21th-ev",
+      "Sha256": "e9c28d16f4e2382d0b6b047b0a8d3409c10454da9b1e6244613ccf6c4ef3926d",
+      "Size": 1218
+    },
+    {
+      "Name": "maps-b114-21th-ev",
+      "Sha256": "63f75a650074cd90f8d4b776e88838cf8f75e0104431e14b1179aac280182122",
+      "Size": 1218
+    },
+    {
+      "Name": "maps-b115-21th-ev",
+      "Sha256": "afcc3c5b55980543d933bc15360b44c70c7b21ac8b31de70eedb49cdc1a2b5b0",
+      "Size": 1218
+    },
+    {
+      "Name": "maps-b116-21th-ev",
+      "Sha256": "9361a17cc1c04ce569edbb72c8d5d6ad6beb212ffd6e598c5ce8126da70e1637",
+      "Size": 1218
+    },
+    {
+      "Name": "maps-b117-21th-ev",
+      "Sha256": "df1d28d626b44d23a11132a54be658dafa9df31f6bb63544f5e9b68bb16b6965",
+      "Size": 1218
+    },
+    {
+      "Name": "maps-b118-21th-ev",
+      "Sha256": "03120fc69898fafc1c4071926206434dbb7d8113fa5a15880c0f4ceb6769cb71",
+      "Size": 1218
+    },
+    {
+      "Name": "maps-b119-21th-ev",
+      "Sha256": "21f3ec0a712b0ab119207c73d17ac385a6c05f214843889eb2a5497f7b350691",
+      "Size": 1218
+    },
+    {
+      "Name": "maps-b120-21th-ev",
+      "Sha256": "88c716ebb9f99d6b70bfbb76156443d905d8bcdb586f7117d90d983f9668f63b",
+      "Size": 1218
+    },
+    {
+      "Name": "maps-b121-21th-ev",
+      "Sha256": "5b41e56692e7d05734b5bae321d3fa51ae14c4e29ac75d2a36094d05cce03a2f",
+      "Size": 1218
+    },
+    {
+      "Name": "maps-b122-21th-ev",
+      "Sha256": "aea17fd8ed522616daef1cf12d2a5314af815ff1f7986bcb9015361ed8301e75",
+      "Size": 1218
+    },
+    {
+      "Name": "maps-b123-21th-ev",
+      "Sha256": "e55fc0e2ae03e99ca1fc38326f068318bbdff01f1e0926f692d8d53eee3f4224",
+      "Size": 1218
+    },
+    {
+      "Name": "maps-b124-21th-ev",
+      "Sha256": "e1d6e9b711d1f33507920889598fa75437a0186ae6ebe6cacc44df0b4139c8be",
+      "Size": 1218
+    },
+    {
+      "Name": "maps-b125-21th-ev",
+      "Sha256": "3d4950ccfc06bdd7f8b70e08d0cb664fdbeb6904cf4fd2922e1b1989f2fbce51",
+      "Size": 1218
+    },
+    {
+      "Name": "maps-b126-21th-ev",
+      "Sha256": "f5c44cf3f3f13b61a7bb82878e7bed7c74d4fee15278f002d39f5dbbf4718f42",
+      "Size": 1218
+    },
+    {
+      "Name": "maps-b127-21th-ev",
+      "Sha256": "ee1368f239d7c4e998e0d95a6bfb033254a6bc351c18fb56bb450aac3b1be614",
+      "Size": 1218
+    },
+    {
+      "Name": "maps-b128-21th-ev",
+      "Sha256": "3e04a40f7f6ec1d927e2d9f57f4a194f48b4a7500fc1ce03072f7514e1a5100a",
+      "Size": 1218
+    },
+    {
+      "Name": "maps-b129-21th-ev",
+      "Sha256": "454dbc91e980f4b6d244aea4eecee1b3420995d4400ce1262a35ece4dadcd55f",
+      "Size": 1218
+    },
+    {
+      "Name": "maps-b130-21th-ev",
+      "Sha256": "32d842333ade3645f66e8a5ea82cbd7c00cbc0ca06a5434537352e553ca26db5",
+      "Size": 1218
+    },
+    {
+      "Name": "maps-b131-21th-ev",
+      "Sha256": "ee5dd4f7593e5c68b5e140b1ef024e454bd39d7b740e2097763c10bb601f90dd",
+      "Size": 1218
+    },
+    {
+      "Name": "maps-b132-21th-ev",
+      "Sha256": "2793b81216181e2482e4afc591be973a0e66bbc36bed3f2e55b4ded9d34779bc",
+      "Size": 1218
+    },
+    {
+      "Name": "maps-b133-21th-ev",
+      "Sha256": "720d169b4b3b4e909b3770d81b2eccd0dcced641edeed5bd5c06063d334b253a",
+      "Size": 1218
+    },
+    {
+      "Name": "maps-b134-21th-ev",
+      "Sha256": "9378f13f96dbd8ced4b11903ae92a510b4fa8c69c4323f1d2198c86fe7ff4c84",
+      "Size": 1218
+    },
+    {
+      "Name": "maps-b135-21th-ev",
+      "Sha256": "190799eeff51d2f5eeb251d13001225ba08b659417774a8a42f7a9a2d4794fa5",
+      "Size": 1218
+    },
+    {
+      "Name": "maps-b136-21th-ev",
+      "Sha256": "d154edd8893404ee2248422cb1c04f88a1cfde6b45066f0d5827b6c1ebf29e6f",
+      "Size": 1218
+    },
+    {
+      "Name": "maps-b137-21th-ev",
+      "Sha256": "a5bdbb5991eaef1812d5cc527ec350e462c4a3a19cce2983b8da8bda2e985222",
+      "Size": 1218
+    },
+    {
+      "Name": "maps-b138-21th-ev",
+      "Sha256": "69adf7c38a52eb0c2db3f130e2d2256f80838201db2d9a58779b67be946bbd75",
+      "Size": 1218
+    },
+    {
+      "Name": "maps-b139-21th-ev",
+      "Sha256": "04ddc8ab2c6b89bf9b3b69637ef3585203e64952b31760b68d4469cd49fe432c",
+      "Size": 1218
+    },
+    {
+      "Name": "maps-b140-21th-ev",
+      "Sha256": "f17fd98e5561c0685c13f6fd21d1eb6bddc46b6b2a9f49e8cbf27a3abce11e76",
+      "Size": 1218
+    },
+    {
+      "Name": "maps-bb",
+      "Sha256": "3e7798e356ba36252ab57895cbea6da93facd498f10772e9b8a1f66cdfb0d102",
+      "Size": 29757
+    },
+    {
+      "Name": "maps-biwun-castle",
+      "Sha256": "5f2b822da0dee5c975bd1e6e46726ed487ca4b7457f47c74ee88e127ad85ab8b",
+      "Size": 2153
+    },
+    {
+      "Name": "maps-bossroom",
+      "Sha256": "9754196cd69e3084cc108677b51437352dac69e37f51483dc05644566a6d617c",
+      "Size": 7006
+    },
+    {
+      "Name": "maps-bumsun-bossroom",
+      "Sha256": "b4267d00b7b1c87800eb714479478979b9fa5e9baf1dc20be6b5ff493bc99cff",
+      "Size": 2640
+    },
+    {
+      "Name": "maps-chaostemple",
+      "Sha256": "b11b4c36b8ea0df76241a3bac653a3f2ed058f9498e0f271c52abdd720d83515",
+      "Size": 26908
+    },
+    {
+      "Name": "maps-chusuck",
+      "Sha256": "da85a4f1471792f8ecf147012b8cdbc5ee69f7e83473964dab44ca91a081a97e",
+      "Size": 3490
+    },
+    {
+      "Name": "maps-d",
+      "Sha256": "332e78e8e36f0c94ef362fa06e660dd376931d3bc8156196e307dc28baae8f05",
+      "Size": 469375
+    },
+    {
+      "Name": "maps-dm",
+      "Sha256": "9694e8205857989d389a720fec7460aec5a58fbaa863674e3051fc54d7f32530",
+      "Size": 2175
+    },
+    {
+      "Name": "maps-dogyominelift",
+      "Sha256": "b936b7dbf79aceed6b01a037caa835b9be81b9a298d3e437fd1f3190a7dbe3f7",
+      "Size": 477
+    },
+    {
+      "Name": "maps-dogyominelobby",
+      "Sha256": "6d4e87bc8925aacb57966642f94fec40431931cf97b988818854d08483b55475",
+      "Size": 16451
+    },
+    {
+      "Name": "maps-dy-craft",
+      "Sha256": "41bd9b4a1e31c77a90721dfbb5706feb25b1c08534527cac731abf433421037a",
+      "Size": 1285
+    },
+    {
+      "Name": "maps-dy-head",
+      "Sha256": "78bb78c1ab6242104907461ab77f9822253467edeb2c57c8039bedfcce387f7c",
+      "Size": 1253
+    },
+    {
+      "Name": "maps-dy-medstorage",
+      "Sha256": "be7464e34229b1e7702026df14084652e63a866e46fd30601a45eaa9e9a0eca8",
+      "Size": 642
+    },
+    {
+      "Name": "maps-dy-pharmacy",
+      "Sha256": "9bd71fe0bf25a1b5ed42875cb9dca34060b781268cd7c73de698c68d676e35a5",
+      "Size": 621
+    },
+    {
+      "Name": "maps-dy-smithy",
+      "Sha256": "59a38feb05258985f7eae89cd4fe4953bc56e3e44a356d122b89635a08d55284",
+      "Size": 873
+    },
+    {
+      "Name": "maps-dy-weapon",
+      "Sha256": "87bdd26a2c0d06d7d529b7adb58bd237bf42253feebf11389d5520d4398e2f48",
+      "Size": 571
+    },
+    {
+      "Name": "maps-dy-wearhouse",
+      "Sha256": "9e8155020ee58fadbf9c7cdb672b09b47b4ac1af9f34d73a9460903106b306eb",
+      "Size": 639
+    },
+    {
+      "Name": "maps-dymine",
+      "Sha256": "eab0e1ebfa00a10dfab7365a279bc2a69e75c33f5925b4fd13a741b684f2bd62",
+      "Size": 231906
+    },
+    {
+      "Name": "maps-e",
+      "Sha256": "ee58783d684bf155311ba34b02c3d708a10d3690c805b77d4dbf4d71bdf2dd20",
+      "Size": 89941
+    },
+    {
+      "Name": "maps-ea",
+      "Sha256": "88919d521e4c742354f3cab827fc903fdea137df4afc546998b5b3efafa5b86d",
+      "Size": 24786
+    },
+    {
+      "Name": "maps-eb",
+      "Sha256": "08c425d8c742745dff165d8dcf4083507b04cfd4fa70b8033da30b1f4ed1a1b4",
+      "Size": 24786
+    },
+    {
+      "Name": "maps-ebeeboss",
+      "Sha256": "1264725f965d01aa5bdbc88422d01a7d14ad2d854980c557a5a29a4ddcbbcb0c",
+      "Size": 8367
+    },
+    {
+      "Name": "maps-ebeeboss-m",
+      "Sha256": "3642f2f7b5454514013b0f8d44260898d2a01c4b96df8952f0e18ac91e0a98bb",
+      "Size": 8375
+    },
+    {
+      "Name": "maps-ec",
+      "Sha256": "af94c8600b48c0ced68a8babc1bfe3adaa181bb12af152f44e6ac1b0a53e097b",
+      "Size": 24786
+    },
+    {
+      "Name": "maps-em",
+      "Sha256": "781fcd3098813a71f688377bb5ecb2235cb6b4033cbc777a57a4ec6d63b4c13a",
+      "Size": 79633
+    },
+    {
+      "Name": "maps-emg",
+      "Sha256": "9a2d0041411b2276c5785196864b13098910d8102de53b3cc7cb5a2e3fc512a8",
+      "Size": 27298
+    },
+    {
+      "Name": "maps-emgwait",
+      "Sha256": "42923ef62cc738eb104abe64c169ea01a4bacd52b571a9d70df110db7076d45e",
+      "Size": 15190
+    },
+    {
+      "Name": "maps-ev",
+      "Sha256": "4e8ae8e2b37d665e58d876a8f6eb56cee9551ab5ea2d8ef99926d03d5a0a8dad",
+      "Size": 2570
+    },
+    {
+      "Name": "maps-ev09r",
+      "Sha256": "5d0401b7b88b817efebe5e969730227136e6919530df45e673b8c6c974056b78",
+      "Size": 116627
+    },
+    {
+      "Name": "maps-ev2010a",
+      "Sha256": "bdc277bc8360aeb63e6ed6f6c2a2093b4dc68d69fa018ba7d49806ba289bbc62",
+      "Size": 3502
+    },
+    {
+      "Name": "maps-ev2010b",
+      "Sha256": "f29fbe0a7de4a892b09a35e5d370dffdd359100da283e8882ca40740d3a19313",
+      "Size": 3502
+    },
+    {
+      "Name": "maps-ev2010c",
+      "Sha256": "d5556cc04e467c01a2fe266e3492dfee3294a03e2b5212eb389072d379ac1ae8",
+      "Size": 3502
+    },
+    {
+      "Name": "maps-event",
+      "Sha256": "d20d3b956ea6e897113dcef0cbd152f2b69af657ef62c93a72103d34255e29fe",
+      "Size": 2736
+    },
+    {
+      "Name": "maps-event-uma",
+      "Sha256": "7a9f9c5c99bb58ece81c9fcf148fc892cc9eb267e19fcde631466ea8957cf6b8",
+      "Size": 5390
+    },
+    {
+      "Name": "maps-event-uma4",
+      "Sha256": "c118253aa78f875dc1afa5b6dbc6537a707e22d5efbbfb31d47fa8f32fc9d889",
+      "Size": 5396
+    },
+    {
+      "Name": "maps-f",
+      "Sha256": "9c73a6ff8c3cbe7b19d4e18a03f305143ac23bd7e9431cdb19d2943e854cefa3",
+      "Size": 42281
+    },
+    {
+      "Name": "maps-familyatk",
+      "Sha256": "233edf22b21ff324ff4e68db5f8a95a5a901049797616902a1365a252068be45",
+      "Size": 327922
+    },
+    {
+      "Name": "maps-fight",
+      "Sha256": "2c57600d18dac5ea9171717040fc42dd00db0050d419d8546ae6938fb729ada4",
+      "Size": 2905
+    },
+    {
+      "Name": "maps-fox",
+      "Sha256": "970fee9d6111cf2baf906023c88c12135c4f3f8f2d24059679e1a6bec38e35af",
+      "Size": 3957
+    },
+    {
+      "Name": "maps-freetalk",
+      "Sha256": "89640aabf0566780de89f1aca83b3ff4f83a60eecf2d1ac181b566cd2168d9a1",
+      "Size": 3971
+    },
+    {
+      "Name": "maps-g",
+      "Sha256": "ccfd8531566f75c6065dab63daec970f6124476ec404345183c55a10bc4696cc",
+      "Size": 68553
+    },
+    {
+      "Name": "maps-ga",
+      "Sha256": "5e4203b69d3af85d583f9d984a76623f3270d23eb6a2f2fa3611f5e7183cf055",
+      "Size": 6975
+    },
+    {
+      "Name": "maps-ga2e",
+      "Sha256": "94e1cf5dc3883a06e933c5cf8a467f474569ca1f5ea1ae3b72c44a8a364c3120",
+      "Size": 74704
+    },
+    {
+      "Name": "maps-gmtest",
+      "Sha256": "4dd564855a8d48ba4c0d3418c8db16e87bd7bea0c55859ae30f0011c7e00ca16",
+      "Size": 3333
+    },
+    {
+      "Name": "maps-gobag",
+      "Sha256": "0b5d26f03d186b9daa7003300051438e90d6cf1d07ea2cb4e621e78e965a9093",
+      "Size": 2620
+    },
+    {
+      "Name": "maps-graytemple",
+      "Sha256": "7fcdbeb52ee0ca13900479d8d819af6444d6848d1949d97af8713b83b5e33f3f",
+      "Size": 5543
+    },
+    {
+      "Name": "maps-hell",
+      "Sha256": "3cc7e9e61711a8a65f2f38ad3c5660fc8d0b753ba5a4cf55a0ecc285241401a2",
+      "Size": 12599
+    },
+    {
+      "Name": "maps-hell302e",
+      "Sha256": "bbb097c4233a29f146584ece4fe5dee4899701aca8cc936ffa1074665f9fd068",
+      "Size": 6936
+    },
+    {
+      "Name": "maps-hero",
+      "Sha256": "1c7788ee28ecdba43070183636c995518b881d1e3a3b1276c15230b2b8795e23",
+      "Size": 52829
+    },
+    {
+      "Name": "maps-herom",
+      "Sha256": "766294c5719a91a5704e76a0ba88052f60c5f752ade20cded1851238584ffd50",
+      "Size": 125103
+    },
+    {
+      "Name": "maps-hwamul-bossroom",
+      "Sha256": "6fe4968fbd8e09059e3e0c954313c42e0e3bcafa0036900584a64b9fea41c6d9",
+      "Size": 2640
+    },
+    {
+      "Name": "maps-hy-indun-04boss",
+      "Sha256": "27afeae5828a227c6293448f300da32a29e47fd483b8aca178abece75bb97308",
+      "Size": 16624
+    },
+    {
+      "Name": "maps-hy-indun-04startroom",
+      "Sha256": "95598cdd93a49b64ed5fdaccc0ea805f72b4ce1354954e26f15e797c2cd8f5a0",
+      "Size": 9157
+    },
+    {
+      "Name": "maps-hy-indun-04waitroom",
+      "Sha256": "158fe11dd1138b77af91b8037c80153c356a964b0b0bce0f7103183e463b6c3d",
+      "Size": 9153
+    },
+    {
+      "Name": "maps-hy01-bumsun-bossroom",
+      "Sha256": "dfe5c624a23364e7a6d5cf56e9bbc2a19a2eca88b3b2bde2f4426ff83e0ae643",
+      "Size": 2660
+    },
+    {
+      "Name": "maps-hy01-d",
+      "Sha256": "acfec7cbed65c36cbf04b70101f9d7d1fba5deb367c577309c6c09849d543080",
+      "Size": 12715
+    },
+    {
+      "Name": "maps-hy01-graytemple",
+      "Sha256": "40481c7e46fe3bb24de5b3d718dfb99d787f0233398a88a3a0cc9a67d303b3f6",
+      "Size": 5563
+    },
+    {
+      "Name": "maps-hy01-hell",
+      "Sha256": "0c43b6df3b827c2d98620084d06c9f66fa3edabf78c08970670c01c30e6ca18a",
+      "Size": 12639
+    },
+    {
+      "Name": "maps-hy01-hell302e",
+      "Sha256": "0e74bcc4f36e0ec984ac566a5cd4a47f918cb8a0960c18e5e64a1b9f0bf93059",
+      "Size": 6956
+    },
+    {
+      "Name": "maps-hy01-hwamul-bossroom",
+      "Sha256": "f1b75edbeba09552218101b654cbe2c7b299fd0ba51c59e350229027a3b1f331",
+      "Size": 2660
+    },
+    {
+      "Name": "maps-hy01-hyunwolboss",
+      "Sha256": "4f06014591180bee6b216a825c8cce292e3e961d3af7f139445d4839e04f63da",
+      "Size": 4627
+    },
+    {
+      "Name": "maps-hy01-morae-chon",
+      "Sha256": "56f486cbab77b14747f8501ac8dfa3ddedc1d91b095ae96f5d45a7a7906b7f0e",
+      "Size": 4091
+    },
+    {
+      "Name": "maps-hy01-morae-sadang",
+      "Sha256": "0352a08b25ed627e443e9cfa41279a3ec9b20368db9959bf1b9278cffa907a72",
+      "Size": 3850
+    },
+    {
+      "Name": "maps-hy01-morae-won",
+      "Sha256": "ab11d92c2c536e5acf49a0fa26df2199128d27d097ac0e650749dc335867e7f8",
+      "Size": 4120
+    },
+    {
+      "Name": "maps-hy01-peunmok-village",
+      "Sha256": "b77045f93cb11924ea29d9e650a8044817c3eece5de714efacd97f9fd2cf2274",
+      "Size": 8938
+    },
+    {
+      "Name": "maps-hy01-pmv-chief",
+      "Sha256": "3252519233e13f15d317fbad4cbe0c94721bf273d5ee7a8ed6b8ce47ba721c8d",
+      "Size": 987
+    },
+    {
+      "Name": "maps-hy01-pmv-clothes",
+      "Sha256": "de3117017721e1289466a84b038f14ee88220b6c334e44b937f95c032ff82bd1",
+      "Size": 781
+    },
+    {
+      "Name": "maps-hy01-whitevil-armor",
+      "Sha256": "a3e9f522ffebf020dcedc6e1f3513d647a1c074ffeb2d77e5062d3fef8e52eda",
+      "Size": 2071
+    },
+    {
+      "Name": "maps-hy01-whitevil-book",
+      "Sha256": "e548bacfa74cb93a30052ddcdc8a057a28c6272dbaccf413fe26e6fc7cbaae69",
+      "Size": 1754
+    },
+    {
+      "Name": "maps-hy01-whitevil-doc",
+      "Sha256": "9cab0ebf5c6b943da72da71b09b7b149d599af9b25f30a3ec2579d4a83a1821f",
+      "Size": 1641
+    },
+    {
+      "Name": "maps-hy01-whitevil-empty",
+      "Sha256": "8aac60889a971172322e6aae351eb7841860cbfe33c2886e94471f648a21732f",
+      "Size": 1620
+    },
+    {
+      "Name": "maps-hy01-whitevil-etc",
+      "Sha256": "01be6d6693d963740e15fb7606ad2e35fdc93807673534a809b8b2e04cfa2d3a",
+      "Size": 2027
+    },
+    {
+      "Name": "maps-hy01-whitevil-fish",
+      "Sha256": "76ae705b0c65d561bc227c7766b3b79be78b8ac8c2a20e4b552b8fd5353fb146",
+      "Size": 2276
+    },
+    {
+      "Name": "maps-hy01-whitevil-weapon",
+      "Sha256": "6fd1ae7359c8e7a1ecab1ac9878d78e143b4551827380c6eb0dd3dea9c7a63cf",
+      "Size": 2195
+    },
+    {
+      "Name": "maps-hy02-d",
+      "Sha256": "e2c89a1e009dc0b0d8dd936003276bd492a2dff37a2d906034502049ad81f1c4",
+      "Size": 12715
+    },
+    {
+      "Name": "maps-hy02-hell",
+      "Sha256": "4e8cd77e600dbf4c42f5c5735eb596d80f076d09e6f4a57e0fe4d71f9153d7c8",
+      "Size": 12639
+    },
+    {
+      "Name": "maps-hy02-hell302e",
+      "Sha256": "9b53105f73c1fbdac1655bbc077a147e59be341c3edf7ce260f0b5f683235b9c",
+      "Size": 6956
+    },
+    {
+      "Name": "maps-hy03-d",
+      "Sha256": "767a03f7b78788e1f7dcfff5fcf0cf0f3350913c134ecc49b615c8d0a2be3c9a",
+      "Size": 12715
+    },
+    {
+      "Name": "maps-hy03-hell",
+      "Sha256": "5b29924e76d58c0c0f0e6a2f8c91f9675e6f6597dadeef8891d454cfe0e6d669",
+      "Size": 12639
+    },
+    {
+      "Name": "maps-hy03-hell302e",
+      "Sha256": "ed670b6af58e8075d9e317081ec0dd497f4254633de46ddfe1cf93247b7c96b1",
+      "Size": 6956
+    },
+    {
+      "Name": "maps-hy04-d",
+      "Sha256": "583b6e0a0a65fef42c3fd1876ac1120ccb5aa08fe7cfc6e99c6f468c8631fc76",
+      "Size": 12715
+    },
+    {
+      "Name": "maps-hy05-d",
+      "Sha256": "fd27f78a727572f1c6cd3e6310e0f51cebeeabf930b0fef6837f894915c3e5c1",
+      "Size": 12715
+    },
+    {
+      "Name": "maps-hyunmoo",
+      "Sha256": "0977d2bde0d09cd3fa6d4ad7828b28cf608caac0389b64af31fdcb7e125c326a",
+      "Size": 4068
+    },
+    {
+      "Name": "maps-hyunmu",
+      "Sha256": "e5ee08abbcc7ef8737809551e31948abfe6efe22e9ad1e10de850fbb9d0478af",
+      "Size": 52541
+    },
+    {
+      "Name": "maps-hyunwolboss",
+      "Sha256": "7a158f18b13c3ddbc5aaf6074760491bd8e0b5887d6d01f1326391df8facc4a9",
+      "Size": 4607
+    },
+    {
+      "Name": "maps-iceland-down-wait",
+      "Sha256": "7dc288437cfdc2c793272fa846e19e9af5e26d9f4bb611c946458322883885f3",
+      "Size": 11415
+    },
+    {
+      "Name": "maps-indun-01bossroom",
+      "Sha256": "aecac6ee5fc5effbccc39d2788b3553c577d96333519bccd728c0cf03cc2d6a8",
+      "Size": 5923
+    },
+    {
+      "Name": "maps-indun-01mainhall",
+      "Sha256": "6b16e82fd451fa1d6087fc3bfdf30a4005b2103ef9701406dc8ec0e264f532a5",
+      "Size": 3913
+    },
+    {
+      "Name": "maps-indun-02dogyoarena",
+      "Sha256": "2d1ff29d093e5b5cf1dd22cd61dacbac5646424776c5cac83f9de9a6e211a73d",
+      "Size": 23841
+    },
+    {
+      "Name": "maps-indun-sd-destroy",
+      "Sha256": "46f2cb012b6fc695bb5e7fee1790d4b18a1a1f183e4dc25304affba449c07b26",
+      "Size": 7036
+    },
+    {
+      "Name": "maps-indun-sd-secr",
+      "Sha256": "016746b65a58d71528e1dbc17403af442aa4532bbe449b8fef86926719323783",
+      "Size": 1859
+    },
+    {
+      "Name": "maps-indun4-event",
+      "Sha256": "4ad4dbde060783b1df02d163b3f0aacad18049545608a2dac81543c237ee7610",
+      "Size": 17517
+    },
+    {
+      "Name": "maps-l",
+      "Sha256": "8d8f1560a2b79d0b32e196b2f561430d0fe578d6701960eca9b07999c59a7a44",
+      "Size": 7195
+    },
+    {
+      "Name": "maps-labybuy",
+      "Sha256": "e4c2d722b9b2b656f41f8b8334f0d0073c078da9574831dd1d1c80f5ec3d25e8",
+      "Size": 1010
+    },
+    {
+      "Name": "maps-labyroom",
+      "Sha256": "a0ecb9b7a06c7cd30bce4f228cffbfcb2f7cd9c055d884b86562741ee823e8dc",
+      "Size": 1072
+    },
+    {
+      "Name": "maps-libraries",
+      "Sha256": "21b7803367d25517d2684610c23c9384ce46f3ddb4d4a47fd30ec353151d07e9",
+      "Size": 1095
+    },
+    {
+      "Name": "maps-m00wait",
+      "Sha256": "fb05f34bd4d5190c787aba24fe72046924389278a78780b43f9e29982136280e",
+      "Size": 5280
+    },
+    {
+      "Name": "maps-magictest",
+      "Sha256": "c9de95fb2d7cabee84c6ccd1990b959356aaae87ba106eace5f93c468439f47e",
+      "Size": 2802
+    },
+    {
+      "Name": "maps-me",
+      "Sha256": "e1f0a19e97b68592031c068d04b8254740ba1abc3f141efe69d8d597093f0a72",
+      "Size": 693
+    },
+    {
+      "Name": "maps-mi",
+      "Sha256": "8b35e9cc5204c7c50cd2103da07d775c7130b1a0eaac2aad4d49cfba1ea831ae",
+      "Size": 48072
+    },
+    {
+      "Name": "maps-morae-chon",
+      "Sha256": "3017bf33f21ee486be9a0cd612d8a7b705f2e0598d493c5436f67147d2df9b00",
+      "Size": 4071
+    },
+    {
+      "Name": "maps-morae-sadang",
+      "Sha256": "811ac9df991ba06ee5e744940d68e84d31e7dad6056c2260461941b8b28b889e",
+      "Size": 3830
+    },
+    {
+      "Name": "maps-morae-won",
+      "Sha256": "5cfb300abe1bca1f7fc9d2f6de80e8746a72d719ae6897d906b8bedc39bf34a9",
+      "Size": 4100
+    },
+    {
+      "Name": "maps-muhan-combat",
+      "Sha256": "5a8fc2d466f7cab9b1af4bf3b9fc13e650d366903ff2be2d133e111587bfffc1",
+      "Size": 886
+    },
+    {
+      "Name": "maps-muhan-wait",
+      "Sha256": "2254ec68e88fe81c303b7fb4a28f5c950c01b96e5c1950e589769634e2316497",
+      "Size": 1257
+    },
+    {
+      "Name": "maps-newyearevent2012",
+      "Sha256": "ac3c5e2adcfbda8fa44dbe4a0c504185a72b583237106b9801a579707db33b3c",
+      "Size": 18502
+    },
+    {
+      "Name": "maps-numeric",
+      "Sha256": "d34db6666ac05b4ada610ba5d6e9bde475e8c9f33636810d4beceee86621d9b1",
+      "Size": 517375
+    },
+    {
+      "Name": "maps-peunmok-village",
+      "Sha256": "0beb48ef9500098a86eba1938faecd87f1a2282f04d5a05502c9a84a48b045a9",
+      "Size": 8918
+    },
+    {
+      "Name": "maps-pmv-chief",
+      "Sha256": "a3f5850bd8c04abb503433a8e30de8163fa8fd96cd88aacc3b4e2e671e34f708",
+      "Size": 967
+    },
+    {
+      "Name": "maps-pmv-clothes",
+      "Sha256": "6b15bfc954d1f5bba5608af5855c6f527713806c65a3993b61400b31e3a1f0b6",
+      "Size": 761
+    },
+    {
+      "Name": "maps-point-fishery-do",
+      "Sha256": "dc46508e3b377966426ab971b271929ad7ee1096c1d96defb181d16f26696992",
+      "Size": 6168
+    },
+    {
+      "Name": "maps-point-fishery-ma",
+      "Sha256": "2659406685ed130697893bb7259174423b5ffd391bc00aa5c5e5c40f0a9c5b01",
+      "Size": 4898
+    },
+    {
+      "Name": "maps-point-fishery-pa",
+      "Sha256": "785758fda91e29434e9272aca6ecd9924910e77dbbf9e384604fd9b786a4e626",
+      "Size": 5227
+    },
+    {
+      "Name": "maps-q",
+      "Sha256": "e64db39f9d07413c85b011cc11dcc67a91d17299b7d2a795ec5847e43cc6cc0a",
+      "Size": 9128
+    },
+    {
+      "Name": "maps-qu",
+      "Sha256": "6bbd51ff94f333f974135415ba36d2001781e595b05ca4fb42a6d5d40bf87e12",
+      "Size": 414
+    },
+    {
+      "Name": "maps-questboss",
+      "Sha256": "b3f97129ef7b1f8ed0cf7d87f800f24b1e6add98ad1b3a488da40d66c37379cf",
+      "Size": 16138
+    },
+    {
+      "Name": "maps-redcave",
+      "Sha256": "e13568cbb8acc0bd5816d50c94e833ce50951710e3dc4a48cceeb6d49567ad3b",
+      "Size": 103607
+    },
+    {
+      "Name": "maps-sabuk-castle",
+      "Sha256": "b231bd032d15edc60c51663682b141b0fa2487b08fba4089fb99fcf4e3311c09",
+      "Size": 996
+    },
+    {
+      "Name": "maps-sd-secr",
+      "Sha256": "e3d5e4edf92bde3b0483db1075e26c99792f495a01c9e6b1216747c0d4b3a0f8",
+      "Size": 1910
+    },
+    {
+      "Name": "maps-search",
+      "Sha256": "3cbd87a9ba2c2e7757e5d59bf735f61ed6153841bebfacd04c2574b65db2f42c",
+      "Size": 3859
+    },
+    {
+      "Name": "maps-snowcave-boss",
+      "Sha256": "3545febf41dc14b90f2bb90f098eb311ed2b9cdca818765341a3723c168efa0f",
+      "Size": 1780
+    },
+    {
+      "Name": "maps-sp",
+      "Sha256": "e6cf3006a25a5e5429af3635eab153c8b4285db83ff4ac7e6b5e698753711951",
+      "Size": 89933
+    },
+    {
+      "Name": "maps-stvillagebang",
+      "Sha256": "3efcf79175c6fd8368611c35599fa004a493c32a875522078922a824196fd20a",
+      "Size": 4710
+    },
+    {
+      "Name": "maps-sur",
+      "Sha256": "b77342f8a7f0f8aebd4684db3af816301252b7fda515547a96eab689f253f2cf",
+      "Size": 17221
+    },
+    {
+      "Name": "maps-sur-waiting",
+      "Sha256": "c2b5b35412e53a2500aa22e3cae862027225126bdb07d05ff2ba25542603abc8",
+      "Size": 612
+    },
+    {
+      "Name": "maps-survival",
+      "Sha256": "b1ba30fdceb2b5a92c3edf5094cbc104c90c08c1156bec4e058a9a04630ad831",
+      "Size": 25553
+    },
+    {
+      "Name": "maps-surwait",
+      "Sha256": "bae36469fc8742c465948cc236ab5dc6b776b73f6b25908689a738ec2ea0b4df",
+      "Size": 7606
+    },
+    {
+      "Name": "maps-t",
+      "Sha256": "610f5df2e5eb461bd0094fb7889112ddffb7dc89a45e437f52cfede4d1aba046",
+      "Size": 125495
+    },
+    {
+      "Name": "maps-t103-21th-ev",
+      "Sha256": "01da605be7922ea80d4e7feb04b9664a167c13a36687adc80e24de319b6a8d86",
+      "Size": 2398
+    },
+    {
+      "Name": "maps-t105-21th-ev",
+      "Sha256": "12d5d1fd878aabf437b4f725a4daf07c92d4802e931dc11b89cb3a78e3745837",
+      "Size": 886
+    },
+    {
+      "Name": "maps-t1061-21th-ev",
+      "Sha256": "5f915fd64241cf0f52c4d58586d65a5f2c78976ef87bce0cfe95799374c10e0f",
+      "Size": 3172
+    },
+    {
+      "Name": "maps-t1062-21th-ev",
+      "Sha256": "ab60a0fc4c785495d96ebebc71895307df6d12bdab5b58d06303f7904bcd12cf",
+      "Size": 3174
+    },
+    {
+      "Name": "maps-t1063-21th-ev",
+      "Sha256": "d4168fea51a3cbefa626606ac023820a8eb97ad5d1198d21d22153dd59dc80d2",
+      "Size": 3172
+    },
+    {
+      "Name": "maps-t109-21th-ev",
+      "Sha256": "32222aff03e58a0b263bcf9fdda9f16f9677496f9d65f6621db4879ed3935daf",
+      "Size": 15226
+    },
+    {
+      "Name": "maps-t118-21th-ev",
+      "Sha256": "b3ee20045156a2d62484d1d34e4b415af4c938b0cf66bc336b1605d024617152",
+      "Size": 1754
+    },
+    {
+      "Name": "maps-t118-e",
+      "Sha256": "bdfbbb72b729839a3b354fb9bd26caa898f574b761e9e647a7c0d5a3a02f7ee8",
+      "Size": 33684
+    },
+    {
+      "Name": "maps-t119-21th-ev",
+      "Sha256": "1d0086eb846c04e375416b88035bd67249b878990a70f4de03e55488e8562e9e",
+      "Size": 19350
+    },
+    {
+      "Name": "maps-t125-21th-ev",
+      "Sha256": "dbd96a095478fe9f10a97ec30beaf836497a7f7a2c1d1248425de6cfe63dec4a",
+      "Size": 1182
+    },
+    {
+      "Name": "maps-t1281-21th-ev",
+      "Sha256": "dd3e8e7f05454879d0ae451e1448fa9e779eebdb3237e3705e2e8fe7ce5e741d",
+      "Size": 6416
+    },
+    {
+      "Name": "maps-t1282-21th-ev",
+      "Sha256": "2ab59d81908e11ddaf8775bcb3d55211984c41dbb8d2d0dddc365a12de1870a8",
+      "Size": 6414
+    },
+    {
+      "Name": "maps-t1283-21th-ev",
+      "Sha256": "5e6a7fcf312e8f3e52614492ed1089e0b77ea0416584592225f2d6975427483a",
+      "Size": 6416
+    },
+    {
+      "Name": "maps-t131-21th-ev",
+      "Sha256": "a25bc6ae0d592acad9a1236bad36c142dcf03833c18362c00c77e7bd358b3d5e",
+      "Size": 1218
+    },
+    {
+      "Name": "maps-t132-21th-ev",
+      "Sha256": "b0ef3d82f7e9f71eb4b0177051514aa7f02b2eabc681a87a0c6e50c0cfd3f1a6",
+      "Size": 3910
+    },
+    {
+      "Name": "maps-t134-21th-ev",
+      "Sha256": "9acdbd71a9da5b39cdf4a4229912faa597231878aa94d88cdf9427040f6ac34b",
+      "Size": 3202
+    },
+    {
+      "Name": "maps-t1361-21th-ev",
+      "Sha256": "4718b11a175528f499502344275e0f7c62fff4e582fdd4e8b12f4bfb5f0c6c06",
+      "Size": 858
+    },
+    {
+      "Name": "maps-t1362-21th-ev",
+      "Sha256": "4326dcdeba8a163a96c3eaefb58b5df5eb527f581ee02ccf522e2d002c67875e",
+      "Size": 858
+    },
+    {
+      "Name": "maps-t1363-21th-ev",
+      "Sha256": "37e5f2c37519ebb48a04bb8012389d20695144a15c153e5b898f2fdc164e7f71",
+      "Size": 1226
+    },
+    {
+      "Name": "maps-t138-21th-ev",
+      "Sha256": "302ac912ad66b7d21b78d1d107991751f44d3e3bc92692fdfc9c9e1954420fea",
+      "Size": 1218
+    },
+    {
+      "Name": "maps-t139-21th-ev",
+      "Sha256": "65fc2d1e42c766f7c1f8c4505b84e1cb8a4f99deb8d839cae60878bf0b8a20d8",
+      "Size": 3958
+    },
+    {
+      "Name": "maps-t140-21th-ev",
+      "Sha256": "5422009feb781241db05efa9c8e35b319f0ec25273044f62214e55bdd6f0a03c",
+      "Size": 1712
+    },
+    {
+      "Name": "maps-t140-e",
+      "Sha256": "e2f511cce87a12131c6036d636763ec796430d0edae729392f705cbbc3bbb7e7",
+      "Size": 842
+    },
+    {
+      "Name": "maps-unionguild",
+      "Sha256": "670f148bd7f61f6fd6072446acbffd830cf65ba36c52feb90e02ae09c793f22b",
+      "Size": 2644
+    },
+    {
+      "Name": "maps-unknown-island",
+      "Sha256": "86fc1835c4e3e0020a5e2cbbb53663b1f2cb8154d553900984544c7c747d4a28",
+      "Size": 123253
+    },
+    {
+      "Name": "maps-utohouse",
+      "Sha256": "7da50b954aeb3ab55ccfab8b5df1a537edb67b9a1f264295bf0fe44d89b71cc7",
+      "Size": 636
+    },
+    {
+      "Name": "maps-versus",
+      "Sha256": "1f49c4e690b0c059469754e184c786944da0394ab1e43e90491c1f8aa7f4e228",
+      "Size": 1164
+    },
+    {
+      "Name": "maps-w",
+      "Sha256": "a0384161abc07d9b8d04bfc9ebde3dd47ed81480dff1ecafa55fd0a91f84005a",
+      "Size": 3046
+    },
+    {
+      "Name": "maps-whitevil-acc",
+      "Sha256": "fd7c292dca8a36af259375895b9ceddcd44e346d72cf03e96bf3d113e795c007",
+      "Size": 1621
+    },
+    {
+      "Name": "maps-whitevil-armor",
+      "Sha256": "43a2e6897388e29024c2c0e728fe00a47194c2c90568c3bc550807bfae3ea986",
+      "Size": 2051
+    },
+    {
+      "Name": "maps-whitevil-book",
+      "Sha256": "be59fca37362e0e6a3f4e4815ec50ea8817cf137088af291c26bde6a9f4cf5f9",
+      "Size": 1734
+    },
+    {
+      "Name": "maps-whitevil-doc",
+      "Sha256": "7849399c22bcbe810882a7f7350fe8db360280716cfe53386e7e4c9bd9b6767f",
+      "Size": 1621
+    },
+    {
+      "Name": "maps-whitevil-empty",
+      "Sha256": "f20bd1ecb80ccb43c359ac9f9087d845d136d6e6b0f9fde8c3cd89d9df2bada7",
+      "Size": 1600
+    },
+    {
+      "Name": "maps-whitevil-etc",
+      "Sha256": "5fbe4c17ddd213ccd8b538d58b9a1f18a05d30b8cc6edade6c765dd8c097e17d",
+      "Size": 2007
+    },
+    {
+      "Name": "maps-whitevil-fish",
+      "Sha256": "70ba9165422a551a5d408831d395f1da95bb7b7bf6a5f4d000b082ffff54edab",
+      "Size": 2256
+    },
+    {
+      "Name": "maps-whitevil-weapon",
+      "Sha256": "266f23806f5d10916bec0f1d2e80c9f39d58d10a33adf6d19991d5b9b0c26a43",
+      "Size": 2175
+    },
+    {
+      "Name": "maps-winterevent2011",
+      "Sha256": "c268363bbc591c5e90f15d27ac2482bc68ce219064bbdf4d85efdf9f38aaa383",
+      "Size": 15322
+    }
+  ],
+  "Signature": "rUrXyuvoaXY7dzmdUTdbC\u002BoSirSyd2wkvF5O5Bn725xxc69pXyQMd/S\u002BlupAvD2J6UhDkoknA2O1hkfRfhhtSQ=="
+}

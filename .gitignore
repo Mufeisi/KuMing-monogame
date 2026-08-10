@@ -38,6 +38,11 @@ bld/
 **/Configs/ProtectedSecrets/
 *.dpapi
 
+# RELEASE-01 签名私钥、APK keystore 与口令只存在于受保护存储。
+**/Configs/ReleaseSecrets/
+*.keystore
+*.jks
+
 # OPS-BASIC-03 远程开关是运行时状态，不作为发布默认值提交。
 **/Configs/Operations/kill-switches.json
 **/Configs/Operations/kill-switches.json.partial-*

@@ -1,0 +1,14 @@
+RELEASE-01 Android APK 独立签名公开证据
+时间：2026-08-10
+APK：com.lommir.client.monogame.android-Signed.apk
+APK SHA-256：205B3BF494442433B6D471B7DA0DD3D10D743622E479B1D6F4E6C028BA695360
+APK Signature Scheme v2：true
+APK Signature Scheme v3：true
+签名者数量：1
+证书 DN：CN=LyoCrystal Release, OU=Release, O=LyoCrystal, C=CN
+证书 SHA-256：2d9f4b2e165407f7e781146f4cf0323aab9980b185c0002fd328ec89ec3bd670
+公钥算法与长度：RSA 4096
+公钥 SHA-256：41f7d37c240a309e2d6145a00df91bc319dd739f6e6cfb162af62319b1429347
+资源索引公钥算法：ECDSA P-256
+结论：APK 与资源索引使用不同算法、不同密钥材料和不同受保护入口
+keystore 与口令：未归档、未提交

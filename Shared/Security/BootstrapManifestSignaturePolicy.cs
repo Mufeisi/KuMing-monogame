@@ -260,10 +260,25 @@ public static class BootstrapManifestTrustConfiguration
 {
     public static Version CurrentClientCompatibilityVersion { get; } = new(1, 0, 0);
 
-    // RELEASE-01 将生产公钥 SPKI 写入此只读信任表；SEC-06 不生成或托管私钥。
-    // 同时保留当前与下一把公钥，并用序列窗口限制轮换边界。
+    // RELEASE-01 生产信任表：私钥不在仓库；当前与下一把公钥用重叠序列窗口完成轮换。
     public static IReadOnlyDictionary<string, BootstrapManifestTrustedKey> TrustedKeys { get; } =
-        new Dictionary<string, BootstrapManifestTrustedKey>(StringComparer.Ordinal);
+        new Dictionary<string, BootstrapManifestTrustedKey>(StringComparer.Ordinal)
+        {
+            ["resource-2026-a"] = new()
+            {
+                KeyId = "resource-2026-a",
+                SubjectPublicKeyInfo = "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEmZm1E/xwt7JUVS670s+x0OhqJz382Usxf52x1gJXFuJsM6AWC615Eu0hp9zWt5DvQ3X0g/tMxoACDSY8Vu6kpg==",
+                NotBeforeSequence = 1,
+                NotAfterSequence = 999_999,
+            },
+            ["resource-2026-b"] = new()
+            {
+                KeyId = "resource-2026-b",
+                SubjectPublicKeyInfo = "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEAFr2FvbF+GNBaHsk57c9O3UQr8IX/rbLJPoUj5yySHT5m1VDCV91wC7W5kfCdKPckOiy6JMUxgHfskNmIV+JXw==",
+                NotBeforeSequence = 900_000,
+                NotAfterSequence = 0,
+            },
+        };
 }
 
 public static class BootstrapManifestAcceptanceStore
