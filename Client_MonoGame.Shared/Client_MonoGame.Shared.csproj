@@ -77,7 +77,20 @@
     <Compile Include="MirScenes\**\*.cs" />
     <Compile Include="MirSounds\**\*.cs" />
     <Compile Include="UI\**\*.cs" />
-    <Compile Include="Share\**\*.cs" Exclude="Share\Extensions\MonoGameConversionExtensions.cs" />
+    <!-- PROTO-02：Android 正式消费者直接编译 Shared 的协议事实源；Share 仅保留平台适配和旧版兼容样本。 -->
+    <Compile Include="..\Shared\BaseStats.cs" Link="Share\BaseStats.cs" />
+    <Compile Include="..\Shared\ClientPackets.cs" Link="Share\ClientPackets.cs" />
+    <Compile Include="..\Shared\Enums.cs" Link="Share\Enums.cs" />
+    <Compile Include="..\Shared\Globals.cs" Link="Share\Globals.cs" />
+    <Compile Include="..\Shared\Packet.cs" Link="Share\Packet.cs" />
+    <Compile Include="..\Shared\ServerPackets.cs" Link="Share\ServerPackets.cs" />
+    <Compile Include="..\Shared\Data\**\*.cs" Link="Share\Data\%(RecursiveDir)%(Filename)%(Extension)" />
+    <Compile Include="..\Shared\Extensions\ExtensionMethods.cs" Link="Share\Extensions\ExtensionMethods.cs" />
+    <Compile Include="..\Shared\Functions\Functions.cs" Link="Share\Functions\Functions.cs" />
+    <Compile Include="..\Shared\Functions\RegexFunctions.cs" Link="Share\Functions\RegexFunctions.cs" />
+    <Compile Include="..\Shared\Helpers\FileIO.cs" Link="Share\Helpers\FileIO.cs" />
+    <Compile Include="Share\Language.cs" />
+    <Compile Include="Share\Functions\IniReader.cs" />
     <Compile Include="Maui\**\*.cs" />
   </ItemGroup>
 

@@ -161,6 +161,15 @@ jobs:
           restore-keys: |
             tests-nuget-${{ runner.os }}-
 
+      - name: Restore protocol manifest generator
+        run: dotnet restore Tools/ProtocolManifestGenerator/ProtocolManifestGenerator.csproj --verbosity minimal
+
+      - name: Verify generated protocol manifest
+        run: >-
+          dotnet run --project Tools/ProtocolManifestGenerator/ProtocolManifestGenerator.csproj
+          --configuration Release --no-restore --
+          --verify Docs/protocol-wire-manifest.generated.json
+
       - name: Discover test projects
         id: discover
         shell: pwsh
