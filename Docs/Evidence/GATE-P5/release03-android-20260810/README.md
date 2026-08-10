@@ -27,4 +27,4 @@ dotnet test Tests/Base05.Tests/Base05.Tests.csproj -c Release --no-restore --fil
 - 等效设备过程与边界见 `device-proof.txt`；原始 ADB/Range/续传命令见 `device-resume-transcript.txt`，密钥恢复、正式构建、`apksigner`、覆盖安装和生命周期原始命令见 `key-device-raw-transcript.txt`；最终运行态 JSON/日志见 `device-runtime-final/`。
 - 账号自动注册、建角、进图和既有业务入口的设备证据复用 `Docs/Evidence/GATE-P1/runtime-20260809/`；本轮正式 APK 再次完成真实服务端 ClientVersion 握手，Base05 全量覆盖后续移动状态回归。未执行的实体手机触控/业务体验按项目所有者决定留交付后观察，不在本目录伪造新截图。
 
-下载中断实跑记录 `.part` 在强停前为 1638400 bytes、停止后保留并达到 7995392 bytes、重启后在同一路径继续增长到 36896768 bytes；最终两包同批提交、队列为空。最终正式 AOT+Trim APK 再次覆盖安装成功，应用数据标记、PackageRepo 和已提交资源版本保持不变。专项 TRX 22/22、Base05 全量 369/369；`ReleaseSigningTool` Release 构建 0 警告、0 错误。四态日志分别见本目录 `android-arm64-*-build.log`，命令与退出码索引见 `build-commands-and-exits.txt`。
+下载中断实跑记录 `.part` 在强停前为 1638400 bytes、停止后保留并达到 7995392 bytes、重启后在同一路径继续增长到 36896768 bytes；最终两包同批提交、队列为空。最终正式 AOT+Trim APK 再次覆盖安装成功，应用数据标记、PackageRepo 和已提交资源版本保持不变。Base05 全量在最终 Range 边界加固前通过 369/369；受影响的 Range、签名与恢复路径在最终提交后由专项 TRX 22/22 覆盖。`ReleaseSigningTool` Release 构建 0 警告、0 错误。四态日志分别见本目录 `android-arm64-*-build.log`，命令与退出码索引见 `build-commands-and-exits.txt`。

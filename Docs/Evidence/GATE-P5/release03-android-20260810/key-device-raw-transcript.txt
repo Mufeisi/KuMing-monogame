@@ -77,47 +77,86 @@ PSRemotingProtocolVersion: 2.3
 SerializationVersion: 1.1.0.1
 WSManStackVersion: 3.0
 **********************
-CONTINUE_UTC=2026-08-10T09:38:55.6377614Z
-COMMAND: apksigner verify --verbose --print-certs <最终APK>（Android OpenJDK 21）
-
-APKSIGNER_EXIT=0
-COMMAND: adb shell 写入覆盖升级保留标记
-
+CONTINUE_UTC=2026-08-10T09:49:33.1293940Z
+COMMAND: C:\Users\luo\AppData\Local\Android\Sdk\platform-tools\adb.exe devices -l
+List of devices attached
+127.0.0.1:21503        device product:ASUS_AI2401_A model:ASUS_AI2401_A device:ASUS_AI2401_A transport_id:85
+ADB_DEVICES_EXIT=0
+COMMAND: adb shell id
+uid=0(root) gid=0(root) groups=0(root),1004(input),1007(log),1011(adb),1015(sdcard_rw),1028(sdcard_r),3001(net_bt_admin),3002(net_bt),3003(inet),3006(net_bw_stats),3009(readproc),3011(uhid)
+ADB_ID_EXIT=0
+COMMAND: adb shell mkdir -p /data/user/0/com.lommir.client.monogame.android/files && echo before-upgrade-20260810 > /data/user/0/com.lommir.client.monogame.android/files/release03-upgrade-marker.txt
 MARKER_WRITE_EXIT=0
 COMMAND: adb install -r <最终APK>
-
+Performing Streamed Install
+Success
 ADB_INSTALL_EXIT=0
-COMMAND: adb shell cat <覆盖升级保留标记>
-
+COMMAND: adb shell cat /data/user/0/com.lommir.client.monogame.android/files/release03-upgrade-marker.txt
+before-upgrade-20260810
 MARKER_READ_EXIT=0
-COMMAND: adb shell dumpsys package <package>（版本与SDK）
-
-COMMAND: adb 恢复反向端口
-
-
-
-ADB_REVERSE_EXIT=0
-COMMAND: adb shell am start -W -n <Activity>
-
+COMMAND: adb shell dumpsys package com.lommir.client.monogame.android | grep -E 'versionCode=|versionName=|minSdk='
+    versionCode=20000 minSdk=24 targetSdk=36
+    versionName=2.0.0
+PACKAGE_INFO_EXIT=0
+COMMAND: adb shell am start -W -n com.lommir.client.monogame.android/crc648e1c27e8d74093fe.MainActivity
+Starting: Intent { cmp=com.lommir.client.monogame.android/crc648e1c27e8d74093fe.MainActivity }
+Status: ok
+Activity: com.lommir.client.monogame.android/crc648e1c27e8d74093fe.MainActivity
+Complete
 START_ACTIVITY_EXIT=0
-COMMAND: adb HOME 后恢复 Activity
-
-
+COMMAND: adb shell dumpsys activity activities | grep mResumedActivity
+    mResumedActivity: ActivityRecord{b1cee8b u0 com.lommir.client.monogame.android/crc648e1c27e8d74093fe.MainActivity t77}
+RESUMED_INITIAL_EXIT=0
+COMMAND: adb shell input keyevent HOME
+    mResumedActivity: ActivityRecord{277581c u0 com.microvirt.launcher2/com.microvirt.launcher.Launcher t2}
+HOME_EXIT=0
+COMMAND: adb shell am start -W -n com.lommir.client.monogame.android/crc648e1c27e8d74093fe.MainActivity
+Status: ok
+Activity: com.lommir.client.monogame.android/crc648e1c27e8d74093fe.MainActivity
+Complete
+    mResumedActivity: ActivityRecord{b1cee8b u0 com.lommir.client.monogame.android/crc648e1c27e8d74093fe.MainActivity t77}
 HOME_RESUME_EXIT=0
-COMMAND: adb 锁屏/解锁后恢复 Activity
-
-
-
-
+COMMAND: adb shell input keyevent 26 && adb shell dumpsys power | grep mWakefulness
+  mWakefulness=Asleep
+  mWakefulnessChanging=false
+SLEEP_STATE_EXIT=0
+COMMAND: adb shell input keyevent 26; adb shell wm dismiss-keyguard; adb shell am start -W -n <Activity>
+Status: ok
+Activity: com.lommir.client.monogame.android/crc648e1c27e8d74093fe.MainActivity
+Complete
+    mResumedActivity: ActivityRecord{b1cee8b u0 com.lommir.client.monogame.android/crc648e1c27e8d74093fe.MainActivity t77}
 LOCK_RESUME_EXIT=0
-COMMAND: adb 临时切换分辨率并恢复
-
-
-
-RESOLUTION_CYCLE_EXIT=0
-COMMAND: adb dumpsys activity resumed
-
-END_UTC=2026-08-10T09:39:19.2541637Z
+COMMAND: adb shell wm size
+Physical size: 1600x900
+COMMAND: adb shell wm size 1280x720
+Physical size: 1600x900
+Override size: 1280x720
+    mResumedActivity: ActivityRecord{b1cee8b u0 com.lommir.client.monogame.android/crc648e1c27e8d74093fe.MainActivity t77}
+RESOLUTION_ACTIVE_EXIT=0
+COMMAND: adb shell wm size reset
+Physical size: 1600x900
+RESOLUTION_RESET_EXIT=0
+END_UTC=2026-08-10T09:49:59.0144940Z
+COMMAND: C:\Users\luo\AppData\Local\Android\Sdk\build-tools\36.1.0\apksigner.bat verify --verbose --print-certs <最终APK>（Android OpenJDK 21）
+Verifies
+Verified using v1 scheme (JAR signing): false
+Verified using v2 scheme (APK Signature Scheme v2): true
+Verified using v3 scheme (APK Signature Scheme v3): true
+Verified using v3.1 scheme (APK Signature Scheme v3.1): false
+Verified using v4 scheme (APK Signature Scheme v4): false
+Verified for SourceStamp: false
+Number of signers: 1
+Signer #1 certificate DN: CN=LyoCrystal Release, OU=Release, O=LyoCrystal, C=CN
+Signer #1 certificate SHA-256 digest: 2d9f4b2e165407f7e781146f4cf0323aab9980b185c0002fd328ec89ec3bd670
+Signer #1 certificate SHA-1 digest: 61bcfb3801b1214b325c6d64b8f1c2fb4b2fb35e
+Signer #1 certificate MD5 digest: 1ed957fc15b3fa32e56693a6962a6d70
+Signer #1 key algorithm: RSA
+Signer #1 key size (bits): 4096
+Signer #1 public key SHA-256 digest: 41f7d37c240a309e2d6145a00df91bc319dd739f6e6cfb162af62319b1429347
+Signer #1 public key SHA-1 digest: d98ba115473ceb1380472dc933047cbcafff6979
+Signer #1 public key MD5 digest: 8eae2dce2fa87eb825598be10783fd57
+APKSIGNER_EXIT=0
+APKSIGNER_END_UTC=2026-08-10T09:50:17.6498115Z
 RESULT=PASS
 **********************
 PowerShell transcript end
