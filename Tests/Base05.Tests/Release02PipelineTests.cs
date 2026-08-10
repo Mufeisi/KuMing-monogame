@@ -204,6 +204,14 @@ public sealed class Release02PipelineTests
             string resourcePath = selected.RootElement.GetProperty("ResourceRepositoryPath").GetString()!;
             string signedIndex = await http.GetStringAsync(prefix.TrimEnd('/') + resourcePath + "Packages/bootstrap-package-index.signed.json");
             Assert.Equal("{\"signed\":true}", signedIndex);
+            using (var rangeRequest = new HttpRequestMessage(HttpMethod.Get, prefix.TrimEnd('/') + resourcePath + "Packages/bootstrap-package-index.signed.json"))
+            {
+                rangeRequest.Headers.Range = new System.Net.Http.Headers.RangeHeaderValue(5, null);
+                using HttpResponseMessage rangeResponse = await http.SendAsync(rangeRequest);
+                Assert.Equal(HttpStatusCode.PartialContent, rangeResponse.StatusCode);
+                Assert.Equal("bytes 5-14/15", rangeResponse.Content.Headers.ContentRange?.ToString());
+                Assert.Equal("ned\":true}", await rangeResponse.Content.ReadAsStringAsync());
+            }
 
             using (var unauthorizedContent = EventContent("release-new", canaryId, "FatalCrash", "unauthorized"))
             using (HttpResponseMessage unauthorized = await http.PostAsync(prefix + "release/events", unauthorizedContent))

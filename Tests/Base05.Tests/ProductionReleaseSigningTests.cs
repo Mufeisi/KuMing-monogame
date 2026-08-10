@@ -107,7 +107,9 @@ public sealed class ProductionReleaseSigningTests
         const string passwordText = "test-password-not-a-production-secret";
         string keyStore = Path.Combine(directory, "source.keystore");
         string passwordPath = Path.Combine(directory, "source-password.dpapi");
-        string backup = Path.Combine(directory, "recovery.enc.json");
+        string backup = Path.Combine(directory, "recovery.android-recovery.json");
+        string corruptedPasswordPath = Path.Combine(directory, "corrupted-password.dpapi");
+        string corruptedExport = Path.Combine(directory, "corrupted.android-recovery.json");
         string restoredKeyStore = Path.Combine(directory, "restored.keystore");
         string restoredPassword = Path.Combine(directory, "restored-password.dpapi");
         byte[] keyStoreBytes = RandomNumberGenerator.GetBytes(512);
@@ -120,6 +122,12 @@ public sealed class ProductionReleaseSigningTests
                 SHA256.HashData(Encoding.UTF8.GetBytes("LyoCrystal.Release.Secret.v1:" + purpose)),
                 DataProtectionScope.CurrentUser));
             string passphrase = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32));
+            File.WriteAllBytes(corruptedPasswordPath, RandomNumberGenerator.GetBytes(64));
+            InvalidOperationException corruptedDpapi = Assert.Throws<InvalidOperationException>(() => RunSigningTool(
+                root, passphrase, "export-android-recovery", keyStore, corruptedPasswordPath, purpose, alias, corruptedExport));
+            Assert.Contains("退出码 2", corruptedDpapi.Message, StringComparison.Ordinal);
+            Assert.False(File.Exists(corruptedExport));
+
             RunSigningTool(root, passphrase, "export-android-recovery", keyStore, passwordPath, purpose, alias, backup);
             InvalidOperationException wrong = Assert.Throws<InvalidOperationException>(() => RunSigningTool(
                 root, "wrong-passphrase-with-enough-length", "import-android-recovery", backup, purpose, alias,
@@ -127,6 +135,23 @@ public sealed class ProductionReleaseSigningTests
             Assert.Contains("退出码 2", wrong.Message, StringComparison.Ordinal);
             Assert.False(File.Exists(restoredKeyStore));
             Assert.False(File.Exists(restoredPassword));
+
+            string malformed = Path.Combine(directory, "malformed.android-recovery.json");
+            File.WriteAllText(malformed, "{\"Format\":\"LyoCrystal.AndroidRecovery.v1\",\"Iterations\":600000,\"Salt\":\"%%%\"}");
+            InvalidOperationException malformedFailure = Assert.Throws<InvalidOperationException>(() => RunSigningTool(
+                root, passphrase, "import-android-recovery", malformed, purpose, alias,
+                restoredKeyStore, restoredPassword));
+            Assert.Contains("退出码 2", malformedFailure.Message, StringComparison.Ordinal);
+            Assert.False(File.Exists(restoredKeyStore));
+            Assert.False(File.Exists(restoredPassword));
+
+            string blockedPasswordOutput = Path.Combine(directory, "blocked-password-output");
+            Directory.CreateDirectory(blockedPasswordOutput);
+            InvalidOperationException secondOutputFailure = Assert.Throws<InvalidOperationException>(() => RunSigningTool(
+                root, passphrase, "import-android-recovery", backup, purpose, alias,
+                restoredKeyStore, blockedPasswordOutput));
+            Assert.Contains("退出码 2", secondOutputFailure.Message, StringComparison.Ordinal);
+            Assert.False(File.Exists(restoredKeyStore));
 
             RunSigningTool(root, passphrase, "import-android-recovery", backup, purpose, alias, restoredKeyStore, restoredPassword);
             Assert.Equal(keyStoreBytes, File.ReadAllBytes(restoredKeyStore));

@@ -115,17 +115,23 @@ internal static class Program
         if (!File.Exists(keyStorePath)) throw new FileNotFoundException("Android keystore 不存在", keyStorePath);
         if (File.Exists(outputPath)) throw new IOException("恢复包已存在，拒绝覆盖");
 
-        byte[] passphrase = ReadAndClearRecoveryPassphrase();
-        byte[] password = LoadProtectedSecret(purpose, protectedPasswordPath);
-        byte[] keyStore = File.ReadAllBytes(keyStorePath);
-        byte[] plain = BuildAndroidRecoveryPayload(purpose, alias, keyStore, password);
-        byte[] salt = RandomNumberGenerator.GetBytes(16);
-        byte[] nonce = RandomNumberGenerator.GetBytes(12);
-        byte[] key = Rfc2898DeriveBytes.Pbkdf2(passphrase, salt, AndroidRecoveryIterations, HashAlgorithmName.SHA256, 32);
-        byte[] cipher = new byte[plain.Length];
-        byte[] tag = new byte[16];
+        byte[] passphrase = Array.Empty<byte>();
+        byte[] password = Array.Empty<byte>();
+        byte[] keyStore = Array.Empty<byte>();
+        byte[] plain = Array.Empty<byte>();
+        byte[] key = Array.Empty<byte>();
+        byte[] cipher = Array.Empty<byte>();
         try
         {
+            passphrase = ReadAndClearRecoveryPassphrase();
+            password = LoadProtectedSecret(purpose, protectedPasswordPath);
+            keyStore = File.ReadAllBytes(keyStorePath);
+            plain = BuildAndroidRecoveryPayload(purpose, alias, keyStore, password);
+            byte[] salt = RandomNumberGenerator.GetBytes(16);
+            byte[] nonce = RandomNumberGenerator.GetBytes(12);
+            key = Rfc2898DeriveBytes.Pbkdf2(passphrase, salt, AndroidRecoveryIterations, HashAlgorithmName.SHA256, 32);
+            cipher = new byte[plain.Length];
+            byte[] tag = new byte[16];
             using var aes = new AesGcm(key, tag.Length);
             aes.Encrypt(nonce, plain, cipher, tag, Utf8NoBom.GetBytes("LyoCrystal.AndroidRecovery.v1"));
             var envelope = new AndroidRecoveryEnvelope
@@ -143,12 +149,12 @@ internal static class Program
         finally
         {
             Environment.SetEnvironmentVariable(AndroidRecoveryPassphraseEnvironment, null);
-            CryptographicOperations.ZeroMemory(passphrase);
-            CryptographicOperations.ZeroMemory(password);
-            CryptographicOperations.ZeroMemory(keyStore);
-            CryptographicOperations.ZeroMemory(plain);
-            CryptographicOperations.ZeroMemory(key);
-            CryptographicOperations.ZeroMemory(cipher);
+            if (passphrase.Length > 0) CryptographicOperations.ZeroMemory(passphrase);
+            if (password.Length > 0) CryptographicOperations.ZeroMemory(password);
+            if (keyStore.Length > 0) CryptographicOperations.ZeroMemory(keyStore);
+            if (plain.Length > 0) CryptographicOperations.ZeroMemory(plain);
+            if (key.Length > 0) CryptographicOperations.ZeroMemory(key);
+            if (cipher.Length > 0) CryptographicOperations.ZeroMemory(cipher);
         }
     }
 
@@ -167,23 +173,32 @@ internal static class Program
         if (File.Exists(keyStoreOutputPath) || File.Exists(protectedPasswordOutputPath))
             throw new IOException("恢复目标已存在，拒绝覆盖");
 
-        AndroidRecoveryEnvelope envelope = JsonSerializer.Deserialize<AndroidRecoveryEnvelope>(
-            File.ReadAllBytes(inputPath), JsonOptions) ?? throw new InvalidDataException("Android 恢复包为空");
-        if (envelope.Format != "LyoCrystal.AndroidRecovery.v1" || envelope.Iterations != AndroidRecoveryIterations)
-            throw new InvalidDataException("Android 恢复包格式或派生参数不受支持");
-
-        byte[] passphrase = ReadAndClearRecoveryPassphrase();
-        byte[] salt = Convert.FromBase64String(envelope.Salt);
-        byte[] nonce = Convert.FromBase64String(envelope.Nonce);
-        byte[] cipher = Convert.FromBase64String(envelope.Ciphertext);
-        byte[] tag = Convert.FromBase64String(envelope.Tag);
-        byte[] key = Rfc2898DeriveBytes.Pbkdf2(passphrase, salt, envelope.Iterations, HashAlgorithmName.SHA256, 32);
-        byte[] plain = new byte[cipher.Length];
+        byte[] envelopeBytes = Array.Empty<byte>();
+        byte[] passphrase = Array.Empty<byte>();
+        byte[] salt = Array.Empty<byte>();
+        byte[] nonce = Array.Empty<byte>();
+        byte[] cipher = Array.Empty<byte>();
+        byte[] tag = Array.Empty<byte>();
+        byte[] key = Array.Empty<byte>();
+        byte[] plain = Array.Empty<byte>();
         byte[] keyStore = Array.Empty<byte>();
         byte[] password = Array.Empty<byte>();
         byte[] protectedPassword = Array.Empty<byte>();
         try
         {
+            envelopeBytes = File.ReadAllBytes(inputPath);
+            AndroidRecoveryEnvelope envelope = JsonSerializer.Deserialize<AndroidRecoveryEnvelope>(
+                envelopeBytes, JsonOptions) ?? throw new InvalidDataException("Android 恢复包为空");
+            if (envelope.Format != "LyoCrystal.AndroidRecovery.v1" || envelope.Iterations != AndroidRecoveryIterations)
+                throw new InvalidDataException("Android 恢复包格式或派生参数不受支持");
+
+            passphrase = ReadAndClearRecoveryPassphrase();
+            salt = Convert.FromBase64String(envelope.Salt);
+            nonce = Convert.FromBase64String(envelope.Nonce);
+            cipher = Convert.FromBase64String(envelope.Ciphertext);
+            tag = Convert.FromBase64String(envelope.Tag);
+            key = Rfc2898DeriveBytes.Pbkdf2(passphrase, salt, envelope.Iterations, HashAlgorithmName.SHA256, 32);
+            plain = new byte[cipher.Length];
             using var aes = new AesGcm(key, tag.Length);
             aes.Decrypt(nonce, cipher, tag, plain, Utf8NoBom.GetBytes("LyoCrystal.AndroidRecovery.v1"));
             var payload = ParseAndroidRecoveryPayload(plain);
@@ -213,9 +228,14 @@ internal static class Program
         finally
         {
             Environment.SetEnvironmentVariable(AndroidRecoveryPassphraseEnvironment, null);
-            CryptographicOperations.ZeroMemory(passphrase);
-            CryptographicOperations.ZeroMemory(key);
-            CryptographicOperations.ZeroMemory(plain);
+            if (envelopeBytes.Length > 0) CryptographicOperations.ZeroMemory(envelopeBytes);
+            if (passphrase.Length > 0) CryptographicOperations.ZeroMemory(passphrase);
+            if (salt.Length > 0) CryptographicOperations.ZeroMemory(salt);
+            if (nonce.Length > 0) CryptographicOperations.ZeroMemory(nonce);
+            if (cipher.Length > 0) CryptographicOperations.ZeroMemory(cipher);
+            if (tag.Length > 0) CryptographicOperations.ZeroMemory(tag);
+            if (key.Length > 0) CryptographicOperations.ZeroMemory(key);
+            if (plain.Length > 0) CryptographicOperations.ZeroMemory(plain);
             if (keyStore.Length > 0) CryptographicOperations.ZeroMemory(keyStore);
             if (password.Length > 0) CryptographicOperations.ZeroMemory(password);
             if (protectedPassword.Length > 0) CryptographicOperations.ZeroMemory(protectedPassword);
@@ -255,15 +275,35 @@ internal static class Program
 
     private static (string Purpose, string Alias, byte[] KeyStore, byte[] Password) ParseAndroidRecoveryPayload(byte[] payload)
     {
-        int offset = 0;
-        byte[] magic = ReadField(payload, ref offset, 128);
-        byte[] purpose = ReadField(payload, ref offset, 128);
-        byte[] alias = ReadField(payload, ref offset, 128);
-        byte[] keyStore = ReadField(payload, ref offset, 16 * 1024 * 1024);
-        byte[] password = ReadField(payload, ref offset, 64 * 1024);
-        if (offset != payload.Length || Utf8NoBom.GetString(magic) != "LyoCrystal.AndroidRecoveryPayload.v1")
-            throw new InvalidDataException("Android 恢复载荷格式不受支持");
-        return (Utf8NoBom.GetString(purpose), Utf8NoBom.GetString(alias), keyStore, password);
+        byte[] magic = Array.Empty<byte>();
+        byte[] purpose = Array.Empty<byte>();
+        byte[] alias = Array.Empty<byte>();
+        byte[] keyStore = Array.Empty<byte>();
+        byte[] password = Array.Empty<byte>();
+        try
+        {
+            int offset = 0;
+            magic = ReadField(payload, ref offset, 128);
+            purpose = ReadField(payload, ref offset, 128);
+            alias = ReadField(payload, ref offset, 128);
+            keyStore = ReadField(payload, ref offset, 16 * 1024 * 1024);
+            password = ReadField(payload, ref offset, 64 * 1024);
+            if (offset != payload.Length || Utf8NoBom.GetString(magic) != "LyoCrystal.AndroidRecoveryPayload.v1")
+                throw new InvalidDataException("Android 恢复载荷格式不受支持");
+            return (Utf8NoBom.GetString(purpose), Utf8NoBom.GetString(alias), keyStore, password);
+        }
+        catch
+        {
+            if (keyStore.Length > 0) CryptographicOperations.ZeroMemory(keyStore);
+            if (password.Length > 0) CryptographicOperations.ZeroMemory(password);
+            throw;
+        }
+        finally
+        {
+            if (magic.Length > 0) CryptographicOperations.ZeroMemory(magic);
+            if (purpose.Length > 0) CryptographicOperations.ZeroMemory(purpose);
+            if (alias.Length > 0) CryptographicOperations.ZeroMemory(alias);
+        }
     }
 
     private static void WriteField(byte[] target, ref int offset, byte[] value)

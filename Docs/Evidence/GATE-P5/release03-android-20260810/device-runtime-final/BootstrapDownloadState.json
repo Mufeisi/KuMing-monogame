@@ -1,0 +1,17 @@
+{
+  "GeneratedAtUtc": "2026-08-10T09:19:21.8974338Z",
+  "AutoDownloadEnabled": true,
+  "DownloadReady": true,
+  "UseMicroAuth": false,
+  "RepositoryRoot": "http://127.0.0.1:18443/releases/release02-20260810-r3/resources/",
+  "RepositorySource": "PackageRepo",
+  "ConfigurationHint": "\u5F53\u524D\u901A\u8FC7 [Bootstrap] PackageRepo \u8BBF\u95EE\u9759\u6001 Zip \u5206\u5305\u4ED3\u5E93\u3002",
+  "ActivePackageName": "",
+  "ActiveStage": "",
+  "ActiveBytesReceived": 0,
+  "ActiveTotalBytes": 0,
+  "LastError": "",
+  "PendingPackageCount": 0,
+  "PendingPackagesSample": [],
+  "Packages": []
+}

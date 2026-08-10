@@ -16,11 +16,19 @@
 - ReleaseTransactions 仅保留 deployment.lock，无未完成事务。
 - 事务完成后 Mir2Config.ini 仍保留 IPAddress=127.0.0.1 与 PackageRepo=本轮签名仓库，远端基线未覆盖用户配置。
 
+下载中断与 Range 恢复：
+- 正式客户端正在下载 `core-startup.zip.part` 时移除仓库反向端口并执行 `am force-stop`。
+- `.part` 在中断前为 720896 bytes，停止后仍保留并达到 4915200 bytes；恢复端口并重启后同一路径增长到 43778048 bytes，证明没有从 0 重建。
+- 正式发布网关对 `Range: bytes=5-14` 返回 HTTP 206、`Content-Range: bytes 5-14/40851` 与 `Accept-Ranges: bytes`；专项测试锁定任意起点续传响应。
+- 最终 `core-startup` 与 `fui-retro` 均进入 `release-applied`，签名队列为空、版本摘要一致，运行时 `PackageRepo` 保留。
+- 原始命令、UTC、退出码和 JSON 见 `device-resume-transcript.txt`，不是人工结论替代运行输出。
+
 生命周期：
 - HOME 后前台切到 com.microvirt.launcher2；重新启动后 MainActivity 恢复 Resumed。
 - POWER 键后 mWakefulness=Asleep；解锁后 MainActivity 恢复 Resumed。
 - 1600×900 切换为 1280×720 时 MainActivity 保持 Resumed，随后恢复物理分辨率。
 - 移除 7000/7777/18443 反向端口后应用进程仍存活；恢复端口并重启后 MainActivity 为 Resumed。
 - 正式 AOT+Trim 运行日志完成 FairyGUI 包加载、11 张主界面贴图预热，并记录“握手通过：ClientVersion=OK，已进入登录界面”；无 MobileErrors.log、无 FATAL EXCEPTION。
+- 恢复材料新构建 APK 的 `adb install -r` 返回 Success；覆盖前标记升级后可复读，HOME、锁屏/解锁、1280×720 临时切换后均回到 Resumed，原始输出见 `key-device-raw-transcript.txt`。
 
 开发阶段未伪报：实体手机基带来电、真实蜂窝/Wi-Fi 射频、刘海/圆角和第三方输入法手感由项目所有者后续观察。

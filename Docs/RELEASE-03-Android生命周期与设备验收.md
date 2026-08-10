@@ -36,6 +36,8 @@ try {
 
 灾难恢复机使用相同口令执行 `import-android-recovery`，输出新的 keystore 与绑定恢复机 Windows CurrentUser 的口令 DPAPI 文件。工具拒绝覆盖任何既有目标；用途、alias、格式、认证 tag 任一不匹配即失败。恢复后必须使用输出材料完成一次 `publish-signed-android`，并用 `apksigner verify --verbose --print-certs` 对比原证书 SHA-256；只比较 keystore 文件摘要不算完整演练。
 
+恢复包统一使用 `*.android-recovery.json` 扩展名并由 Git 忽略。恢复工具在最外层 `finally` 清除口令、DPAPI 明文、keystore 副本、恢复载荷和派生密钥；解析或第二输出失败也不得留下输出文件。
+
 ## 仍需项目所有者观察的实体手机体验
 
 - 真实电话呼入/挂断与基带音频焦点；

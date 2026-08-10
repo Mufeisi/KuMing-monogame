@@ -415,9 +415,39 @@ function Start-ReleaseGateway([string]$Root, [string]$Prefix) {
                     if (-not (Test-Path -LiteralPath $filePath -PathType Leaf)) { $context.Response.StatusCode = 404; throw '发布文件不存在。' }
                     $info = Get-Item -LiteralPath $filePath
                     $context.Response.ContentType = 'application/octet-stream'
-                    $context.Response.ContentLength64 = $info.Length
+                    $start = 0L
+                    $end = $info.Length - 1L
+                    $range = [string]$context.Request.Headers['Range']
+                    if (-not [string]::IsNullOrWhiteSpace($range)) {
+                        $match = [Text.RegularExpressions.Regex]::Match($range, '^bytes=(\d+)-(\d*)$')
+                        if (-not $match.Success) { $context.Response.StatusCode = 416; throw 'Range 格式无效。' }
+                        $start = [long]::Parse($match.Groups[1].Value, [Globalization.CultureInfo]::InvariantCulture)
+                        if ($match.Groups[2].Success -and $match.Groups[2].Value.Length -gt 0) {
+                            $end = [long]::Parse($match.Groups[2].Value, [Globalization.CultureInfo]::InvariantCulture)
+                        }
+                        if ($start -ge $info.Length -or $end -lt $start -or $end -ge $info.Length) {
+                            $context.Response.StatusCode = 416
+                            $context.Response.AddHeader('Content-Range', "bytes */$($info.Length)")
+                            throw 'Range 超出发布文件范围。'
+                        }
+                        $context.Response.StatusCode = 206
+                        $context.Response.AddHeader('Accept-Ranges', 'bytes')
+                        $context.Response.AddHeader('Content-Range', "bytes $start-$end/$($info.Length)")
+                    }
+                    $remaining = $end - $start + 1L
+                    $context.Response.ContentLength64 = $remaining
                     $stream = [IO.File]::OpenRead($filePath)
-                    try { $stream.CopyTo($context.Response.OutputStream) } finally { $stream.Dispose(); $context.Response.Close() }
+                    try {
+                        $stream.Position = $start
+                        $buffer = [byte[]]::new(65536)
+                        while ($remaining -gt 0) {
+                            $read = $stream.Read($buffer, 0, [int][Math]::Min($buffer.Length, $remaining))
+                            if ($read -le 0) { throw '发布文件在 Range 传输期间意外结束。' }
+                            $context.Response.OutputStream.Write($buffer, 0, $read)
+                            $remaining -= $read
+                        }
+                    } finally { $stream.Dispose() }
+                    $context.Response.Close()
                     continue
                 }
                 elseif ($context.Request.HttpMethod -eq 'GET' -and $path -eq '/health') {
