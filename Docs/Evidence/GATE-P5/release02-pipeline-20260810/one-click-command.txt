@@ -1,0 +1,7 @@
+RELEASE-02 最终一键发布命令（实际执行，退出码 0）
+
+$env:ANDROID_HOME='C:\Users\luo\AppData\Local\Android\Sdk'
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File Tools\Invoke-Release02.ps1 -Action Prepare -RepositoryRoot 'C:\Users\luo\.codex\worktrees\p5-release02-20260810' -ChannelRoot 'C:\Users\luo\.codex\release-channels\lyocrystal-canary' -ReleaseId 'release02-20260810-r2' -Sequence 3 -MinimumClientVersion '1.0.0'
+
+结果：EXIT=0；Current=release02-20260810-r2；Previous=release02-20260810；RolloutPercent=5。
+公开输出摘要：Base05 360/360；Exported=261/Skipped=0；资源信任表验签通过；APK v2/v3=true、signers=1、RSA=4096。

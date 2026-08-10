@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using Shared.Release;
 
 namespace Client.Bootstrap
 {
@@ -57,6 +58,10 @@ namespace Client.Bootstrap
             {
                 Directory.CreateDirectory(directories[i]);
             }
+
+            TransactionalFileDeployment.RecoverIncomplete(
+                Path.Combine(BundleStagingRoot, "Transactions"),
+                new[] { ClientRoot });
         }
 
         private static string NormalizeRoot(string path)

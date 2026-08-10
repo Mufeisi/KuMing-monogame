@@ -1,0 +1,26 @@
+**********************
+PowerShell transcript start
+Start time: 20260810140033
+Username: DESKTOP-4J13TH0\luo
+RunAs User: DESKTOP-4J13TH0\luo
+Configuration Name:
+Machine: DESKTOP-4J13TH0 (Microsoft Windows NT 10.0.19045.0)
+Host Application: C:\Program Files\PowerShell\7\pwsh.dll -Command try { [Console]::OutputEncoding=[System.Text.Encoding]::UTF8 } catch {}
+$evidence=(Resolve-Path 'Docs\Evidence\GATE-P5\release02-pipeline-20260810').Path; $channel='C:\Users\luo\.codex\release-channels\lyocrystal-canary'; $state=Get-Content (Join-Path $channel 'channel-state.json') -Raw|ConvertFrom-Json; $release=Join-Path (Join-Path $channel 'releases') $state.CurrentReleaseId; Copy-Item -LiteralPath (Join-Path $channel 'channel-state.json') -Destination (Join-Path $evidence 'channel-state.json') -Force; Copy-Item -LiteralPath (Join-Path $release 'release-manifest.json') -Destination (Join-Path $evidence 'release-manifest.json') -Force; Copy-Item -LiteralPath (Join-Path $release 'android-signing-build.log') -Destination (Join-Path $evidence 'android-signing-build.log') -Force; Start-Transcript -LiteralPath (Join-Path $evidence 'apk-signature-proof.txt') -Force | Out-Null; $apk=Get-ChildItem $release -Filter '*-Signed.apk' -File|Select-Object -First 1; $env:JAVA_HOME='C:\Program Files\Android\openjdk\jdk-21.0.8'; & 'C:\Users\luo\AppData\Local\Android\Sdk\build-tools\36.1.0\apksigner.bat' verify --verbose --print-certs $apk.FullName; "APK_VERIFY_EXIT=$LASTEXITCODE"; Stop-Transcript | Out-Null; Start-Transcript -LiteralPath (Join-Path $evidence 'artifact-proof.txt') -Force | Out-Null; $manifest=Get-Content (Join-Path $release 'release-manifest.json') -Raw|ConvertFrom-Json; $bad=0; foreach($file in $manifest.Files){$path=Join-Path $release ($file.Path.Replace('/','\')); if(-not(Test-Path -LiteralPath $path -PathType Leaf)){$bad++;continue}; if((Get-Item $path).Length -ne [long]$file.Size -or (Get-FileHash $path -Algorithm SHA256).Hash.ToLowerInvariant() -ne $file.Sha256){$bad++}}; $signed=Get-Content (Join-Path $release 'resources\Packages\bootstrap-package-index.signed.json') -Raw|ConvertFrom-Json; $packageBad=0; foreach($p in $signed.Packages){$zip=Join-Path $release ('resources\Packages\'+$p.Name+'.zip'); if(-not(Test-Path $zip -PathType Leaf) -or (Get-Item $zip).Length -ne [long]$p.Size -or (Get-FileHash $zip -Algorithm SHA256).Hash.ToLowerInvariant() -ne $p.Sha256){$packageBad++}}; "CURRENT=$($state.CurrentReleaseId)"; "PREVIOUS=$($state.PreviousReleaseId)"; "ROLLOUT_PERCENT=$($state.RolloutPercent)"; "STATUS=$($state.Status)"; "MANIFEST_FILES=$($manifest.Files.Count)"; "MANIFEST_FAILURES=$bad"; "SIGNED_SEQUENCE=$($signed.Sequence)"; "SIGNED_PACKAGES=$($signed.Packages.Count)"; "PACKAGE_FAILURES=$packageBad"; "PARTIAL_DIRECTORIES=$(@(Get-ChildItem (Join-Path $channel 'releases') -Directory -Filter '*.partial-*').Count)"; "RELEASE_BYTES=$((Get-ChildItem $release -File -Recurse|Measure-Object Length -Sum).Sum)"; Stop-Transcript | Out-Null; Get-ChildItem $evidence -File | Select-Object Name,Length
+Process ID: 7940
+PSVersion: 7.4.7
+PSEdition: Core
+GitCommitId: 7.4.7
+OS: Microsoft Windows 10.0.19045
+Platform: Win32NT
+PSCompatibleVersions: 1.0, 2.0, 3.0, 4.0, 5.0, 5.1, 6.0, 7.0
+PSRemotingProtocolVersion: 2.3
+SerializationVersion: 1.1.0.1
+WSManStackVersion: 3.0
+**********************
+
+APK_VERIFY_EXIT=0
+**********************
+PowerShell transcript end
+End time: 20260810140034
+**********************

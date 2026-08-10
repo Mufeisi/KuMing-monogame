@@ -6,6 +6,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.Xna.Framework;
+using Shared.Release;
 
 namespace MonoShare
 {
@@ -160,6 +161,10 @@ namespace MonoShare
             {
                 Directory.CreateDirectory(directories[i]);
             }
+
+            TransactionalFileDeployment.RecoverIncomplete(
+                Path.Combine(RuntimeRoot, "ReleaseTransactions"),
+                new[] { ClientRoot });
         }
 
         public static void EnsureCoreBootstrapAssetsAvailable()

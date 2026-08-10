@@ -17,6 +17,7 @@
   <ItemGroup>
     <Compile Include="..\Shared\Transport\StreamWriteGate.cs" Link="Transport\StreamWriteGate.cs" />
     <Compile Include="..\Shared\Diagnostics\CrashDiagnosticBundle.cs" Link="Diagnostics\CrashDiagnosticBundle.cs" />
+    <Compile Include="..\Shared\Release\TransactionalFileDeployment.cs" Link="Release\TransactionalFileDeployment.cs" />
     <Compile Include="Security\LoginSettingsIntegration.cs" />
     <Compile Include="Diagnostics\MobileCrashDiagnostics.cs" />
   </ItemGroup>

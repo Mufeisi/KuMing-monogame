@@ -1,7 +1,10 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Security.Cryptography;
+using Shared.Release;
 
 namespace Client.Bootstrap
 {
@@ -36,7 +39,7 @@ namespace Client.Bootstrap
                 throw new DirectoryNotFoundException($"未检测到分包根目录：{packRoot}");
 
             string clientRoot = PcBootstrapLayout.ClientRoot;
-            int installed = 0;
+            var entries = new List<TransactionalFileDeploymentEntry>();
 
             foreach (string sourcePath in Directory.GetFiles(packRoot, "*", SearchOption.AllDirectories))
             {
@@ -56,15 +59,35 @@ namespace Client.Bootstrap
                 if (!destPath.StartsWith(clientRoot, StringComparison.OrdinalIgnoreCase))
                     continue;
 
-                string destDir = Path.GetDirectoryName(destPath);
-                if (!string.IsNullOrWhiteSpace(destDir))
-                    Directory.CreateDirectory(destDir);
-
-                File.Copy(sourcePath, destPath, overwrite: true);
-                installed++;
+                entries.Add(new TransactionalFileDeploymentEntry
+                {
+                    SourcePath = sourcePath,
+                    TargetPath = destPath,
+                });
             }
 
-            return installed;
+            if (entries.Count == 0)
+                throw new InvalidDataException("资源包没有可安装文件。");
+
+            TransactionalFileDeploymentResult deployed = TransactionalFileDeployment.Apply(
+                Path.Combine(PcBootstrapLayout.BundleStagingRoot, "Transactions"),
+                new[] { clientRoot },
+                entries,
+                verifyAfterPublish: () => entries.All(entry => FilesMatch(entry.SourcePath, entry.TargetPath)));
+            return deployed.PublishedFileCount;
+        }
+
+        private static bool FilesMatch(string sourcePath, string targetPath)
+        {
+            if (!File.Exists(sourcePath) || !File.Exists(targetPath)) return false;
+            if (new FileInfo(sourcePath).Length != new FileInfo(targetPath).Length) return false;
+            using SHA256 sourceHash = SHA256.Create();
+            using SHA256 targetHash = SHA256.Create();
+            using FileStream source = File.OpenRead(sourcePath);
+            using FileStream target = File.OpenRead(targetPath);
+            return CryptographicOperations.FixedTimeEquals(
+                sourceHash.ComputeHash(source),
+                targetHash.ComputeHash(target));
         }
 
         private static void SafeExtractZip(string zipPath, string destinationDirectory)
