@@ -4234,8 +4234,8 @@
          正在删除文件“obj\Release\net10.0-android\android-arm64\android\bin\classes.zip”。
          C:\Program Files\Android\openjdk\jdk-21.0.8\bin\javac.exe -J-Dfile.encoding=UTF8 "@C:\Users\luo\AppData\Local\Temp\tmpr2y0pw.tmp" -target 1.8 -source 1.8 -Xlint:-options
          obj\Release\net10.0-android\android-arm64\android\src\crc64338477404e88479c\GenericAnimatorListener.java:39: 警告: [removal] Object 中的 finalize() 已过时, 且标记为待删除
-         	public void finalize ()
-         	            ^
+	public void finalize ()
+	            ^
          注: 某些输入文件使用或覆盖了已过时的 API。
          注: 有关详细信息, 请使用 -Xlint:deprecation 重新编译。
          注: 某些输入文件使用了未经检查或不安全的操作。
