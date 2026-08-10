@@ -545,7 +545,7 @@
 已成功生成。
 
        “C:\Users\luo\.codex\worktrees\p5-ops-basic-04-license-audit-20260810\Server.MirForms\Server.csproj”(默认目标) (1) ->
-       (CoreCompile 目标) -> 
+       (CoreCompile 目标) ->
          C:\Users\luo\.codex\worktrees\p5-ops-basic-04-license-audit-20260810\Server.MirForms\Account\PlayerInfoForm.cs(10,35): warning CS8625: 无法将 null 字面量转换为非 null 的引用类型。 [C:\Users\luo\.codex\worktrees\p5-ops-basic-04-license-audit-20260810\Server.MirForms\Server.csproj]
          C:\Users\luo\.codex\worktrees\p5-ops-basic-04-license-audit-20260810\Server.MirForms\Database\ItemInfoFormNew.cs(38,50): warning CS8622: “void ItemInfoFormNew.CellValueChanged(object sender, DataGridViewCellEventArgs e)”的参数“sender”类型中引用类型的为 Null 性与目标委托“DataGridViewCellEventHandler”不匹配(可能是由于为 Null 性特性)。 [C:\Users\luo\.codex\worktrees\p5-ops-basic-04-license-audit-20260810\Server.MirForms\Server.csproj]
          C:\Users\luo\.codex\worktrees\p5-ops-basic-04-license-audit-20260810\Server.MirForms\Database\ItemInfoFormNew.cs(39,48): warning CS8622: “void ItemInfoFormNew.itemInfoGridView_CellValidating(object sender, DataGridViewCellValidatingEventArgs e)”的参数“sender”类型中引用类型的为 Null 性与目标委托“DataGridViewCellValidatingEventHandler”不匹配(可能是由于为 Null 性特性)。 [C:\Users\luo\.codex\worktrees\p5-ops-basic-04-license-audit-20260810\Server.MirForms\Server.csproj]
