@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Net.Http;
 using System.Text;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -33,12 +34,14 @@ namespace Launcher.Remote
     {
         public RemoteLaunchManifest Manifest { get; }
         public LaunchManifestSource Source { get; }
+        public string ListUrl { get; }
         public string Warning { get; }
 
-        public LaunchManifestLoadResult(RemoteLaunchManifest manifest, LaunchManifestSource source, string warning)
+        public LaunchManifestLoadResult(RemoteLaunchManifest manifest, LaunchManifestSource source, string listUrl, string warning)
         {
             Manifest = manifest;
             Source = source;
+            ListUrl = listUrl ?? string.Empty;
             Warning = warning ?? string.Empty;
         }
     }
@@ -89,14 +92,14 @@ namespace Launcher.Remote
                 string cacheWarning = string.Empty;
                 try
                 {
-                    await WriteAtomicAsync(_cachePath, json, cancellationToken).ConfigureAwait(false);
+                    await WriteAtomicAsync(_cachePath, CreateCacheDocument(uri, json), cancellationToken).ConfigureAwait(false);
                 }
                 catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
                 {
                     cacheWarning = $"远程区服列表有效，但缓存写入失败：{ex.GetType().Name}";
                 }
 
-                return new LaunchManifestLoadResult(manifest, LaunchManifestSource.Remote, cacheWarning);
+                return new LaunchManifestLoadResult(manifest, LaunchManifestSource.Remote, uri.AbsoluteUri, cacheWarning);
             }
             catch (Exception ex) when (ex is HttpRequestException
                                        or TaskCanceledException
@@ -110,9 +113,9 @@ namespace Launcher.Remote
 
             try
             {
-                string cachedJson = await File.ReadAllTextAsync(_cachePath, Utf8NoBomStrict, cancellationToken).ConfigureAwait(false);
-                RemoteLaunchManifest cached = RemoteLaunchManifest.ParseAndValidate(cachedJson);
-                return new LaunchManifestLoadResult(cached, LaunchManifestSource.Cache,
+                string cacheDocument = await File.ReadAllTextAsync(_cachePath, Utf8NoBomStrict, cancellationToken).ConfigureAwait(false);
+                (RemoteLaunchManifest cached, string cachedListUrl) = ParseCacheDocument(cacheDocument);
+                return new LaunchManifestLoadResult(cached, LaunchManifestSource.Cache, cachedListUrl,
                     string.IsNullOrEmpty(remoteFailure) ? "已使用上次区服列表" : remoteFailure + "；已使用上次区服列表");
             }
             catch (Exception ex) when (ex is IOException
@@ -126,7 +129,49 @@ namespace Launcher.Remote
                     : remoteFailure + "；" + cacheFailure + "；已使用本地配置";
                 RemoteLaunchManifest localFallback = localFallbackFactory()
                     ?? throw new InvalidOperationException("本地保底配置为空");
-                return new LaunchManifestLoadResult(localFallback, LaunchManifestSource.Local, warning);
+                return new LaunchManifestLoadResult(localFallback, LaunchManifestSource.Local, string.Empty, warning);
+            }
+        }
+
+        private static string CreateCacheDocument(Uri listUri, string manifestJson)
+        {
+            using JsonDocument manifest = JsonDocument.Parse(manifestJson);
+            return JsonSerializer.Serialize(new
+            {
+                cacheVersion = 1,
+                listUrl = listUri.AbsoluteUri,
+                manifest = manifest.RootElement,
+            });
+        }
+
+        private static (RemoteLaunchManifest Manifest, string ListUrl) ParseCacheDocument(string content)
+        {
+            try
+            {
+                using JsonDocument document = JsonDocument.Parse(content);
+                JsonElement root = document.RootElement;
+                if (root.ValueKind == JsonValueKind.Object && root.TryGetProperty("cacheVersion", out _))
+                {
+                    if (root.GetProperty("cacheVersion").GetInt32() != 1)
+                        throw new InvalidLaunchManifestException("区服列表缓存版本不受支持");
+
+                    string listUrl = root.GetProperty("listUrl").GetString() ?? string.Empty;
+                    Uri listUri = ValidateListUri(listUrl);
+                    JsonElement manifestElement = root.GetProperty("manifest");
+                    RemoteLaunchManifest manifest = RemoteLaunchManifest.ParseAndValidate(manifestElement.GetRawText());
+                    return (manifest, listUri.AbsoluteUri);
+                }
+
+                // 兼容旧版原始清单缓存，但来源未知，因此不会取得远程补丁授权。
+                return (RemoteLaunchManifest.ParseAndValidate(content), string.Empty);
+            }
+            catch (InvalidLaunchManifestException)
+            {
+                throw;
+            }
+            catch (Exception ex) when (ex is JsonException or KeyNotFoundException or InvalidOperationException or ArgumentException)
+            {
+                throw new InvalidLaunchManifestException("区服列表缓存格式无效", ex);
             }
         }
 

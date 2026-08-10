@@ -41,6 +41,7 @@ namespace Launcher
         private LauncherStateStore _launcherStateStore;
         private GameInstanceManager _gameInstanceManager;
         private LaunchManifestSource _serverListSource;
+        private string _serverListOriginUrl;
         private string _configuredPatchHost;
         private string _configuredPatchFileName;
         private readonly CancellationTokenSource _lifetimeCancellation = new();
@@ -489,7 +490,7 @@ namespace Launcher
 
             string effectivePatchUrl = RemotePatchPolicy.ResolvePatchUrl(
                 _serverListSource,
-                Settings.P_ServerListUrl,
+                _serverListOriginUrl,
                 _launchManifest.PatchUrl);
             if (!string.IsNullOrEmpty(_launchManifest.PatchUrl) && string.IsNullOrEmpty(effectivePatchUrl))
             {
@@ -530,6 +531,7 @@ namespace Launcher
                 cancellationToken);
             _launchManifest = result.Manifest;
             _serverListSource = result.Source;
+            _serverListOriginUrl = result.ListUrl;
             _gameInstanceManager = new GameInstanceManager(_launchManifest.MaxInstances, Settings.UseTestConfig);
             _gameInstanceManager.ActiveCountChanged += GameInstanceManager_ActiveCountChanged;
 

@@ -73,8 +73,14 @@ public sealed class LauncherRemoteListTests
 
             Assert.Equal(LaunchManifestSource.Remote, result.Source);
             Assert.Equal("远程一区", Assert.Single(result.Manifest.Servers).Name);
-            string cache = await File.ReadAllTextAsync(Path.Combine(root, "RemoteLaunchManifest.json"));
-            Assert.Equal("远程一区", Assert.Single(RemoteLaunchManifest.ParseAndValidate(cache).Servers).Name);
+            Assert.Equal("http://list.example.com/launcher.txt", result.ListUrl);
+
+            using var failedHttpClient = new HttpClient(new FailingResponseHandler());
+            var cachedLoader = new RemoteLaunchManifestLoader(failedHttpClient, root, TimeSpan.FromSeconds(1));
+            LaunchManifestLoadResult cachedResult = await cachedLoader.LoadAsync("http://list.example.com/launcher.txt", fallback);
+            Assert.Equal(LaunchManifestSource.Cache, cachedResult.Source);
+            Assert.Equal("远程一区", Assert.Single(cachedResult.Manifest.Servers).Name);
+            Assert.Equal("http://list.example.com/launcher.txt", cachedResult.ListUrl);
         }
         finally
         {
@@ -249,6 +255,35 @@ public sealed class LauncherRemoteListTests
         string expected)
     {
         Assert.Equal(expected, RemotePatchPolicy.ResolvePatchUrl(source, listUrl, patchUrl));
+    }
+
+    [Fact]
+    public async Task HTTP来源缓存不能被后来配置的HTTPS地址授予补丁权限()
+    {
+        string root = CreateTemporaryRoot();
+        try
+        {
+            const string remoteJson = """
+                {"version":1,"maxInstances":1,"patchUrl":"https://evil.example.com/patch/","servers":[{"name":"一区","serverAddress":"127.0.0.1","serverPort":7000,"microEnabled":false,"microAddress":"","microPort":0}]}
+                """;
+            using (var httpClient = new HttpClient(new StaticResponseHandler(remoteJson)))
+            {
+                var loader = new RemoteLaunchManifestLoader(httpClient, root, TimeSpan.FromSeconds(1));
+                await loader.LoadAsync("http://list.example.com/launcher.txt", CreateFallback());
+            }
+
+            using var failedHttpClient = new HttpClient(new FailingResponseHandler());
+            var cachedLoader = new RemoteLaunchManifestLoader(failedHttpClient, root, TimeSpan.FromSeconds(1));
+            LaunchManifestLoadResult cached = await cachedLoader.LoadAsync("https://list.example.com/launcher.txt", CreateFallback());
+
+            Assert.Equal(LaunchManifestSource.Cache, cached.Source);
+            Assert.Equal("http://list.example.com/launcher.txt", cached.ListUrl);
+            Assert.Equal(string.Empty, RemotePatchPolicy.ResolvePatchUrl(cached.Source, cached.ListUrl, cached.Manifest.PatchUrl));
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
     }
 
     [Fact]
