@@ -55,6 +55,24 @@ jobs:
           dotnet restore Tools/ReleaseSigningTool/ReleaseSigningTool.csproj --verbosity minimal
           dotnet restore Client_MonoGame.Android/Client_MonoGame.Android.csproj --verbosity minimal
 
+      - name: Validate and normalize release inputs without secrets
+        shell: pwsh
+        env:
+          INPUT_SEQUENCE: ${{ inputs.sequence }}
+          INPUT_MINIMUM_CLIENT_VERSION: ${{ inputs.minimum_client_version }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          [long]$sequence = 0
+          if (-not [long]::TryParse($env:INPUT_SEQUENCE, [Globalization.NumberStyles]::None, [Globalization.CultureInfo]::InvariantCulture, [ref]$sequence) -or $sequence -le 0) {
+            throw '资源索引序列必须是正整数。'
+          }
+          [Version]$minimumVersion = $null
+          if (-not [Version]::TryParse($env:INPUT_MINIMUM_CLIENT_VERSION, [ref]$minimumVersion)) {
+            throw '最低客户端版本无效。'
+          }
+          "RELEASE_SEQUENCE=$($sequence.ToString([Globalization.CultureInfo]::InvariantCulture))" >> $env:GITHUB_ENV
+          "RELEASE_MINIMUM_CLIENT_VERSION=$($minimumVersion.ToString())" >> $env:GITHUB_ENV
+
       - name: Reject missing or reused secret material
         shell: pwsh
         env:
@@ -112,8 +130,8 @@ jobs:
           Client_MonoGame.Shared/BootstrapAssets/bootstrap-package-index.json
           ${{ runner.temp }}/bootstrap-package-index.signed.json
           resource-2026-a
-          ${{ inputs.sequence }}
-          ${{ inputs.minimum_client_version }}
+          $env:RELEASE_SEQUENCE
+          $env:RELEASE_MINIMUM_CLIENT_VERSION
           -
 
       - name: Sign resource index with next key
@@ -128,8 +146,8 @@ jobs:
           Client_MonoGame.Shared/BootstrapAssets/bootstrap-package-index.json
           ${{ runner.temp }}/bootstrap-package-index.signed.json
           resource-2026-b
-          ${{ inputs.sequence }}
-          ${{ inputs.minimum_client_version }}
+          $env:RELEASE_SEQUENCE
+          $env:RELEASE_MINIMUM_CLIENT_VERSION
           -
 
       - name: Verify resource index against compiled trust table
@@ -139,7 +157,7 @@ jobs:
           --configuration Release --no-restore --
           verify-resource-index
           ${{ runner.temp }}/bootstrap-package-index.signed.json
-          ${{ inputs.minimum_client_version }}
+          $env:RELEASE_MINIMUM_CLIENT_VERSION
 
       - name: Publish independently signed Android APK
         shell: pwsh

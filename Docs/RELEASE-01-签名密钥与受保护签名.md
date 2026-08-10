@@ -36,11 +36,17 @@ dotnet run --project Tools/ReleaseSigningTool/ReleaseSigningTool.csproj -c Relea
 
 ## 本地 APK 签名
 
-把一次性口令放入当前进程环境变量，再立即保护并清空该变量：
+把一次性口令放入当前 PowerShell 环境变量；工具读取后会清除子进程副本，调用脚本必须在 `finally` 中清除父 PowerShell 副本：
 
 ```powershell
 $env:LYOCRYSTAL_APK_PASSWORD = '<一次性输入>'
-dotnet run --project Tools/ReleaseSigningTool/ReleaseSigningTool.csproj -c Release -- protect-environment-secret android-apk-2026 LYOCRYSTAL_APK_PASSWORD Configs/ReleaseSecrets/lyocrystal-android-2026-r2-password.dpapi
+try {
+    dotnet run --project Tools/ReleaseSigningTool/ReleaseSigningTool.csproj -c Release -- protect-environment-secret android-apk-2026 LYOCRYSTAL_APK_PASSWORD Configs/ReleaseSecrets/lyocrystal-android-2026-r2-password.dpapi
+    if ($LASTEXITCODE -ne 0) { throw "保护 APK 口令失败，退出码 $LASTEXITCODE" }
+}
+finally {
+    Remove-Item Env:LYOCRYSTAL_APK_PASSWORD -ErrorAction SilentlyContinue
+}
 ```
 
 签名构建由工具在子进程环境中传递口令，命令行和构建日志不出现口令：

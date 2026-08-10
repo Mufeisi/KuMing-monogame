@@ -79,6 +79,10 @@ public sealed class ProductionReleaseSigningTests
         Assert.Contains("LYOCRYSTAL_RESOURCE_KEY_B_PKCS8_BASE64", workflow, StringComparison.Ordinal);
         Assert.Contains("IsNullOrWhiteSpace($env:APK_KEYSTORE_BASE64)", workflow, StringComparison.Ordinal);
         Assert.Contains("production-signing 环境缺少 APK 或资源签名秘密", workflow, StringComparison.Ordinal);
+        Assert.Contains("Validate and normalize release inputs without secrets", workflow, StringComparison.Ordinal);
+        Assert.Contains("[Version]::TryParse($env:INPUT_MINIMUM_CLIENT_VERSION", workflow, StringComparison.Ordinal);
+        Assert.Contains("$env:RELEASE_SEQUENCE", workflow, StringComparison.Ordinal);
+        Assert.Contains("$env:RELEASE_MINIMUM_CLIENT_VERSION", workflow, StringComparison.Ordinal);
         Assert.Contains("FixedTimeEquals($apkHash, $aHash)", workflow, StringComparison.Ordinal);
         Assert.Contains("AndroidSigningStorePass=env:LYOCRYSTAL_APK_STORE_PASSWORD", workflow, StringComparison.Ordinal);
         Assert.Contains("Remove temporary signing material", workflow, StringComparison.Ordinal);
