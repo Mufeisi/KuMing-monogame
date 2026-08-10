@@ -40,6 +40,7 @@ namespace Launcher
         private RemoteLaunchManifest _launchManifest;
         private LauncherStateStore _launcherStateStore;
         private GameInstanceManager _gameInstanceManager;
+        private LaunchManifestSource _serverListSource;
         private string _configuredPatchHost;
         private string _configuredPatchFileName;
         private readonly CancellationTokenSource _lifetimeCancellation = new();
@@ -486,7 +487,17 @@ namespace Launcher
                 return;
             }
 
-            if (string.IsNullOrEmpty(_launchManifest.PatchUrl))
+            string effectivePatchUrl = RemotePatchPolicy.ResolvePatchUrl(
+                _serverListSource,
+                Settings.P_ServerListUrl,
+                _launchManifest.PatchUrl);
+            if (!string.IsNullOrEmpty(_launchManifest.PatchUrl) && string.IsNullOrEmpty(effectivePatchUrl))
+            {
+                SaveError("远程补丁已停用：区服清单和补丁地址必须同时使用 HTTPS。HTTP 区服列表仍可正常使用。");
+                _serverStatusLabel.Text += " · 未启用远程补丁";
+            }
+
+            if (string.IsNullOrEmpty(effectivePatchUrl))
             {
                 Completed = true;
             }
@@ -494,7 +505,7 @@ namespace Launcher
             {
                 _configuredPatchHost = Settings.P_Host;
                 _configuredPatchFileName = Settings.P_PatchFileName;
-                Settings.P_Host = _launchManifest.PatchUrl;
+                Settings.P_Host = effectivePatchUrl;
                 Settings.P_PatchFileName = "PList.gz";
                 _workThread = new Thread(Start) { IsBackground = true };
                 _workThread.Start();
@@ -518,6 +529,7 @@ namespace Launcher
                     Settings.MicroBaseUrl),
                 cancellationToken);
             _launchManifest = result.Manifest;
+            _serverListSource = result.Source;
             _gameInstanceManager = new GameInstanceManager(_launchManifest.MaxInstances, Settings.UseTestConfig);
             _gameInstanceManager.ActiveCountChanged += GameInstanceManager_ActiveCountChanged;
 

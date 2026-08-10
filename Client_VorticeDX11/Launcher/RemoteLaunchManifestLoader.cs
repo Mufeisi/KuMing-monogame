@@ -14,6 +14,21 @@ namespace Launcher.Remote
         Local,
     }
 
+    public static class RemotePatchPolicy
+    {
+        public static string ResolvePatchUrl(LaunchManifestSource source, string serverListUrl, string manifestPatchUrl)
+        {
+            if (string.IsNullOrEmpty(manifestPatchUrl)) return string.Empty;
+            if (source == LaunchManifestSource.Local) return manifestPatchUrl;
+
+            bool trustedList = Uri.TryCreate(serverListUrl, UriKind.Absolute, out Uri listUri)
+                               && listUri.Scheme == Uri.UriSchemeHttps;
+            bool trustedPatch = Uri.TryCreate(manifestPatchUrl, UriKind.Absolute, out Uri patchUri)
+                                && patchUri.Scheme == Uri.UriSchemeHttps;
+            return trustedList && trustedPatch ? manifestPatchUrl : string.Empty;
+        }
+    }
+
     public sealed class LaunchManifestLoadResult
     {
         public RemoteLaunchManifest Manifest { get; }

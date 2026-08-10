@@ -236,6 +236,21 @@ public sealed class LauncherRemoteListTests
         }
     }
 
+    [Theory]
+    [InlineData(LaunchManifestSource.Remote, "http://list.example.com/list.txt", "https://patch.example.com/", "")]
+    [InlineData(LaunchManifestSource.Remote, "https://list.example.com/list.txt", "http://patch.example.com/", "")]
+    [InlineData(LaunchManifestSource.Remote, "https://list.example.com/list.txt", "https://patch.example.com/", "https://patch.example.com/")]
+    [InlineData(LaunchManifestSource.Cache, "https://list.example.com/list.txt", "https://patch.example.com/", "https://patch.example.com/")]
+    [InlineData(LaunchManifestSource.Local, "", "http://127.0.0.1/patch/", "http://127.0.0.1/patch/")]
+    public void 远程补丁只有在清单和补丁地址均为HTTPS时启用(
+        LaunchManifestSource source,
+        string listUrl,
+        string patchUrl,
+        string expected)
+    {
+        Assert.Equal(expected, RemotePatchPolicy.ResolvePatchUrl(source, listUrl, patchUrl));
+    }
+
     [Fact]
     public async Task 启动器状态独立保存并恢复上次区服名()
     {
