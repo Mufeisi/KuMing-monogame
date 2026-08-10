@@ -3,7 +3,7 @@
   宸ュ叿鈥渄otnet-mgcb-editor-linux鈥?鐗堟湰鈥?.8.1.303鈥?宸茶繕鍘熴€傚彲鐢ㄧ殑鍛戒护: mgcb-editor-linux
   宸ュ叿鈥渄otnet-mgcb-editor-windows鈥?鐗堟湰鈥?.8.1.303鈥?宸茶繕鍘熴€傚彲鐢ㄧ殑鍛戒护: mgcb-editor-windows
   宸ュ叿鈥渄otnet-mgcb-editor-mac鈥?鐗堟湰鈥?.8.1.303鈥?宸茶繕鍘熴€傚彲鐢ㄧ殑鍛戒护: mgcb-editor-mac
-  
+
   杩樺師鎴愬姛銆?
   Skipping C:/Users/luo/.codex/worktrees/p5-release03-20260810/Client_MonoGame.Android/Content/FairyGUI.fx
 C:\Users\luo\.codex\worktrees\p5-release03-20260810\Client_MonoGame.Shared\UI\FairyGui\Runtime\Core\Image.cs(37,7): warning CS1570: XML 注释出现 XML 格式错误 --“在此位置不应为结束标记。” [C:\Users\luo\.codex\worktrees\p5-release03-20260810\Client_MonoGame.Shared\Client_MonoGame.Shared.csproj::TargetFramework=net10.0-android]
