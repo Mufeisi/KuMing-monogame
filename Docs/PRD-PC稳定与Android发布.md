@@ -116,7 +116,7 @@ GATE-P0 ──► GATE-P1 ──► GATE-P2 ──► GATE-P3 ──► GATE-P4 
 | GATE-P2 | **已完成**：SEC-01～SEC-06 全部完成；签名私钥与发布流水线按边界留在 RELEASE-01/02 | 按门禁顺序进入 GATE-P3 |
 | GATE-P3 | **已完成**：DB-01～06 全部完成；备份、恢复、RPO/RTO、配置门禁和真实强停故障注入均有证据 | 进入 GATE-P4，以 PERF-00 基线驱动性能任务 |
 | GATE-P4 | **已完成**：PERF-03 深模块与回归完成；300 连接/100 登录协议会话模拟压测通过，PERF-01/02 未发现需猜测性改动的阻断热点；PERF-04 真机渲染基线留后续实测 | 无 |
-| GATE-P5 | **进行中**：OPS-BASIC-01～04 已完成 | 完成 PROTO-02/03、RELEASE-01～03 |
+| GATE-P5 | **进行中**：OPS-BASIC-01～04、PROTO-02/03 已完成 | 完成 RELEASE-01～03 |
 
 > SEC-01/02 是 GATE-P1 关闭前已经产生的超前成果，保留代码和证据，但不将其解读为门禁顺序已改变。从本版开始，先关闭 GATE-P1，再合并新的 P2 功能成果。
 
@@ -280,8 +280,8 @@ GATE-P1 关闭后，P2 的 SEC-03、SEC-04、SEC-05、SEC-06 各为独立任务�
 | OPS-BASIC-02 | **已完成**：崩溃诊断基础；PC/Android/服务端崩溃收集最后一段日志 + 版本 + 资源版本 + 脱敏配置摘要 | GATE-P4/BASE-04 | 崩溃现场可离线定位 |
 | OPS-BASIC-03 | **已完成**：Kill Switch；可远程关闭商城/更新/活动/高风险功能 | GATE-P4/RELEASE-02 | 开关生效 + 审计 |
 | OPS-BASIC-04 | **已完成**：依赖漏洞扫描 + SBOM + 许可证审计；外部素材/字体/FairyGUI/音频/地图授权清单 | GATE-P4 | 清单文档化 + 扫描通过 |
-| PROTO-02 | 协议统一：按 wire manifest 逐步切换消费者（PC/移动/Server），**不做大爆炸替换**；manifest 由工具从 C# 自动生成并纳入 CI 漂移审计 | PROTO-01 | 三端同一协议源；兼容矩阵绿；manifest 自动生成无漂移 |
-| PROTO-03 | 兼容矩阵：服务端/客户端/协议/资源版本兼容矩阵 + 最低兼容版本 | PROTO-02 | 矩阵文档化 |
+| PROTO-02 | **已完成**：Android 正式构建改为直接链接 `Shared` 协议事实源，PC/Server 继续引用同一项目；自动生成 wire manifest 并纳入 CI 漂移审计 | PROTO-01 | 三端同一协议源；兼容矩阵绿；manifest 自动生成无漂移 |
+| PROTO-03 | **已完成**：服务端/客户端/协议/资源版本兼容矩阵及最低兼容规则已文档化 | PROTO-02 | 矩阵文档化 |
 | RELEASE-01 | 签名实现 + 密钥管理：APK 签名密钥与资源清单签名密钥**分开**；清单签名覆盖所有资源包哈希；Key ID/轮换/防降级；CI 从受保护密钥存储短暂获取 | SEC-06/OPS-BASIC-04 | 签名校验通过（T-07 通过）；密钥不出安全存储 |
 | RELEASE-02 | 发布流水线：构建 + 冒烟 + 导出 + 签名 + 灰度/回滚一条命令；事务化更新（下载→验证→切换→失败恢复，保留上一可运行版本）；**发布后错误率/崩溃率/回滚触发条件** | RELEASE-01/OPS-BASIC-01/02/03 | 一键发布 |
 | RELEASE-03 | **Android 生命周期与设备验收**：真机 arm64 Debug/Release/AOT+Trim/Trim-only 四态；安装/覆盖升级/失败回滚；首次资源下载/断点续传/磁盘不足；登录→创建角色→移动→战斗→拾取→背包→装备→技能→NPC→任务→交易→邮件→公会；前后台切换/锁屏恢复/电话中断；Wi-Fi/移动网络切换；软键盘/安全区域/多分辨率；最低 API 24/推荐/内存档位；AOT/Trim 后反射裁剪验证；APK 签名密钥备份与灾难恢复 | RELEASE-02/OPS-BASIC-01..04 | 验收清单全绿 |
@@ -294,7 +294,9 @@ GATE-P1 关闭后，P2 的 SEC-03、SEC-04、SEC-05、SEC-06 各为独立任务�
 
 **OPS-BASIC-03 收口记录（2026-08-10）**：正式服务端新增原子持久化的四项总闸，Administrator 可经 SEC-04 管理 HTTP 修改商城、服务端微端资源更新、活动和高风险账户操作，Operator 可只读查询；每次请求保留 `ADMIN_AUDIT`，成功变更把完整连续审计与状态一次原子提交，另以可靠 `Warn` 写入不含原因原文的 `OPS_KILL_SWITCH` 检索副本，日志副本失败不会伪报开关失败。状态和审计先写入、刷新并原子替换，成功后才发布不可变快照；损坏、缺字段、未知版本、审计代次不连续、审计重放与四闸状态不一致或不可读状态在监听和 Ready 前失败关闭。商城列表与两条购买路径、微端资源文件路径、攻城/魔龙主线程进度以及开户/改密/删角入口均读取同一快照；正在进行的攻城只在主线程停止，不从管理线程跨界修改游戏状态。服务端外部签名仓库的事务化发布仍属于 RELEASE-02，细粒度开关仍属于发布后 OPS-03。专项、全量及构建证据见 `Docs/Evidence/GATE-P5/ops-basic-03-kill-switch-20260810/`；运维说明见 `Docs/OPS-BASIC-03-Kill-Switch.md`。PROTO-02/03、RELEASE-01～03 仍未完成，GATE-P5 保持开启。
 
-**OPS-BASIC-04 收口记录（2026-08-10）**：使用 Microsoft SBOM Tool 4.1.5 为服务端、PC 和 Android 六个真实 Release 工件生成 SPDX 2.2 发布侧车，记录 218 个包、6 个文件及 988 条依赖关系；另将 218 包纯依赖 SPDX、外部资源清单、许可证/NOTICE/EULA 正文及全部 217 个第三方生产包的实际版权/作者归属随 PC、服务端、Android APK 与 iOS 发布。依赖 SPDX 不含文件校验码、自引用或悬空引用，并由专项测试验证关系闭合。许可证自动识别 204/221 个唯一组件，12 个 `NOASSERTION` 项按包名和版本由专项测试锁定。初扫发现的 `log4net 3.0.3` 中危和 `SQLitePCLRaw.lib.e_sqlite3 2.1.11` 高危已分别升级到 3.3.2 和 2.1.12，Windows、Android、iOS 直接/传递依赖复扫原始 JSON 均为退出码 0、无漏洞包。`D:\ChuanQi\Crystal_monogame` 的素材、字体、FairyGUI、音频、地图和微端资源已按项目所有者的明确授权确认分类记录，不把 11GB 外部资源复制进 Git；资源签名继续复用 SEC-06。证据见 `Docs/Evidence/GATE-P5/ops-basic-04-license-audit-20260810/`；执行边界见 `Docs/OPS-BASIC-04-授权与依赖审计.md`。PERF-01/02 模拟并发已于后续回补完成；PROTO-02/03、RELEASE-01～03 仍未完成，GATE-P5 保持开启。
+**OPS-BASIC-04 收口记录（2026-08-10）**：使用 Microsoft SBOM Tool 4.1.5 为服务端、PC 和 Android 六个真实 Release 工件生成 SPDX 2.2 发布侧车，记录 218 个包、6 个文件及 988 条依赖关系；另将 218 包纯依赖 SPDX、外部资源清单、许可证/NOTICE/EULA 正文及全部 217 个第三方生产包的实际版权/作者归属随 PC、服务端、Android APK 与 iOS 发布。依赖 SPDX 不含文件校验码、自引用或悬空引用，并由专项测试验证关系闭合。许可证自动识别 204/221 个唯一组件，12 个 `NOASSERTION` 项按包名和版本由专项测试锁定。初扫发现的 `log4net 3.0.3` 中危和 `SQLitePCLRaw.lib.e_sqlite3 2.1.11` 高危已分别升级到 3.3.2 和 2.1.12，Windows、Android、iOS 直接/传递依赖复扫原始 JSON 均为退出码 0、无漏洞包。`D:\ChuanQi\Crystal_monogame` 的素材、字体、FairyGUI、音频、地图和微端资源已按项目所有者的明确授权确认分类记录，不把 11GB 外部资源复制进 Git；资源签名继续复用 SEC-06。证据见 `Docs/Evidence/GATE-P5/ops-basic-04-license-audit-20260810/`；执行边界见 `Docs/OPS-BASIC-04-授权与依赖审计.md`。PERF-01/02 模拟并发与 PROTO-02/03 已于后续回补完成；RELEASE-01～03 仍未完成，GATE-P5 保持开启。
+
+**PROTO-02/03 收口记录（2026-08-10）**：Android 正式构建已从编译 `Share/**/*.cs` 协议副本切换为直接链接 `Shared` 的 17 个协议源文件；PC 与 Server 继续通过项目引用消费同一 `Shared`。历史 `Share` 副本不删除、不修改，只保留给 `ShareProtocolCompat` 作为 PROTO-01 兼容差异夹具。新增受限的 `ProtocolManifestGenerator` 从实际 `Shared.dll` 和 C# 源生成包方向、ID、字段、枚举、读写 IL 与源文件摘要，CI 每次执行 `--verify`，漂移即失败；当前覆盖 145 个客户端包、275 个服务端包和 64 个公开枚举。兼容矩阵固化 `wire-v1`、PC 资源兼容版本 `1.0.0`、Android `2.0.0`、SEC-06 签名清单最低版本门禁及服务端构建哈希白名单边界。专项 13/13、Base05 347/347、Android/PC/Server Release 构建均 0 错误；证据见 `Docs/Evidence/GATE-P5/proto02-03-unification-20260810/`。RELEASE-01～03 仍未完成，GATE-P5 保持开启。
 
 ### P6 脚本化赛季活动（4~6 周，发布后路线图）
 

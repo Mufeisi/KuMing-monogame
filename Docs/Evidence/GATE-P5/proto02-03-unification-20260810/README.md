@@ -11,10 +11,17 @@
 
 阶段末归档以下原始输出：
 
-- `proto02-03-targeted.trx`：生成清单、三端协议源接线与 PROTO-01 golden 专项。
-- `proto02-03-base05-full.trx`：Base05 全量回归。
+- `proto02-03-targeted.trx`：生成清单、三端协议源接线与 PROTO-01 golden 专项，13/13 通过。
+- `proto02-03-base05-full.trx`：Base05 全量回归，347/347 通过。
 - `protocol-manifest-verify.log`：Release 配置重新生成事实并执行无漂移校验。
 - `android-shared-build.log`、`pc-build.log`、`server-library-build.log`：三端正式消费者构建结果。
 - `commands-and-exit-codes.txt`：精确命令和退出码。
 
-当前状态：验证进行中，完成后更新实际计数与构建结论。
+## 构建结果
+
+- Android Shared `net10.0-android` Release：2867 个既有警告，0 个错误。
+- PC `Client_VorticeDX11` Release：38 个既有警告，0 个错误。
+- Server.Library Release：8 个既有警告，0 个错误。
+- `git diff --check 3bd9403..HEAD`：通过。
+
+这些验证使用模拟/构建接缝，不把真机体验纳入 PROTO-02/03；真机验收仍按用户后续实测安排进入 RELEASE-03。
