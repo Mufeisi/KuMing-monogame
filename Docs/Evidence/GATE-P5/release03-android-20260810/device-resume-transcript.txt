@@ -1,0 +1,142 @@
+**********************
+PowerShell transcript start
+Start time: 20260810173208
+Username: DESKTOP-4J13TH0\luo
+RunAs User: DESKTOP-4J13TH0\luo
+Configuration Name:
+Machine: DESKTOP-4J13TH0 (Microsoft Windows NT 10.0.19045.0)
+Host Application: C:\Program Files\PowerShell\7\pwsh.dll -Command try { [Console]::OutputEncoding=[System.Text.Encoding]::UTF8 } catch {}
+& 'C:\Users\luo\AppData\Local\Temp\release03-device-resume.ps1'
+Process ID: 12368
+PSVersion: 7.4.7
+PSEdition: Core
+GitCommitId: 7.4.7
+OS: Microsoft Windows 10.0.19045
+Platform: Win32NT
+PSCompatibleVersions: 1.0, 2.0, 3.0, 4.0, 5.0, 5.1, 6.0, 7.0
+PSRemotingProtocolVersion: 2.3
+SerializationVersion: 1.1.0.1
+WSManStackVersion: 3.0
+**********************
+START_UTC=2026-08-10T09:32:08.8803325Z
+COMMAND: adb devices -l
+
+EXIT=0
+COMMAND: adb shell getprop ro.product.model
+
+EXIT=0
+COMMAND: adb shell getprop ro.build.version.sdk
+
+EXIT=0
+COMMAND: adb shell getprop ro.product.cpu.abilist
+
+EXIT=0
+COMMAND: adb shell am force-stop com.lommir.client.monogame.android
+
+EXIT=0
+COMMAND: adb shell pm clear com.lommir.client.monogame.android
+
+EXIT=0
+COMMAND: adb reverse tcp:7000 tcp:7000
+
+EXIT=0
+COMMAND: adb reverse tcp:7777 tcp:7777
+
+EXIT=0
+COMMAND: adb reverse tcp:18443 tcp:18444
+
+EXIT=0
+COMMAND: adb shell am start -W -n com.lommir.client.monogame.android/crc648e1c27e8d74093fe.MainActivity
+
+EXIT=0
+COMMAND: adb shell sed -i 's|^PackageRepo=.*|PackageRepo=http://127.0.0.1:18443/releases/release02-20260810-r3/resources/|' '/data/user/0/com.lommir.client.monogame.android/files/Cache/Mobile/Runtime/Mir2Config.ini'
+
+EXIT=0
+COMMAND: adb shell chown 10052:10052 '/data/user/0/com.lommir.client.monogame.android/files/Cache/Mobile/Runtime/Mir2Config.ini'
+
+EXIT=0
+COMMAND: adb shell am force-stop com.lommir.client.monogame.android
+
+EXIT=0
+COMMAND: adb shell am start -W -n com.lommir.client.monogame.android/crc648e1c27e8d74093fe.MainActivity
+
+EXIT=0
+PART_BEFORE_INTERRUPT_PATH=/data/user/0/com.lommir.client.monogame.android/files/Cache/Mobile/Downloads/Packages/core-startup.zip.part
+PART_BEFORE_INTERRUPT_BYTES=1638400
+COMMAND: adb reverse --remove tcp:18443
+
+EXIT=0
+COMMAND: adb shell am force-stop com.lommir.client.monogame.android
+
+EXIT=0
+PART_WHILE_STOPPED_BYTES=7995392
+COMMAND: adb reverse tcp:18443 tcp:18444
+
+EXIT=0
+COMMAND: adb shell am start -W -n com.lommir.client.monogame.android/crc648e1c27e8d74093fe.MainActivity
+
+EXIT=0
+PART_AFTER_RESTART_BYTES=36896768
+**********************
+PowerShell transcript start
+Start time: 20260810173437
+Username: DESKTOP-4J13TH0\luo
+RunAs User: DESKTOP-4J13TH0\luo
+Configuration Name:
+Machine: DESKTOP-4J13TH0 (Microsoft Windows NT 10.0.19045.0)
+Host Application: C:\Program Files\PowerShell\7\pwsh.dll -Command try { [Console]::OutputEncoding=[System.Text.Encoding]::UTF8 } catch {}
+& 'C:\Users\luo\AppData\Local\Temp\release03-device-finalize.ps1'; Get-Item Docs/Evidence/GATE-P5/release03-android-20260810/device-resume-transcript.txt | Select-Object Length
+Process ID: 22284
+PSVersion: 7.4.7
+PSEdition: Core
+GitCommitId: 7.4.7
+OS: Microsoft Windows 10.0.19045
+Platform: Win32NT
+PSCompatibleVersions: 1.0, 2.0, 3.0, 4.0, 5.0, 5.1, 6.0, 7.0
+PSRemotingProtocolVersion: 2.3
+SerializationVersion: 1.1.0.1
+WSManStackVersion: 3.0
+**********************
+CONTINUE_UTC=2026-08-10T09:34:37.9010249Z
+COMMAND: curl.exe -H Range:bytes=5-14 <signed-index>
+
+EXIT=0
+COMMAND: adb reverse tcp:7000 tcp:7000
+
+EXIT=0
+COMMAND: adb reverse tcp:7777 tcp:7777
+
+EXIT=0
+COMMAND: adb reverse tcp:18443 tcp:18444
+
+EXIT=0
+COMMAND: adb shell am start -W -n com.lommir.client.monogame.android/crc648e1c27e8d74093fe.MainActivity
+
+EXIT=0
+COMMAND: adb shell cat '/data/user/0/com.lommir.client.monogame.android/files/Cache/Mobile/Runtime/BootstrapDownloadState.json'
+
+EXIT=0
+COMMAND: adb shell cat '/data/user/0/com.lommir.client.monogame.android/files/Cache/Mobile/Runtime/BootstrapPackageUpdateQueue.json'
+
+EXIT=0
+COMMAND: adb shell cat '/data/user/0/com.lommir.client.monogame.android/files/Cache/Mobile/Runtime/BootstrapPackageVersions.json'
+
+EXIT=0
+COMMAND: adb shell find '/data/user/0/com.lommir.client.monogame.android/files/Cache/Mobile/BundleInbox/Processed' -mindepth 1 -maxdepth 1 -type d -print | sort
+
+EXIT=0
+COMMAND: adb shell grep '^PackageRepo=' '/data/user/0/com.lommir.client.monogame.android/files/Cache/Mobile/Runtime/Mir2Config.ini'
+
+EXIT=0
+COMMAND: adb shell grep -E '握手通过|FATAL|Unhandled' '/data/user/0/com.lommir.client.monogame.android/files/Cache/Mobile/Runtime/MobileRuntime.log' '/data/user/0/com.lommir.client.monogame.android/files/Cache/Mobile/Runtime/MobileErrors.log' 2>/dev/null || true
+
+EXIT=0
+COMMAND: adb shell dumpsys activity activities | grep mResumedActivity | head -n 1
+
+EXIT=0
+END_UTC=2026-08-10T09:34:39.9948010Z
+RESULT=PASS
+**********************
+PowerShell transcript end
+End time: 20260810173439
+**********************

@@ -421,9 +421,15 @@ function Start-ReleaseGateway([string]$Root, [string]$Prefix) {
                     if (-not [string]::IsNullOrWhiteSpace($range)) {
                         $match = [Text.RegularExpressions.Regex]::Match($range, '^bytes=(\d+)-(\d*)$')
                         if (-not $match.Success) { $context.Response.StatusCode = 416; throw 'Range 格式无效。' }
-                        $start = [long]::Parse($match.Groups[1].Value, [Globalization.CultureInfo]::InvariantCulture)
+                        if (-not [long]::TryParse($match.Groups[1].Value, [Globalization.NumberStyles]::None, [Globalization.CultureInfo]::InvariantCulture, [ref]$start)) {
+                            $context.Response.StatusCode = 416
+                            throw 'Range 起点超出支持范围。'
+                        }
                         if ($match.Groups[2].Success -and $match.Groups[2].Value.Length -gt 0) {
-                            $end = [long]::Parse($match.Groups[2].Value, [Globalization.CultureInfo]::InvariantCulture)
+                            if (-not [long]::TryParse($match.Groups[2].Value, [Globalization.NumberStyles]::None, [Globalization.CultureInfo]::InvariantCulture, [ref]$end)) {
+                                $context.Response.StatusCode = 416
+                                throw 'Range 终点超出支持范围。'
+                            }
                         }
                         if ($start -ge $info.Length -or $end -lt $start -or $end -ge $info.Length) {
                             $context.Response.StatusCode = 416

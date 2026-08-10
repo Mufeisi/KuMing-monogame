@@ -18,7 +18,7 @@
 
 下载中断与 Range 恢复：
 - 正式客户端正在下载 `core-startup.zip.part` 时移除仓库反向端口并执行 `am force-stop`。
-- `.part` 在中断前为 720896 bytes，停止后仍保留并达到 4915200 bytes；恢复端口并重启后同一路径增长到 43778048 bytes，证明没有从 0 重建。
+- `.part` 在中断前为 1638400 bytes，停止后仍保留并达到 7995392 bytes；恢复端口并重启后同一路径增长到 36896768 bytes，证明没有从 0 重建。
 - 正式发布网关对 `Range: bytes=5-14` 返回 HTTP 206、`Content-Range: bytes 5-14/40851` 与 `Accept-Ranges: bytes`；专项测试锁定任意起点续传响应。
 - 最终 `core-startup` 与 `fui-retro` 均进入 `release-applied`，签名队列为空、版本摘要一致，运行时 `PackageRepo` 保留。
 - 原始命令、UTC、退出码和 JSON 见 `device-resume-transcript.txt`，不是人工结论替代运行输出。

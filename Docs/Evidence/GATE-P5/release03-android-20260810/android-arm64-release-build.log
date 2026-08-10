@@ -2887,3 +2887,5 @@ C:\Users\luo\.codex\worktrees\p5-release03-20260810\Client_MonoGame.Android\Main
 C:\Users\luo\.codex\worktrees\p5-release03-20260810\Client_MonoGame.Android\MainActivity.cs(63,98): warning CS8604: “bool LoginSettingsIntegration.RunTlsHostProbe(string host = null, int tlsPort = 0, string serverName = null)”中的形参“serverName”可能传入 null 引用实参。 [C:\Users\luo\.codex\worktrees\p5-release03-20260810\Client_MonoGame.Android\Client_MonoGame.Android.csproj]
   Client_MonoGame.Android -> C:\Users\luo\.codex\worktrees\p5-release03-20260810\Client_MonoGame.Android\bin\Release\net10.0-android\android-arm64\Client_MonoGame.Android.dll
   Client_MonoGame.Shared -> C:\Users\luo\.codex\worktrees\p5-release03-20260810\Client_MonoGame.Shared\bin\Release\net10.0-android\android-arm64\Client_MonoGame.Shared.dll
+COMMAND=dotnet publish Client_MonoGame.Android/Client_MonoGame.Android.csproj -f net10.0-android -c Release -r android-arm64 --no-restore -p:MobileBootstrapAssetMode=Micro -p:AndroidPackageFormat=apk -p:ArchiveOnBuild=false -p:RunAOTCompilation=false -p:PublishTrimmed=false
+EXIT=0

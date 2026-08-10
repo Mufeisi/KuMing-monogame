@@ -212,6 +212,19 @@ public sealed class Release02PipelineTests
                 Assert.Equal("bytes 5-14/15", rangeResponse.Content.Headers.ContentRange?.ToString());
                 Assert.Equal("ned\":true}", await rangeResponse.Content.ReadAsStringAsync());
             }
+            using (var overflowRangeRequest = new HttpRequestMessage(HttpMethod.Get, prefix.TrimEnd('/') + resourcePath + "Packages/bootstrap-package-index.signed.json"))
+            {
+                overflowRangeRequest.Headers.TryAddWithoutValidation("Range", "bytes=999999999999999999999999999999-");
+                using HttpResponseMessage overflowRangeResponse = await http.SendAsync(overflowRangeRequest);
+                Assert.Equal(HttpStatusCode.BadRequest, overflowRangeResponse.StatusCode);
+            }
+            using (var outsideRangeRequest = new HttpRequestMessage(HttpMethod.Get, prefix.TrimEnd('/') + resourcePath + "Packages/bootstrap-package-index.signed.json"))
+            {
+                outsideRangeRequest.Headers.Range = new System.Net.Http.Headers.RangeHeaderValue(15, null);
+                using HttpResponseMessage outsideRangeResponse = await http.SendAsync(outsideRangeRequest);
+                Assert.Equal(HttpStatusCode.RequestedRangeNotSatisfiable, outsideRangeResponse.StatusCode);
+                Assert.Equal("bytes */15", outsideRangeResponse.Content.Headers.ContentRange?.ToString());
+            }
 
             using (var unauthorizedContent = EventContent("release-new", canaryId, "FatalCrash", "unauthorized"))
             using (HttpResponseMessage unauthorized = await http.PostAsync(prefix + "release/events", unauthorizedContent))

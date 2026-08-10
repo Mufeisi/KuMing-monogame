@@ -1,17 +1,17 @@
 {
-  "GeneratedAtUtc": "2026-08-10T09:19:02.1422257Z",
+  "GeneratedAtUtc": "2026-08-10T09:32:50.5983366Z",
   "Packages": [
     {
       "Name": "core-startup",
       "Sha256": "f1321e74a53bd4cde040c399403ba09025432a3e1905e48e63a2b3f8bac77a46",
-      "Source": "download",
-      "InstalledAtUtc": "2026-08-10T09:19:02.1421745Z"
+      "Source": "signed-release",
+      "InstalledAtUtc": "2026-08-10T09:32:50.5983366Z"
     },
     {
       "Name": "fui-retro",
       "Sha256": "1b090df55e5f1b05a98093baaba6347a557691e2fc612f5cf195903139ea5f4b",
       "Source": "signed-release",
-      "InstalledAtUtc": "2026-08-10T09:09:58.9201737Z"
+      "InstalledAtUtc": "2026-08-10T09:32:50.5983366Z"
     }
   ]
 }

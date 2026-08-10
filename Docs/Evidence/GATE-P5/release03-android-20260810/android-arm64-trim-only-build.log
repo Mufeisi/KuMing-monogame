@@ -2889,3 +2889,5 @@ C:\Users\luo\.codex\worktrees\p5-release03-20260810\Client_MonoGame.Android\Main
   Client_MonoGame.Shared -> C:\Users\luo\.codex\worktrees\p5-release03-20260810\Client_MonoGame.Shared\bin\Release\net10.0-android\android-arm64\Client_MonoGame.Shared.dll
   优化程序集以调整大小可能会更改应用的行为。请务必在发布后进行测试。请参阅: https://aka.ms/dotnet-illink
   正在优化程序集以调整大小。此过程可能需要一段时间。
+COMMAND=dotnet publish Client_MonoGame.Android/Client_MonoGame.Android.csproj -f net10.0-android -c Release -r android-arm64 --no-restore -p:MobileBootstrapAssetMode=Micro -p:AndroidPackageFormat=apk -p:ArchiveOnBuild=false -p:RunAOTCompilation=false -p:PublishTrimmed=true
+EXIT=0

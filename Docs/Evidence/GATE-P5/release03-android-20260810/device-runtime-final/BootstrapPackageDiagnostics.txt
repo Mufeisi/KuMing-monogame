@@ -1,5 +1,5 @@
 Bootstrap 分包运行时诊断
-生成时间(UTC)：2026-08-10T09:19:05.2967673Z
+生成时间(UTC)：2026-08-10T09:39:19.6859279Z
 客户端根目录：/data/user/0/com.lommir.client.monogame.android/files
 运行时目录：/data/user/0/com.lommir.client.monogame.android/files/Cache/Mobile/Runtime
 声明包数：261，状态包数：261
