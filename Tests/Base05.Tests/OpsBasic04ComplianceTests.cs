@@ -44,18 +44,44 @@ public sealed class OpsBasic04ComplianceTests
     {
         string baseDirectory = AppContext.BaseDirectory;
         using JsonDocument dependencySbom = JsonDocument.Parse(File.ReadAllText(Path.Combine(baseDirectory, "dependencies.spdx.json")));
-        Assert.Empty(dependencySbom.RootElement.GetProperty("files").EnumerateArray());
-        Assert.True(dependencySbom.RootElement.GetProperty("packages").GetArrayLength() >= 218);
+        JsonElement dependencyRoot = dependencySbom.RootElement;
+        Assert.Empty(dependencyRoot.GetProperty("files").EnumerateArray());
+        Assert.True(dependencyRoot.GetProperty("packages").GetArrayLength() >= 218);
+
+        JsonElement rootPackage = dependencyRoot.GetProperty("packages").EnumerateArray()
+            .Single(package => package.GetProperty("SPDXID").GetString() == "SPDXRef-RootPackage");
+        Assert.False(rootPackage.GetProperty("filesAnalyzed").GetBoolean());
+        Assert.False(rootPackage.TryGetProperty("packageVerificationCode", out _));
+        Assert.False(rootPackage.TryGetProperty("hasFiles", out _));
+
+        HashSet<string> declaredIds = dependencyRoot.GetProperty("packages").EnumerateArray()
+            .Select(package => package.GetProperty("SPDXID").GetString()!)
+            .Append("SPDXRef-DOCUMENT")
+            .ToHashSet(StringComparer.Ordinal);
+        foreach (JsonElement relationship in dependencyRoot.GetProperty("relationships").EnumerateArray())
+        {
+            Assert.Contains(relationship.GetProperty("spdxElementId").GetString()!, declaredIds);
+            Assert.Contains(relationship.GetProperty("relatedSpdxElement").GetString()!, declaredIds);
+        }
 
         string licenseDirectory = Path.Combine(baseDirectory, "Compliance", "Licenses");
         string[] requiredFiles =
         {
             "MIT.txt", "Apache-2.0.txt", "BSD-2-Clause.txt", "Zlib.txt", "MS-PL.txt", "EPL-2.0.txt", "MPL-2.0.txt",
             "Microsoft-Windows-SDK-License.txt", "Microsoft-WebView2-LICENSE.txt", "Microsoft-WebView2-NOTICE.txt",
-            "Microsoft-NET-Library-EULA.txt", "NAudio-MIT.txt"
+            "Microsoft-NET-Library-EULA.txt", "NAudio-MIT.txt", "RoslynPad-MIT.txt", "PACKAGE-ATTRIBUTIONS.md"
         };
 
         Assert.All(requiredFiles, file => Assert.True(File.Exists(Path.Combine(licenseDirectory, file)), $"缺少许可证文件：{file}"));
+
+        string attributions = File.ReadAllText(Path.Combine(licenseDirectory, "PACKAGE-ATTRIBUTIONS.md"));
+        using JsonDocument releaseSbom = JsonDocument.Parse(File.ReadAllText(Path.Combine(baseDirectory, "manifest.spdx.json")));
+        foreach (JsonElement package in releaseSbom.RootElement.GetProperty("packages").EnumerateArray()
+                     .Where(package => package.GetProperty("name").GetString() != "LyoCrystal"))
+        {
+            string expectedRow = $"| {package.GetProperty("name").GetString()} | {package.GetProperty("versionInfo").GetString()} |";
+            Assert.Contains(expectedRow, attributions, StringComparison.Ordinal);
+        }
     }
 
     [Fact]

@@ -17,7 +17,7 @@
 | Microsoft.AspNet.WebApi.Client | 6.0.0 | NuGet 包内 `.NET Library EULA` |
 | NAudio | 2.2.1 | NuGet 包内 `license.txt`，MIT |
 
-上述包的精确 PURL、版本与依赖关系以随包依赖 SPDX 为准；最终发布文件哈希以发布侧车 SPDX 为准。许可证、NOTICE 或 EULA 正文均收录在随包 `Compliance/Licenses`，发布时不得删除。
+上述包的精确 PURL、版本与依赖关系以随包依赖 SPDX 为准；最终发布文件哈希以发布侧车 SPDX 为准。许可证、NOTICE 或 EULA 正文及全部第三方包的实际版权/作者归属均收录在随包 `Compliance/Licenses`，发布时不得删除。
 
 ## FairyGUI MonoGame
 

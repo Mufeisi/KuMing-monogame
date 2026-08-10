@@ -3911,14 +3911,8 @@
       "name": "LyoCrystal",
       "SPDXID": "SPDXRef-RootPackage",
       "downloadLocation": "NOASSERTION",
-      "packageVerificationCode": {
-        "packageVerificationCodeValue": "b3a08fcfda0fd428abe1b2de638d01edfab33d38"
-      },
-      "filesAnalyzed": true,
+      "filesAnalyzed": false,
       "licenseConcluded": "NOASSERTION",
-      "licenseInfoFromFiles": [
-        "NOASSERTION"
-      ],
       "licenseDeclared": "NOASSERTION",
       "copyrightText": "NOASSERTION",
       "versionInfo": "2026.08.10",
@@ -3929,15 +3923,7 @@
           "referenceLocator": "pkg:swid/Organization%3A%20LyoCrystal/lyocrystal.local/LyoCrystal@2026.08.10?tag_id=9cab899d-18ad-4249-a114-fb907e82aa4d"
         }
       ],
-      "supplier": "Organization: Organization: LyoCrystal",
-      "hasFiles": [
-        "SPDXRef-File--Server.exe-D7C2F656641A7F5B377F3C7A366A4346AD4D2DA2",
-        "SPDXRef-File--com.lommir.client.monogame.android-Signed.apk-AD60782AA2C0C55EEF71C7E6D304FF02B049A856",
-        "SPDXRef-File--Server.Library.dll-9872C2CE7EE458ACFA89E26A0F715080D7199176",
-        "SPDXRef-File--Client.dll-5040C6957BE585215219199ACBDB19C253007DEC",
-        "SPDXRef-File--Server.dll-D77EDC5D524A76C83A880319C8F57BFEDB6E9C9D",
-        "SPDXRef-File--Client.exe-C31222DE1D9BC98C6108F68CC8CC9BA86068BCEE"
-      ]
+      "supplier": "Organization: Organization: LyoCrystal"
     }
   ],
   "externalDocumentRefs": [],

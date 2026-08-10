@@ -19,4 +19,5 @@ BuildComponentPath：仓库工作树
 
 随包依赖清单：Docs/Compliance/SBOM/dependencies.spdx.json
 - 从同一份生产依赖图派生：218 个包、0 个二进制文件、988 条关系
+- 根包为 `filesAnalyzed=false`，不含文件校验码、`hasFiles` 或悬空文件引用
 - 发布侧车保留 6 个最终工件 SHA-256；依赖清单进入四端发布物，不包含自身或 APK 文件哈希

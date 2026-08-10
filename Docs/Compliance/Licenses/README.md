@@ -7,5 +7,7 @@
 - `Microsoft-WebView2-LICENSE.txt`、`Microsoft-WebView2-NOTICE.txt`：WebView2 包内许可证与通知。
 - `Microsoft-NET-Library-EULA.txt`：Microsoft.AspNet.WebApi.Client 包内 .NET Library EULA。
 - `NAudio-MIT.txt`：NAudio 包内 MIT 许可证。
+- `RoslynPad-MIT.txt`：RoslynPad 固定提交的上游 MIT 原文与版权声明。
+- `PACKAGE-ATTRIBUTIONS.md`：全部 217 个第三方生产包的包名、版本、声明许可证及 NuGet 发布元数据中的实际版权或作者归属。
 
 FairyGUI 的 MIT 声明及 HarmonyOS Sans SC Medium 的项目授权依据直接列在发布根目录的 `THIRD-PARTY-NOTICES.md`。

@@ -17,7 +17,7 @@
 
 在线许可证补充识别 204/221 个唯一组件许可证；SPDX 内 12 个 `NOASSERTION` 项由 `THIRD-PARTY-NOTICES.md` 按包名和版本逐项复核，不允许依赖升级后沿用旧结论。
 
-`THIRD-PARTY-NOTICES.md`、依赖 SPDX、外部资源清单和 `Docs/Compliance/Licenses` 下的标准许可证及包内 NOTICE/EULA，由 PC、Android、iOS 与服务端项目一起复制或打包进发布物。以后新增、删除或升级依赖时，必须重新生成两份 SBOM、重跑漏洞扫描并更新人工复核表。
+`THIRD-PARTY-NOTICES.md`、依赖 SPDX、外部资源清单和 `Docs/Compliance/Licenses` 下的标准许可证、包内 NOTICE/EULA 与 217 包实际归属表，由 PC、Android、iOS 与服务端项目一起复制或打包进发布物。依赖 SPDX 的根包明确为 `filesAnalyzed=false`，不保留发布侧车的文件校验码或文件引用；专项测试校验所有 SPDX 关系引用都能在文档内解析。以后新增、删除或升级依赖时，必须重新生成两份 SBOM、重跑漏洞扫描并更新人工复核表与归属表。
 
 ## 外部资源授权
 

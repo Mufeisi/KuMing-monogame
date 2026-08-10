@@ -1,4 +1,4 @@
-生成启动时间为 2026/8/10 10:42:02。
+生成启动时间为 2026/8/10 10:59:00。
 日志记录详细程度设置为: Normal。     1>节点 1 上的项目“C:\Users\luo\.codex\worktrees\p5-ops-basic-04-license-audit-20260810\Server\Server.Library.csproj”(默认目标)。
      1>项目“C:\Users\luo\.codex\worktrees\p5-ops-basic-04-license-audit-20260810\Server\Server.Library.csproj”(1)正在节点 1 上生成“C:\Users\luo\.codex\worktrees\p5-ops-basic-04-license-audit-20260810\Shared\Shared.csproj”(2:2) (默认目标)。
      2>GenerateTargetFrameworkMonikerAttribute:
@@ -32,4 +32,4 @@
     0 个警告
     0 个错误
 
-已用时间 00:00:01.23
+已用时间 00:00:01.08
