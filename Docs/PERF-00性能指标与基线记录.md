@@ -84,7 +84,7 @@ dotnet build Client_MonoGame.Shared/Client_MonoGame.Shared.csproj -f net10.0-and
 
 ## 模拟并发阶段证据（2026-08-10）
 
-`SimulatedProtocolLoadTests` 启动正式 `Envir.Main` TLS-only 监听，使用临时自签根信任、临时 SQLite 和 100 个自动生成的 Argon2id 账号；300 个客户端均执行正式 `ClientVersion`/Packet 帧，100 个会话完成登录，全部持续心跳，并在主动断开一个会话后自动补足到 300。30 秒稳定窗口结果为：峰值连接 300、登录成功 101 次（含一次补连）、心跳响应 23458 次、建连重试 0、协议失败 0、补连 1、心跳 p95 580.18ms、GC pause p95 19.66ms、网络队列高水位 300。原始 TRX 与复现命令见 `Docs/Evidence/GATE-P4/perf01-02-simulated-load-20260810/`。
+`SimulatedProtocolLoadTests` 在独立测试子进程中启动正式 `Envir.Main` TLS-only 监听，使用临时自签根信任、临时 SQLite 和 100 个自动生成的 Argon2id 账号；300 个客户端均执行正式 `ClientVersion`/Packet 帧，100 个会话完成登录，逐槽验证持续心跳，并在主动断开一个会话后自动补足到 300。30 秒稳定窗口结束前再次确认 300 总连接和 100 登录连接在线；结果为：峰值连接 300、登录成功 101 次（含一次补连）、心跳响应 23197 次、建连重试 0、协议失败 0、补连 1、心跳 p95 297.16ms、GC pause p95 39.32ms、网络队列高水位 300。原始 TRX 与复现命令见 `Docs/Evidence/GATE-P4/perf01-02-simulated-load-20260810/`。
 
 ## 真实性与关闭条件
 

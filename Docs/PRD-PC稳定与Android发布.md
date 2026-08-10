@@ -270,7 +270,7 @@ GATE-P1 关闭后，P2 的 SEC-03、SEC-04、SEC-05、SEC-06 各为独立任务�
 
 **PERF-03/GATE-P4 收口记录（2026-08-10）**：`HumanObject.RefreshStats` 原有普通套装、圣龙戒指、神龙部位与天龙组合规则已迁入纯进程内 `EquipmentSetBonusModule`；模块以 `ApplyItemSetBonuses`、`ApplyMirSetBonuses` 两个接口隐藏 263 行实现，巨型类移除原 267 行规则，不使用 `partial` 或假适配器。回归覆盖破碎、强青玉、圣龙左右戒、神龙局部/完整、天龙四层累积及原有提前结束语义；专项 6/6、Base05 全量 322/322、Server.Library 与 Server.MirForms Release 均 0 错误，证据见 `Docs/Evidence/GATE-P4/perf03-deep-module-20260810/`。
 
-**PERF-01/02 模拟并发回补记录（2026-08-10）**：新增测试项目内的协议模拟客户端，复用正式 `Envir.Main`、TLS/`SslStream`、Packet、登录与 PERF-00 接缝；每次运行创建临时 SQLite 和 100 个 Argon2id 测试账号，不接生产数据库。阶段运行维持 300 个同时在线连接，其中 100 个完成登录并发送心跳；主动断开后补足目标连接数。30 秒窗口记录峰值 300、登录成功 101 次、心跳响应 23458、补连 1、建连重试 0、协议失败 0、心跳 p95 580.18ms、GC pause p95 19.66ms。未观察到需要猜测性 ArrayPool、协议或渲染改造的阻断热点，PERF-01/02 按测量结果关闭；PERF-04 的真实渲染与设备体验留用户后续实机验证。证据见 `Docs/Evidence/GATE-P4/perf01-02-simulated-load-20260810/`。
+**PERF-01/02 模拟并发回补记录（2026-08-10）**：新增测试项目内的协议模拟客户端，以独立测试子进程复用正式 `Envir.Main`、TLS/`SslStream`、Packet、登录与 PERF-00 接缝，避免静态状态污染全量测试；每次运行创建临时 SQLite 和 100 个 Argon2id 测试账号，不接生产数据库。阶段运行维持 300 个同时在线连接，其中 100 个完成登录并逐槽持续心跳；主动断开后补足目标连接数，稳定窗结束前再次确认 300/100 在线。30 秒窗口记录峰值 300、登录成功 101 次、心跳响应 23197、补连 1、建连重试 0、协议失败 0、心跳 p95 297.16ms、GC pause p95 39.32ms。未观察到需要猜测性 ArrayPool、协议或渲染改造的阻断热点，PERF-01/02 按测量结果关闭；PERF-04 的真实渲染与设备体验留用户后续实机验证。证据见 `Docs/Evidence/GATE-P4/perf01-02-simulated-load-20260810/`。
 
 ### P5 协议 canonicalization + 签名发布流水线 + 发布前能力（4~6 周）
 

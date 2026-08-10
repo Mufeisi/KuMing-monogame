@@ -1,2 +1,35 @@
-  Shared -> C:\Users\luo\.codex\worktrees\p4-simulated-load-20260810\Shared\bin\Release\Shared.dll
-  Server.Library -> C:\Users\luo\.codex\worktrees\p4-simulated-load-20260810\Server\bin\Release\Server.Library.dll
+生成启动时间为 2026/8/10 11:52:59。
+日志记录详细程度设置为: Normal。     1>节点 1 上的项目“C:\Users\luo\.codex\worktrees\p4-simulated-load-20260810\Server\Server.Library.csproj”(默认目标)。
+     1>项目“C:\Users\luo\.codex\worktrees\p4-simulated-load-20260810\Server\Server.Library.csproj”(1)正在节点 1 上生成“C:\Users\luo\.codex\worktrees\p4-simulated-load-20260810\Shared\Shared.csproj”(2:2) (默认目标)。
+     2>GenerateTargetFrameworkMonikerAttribute:
+       正在跳过目标“GenerateTargetFrameworkMonikerAttribute”，因为所有输出文件相对于输入文件而言都是最新的。
+       CoreGenerateAssemblyInfo:
+       正在跳过目标“CoreGenerateAssemblyInfo”，因为所有输出文件相对于输入文件而言都是最新的。
+       _GenerateSourceLinkFile:
+         Source Link 文件 "obj\Release\Shared.sourcelink.json" 是最新的。
+       CoreCompile:
+       正在跳过目标“CoreCompile”，因为所有输出文件相对于输入文件而言都是最新的。
+       GenerateBuildDependencyFile:
+       正在跳过目标“GenerateBuildDependencyFile”，因为所有输出文件相对于输入文件而言都是最新的。
+       CopyFilesToOutputDirectory:
+         Shared -> C:\Users\luo\.codex\worktrees\p4-simulated-load-20260810\Shared\bin\Release\Shared.dll
+     2>已完成生成项目“C:\Users\luo\.codex\worktrees\p4-simulated-load-20260810\Shared\Shared.csproj”(默认目标)的操作。
+     1>GenerateTargetFrameworkMonikerAttribute:
+       正在跳过目标“GenerateTargetFrameworkMonikerAttribute”，因为所有输出文件相对于输入文件而言都是最新的。
+       CoreGenerateAssemblyInfo:
+       正在跳过目标“CoreGenerateAssemblyInfo”，因为所有输出文件相对于输入文件而言都是最新的。
+       _GenerateSourceLinkFile:
+         Source Link 文件 "obj\Release\Server.Library.sourcelink.json" 是最新的。
+       CoreCompile:
+       正在跳过目标“CoreCompile”，因为所有输出文件相对于输入文件而言都是最新的。
+       GenerateBuildDependencyFile:
+       正在跳过目标“GenerateBuildDependencyFile”，因为所有输出文件相对于输入文件而言都是最新的。
+       CopyFilesToOutputDirectory:
+         Server.Library -> C:\Users\luo\.codex\worktrees\p4-simulated-load-20260810\Server\bin\Release\Server.Library.dll
+     1>已完成生成项目“C:\Users\luo\.codex\worktrees\p4-simulated-load-20260810\Server\Server.Library.csproj”(默认目标)的操作。
+
+已成功生成。
+    0 个警告
+    0 个错误
+
+已用时间 00:00:00.90

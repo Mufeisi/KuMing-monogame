@@ -6,4 +6,3 @@
 - 基线：`8c207c9`
 - 状态：待审核
 - 文件所有权：`Tests/Base05.Tests/SimulatedProtocolLoadTests.cs`、本证据目录、PERF-00 与 PRD 对应状态段
-

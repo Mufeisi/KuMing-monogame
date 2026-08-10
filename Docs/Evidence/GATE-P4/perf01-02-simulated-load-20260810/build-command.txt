@@ -1,0 +1,4 @@
+命令：dotnet build Server\Server.Library.csproj -c Release --no-restore -flp:"logfile=Docs\Evidence\GATE-P4\perf01-02-simulated-load-20260810\server-library-build.log;verbosity=normal"
+工作目录：C:\Users\luo\.codex\worktrees\p4-simulated-load-20260810
+退出码：0
+结果：已成功生成；0 个警告；0 个错误。

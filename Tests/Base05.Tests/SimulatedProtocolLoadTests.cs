@@ -21,6 +21,8 @@ namespace Base05.Tests;
 [Collection("TLS环境")]
 public sealed class SimulatedProtocolLoadTests
 {
+    private const string ChildModeVariable = "LYOCRYSTAL_SIM_LOAD_CHILD";
+    private const string ChildResultVariable = "LYOCRYSTAL_SIM_LOAD_RESULT";
     private const string Password = "LoadPass1234";
     private readonly ITestOutputHelper _output;
 
@@ -29,6 +31,23 @@ public sealed class SimulatedProtocolLoadTests
     [Fact]
     [Trait("Category", "Load")]
     public async Task 模拟客户端维持连接并完成登录心跳与掉线补连()
+    {
+        if (string.Equals(Environment.GetEnvironmentVariable(ChildModeVariable), "1", StringComparison.Ordinal))
+        {
+            string resultPath = Environment.GetEnvironmentVariable(ChildResultVariable)
+                ?? throw new InvalidOperationException("模拟压测子进程缺少结果路径。");
+            string evidence = await RunScenarioAsync();
+            string partialPath = resultPath + ".partial";
+            File.WriteAllText(partialPath, evidence);
+            File.Move(partialPath, resultPath);
+            return;
+        }
+
+        string isolatedEvidence = await RunInIsolatedProcessAsync();
+        _output.WriteLine(isolatedEvidence);
+    }
+
+    private static async Task<string> RunScenarioAsync()
     {
         int connections = ReadBoundedSetting("LYOCRYSTAL_LOAD_CONNECTIONS", 12, 1, 500);
         int active = ReadBoundedSetting("LYOCRYSTAL_LOAD_ACTIVE", 4, 1, connections);
@@ -55,8 +74,16 @@ public sealed class SimulatedProtocolLoadTests
         load.Drop(0);
         await load.WaitForReplenishmentAsync(TimeSpan.FromSeconds(15));
         Assert.Equal(connections, load.CurrentConnections);
+        Assert.True(load.SuccessfulLogins >= active + 1, "主动断开的登录会话没有完成重新登录。");
 
+        int[] activeHeartbeatBaseline = load.CaptureActiveHeartbeatCounts();
         await Task.Delay(TimeSpan.FromSeconds(durationSeconds));
+        load.AssertActiveHeartbeatProgress(
+            activeHeartbeatBaseline,
+            minimumNewReplies: Math.Max(1, durationSeconds / 2),
+            maximumSilence: TimeSpan.FromSeconds(5));
+        Assert.Equal(connections, load.CurrentConnections);
+        Assert.Equal(active, load.CurrentActiveConnections);
         PerformanceSnapshot snapshot = PerformanceMetrics.StopSession();
         SimulatedLoadResult result = await load.StopAsync(snapshot, scope.Environment.NetworkQueueHighWater);
 
@@ -66,7 +93,71 @@ public sealed class SimulatedProtocolLoadTests
         Assert.True(result.ProtocolFailures == 0, $"协议失败 {result.ProtocolFailures} 次，首个错误：{load.FirstError}");
         Assert.True(result.KeepAliveP95Milliseconds < 5_000, $"心跳 p95 超出有界等待：{result.KeepAliveP95Milliseconds:F2}ms");
 
-        _output.WriteLine(result.ToEvidenceLine());
+        return result.ToEvidenceLine();
+    }
+
+    private static async Task<string> RunInIsolatedProcessAsync()
+    {
+        string root = Path.Combine(Path.GetTempPath(), "lyocrystal-simload-parent-" + Guid.NewGuid().ToString("N"));
+        string resultPath = Path.Combine(root, "result.txt");
+        Directory.CreateDirectory(root);
+        Process? child = null;
+        try
+        {
+            string projectPath = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Base05.Tests.csproj"));
+            var startInfo = new ProcessStartInfo("dotnet")
+            {
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+            };
+            startInfo.ArgumentList.Add("test");
+            startInfo.ArgumentList.Add(projectPath);
+            startInfo.ArgumentList.Add("-c");
+            startInfo.ArgumentList.Add("Release");
+            startInfo.ArgumentList.Add("--no-build");
+            startInfo.ArgumentList.Add("--no-restore");
+            startInfo.ArgumentList.Add("--filter");
+            startInfo.ArgumentList.Add(
+                "FullyQualifiedName=Base05.Tests.SimulatedProtocolLoadTests.模拟客户端维持连接并完成登录心跳与掉线补连");
+            startInfo.Environment[ChildModeVariable] = "1";
+            startInfo.Environment[ChildResultVariable] = resultPath;
+
+            child = Process.Start(startInfo) ?? throw new InvalidOperationException("无法启动模拟压测隔离子进程。");
+            Task<string> stdout = child.StandardOutput.ReadToEndAsync();
+            Task<string> stderr = child.StandardError.ReadToEndAsync();
+            using var timeout = new CancellationTokenSource(TimeSpan.FromMinutes(4));
+            try
+            {
+                await child.WaitForExitAsync(timeout.Token);
+            }
+            catch (OperationCanceledException)
+            {
+                throw new TimeoutException("模拟压测隔离子进程未在 4 分钟内结束。");
+            }
+
+            string capturedStdout = await stdout;
+            string capturedStderr = await stderr;
+            if (child.ExitCode != 0 || !File.Exists(resultPath))
+                throw new Xunit.Sdk.XunitException(
+                    $"模拟压测隔离子进程失败：exit={child.ExitCode}{Environment.NewLine}{capturedStdout}{Environment.NewLine}{capturedStderr}");
+            return File.ReadAllText(resultPath);
+        }
+        finally
+        {
+            if (child is { HasExited: false })
+            {
+                try { child.Kill(entireProcessTree: true); child.WaitForExit(10000); } catch { }
+            }
+            child?.Dispose();
+            TryDeleteDirectory(root);
+        }
+    }
+
+    private static void TryDeleteDirectory(string path)
+    {
+        try { if (Directory.Exists(path)) Directory.Delete(path, recursive: true); } catch { }
     }
 
     private static int ReadBoundedSetting(string name, int defaultValue, int minimum, int maximum)
@@ -310,9 +401,12 @@ public sealed class SimulatedProtocolLoadTests
         private readonly ConcurrentDictionary<int, SimulatedClient> _clients = new();
         private readonly ConcurrentDictionary<int, byte> _expectedDrops = new();
         private readonly ConcurrentBag<double> _latencies = new();
+        private readonly int[] _activeHeartbeatCounts;
+        private readonly long[] _activeLastHeartbeatTimestamps;
         private string? _firstError;
         private Task[] _slots = Array.Empty<Task>();
         private int _currentConnections;
+        private int _currentActiveConnections;
         private int _peakConnections;
         private int _successfulLogins;
         private int _keepAliveReplies;
@@ -321,6 +415,7 @@ public sealed class SimulatedProtocolLoadTests
         private int _replenishments;
 
         public int CurrentConnections => Volatile.Read(ref _currentConnections);
+        public int CurrentActiveConnections => Volatile.Read(ref _currentActiveConnections);
         public int SuccessfulLogins => Volatile.Read(ref _successfulLogins);
         public string? FirstError => Volatile.Read(ref _firstError);
 
@@ -336,6 +431,40 @@ public sealed class SimulatedProtocolLoadTests
             _connections = connections;
             _active = active;
             _accountId = accountId;
+            _activeHeartbeatCounts = new int[active];
+            _activeLastHeartbeatTimestamps = new long[active];
+        }
+
+        public int[] CaptureActiveHeartbeatCounts()
+        {
+            var snapshot = new int[_active];
+            for (int slot = 0; slot < _active; slot++)
+                snapshot[slot] = Volatile.Read(ref _activeHeartbeatCounts[slot]);
+            return snapshot;
+        }
+
+        public void AssertActiveHeartbeatProgress(int[] baseline, int minimumNewReplies, TimeSpan maximumSilence)
+        {
+            if (baseline == null || baseline.Length != _active)
+                throw new ArgumentException("活跃心跳基线数量与目标不一致。", nameof(baseline));
+
+            long now = Stopwatch.GetTimestamp();
+            var unhealthy = new List<string>();
+            for (int slot = 0; slot < _active; slot++)
+            {
+                int current = Volatile.Read(ref _activeHeartbeatCounts[slot]);
+                long last = Volatile.Read(ref _activeLastHeartbeatTimestamps[slot]);
+                double silenceMilliseconds = last == 0
+                    ? double.PositiveInfinity
+                    : Stopwatch.GetElapsedTime(last, now).TotalMilliseconds;
+                if (current - baseline[slot] < minimumNewReplies || silenceMilliseconds > maximumSilence.TotalMilliseconds)
+                    unhealthy.Add($"{slot}:新增{current - baseline[slot]},静默{silenceMilliseconds:F0}ms");
+            }
+
+            if (unhealthy.Count > 0)
+                throw new InvalidOperationException(
+                    $"登录会话心跳未持续达标（每槽至少新增 {minimumNewReplies} 次，末次不早于 {maximumSilence.TotalSeconds:F0}s）：" +
+                    string.Join(";", unhealthy.Take(20)));
         }
 
         public async Task StartAsync(TimeSpan timeout)
@@ -430,6 +559,7 @@ public sealed class SimulatedProtocolLoadTests
             {
                 SimulatedClient? client = null;
                 bool admitted = false;
+                bool activeAdmitted = false;
                 bool protocolReady = false;
                 bool connectGateHeld = false;
                 try
@@ -451,6 +581,11 @@ public sealed class SimulatedProtocolLoadTests
 
                     int current = Interlocked.Increment(ref _currentConnections);
                     admitted = true;
+                    if (slot < _active)
+                    {
+                        Interlocked.Increment(ref _currentActiveConnections);
+                        activeAdmitted = true;
+                    }
                     UpdatePeak(current);
                     if (!firstConnection) Interlocked.Increment(ref _replenishments);
                     firstConnection = false;
@@ -463,6 +598,11 @@ public sealed class SimulatedProtocolLoadTests
                         double elapsed = await client.KeepAliveAsync(cancellationToken);
                         _latencies.Add(elapsed);
                         Interlocked.Increment(ref _keepAliveReplies);
+                        if (slot < _active)
+                        {
+                            Interlocked.Increment(ref _activeHeartbeatCounts[slot]);
+                            Volatile.Write(ref _activeLastHeartbeatTimestamps[slot], Stopwatch.GetTimestamp());
+                        }
                         await Task.Delay(heartbeatInterval, cancellationToken);
                     }
                 }
@@ -472,12 +612,12 @@ public sealed class SimulatedProtocolLoadTests
                 }
                 catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
                 {
-                    Interlocked.CompareExchange(
-                        ref _firstError,
-                        $"slot={slot}, {ex.GetType().Name}:{ex.Message}",
-                        null);
                     if (!_expectedDrops.TryRemove(slot, out _))
                     {
+                        Interlocked.CompareExchange(
+                            ref _firstError,
+                            $"slot={slot}, {ex.GetType().Name}:{ex.Message}",
+                            null);
                         if (protocolReady)
                             Interlocked.Increment(ref _protocolFailures);
                         else
@@ -498,6 +638,7 @@ public sealed class SimulatedProtocolLoadTests
                     _clients.TryRemove(slot, out _);
                     client?.Dispose();
                     if (admitted) Interlocked.Decrement(ref _currentConnections);
+                    if (activeAdmitted) Interlocked.Decrement(ref _currentActiveConnections);
                 }
             }
         }
@@ -530,17 +671,27 @@ public sealed class SimulatedProtocolLoadTests
             CancellationToken cancellationToken)
         {
             var client = new TcpClient { NoDelay = true };
-            await client.ConnectAsync(IPAddress.Loopback, port, cancellationToken);
-            var ssl = new SslStream(client.GetStream(), leaveInnerStreamOpen: false);
-            var options = TlsClientPolicy.CreateOptions("localhost");
-            options.CertificateChainPolicy = new X509ChainPolicy
+            SslStream? ssl = null;
+            try
             {
-                TrustMode = X509ChainTrustMode.CustomRootTrust,
-                RevocationMode = X509RevocationMode.NoCheck,
-            };
-            options.CertificateChainPolicy.CustomTrustStore.Add(certificate);
-            await ssl.AuthenticateAsClientAsync(options, cancellationToken);
-            return new SimulatedClient(client, ssl);
+                await client.ConnectAsync(IPAddress.Loopback, port, cancellationToken);
+                ssl = new SslStream(client.GetStream(), leaveInnerStreamOpen: false);
+                var options = TlsClientPolicy.CreateOptions("localhost");
+                options.CertificateChainPolicy = new X509ChainPolicy
+                {
+                    TrustMode = X509ChainTrustMode.CustomRootTrust,
+                    RevocationMode = X509RevocationMode.NoCheck,
+                };
+                options.CertificateChainPolicy.CustomTrustStore.Add(certificate);
+                await ssl.AuthenticateAsClientAsync(options, cancellationToken);
+                return new SimulatedClient(client, ssl);
+            }
+            catch
+            {
+                ssl?.Dispose();
+                client.Dispose();
+                throw;
+            }
         }
 
         public async Task EnterLoginStageAsync(CancellationToken cancellationToken)
