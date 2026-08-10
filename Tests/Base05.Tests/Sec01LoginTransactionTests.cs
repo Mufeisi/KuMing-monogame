@@ -86,6 +86,7 @@ public sealed class Sec01LoginTransactionTests
         var environment = StartMinimalEnvironment();
         using var blockerEntered = new ManualResetEventSlim(false);
         using var releaseBlocker = new ManualResetEventSlim(false);
+        Exception blockerException = null;
         try
         {
             var account = new AccountInfo
@@ -103,19 +104,30 @@ public sealed class Sec01LoginTransactionTests
                 return 0;
             });
 
-            var blocker = Task.Run(() => environment.InvokeOnMainThread(() =>
+            var blocker = new Thread(() =>
             {
-                blockerEntered.Set();
-                releaseBlocker.Wait();
-                return 0;
-            }));
-            Assert.True(blockerEntered.Wait(TimeSpan.FromSeconds(2)));
+                try
+                {
+                    environment.InvokeOnMainThread(() =>
+                    {
+                        blockerEntered.Set();
+                        releaseBlocker.Wait();
+                        return 0;
+                    });
+                }
+                catch (Exception ex)
+                {
+                    blockerException = ex;
+                }
+            }) { IsBackground = true };
+            blocker.Start();
+            Assert.True(blockerEntered.Wait(TimeSpan.FromSeconds(10)));
 
             var result = await Task.Run(() => environment.HTTPLogin("timeout1", "secret12", 100));
             Assert.Equal(0, result);
             releaseBlocker.Set();
-            await blocker;
-            await Task.Delay(100);
+            Assert.True(blocker.Join(TimeSpan.FromSeconds(10)));
+            Assert.Null(blockerException);
 
             Assert.Equal(hash, account.Password);
             Assert.Equal(salt, account.Salt);
