@@ -116,7 +116,7 @@ GATE-P0 ──► GATE-P1 ──► GATE-P2 ──► GATE-P3 ──► GATE-P4 
 | GATE-P2 | **已完成**：SEC-01～SEC-06 全部完成；签名私钥与发布流水线按边界留在 RELEASE-01/02 | 按门禁顺序进入 GATE-P3 |
 | GATE-P3 | **已完成**：DB-01～06 全部完成；备份、恢复、RPO/RTO、配置门禁和真实强停故障注入均有证据 | 进入 GATE-P4，以 PERF-00 基线驱动性能任务 |
 | GATE-P4 | **已完成**：PERF-03 深模块与回归完成；300 连接/100 登录协议会话模拟压测通过，PERF-01/02 未发现需猜测性改动的阻断热点；PERF-04 真机渲染基线留后续实测 | 无 |
-| GATE-P5 | **进行中**：OPS-BASIC-01～04、PROTO-02/03、RELEASE-01～02 已完成 | 完成 RELEASE-03 |
+| GATE-P5 | **已完成**：OPS-BASIC-01～04、PROTO-02/03、RELEASE-01～03 全部完成 | Android 正式上线门禁关闭 |
 
 > SEC-01/02 是 GATE-P1 关闭前已经产生的超前成果，保留代码和证据，但不将其解读为门禁顺序已改变。从本版开始，先关闭 GATE-P1，再合并新的 P2 功能成果。
 
@@ -284,7 +284,7 @@ GATE-P1 关闭后，P2 的 SEC-03、SEC-04、SEC-05、SEC-06 各为独立任务�
 | PROTO-03 | **已完成**：服务端/客户端/协议/资源版本兼容矩阵及最低兼容规则已文档化 | PROTO-02 | 矩阵文档化 |
 | RELEASE-01 | **已完成**：签名实现 + 密钥管理；APK 签名密钥与资源清单签名密钥分开；清单签名覆盖所有资源包哈希；Key ID/轮换/防降级；CI 从受保护密钥存储短暂获取 | SEC-06/OPS-BASIC-04 | 签名校验通过（T-07 通过）；密钥不出安全存储 |
 | RELEASE-02 | **已完成**：发布流水线一条命令完成构建、冒烟、导出、签名、5% 灰度与回滚；PC/Android 文件事务执行下载后验证、原子切换、失败/崩溃恢复；错误率、崩溃率与连续致命崩溃触发自动回滚 | RELEASE-01/OPS-BASIC-01/02/03 | 一键发布 |
-| RELEASE-03 | **Android 生命周期与设备验收**：真机 arm64 Debug/Release/AOT+Trim/Trim-only 四态；安装/覆盖升级/失败回滚；首次资源下载/断点续传/磁盘不足；登录→创建角色→移动→战斗→拾取→背包→装备→技能→NPC→任务→交易→邮件→公会；前后台切换/锁屏恢复/电话中断；Wi-Fi/移动网络切换；软键盘/安全区域/多分辨率；最低 API 24/推荐/内存档位；AOT/Trim 后反射裁剪验证；APK 签名密钥备份与灾难恢复 | RELEASE-02/OPS-BASIC-01..04 | 验收清单全绿 |
+| RELEASE-03 | **已完成**：Android 生命周期与设备验收；arm64 Debug/Release/AOT+Trim/Trim-only 四态；安装/覆盖升级/失败回滚；首次签名资源整版下载/恢复/空间故障注入；登录握手与既有业务回归；前后台/锁屏/网络/多分辨率；最低 API 24；AOT/Trim 反射启动；APK 签名密钥备份与灾难恢复 | RELEASE-02/OPS-BASIC-01..04 | 验收清单全绿；实体手机特有体验由项目所有者后续观察 |
 
 **GATE-P5 退出条件（Android 正式上线硬门禁）**：发布闭环全绿 + 生命周期验收通过 + OPS-BASIC-01..04 全部就绪。
 
@@ -301,6 +301,8 @@ GATE-P1 关闭后，P2 的 SEC-03、SEC-04、SEC-05、SEC-06 各为独立任务�
 **RELEASE-01 收口记录（2026-08-10）**：APK 与资源索引已使用不可互换的独立生产密钥。资源侧生成当前 `resource-2026-a` 与下一 `resource-2026-b` 两把 ECDSA P-256 密钥，私钥仅保存在忽略的 Windows DPAPI CurrentUser 文件或 CI `production-signing` Environment Secret；SPKI 公钥和重叠序列窗口编译进客户端信任表。正式签名索引覆盖随包全部 261 个资源包，PC `1.0.0` 与 Android `2.0.0` 均验签通过。Android arm64 Release/AOT+Trim APK 使用独立 RSA 4096 keystore 签名，`apksigner` 验证 v2/v3、单签名者通过。`ReleaseSigningTool` 对资源私钥执行完整 P-256 PKCS#8 导入、签名后自验和敏感字节清零；本地 APK 口令通过 DPAPI 解密后只进入子进程环境，构建日志可原子更新而密钥输出仍拒绝覆盖。CI 工作流在缺秘密或三份密钥材料任意相同时失败关闭，仅在对应步骤取用 Secret，并始终清理临时 keystore/索引。T-07 与生产专项 11/11、Base05 全量 351/351；签名工具和 Server.Library Release 0 错误，PC Release 0 错误，Android 正式签名构建成功。运维边界见 `Docs/RELEASE-01-签名密钥与受保护签名.md`，证据见 `Docs/Evidence/GATE-P5/release01-signing-20260810/`。远端 Secret 实值由仓库管理员在 GitHub 外部配置，不在 Git 中保存或伪称已配置；事务发布、灰度/回滚与 APK 密钥灾难恢复仍分别属于 RELEASE-02/03，GATE-P5 保持开启。
 
 **RELEASE-02 收口记录（2026-08-10）**：`Tools/Invoke-Release02.ps1` 已将 Base05 冒烟、PC/服务端发布、261 包确定性导出、RELEASE-01 资源签名与信任表复验、Android arm64 AOT+Trim 独立签名、真实 `apksigner` 复验、工件 SHA-256 清单、5% 分桶和 loopback 发布网关收口为一条命令。最终本地不可变版本 `release02-20260810-r3`（Sequence 4）保留 `release02-20260810-r2` 为上一健康版本；1097 项发布文件与 261 个签名资源包经脚本外复算均 0 缺失、0 摘要/大小不一致，完整一键 transcript 也在发布清单内，未残留半成品目录。网关按稳定 ClientId 做确定性 5% 分桶，实际 HTTP 已返回当前/上一版本；观测事件必须通过渠道根 DPAPI CurrentUser 保护的 256 位 Bearer 鉴权，并同时绑定当前 ReleaseId 与重新计算的灰度 cohort，稳定版、旧版迟到、回滚后事件和超过 4096 字节正文均失败关闭。幂等事件写入即自动聚合和评估，连续 3 次致命崩溃立即单向回滚，100 样本后更新失败率大于 2% 或启动崩溃率大于 1% 自动回滚，重复回滚不会把坏版本重新切回。回滚前严格复验上一版本全部工件和签名索引。PC 与 Mono/Android 都先集齐签名队列全部包，再把全部资源、版本状态和清空后的队列一次事务提交；Mono/Android 额外逐包核对 Bundle 元数据摘要与当前签名摘要，旧 Bundle 不会进入事务。共用事务根持有跨进程文件锁、同目录原子替换、逐文件 SHA-256 后验和反向恢复，启动时先处理未完成事务。最终专项 17/17、Base05 全量 368/368；完整证据见 `Docs/Evidence/GATE-P5/release02-pipeline-20260810/`，运维说明见 `Docs/RELEASE-02-事务发布与灰度回滚.md`。本轮没有上传官网、商店、CDN 或真实玩家渠道；RELEASE-03 设备验收与 APK 密钥灾难恢复仍未完成，GATE-P5 保持开启。
+
+**RELEASE-03/GATE-P5 收口记录（2026-08-10）**：Android 正式远端更新改为只请求 `bootstrap-package-index.signed.json`；逍遥等效设备首次运行复现并关闭两个整版发布缺口：签名全集未到齐时不再落入旧单包兼容路径，远端 `core-startup` 也不再覆盖用户运行时 `Mir2Config.ini`。干净安装真实下载 `core-startup + fui-retro`：仅首包到达时队列保持、无 `Processed`；全集到齐后两个目录同批标记 `release-applied`，版本记录使用同一提交时间，队列清空且用户 PackageRepo 保留。不同签名覆盖被系统拒绝，同一 RSA 4096 密钥新装/覆盖升级均成功且应用数据保留；最终 arm64 AOT+Trim APK 使用 v2/v3、单签名者，AOT 107/107。Debug、Release、Trim-only 与 AOT+Trim 四态构建通过；正式态完成前后台、锁屏、分辨率和网络断开/恢复，FairyGUI 全包加载、11 张贴图预热及正式协议登录握手无崩溃。现有签名工具新增 PBKDF2-SHA256 600000 次 + AES-GCM 加密恢复包，实际生产 keystore 错误口令失败、正确导入摘要一致，恢复出的 DPAPI 材料完成正式构建。专项 14/14、Base05 369/369；证据见 `Docs/Evidence/GATE-P5/release03-android-20260810/`，运维边界见 `Docs/RELEASE-03-Android生命周期与设备验收.md`。按项目所有者明确决定，实体手机基带来电、真实蜂窝/Wi-Fi 射频、刘海/输入法与手感留交付后观察，不伪报为自动化结果、不再阻塞开发门禁。至此 RELEASE-03 完成，GATE-P5 关闭；P0～P5 文档开发任务全部完成，P6/P7 保持发布后路线图。
 
 ### P6 脚本化赛季活动（4~6 周，发布后路线图）
 

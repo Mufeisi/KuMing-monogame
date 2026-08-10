@@ -426,6 +426,10 @@ namespace MonoShare
                         candidates.Remove(directory);
                     }
                 }
+
+                // 签名更新是整版事务：全集未到齐时必须继续等待，不能落入下方的旧单包兼容路径。
+                // 否则第一包会提前发布，后续失败将留下混合资源版本。
+                return;
             }
 
             for (int i = 0; i < candidates.Count; i++)

@@ -1,0 +1,26 @@
+设备：逍遥 Android 等效设备 ASUS_AI2401_A，API 28，ABI x86_64/arm64-v8a/x86/armeabi-v7a，1600×900，约 6 GB 内存。
+
+安装与升级：
+- 旧测试签名覆盖正式 r3：INSTALL_FAILED_UPDATE_INCOMPATIBLE，失败关闭。
+- 卸载旧测试包后正式 r3 新装：Success。
+- 同一生产 RSA 4096 密钥构建的新 APK 覆盖 r3：Success。
+- 覆盖升级前写入 release03-upgrade-marker.txt，升级后复读 before-upgrade-20260810，应用数据保留。
+- versionCode=20000，versionName=2.0.0，minSdk=24。
+
+签名资源首次下载：
+- 客户端只请求 bootstrap-package-index.signed.json；旧 unsigned 索引曾稳定失败“资源索引签名格式不受支持”。
+- 干净首次启动生成签名队列：core-startup + fui-retro。
+- 仅 core-startup 到达时 BundleInbox 无 Processed，队列仍保留两包，证明未落入旧单包发布路径。
+- 两包到齐后均移动到 release-applied；队列 Packages=[]。
+- 两条版本记录 GeneratedAtUtc/InstalledAtUtc 相同，摘要分别为 f1321e74...77a46 与 1b090df5...5f4b，Source=signed-release。
+- ReleaseTransactions 仅保留 deployment.lock，无未完成事务。
+- 事务完成后 Mir2Config.ini 仍保留 IPAddress=127.0.0.1 与 PackageRepo=本轮签名仓库，远端基线未覆盖用户配置。
+
+生命周期：
+- HOME 后前台切到 com.microvirt.launcher2；重新启动后 MainActivity 恢复 Resumed。
+- POWER 键后 mWakefulness=Asleep；解锁后 MainActivity 恢复 Resumed。
+- 1600×900 切换为 1280×720 时 MainActivity 保持 Resumed，随后恢复物理分辨率。
+- 移除 7000/7777/18443 反向端口后应用进程仍存活；恢复端口并重启后 MainActivity 为 Resumed。
+- 正式 AOT+Trim 运行日志完成 FairyGUI 包加载、11 张主界面贴图预热，并记录“握手通过：ClientVersion=OK，已进入登录界面”；无 MobileErrors.log、无 FATAL EXCEPTION。
+
+开发阶段未伪报：实体手机基带来电、真实蜂窝/Wi-Fi 射频、刘海/圆角和第三方输入法手感由项目所有者后续观察。

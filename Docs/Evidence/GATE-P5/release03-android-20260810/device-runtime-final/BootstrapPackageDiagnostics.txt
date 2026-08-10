@@ -1,0 +1,35 @@
+Bootstrap 分包运行时诊断
+生成时间(UTC)：2026-08-10T08:06:03.3884592Z
+客户端根目录：/data/user/0/com.lommir.client.monogame.android/files
+运行时目录：/data/user/0/com.lommir.client.monogame.android/files/Cache/Mobile/Runtime
+声明包数：261，状态包数：261
+包状态：hydrated=2，staged=0，partial=0，declared=259
+请求队列：pending=0，resolved=0，涉及包=0
+
+包摘要（最多 12 项）：
+- core-startup | 状态=hydrated | hydrated=9/9 | staged=0 | pending=0 | 大小=53.24 MB
+- data-background | 状态=declared | hydrated=0/1 | staged=0 | pending=0 | 大小=20.26 MB
+  MissingSample: Data/Background.Lib
+- data-bufficon | 状态=declared | hydrated=0/1 | staged=0 | pending=0 | 大小=224.83 KB
+  MissingSample: Data/BuffIcon.Lib
+- data-items | 状态=declared | hydrated=0/1 | staged=0 | pending=0 | 大小=3.85 MB
+  MissingSample: Data/Items.Lib
+- data-magicon | 状态=declared | hydrated=0/1 | staged=0 | pending=0 | 大小=237.83 KB
+  MissingSample: Data/MagIcon.Lib
+- data-magicon2 | 状态=declared | hydrated=0/1 | staged=0 | pending=0 | 大小=409.06 KB
+  MissingSample: Data/MagIcon2.Lib
+- data-mmap | 状态=declared | hydrated=0/1 | staged=0 | pending=0 | 大小=26.8 MB
+  MissingSample: Data/MMap.Lib
+- data-prguse2 | 状态=declared | hydrated=0/1 | staged=0 | pending=0 | 大小=4.99 MB
+  MissingSample: Data/Prguse2.Lib
+- data-prguse3 | 状态=declared | hydrated=0/1 | staged=0 | pending=0 | 大小=196.69 KB
+  MissingSample: Data/Prguse3.Lib
+- lib-objects | 状态=declared | hydrated=0/1 | staged=0 | pending=0 | 大小=42.89 MB
+  MissingSample: Data/Map/WemadeMir2/Objects.Lib
+- lib-objects10 | 状态=declared | hydrated=0/1 | staged=0 | pending=0 | 大小=17.27 MB
+  MissingSample: Data/Map/WemadeMir2/Objects10.Lib
+- lib-objects11 | 状态=declared | hydrated=0/1 | staged=0 | pending=0 | 大小=9.52 MB
+  MissingSample: Data/Map/WemadeMir2/Objects11.Lib
+
+待处理资源请求（最多 12 项）：
+- 当前没有待处理缺包请求。

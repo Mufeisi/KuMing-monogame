@@ -54,11 +54,11 @@ namespace MonoShare
                 // 1) 读取壳子自带的 baseline 版本索引，用于避免“已随包携带的 core-startup”被重复全量下载。
                 TrySeedInstalledVersionsFromBaselineIndex();
 
-                // 2) 下载远端版本索引（微端通过 /api/file/Packages/bootstrap-package-index.json 提供）
+                // 2) 下载远端签名版本索引；本地随包基线仍保留未签名索引供离线资源盘点。
                 string indexUrl = BuildRemoteIndexUrl(snapshot.RepositoryRoot);
                 BootstrapPackageIndexView remoteIndex = await TryDownloadPackageIndexAsync(indexUrl, snapshot.UseMicroAuth, cancellationToken);
                 if (remoteIndex == null || remoteIndex.Packages == null || remoteIndex.Packages.Count == 0)
-                    return BootstrapPreLoginUpdatePlanView.Skip("远端未提供 bootstrap-package-index.json 或内容为空。");
+                    return BootstrapPreLoginUpdatePlanView.Skip("远端未提供 bootstrap-package-index.signed.json 或内容为空。");
 
                 // 缓存一份到运行时目录，便于排查（不影响流程）
                 TryWriteRemoteIndexCache(remoteIndex);
@@ -273,7 +273,7 @@ namespace MonoShare
             if (!normalized.EndsWith("/", StringComparison.Ordinal))
                 normalized += "/";
 
-            return normalized + "Packages/" + BootstrapPackageUpdateRuntime.PackageIndexFileName;
+            return normalized + "Packages/" + BootstrapPackageUpdateRuntime.SignedPackageIndexFileName;
         }
 
         private static void ApplyMicroAuthHeaders(HttpRequestMessage request, bool useMicroAuth)

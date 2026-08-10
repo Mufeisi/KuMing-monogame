@@ -1,4 +1,6 @@
 using System.Security.Cryptography;
+using System.Diagnostics;
+using System.Text;
 using System.Text.Json;
 using Shared.Security;
 using Xunit;
@@ -91,6 +93,82 @@ public sealed class ProductionReleaseSigningTests
         string ignore = File.ReadAllText(Path.Combine(root, ".gitignore"));
         Assert.Contains("**/Configs/ReleaseSecrets/", ignore, StringComparison.Ordinal);
         Assert.Contains("*.keystore", ignore, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Android签名恢复包可跨DPAPI文件往返且错误口令失败关闭()
+    {
+        if (!OperatingSystem.IsWindows()) return;
+        string root = FindRepositoryRoot(AppContext.BaseDirectory);
+        string directory = Path.Combine(Path.GetTempPath(), "lyocrystal-android-recovery-test-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+        const string purpose = "android-test-purpose";
+        const string alias = "android-test-alias";
+        const string passwordText = "test-password-not-a-production-secret";
+        string keyStore = Path.Combine(directory, "source.keystore");
+        string passwordPath = Path.Combine(directory, "source-password.dpapi");
+        string backup = Path.Combine(directory, "recovery.enc.json");
+        string restoredKeyStore = Path.Combine(directory, "restored.keystore");
+        string restoredPassword = Path.Combine(directory, "restored-password.dpapi");
+        byte[] keyStoreBytes = RandomNumberGenerator.GetBytes(512);
+        byte[] passwordBytes = Encoding.UTF8.GetBytes(passwordText);
+        try
+        {
+            File.WriteAllBytes(keyStore, keyStoreBytes);
+            File.WriteAllBytes(passwordPath, ProtectedData.Protect(
+                passwordBytes,
+                SHA256.HashData(Encoding.UTF8.GetBytes("LyoCrystal.Release.Secret.v1:" + purpose)),
+                DataProtectionScope.CurrentUser));
+            string passphrase = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32));
+            RunSigningTool(root, passphrase, "export-android-recovery", keyStore, passwordPath, purpose, alias, backup);
+            InvalidOperationException wrong = Assert.Throws<InvalidOperationException>(() => RunSigningTool(
+                root, "wrong-passphrase-with-enough-length", "import-android-recovery", backup, purpose, alias,
+                restoredKeyStore, restoredPassword));
+            Assert.Contains("退出码 2", wrong.Message, StringComparison.Ordinal);
+            Assert.False(File.Exists(restoredKeyStore));
+            Assert.False(File.Exists(restoredPassword));
+
+            RunSigningTool(root, passphrase, "import-android-recovery", backup, purpose, alias, restoredKeyStore, restoredPassword);
+            Assert.Equal(keyStoreBytes, File.ReadAllBytes(restoredKeyStore));
+            byte[] restoredPlain = ProtectedData.Unprotect(
+                File.ReadAllBytes(restoredPassword),
+                SHA256.HashData(Encoding.UTF8.GetBytes("LyoCrystal.Release.Secret.v1:" + purpose)),
+                DataProtectionScope.CurrentUser);
+            try { Assert.Equal(passwordText, Encoding.UTF8.GetString(restoredPlain)); }
+            finally { CryptographicOperations.ZeroMemory(restoredPlain); }
+        }
+        finally
+        {
+            CryptographicOperations.ZeroMemory(keyStoreBytes);
+            CryptographicOperations.ZeroMemory(passwordBytes);
+            if (Directory.Exists(directory)) Directory.Delete(directory, recursive: true);
+        }
+    }
+
+    private static void RunSigningTool(string root, string passphrase, params string[] arguments)
+    {
+        var start = new ProcessStartInfo("dotnet")
+        {
+            WorkingDirectory = root,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+        };
+        start.ArgumentList.Add("run");
+        start.ArgumentList.Add("--project");
+        start.ArgumentList.Add(Path.Combine(root, "Tools", "ReleaseSigningTool", "ReleaseSigningTool.csproj"));
+        start.ArgumentList.Add("-c");
+        start.ArgumentList.Add("Release");
+        start.ArgumentList.Add("--no-build");
+        start.ArgumentList.Add("--");
+        foreach (string argument in arguments) start.ArgumentList.Add(argument);
+        start.Environment["LYOCRYSTAL_ANDROID_RECOVERY_PASSPHRASE"] = passphrase;
+        using Process process = Process.Start(start) ?? throw new InvalidOperationException("无法启动发布签名工具");
+        string stdout = process.StandardOutput.ReadToEnd();
+        string stderr = process.StandardError.ReadToEnd();
+        process.WaitForExit();
+        if (process.ExitCode != 0)
+            throw new InvalidOperationException($"发布签名工具退出码 {process.ExitCode}：{stderr}{stdout}");
     }
 
     private static void AssertPublicRecord(string root, BootstrapManifestTrustedKey trusted)

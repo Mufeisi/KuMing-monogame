@@ -801,7 +801,9 @@ namespace MonoShare
                     if (string.IsNullOrWhiteSpace(source))
                         throw new FileNotFoundException("整版事务缺少清单声明文件：" + pack.Name + "/" + asset);
                     AddTransactionalEntry(entries, source, BuildInstalledPackageAssetPath(pack, asset));
-                    if (ClientResourceLayout.TryResolveBootstrapAssetTargetPath(asset, out string hydratedTarget))
+                    // Mir2Config.ini 是用户运行时配置；远端资源版只能更新包内基线，不能覆盖已保存服务器/仓库设置。
+                    if (!string.Equals(asset.Replace('\\', '/').TrimStart('/'), "Mir2Config.ini", StringComparison.OrdinalIgnoreCase) &&
+                        ClientResourceLayout.TryResolveBootstrapAssetTargetPath(asset, out string hydratedTarget))
                         AddTransactionalEntry(entries, source, hydratedTarget);
                 }
             }

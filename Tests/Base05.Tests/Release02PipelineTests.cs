@@ -44,10 +44,15 @@ public sealed class Release02PipelineTests
         Assert.DoesNotContain("TryOnBundleApplied(directory, releaseResult)", mobile, StringComparison.Ordinal);
         Assert.Contains("BuildBundleDeclaredPackages(sourceDirectory, installManifestBundle)", mobileRuntime, StringComparison.Ordinal);
         Assert.Contains("BuildReleaseCommitEntries(required, stateStagingDirectory)", mobileRuntime, StringComparison.Ordinal);
+        Assert.Contains("不能覆盖已保存服务器/仓库设置", mobileRuntime, StringComparison.Ordinal);
         Assert.Contains("事务资源版本缺少清单声明文件", mobileRuntime, StringComparison.Ordinal);
         int callbackStart = mobileRuntime.IndexOf("verifyAfterPublish: () =>", StringComparison.Ordinal);
         int callbackEnd = mobileRuntime.IndexOf("ClientResourceLayout.ReloadBootstrapMetadata();", callbackStart, StringComparison.Ordinal);
         Assert.DoesNotContain("TryApplyPackageBundleFromDirectory", mobileRuntime[callbackStart..callbackEnd], StringComparison.Ordinal);
+
+        string mobileUpdate = File.ReadAllText(Path.Combine(FindRepositoryRoot(), "Client_MonoGame.Shared", "BootstrapPackageUpdateService.cs"));
+        Assert.Contains("BootstrapPackageUpdateRuntime.SignedPackageIndexFileName", mobileUpdate, StringComparison.Ordinal);
+        Assert.Contains("签名更新是整版事务", mobile, StringComparison.Ordinal);
     }
 
     [Fact]

@@ -16,6 +16,7 @@ namespace MonoShare
         private static readonly JsonSerializerOptions JsonWriteOptions = new JsonSerializerOptions { WriteIndented = true };
 
         public const string PackageIndexFileName = "bootstrap-package-index.json";
+        public const string SignedPackageIndexFileName = "bootstrap-package-index.signed.json";
         public const string BundleDownloadMetaFileName = "bundle-download-meta.json";
 
         public static BootstrapPackageUpdateQueueView LoadUpdateQueue()
