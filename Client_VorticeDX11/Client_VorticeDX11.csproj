@@ -119,6 +119,9 @@
 		<None Update="MIR2.ICO">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
+		<None Include="..\Docs\Compliance\SBOM\dependencies.spdx.json" Link="Compliance\SBOM\dependencies.spdx.json" CopyToOutputDirectory="PreserveNewest" />
+		<None Include="..\Docs\Compliance\external-assets.manifest.json" Link="Compliance\external-assets.manifest.json" CopyToOutputDirectory="PreserveNewest" />
+		<None Include="..\Docs\Compliance\Licenses\**\*" Link="Compliance\Licenses\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
 	</ItemGroup>
 
 </Project>

@@ -13,9 +13,11 @@
 
 ## SBOM 与许可证
 
-`Docs/Compliance/SBOM/manifest.spdx.json` 由 Microsoft SBOM Tool 4.1.5 生成，覆盖服务端、PC 客户端和 Android 签名 APK 共六个 Release 工件；包含 218 个包、6 个文件及 988 条关系。在线许可证补充识别 204/221 个唯一组件许可证；SPDX 内 12 个 `NOASSERTION` 项由 `THIRD-PARTY-NOTICES.md` 逐项复核，不允许留下未列入复核表的新项。
+`Docs/Compliance/SBOM/manifest.spdx.json` 由 Microsoft SBOM Tool 4.1.5 生成，是发布侧车清单，覆盖服务端、PC 客户端和 Android 签名 APK 共六个 Release 工件；包含 218 个包、6 个文件及 988 条关系。`Docs/Compliance/SBOM/dependencies.spdx.json` 保留相同的 218 个生产依赖及关系，但不列二进制文件，作为稳定的随包依赖清单。二者分离是为了避免 Android APK 内嵌清单又校验自身而形成不可解的自引用哈希。
 
-`THIRD-PARTY-NOTICES.md` 由 PC、Android、iOS 与服务端项目复制或打包进发布物。以后新增、删除或升级依赖时，必须重新生成 SBOM、重跑漏洞扫描并更新人工复核表。
+在线许可证补充识别 204/221 个唯一组件许可证；SPDX 内 12 个 `NOASSERTION` 项由 `THIRD-PARTY-NOTICES.md` 按包名和版本逐项复核，不允许依赖升级后沿用旧结论。
+
+`THIRD-PARTY-NOTICES.md`、依赖 SPDX、外部资源清单和 `Docs/Compliance/Licenses` 下的标准许可证及包内 NOTICE/EULA，由 PC、Android、iOS 与服务端项目一起复制或打包进发布物。以后新增、删除或升级依赖时，必须重新生成两份 SBOM、重跑漏洞扫描并更新人工复核表。
 
 ## 外部资源授权
 

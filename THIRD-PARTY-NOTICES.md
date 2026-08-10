@@ -1,6 +1,6 @@
 # 第三方组件与资源声明
 
-本文件随 PC、Android、iOS 客户端和 Windows 服务端发布。完整依赖、版本、文件摘要及 SPDX 许可证字段见 `Docs/Compliance/SBOM/manifest.spdx.json`；外部素材清单见 `Docs/Compliance/external-assets.manifest.json`。
+本文件随 PC、Android、iOS 客户端和 Windows 服务端发布。每个发布物的 `Compliance` 目录同时包含 `SBOM/dependencies.spdx.json`、`external-assets.manifest.json` 和 `Licenses` 许可证正文；接收者无需仓库即可读取这些材料。最终二进制文件摘要另见发布侧车 `Docs/Compliance/SBOM/manifest.spdx.json`，该侧车不嵌入自身所校验的 APK，以避免自引用哈希。
 
 ## SBOM 许可证复核
 
@@ -17,7 +17,7 @@
 | Microsoft.AspNet.WebApi.Client | 6.0.0 | NuGet 包内 `.NET Library EULA` |
 | NAudio | 2.2.1 | NuGet 包内 `license.txt`，MIT |
 
-上述包的精确 PURL、依赖关系和哈希以 SPDX 工件为准；发布时不得删除包自带的许可证、NOTICE 或 EULA 文件。
+上述包的精确 PURL、版本与依赖关系以随包依赖 SPDX 为准；最终发布文件哈希以发布侧车 SPDX 为准。许可证、NOTICE 或 EULA 正文均收录在随包 `Compliance/Licenses`，发布时不得删除。
 
 ## FairyGUI MonoGame
 
