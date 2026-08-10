@@ -3,6 +3,7 @@ using System.Drawing;
 using Server.MirObjects;
 using Server.MirObjects.Monsters;
 using Server.Scripting;
+using Server.Operations;
 
 namespace Server.MirEnvir
 {
@@ -187,6 +188,7 @@ namespace Server.MirEnvir
         }
         public void GainExp(int ammount)
         {
+            if (Envir.KillSwitches?.IsEnabled(KillSwitchFeature.Activities) == false) return;
             if (ammount <= 0) return;
 
             Info.Experience += ammount;
@@ -198,6 +200,7 @@ namespace Server.MirEnvir
         }
         public void LevelUp()
         {
+            if (Envir.KillSwitches?.IsEnabled(KillSwitchFeature.Activities) == false) return;
             int previousLevel = Info.Level;
             int targetLevel = Info.Level < Globals.MaxDragonLevel ? Info.Level + 1 : Info.Level;
             ScriptHookDecision scriptDecision = ScriptHookDecision.Continue;
@@ -228,6 +231,7 @@ namespace Server.MirEnvir
         }
         public void LevelDown()
         {
+            if (Envir.KillSwitches?.IsEnabled(KillSwitchFeature.Activities) == false) return;
             if (Info.Level <= 1) return;
 
             int previousLevel = Info.Level;
@@ -396,6 +400,7 @@ namespace Server.MirEnvir
 
         public void Process()
         {
+            if (Envir.KillSwitches?.IsEnabled(KillSwitchFeature.Activities) == false) return;
             if (!Loaded) return;
             if (Envir.Time < ProcessTime) return;
 

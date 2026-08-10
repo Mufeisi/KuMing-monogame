@@ -8,6 +8,7 @@ using System.Text.RegularExpressions;
 using Timer = Server.MirEnvir.Timer;
 using Server.MirObjects.Monsters;
 using System.Threading;
+using Server.Operations;
 
 namespace Server.MirObjects
 {
@@ -9766,6 +9767,12 @@ namespace Server.MirObjects
         public void GetMarket(string name, ItemType type)
         {
             Search.Clear();
+            if (MarketPanelType == MarketPanelType.GameShop &&
+                Envir.KillSwitches?.IsEnabled(KillSwitchFeature.GameShop) == false)
+            {
+                Enqueue(new S.NPCMarketPage { Listings = new List<ClientAuction>() });
+                return;
+            }
             MatchName = name.Replace(" ", "");
             MatchType = type;
             PageSent = 0;
@@ -9839,6 +9846,13 @@ namespace Server.MirObjects
 
         public void MarketBuy(ulong auctionID, uint bidPrice = 0)
         {
+            if (MarketPanelType == MarketPanelType.GameShop &&
+                Envir.KillSwitches?.IsEnabled(KillSwitchFeature.GameShop) == false)
+            {
+                Enqueue(new S.MarketFail { Reason = 0 });
+                return;
+            }
+
             if (Dead)
             {
                 Enqueue(new S.MarketFail { Reason = 0 });
@@ -15028,6 +15042,12 @@ namespace Server.MirObjects
 
         public void GameshopBuy(int GIndex, byte Quantity, int PType)
         {
+            if (Envir.KillSwitches?.IsEnabled(KillSwitchFeature.GameShop) == false)
+            {
+                ReceiveChat("游戏商城当前已由运营关闭", ChatType.System);
+                return;
+            }
+
             if (Quantity < 1 || Quantity > 99) return;
 
             List<GameShopItem> shopList = Envir.GameShopList;
@@ -15216,6 +15236,9 @@ namespace Server.MirObjects
 
         public void GetGameShop()
         {
+            if (Envir.KillSwitches?.IsEnabled(KillSwitchFeature.GameShop) == false)
+                return;
+
             int purchased;
             int stockLevel;
 

@@ -6,6 +6,7 @@ using Server.MirObjects;
 using Server.MirObjects.Monsters;
 using Server.Persistence;
 using Server.Persistence.Sql;
+using Server.Operations;
 using Server.Security;
 using Server.Scripting;
 using System.Collections.Concurrent;
@@ -96,6 +97,7 @@ namespace Server.MirEnvir
 
         private IServerPersistence? _persistence;
         internal SqliteBackupService SqliteBackup { get; private set; }
+        internal KillSwitchService KillSwitches { get; private set; }
         private bool _basicOperationsMetricsSession;
 
         private IServerPersistence Persistence => _persistence ??= ServerPersistenceFactory.CreateFromSettings();
@@ -1015,6 +1017,9 @@ namespace Server.MirEnvir
 
                 LinkedListNode<MapObject> current = null;
 
+                if (options.LoadResources)
+                    KillSwitches = new KillSwitchService();
+
                 if (options.Multithreaded)
                 {
                     for (var j = 0; j < MobThreads.Length; j++)
@@ -1063,7 +1068,7 @@ namespace Server.MirEnvir
                     StartNetwork();
                 if (options.StartHttp && Settings.StartHTTPService)
                 {
-                    http = new HttpServer(SqliteBackup);
+                    http = new HttpServer(SqliteBackup, killSwitches: KillSwitches);
                     http.Start();
                 }
 
@@ -4975,7 +4980,8 @@ namespace Server.MirEnvir
 
         public void NewAccount(ClientPackets.NewAccount p, MirConnection c)
         {
-            if (!Settings.AllowNewAccount)
+            if (!Settings.AllowNewAccount ||
+                KillSwitches?.IsEnabled(KillSwitchFeature.HighRiskOperations) == false)
             {
                 c.Enqueue(new ServerPackets.NewAccount { Result = 0 });
                 return;
@@ -5059,7 +5065,8 @@ namespace Server.MirEnvir
 
         public int HTTPNewAccount(ClientPackets.NewAccount p, string ip)
         {
-            if (!Settings.AllowNewAccount)
+            if (!Settings.AllowNewAccount ||
+                KillSwitches?.IsEnabled(KillSwitchFeature.HighRiskOperations) == false)
             {
                 return 0;
             }
@@ -5108,7 +5115,8 @@ namespace Server.MirEnvir
 
         public void ChangePassword(ClientPackets.ChangePassword p, MirConnection c)
         {
-            if (!Settings.AllowChangePassword)
+            if (!Settings.AllowChangePassword ||
+                KillSwitches?.IsEnabled(KillSwitchFeature.HighRiskOperations) == false)
             {
                 c.Enqueue(new ServerPackets.ChangePassword { Result = 0 });
                 return;

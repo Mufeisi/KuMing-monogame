@@ -68,7 +68,8 @@ internal static class AdminSecurityPolicy
 
         bool allowed = role == AdminRole.Administrator ||
             role == AdminRole.Operator && (action == "status" || action == "broadcast" ||
-                                           action == "backup-status" || action == "operations-status");
+                                           action == "backup-status" || action == "operations-status" ||
+                                           action == "kill-switch-status");
         return new AdminAuthorizationResult(
             allowed ? AdminAuthorizationStatus.Authorized : AdminAuthorizationStatus.Forbidden,
             role,
@@ -92,6 +93,8 @@ internal static class AdminSecurityPolicy
         "/backup/status" => "backup-status",
         "/backup/run" => "backup-run",
         "/operations/status" => "operations-status",
+        "/operations/kill-switches" => "kill-switch-status",
+        "/operations/kill-switches/set" => "kill-switch-change",
         _ => "unknown",
     };
 

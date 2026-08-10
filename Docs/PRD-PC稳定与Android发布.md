@@ -276,7 +276,7 @@ GATE-P1 关闭后，P2 的 SEC-03、SEC-04、SEC-05、SEC-06 各为独立任务�
 |---|---|---|---|
 | OPS-BASIC-01 | **已完成**：最小服务端监控 + 告警；在线/Tick p95/保存耗时/队列积压/备份状态 + 告警（发布前基础版） | GATE-P4/DB-03 | Operator 可读真实管理端点；告警触发/恢复有测试与日志接缝 |
 | OPS-BASIC-02 | **已完成**：崩溃诊断基础；PC/Android/服务端崩溃收集最后一段日志 + 版本 + 资源版本 + 脱敏配置摘要 | GATE-P4/BASE-04 | 崩溃现场可离线定位 |
-| OPS-BASIC-03 | **Kill Switch**：可远程关闭商城/更新/活动/高风险功能 | GATE-P4/RELEASE-02 | 开关生效 + 审计 |
+| OPS-BASIC-03 | **已完成**：Kill Switch；可远程关闭商城/更新/活动/高风险功能 | GATE-P4/RELEASE-02 | 开关生效 + 审计 |
 | OPS-BASIC-04 | **授权审计**：依赖漏洞扫描 + SBOM + 许可证审计；外部素材/字体/FairyGUI/音频/地图授权清单 | GATE-P4 | 清单文档化 + 扫描通过 |
 | PROTO-02 | 协议统一：按 wire manifest 逐步切换消费者（PC/移动/Server），**不做大爆炸替换**；manifest 由工具从 C# 自动生成并纳入 CI 漂移审计 | PROTO-01 | 三端同一协议源；兼容矩阵绿；manifest 自动生成无漂移 |
 | PROTO-03 | 兼容矩阵：服务端/客户端/协议/资源版本兼容矩阵 + 最低兼容版本 | PROTO-02 | 矩阵文档化 |
@@ -289,6 +289,8 @@ GATE-P1 关闭后，P2 的 SEC-03、SEC-04、SEC-05、SEC-06 各为独立任务�
 **OPS-BASIC-01 收口记录（2026-08-10）**：正式服务端在管理 HTTP 启用时自动启动不导出的 PERF-00 基础监控会话；`BasicOperationsMonitor` 只组合既有 PERF-00 在线数、Tick p95、保存 p95/失败、网络队列 gauge 与 DB-03 备份快照，不跨线程遍历玩家状态。Operator/Administrator 可经 SEC-04 来源限制、Bearer 鉴权和审计读取 `GET /operations/status` JSON。Tick、保存、队列阈值与检查周期可配置并在正式启动前校验；备份时效复用 DB-03 周期计算。告警以不可静默丢弃的 `Warn` 日志写入 `OPS_ALERT`，只在触发/恢复转换时记录；MySQL 部署不会误报 SQLite 备份缺失。该阈值只作为可调运营告警起点，不是压力容量承诺；用户后续自行实机观察。专项、全量及构建证据见 `Docs/Evidence/GATE-P5/ops-basic-01-monitoring-20260810/`；运维说明见 `Docs/OPS-BASIC-01-基础服务端监控与告警.md`。OPS-BASIC-02～04、PROTO-02/03、RELEASE-01～03 仍未完成，GATE-P5 保持开启。
 
 **OPS-BASIC-02 收口记录（2026-08-10）**：共享 `CrashDiagnosticBundle` 在同一输出根目录内先写入并刷新 `.partial`，完成后再以目录移动发布；失败会清理半成品，同进程同组件只保留首个崩溃现场。PC、Android 和服务端正式宿主均接入未处理异常；Android 还覆盖游戏对象构造前的启动协调阶段，并在捕获前同步排空移动日志队列。诊断包包含每份现有日志脱敏后最后最多 64 KiB、程序版本、SEC-06 资源状态版本及摘要、宿主白名单配置摘要和异常；首次启动无接受状态时回退到随包资源索引，服务端清单随正式构建复制。JSON/键值秘密、Bearer/Basic、连接串、邮箱、IPv4 与用户主目录名均在落盘前遮蔽；不自动上传。专项、全量及五项目标构建证据见 `Docs/Evidence/GATE-P5/ops-basic-02-crash-diagnostics-20260810/`；使用边界见 `Docs/OPS-BASIC-02-崩溃诊断基础.md`。OPS-BASIC-03/04、PROTO-02/03、RELEASE-01～03 仍未完成，GATE-P5 保持开启。
+
+**OPS-BASIC-03 收口记录（2026-08-10）**：正式服务端新增原子持久化的四项总闸，Administrator 可经 SEC-04 管理 HTTP 修改商城、服务端微端资源更新、活动和高风险账户操作，Operator 可只读查询；每次请求保留 `ADMIN_AUDIT`，成功变更另以可靠 `Warn` 写入不含原因原文的 `OPS_KILL_SWITCH`。状态先写入、刷新并原子替换，成功后才发布不可变快照；损坏、缺字段、未知版本或不可读状态在监听和 Ready 前失败关闭。商城列表与两条购买路径、微端资源文件路径、攻城/魔龙主线程进度以及开户/改密/删角入口均读取同一快照；正在进行的攻城只在主线程停止，不从管理线程跨界修改游戏状态。服务端外部签名仓库的事务化发布仍属于 RELEASE-02，细粒度开关仍属于发布后 OPS-03。专项、全量及构建证据见 `Docs/Evidence/GATE-P5/ops-basic-03-kill-switch-20260810/`；运维说明见 `Docs/OPS-BASIC-03-Kill-Switch.md`。OPS-BASIC-04、PROTO-02/03、RELEASE-01～03 仍未完成，GATE-P5 保持开启。
 
 ### P6 脚本化赛季活动（4~6 周，发布后路线图）
 

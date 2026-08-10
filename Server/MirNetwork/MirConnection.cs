@@ -10,6 +10,7 @@ using System.Text.RegularExpressions;
 using Server.Utils;
 using Shared.Diagnostics;
 using Shared.Transport;
+using Server.Operations;
 
 namespace Server.MirNetwork
 {
@@ -984,7 +985,8 @@ namespace Server.MirNetwork
         {
             if (Stage != GameStage.Select) return;
             
-            if (!Settings.AllowDeleteCharacter)
+            if (!Settings.AllowDeleteCharacter ||
+                Envir.KillSwitches?.IsEnabled(KillSwitchFeature.HighRiskOperations) == false)
             {
                 Enqueue(new S.DeleteCharacter { Result = 0 });
                 return;

@@ -38,6 +38,10 @@ bld/
 **/Configs/ProtectedSecrets/
 *.dpapi
 
+# OPS-BASIC-03 远程开关是运行时状态，不作为发布默认值提交。
+**/Configs/Operations/kill-switches.json
+**/Configs/Operations/kill-switches.json.partial-*
+
 # .NET Core
 project.lock.json
 project.fragment.lock.json

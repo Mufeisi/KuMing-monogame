@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using Server.Security;
 using Server.Persistence.Sql;
 using Server.Operations;
+using System.Text.Json;
 using S = ServerPackets;
 
 namespace Server.Library.Utils
@@ -21,6 +22,7 @@ namespace Server.Library.Utils
         private readonly string _operatorToken;
         private readonly SqliteBackupService _backupService;
         private readonly BasicOperationsMonitor _operationsMonitor;
+        private readonly KillSwitchService _killSwitches;
 
         private sealed class CachedSoundList
         {
@@ -29,13 +31,17 @@ namespace Server.Library.Utils
             public Dictionary<int, string> Entries = new();
         }
 
-        public HttpServer(SqliteBackupService backupService = null, BasicOperationsMonitor operationsMonitor = null)
+        public HttpServer(
+            SqliteBackupService backupService = null,
+            BasicOperationsMonitor operationsMonitor = null,
+            KillSwitchService killSwitches = null)
         {
             Host = Settings.HTTPIPAddress;
             _administratorToken = ProtectedSecretStore.Read(ProtectedSecretStore.AdministratorToken);
             _operatorToken = ProtectedSecretStore.Read(ProtectedSecretStore.OperatorToken);
             _backupService = backupService;
             _operationsMonitor = operationsMonitor ?? new BasicOperationsMonitor(backupService);
+            _killSwitches = killSwitches;
         }
 
         public void Start()
@@ -130,6 +136,14 @@ namespace Server.Library.Utils
                     case "/operations/status":
                         WriteJsonResponse(response, HttpStatusCode.OK, _operationsMonitor.CaptureStatus());
                         break;
+                    case "/operations/kill-switches":
+                        if (_killSwitches == null)
+                        {
+                            WriteStatusResponse(response, HttpStatusCode.ServiceUnavailable, "kill switches unavailable");
+                            break;
+                        }
+                        WriteJsonResponse(response, HttpStatusCode.OK, _killSwitches.GetSnapshot());
+                        break;
                     default:
                         WriteResponse(response, "error");
                         break;
@@ -222,6 +236,12 @@ namespace Server.Library.Utils
 
             if (!AuthorizeMicroRequest(request, response))
                 return;
+
+            if (_killSwitches != null && !_killSwitches.IsEnabled(KillSwitchFeature.ResourceUpdate))
+            {
+                WriteStatusResponse(response, HttpStatusCode.ServiceUnavailable, "resource update disabled");
+                return;
+            }
 
             var segments = absolutePath.Split(PathSplitChars, StringSplitOptions.RemoveEmptyEntries);
             if (segments.Length < 2 || !segments[0].Equals("api", StringComparison.OrdinalIgnoreCase))
@@ -809,7 +829,70 @@ namespace Server.Library.Utils
                 WriteJsonResponse(response, HttpStatusCode.Accepted, _backupService.GetStatus());
                 return;
             }
+            if (path.Equals("/operations/kill-switches/set", StringComparison.OrdinalIgnoreCase))
+            {
+                HandleKillSwitchChange(request, response);
+                return;
+            }
             WriteStatusResponse(response, HttpStatusCode.MethodNotAllowed, "method not allowed");
+        }
+
+        private void HandleKillSwitchChange(HttpListenerRequest request, HttpListenerResponse response)
+        {
+            if (_killSwitches == null)
+            {
+                WriteStatusResponse(response, HttpStatusCode.ServiceUnavailable, "kill switches unavailable");
+                return;
+            }
+
+            try
+            {
+                string body = ReadBoundedBody(request, 8 * 1024);
+                var change = JsonSerializer.Deserialize<KillSwitchChangeRequest>(body, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true,
+                });
+                if (change == null || !change.Enabled.HasValue ||
+                    !KillSwitchService.TryParseFeature(change.Feature, out KillSwitchFeature feature))
+                {
+                    WriteStatusResponse(response, HttpStatusCode.BadRequest, "invalid kill switch request");
+                    return;
+                }
+
+                KillSwitchSnapshot snapshot = _killSwitches.Set(
+                    feature, change.Enabled.Value, change.Reason, AdminRole.Administrator.ToString());
+                WriteJsonResponse(response, HttpStatusCode.OK, snapshot);
+            }
+            catch (Exception error) when (error is JsonException or ArgumentException)
+            {
+                WriteStatusResponse(response, HttpStatusCode.BadRequest, "kill switch change rejected: " + error.Message);
+            }
+            catch (InvalidOperationException error) when (error.Message == "request body too large")
+            {
+                WriteStatusResponse(response, HttpStatusCode.RequestEntityTooLarge, error.Message);
+            }
+            catch (Exception error) when (error is InvalidOperationException or IOException or UnauthorizedAccessException)
+            {
+                WriteStatusResponse(response, HttpStatusCode.ServiceUnavailable, "kill switch change unavailable: " + error.Message);
+            }
+        }
+
+        private static string ReadBoundedBody(HttpListenerRequest request, int maximumBytes)
+        {
+            if (request.ContentLength64 > maximumBytes)
+                throw new InvalidOperationException("request body too large");
+
+            using var memory = new MemoryStream();
+            var buffer = new byte[1024];
+            while (true)
+            {
+                int read = request.InputStream.Read(buffer, 0, buffer.Length);
+                if (read <= 0) break;
+                if (memory.Length + read > maximumBytes)
+                    throw new InvalidOperationException("request body too large");
+                memory.Write(buffer, 0, read);
+            }
+            return new System.Text.UTF8Encoding(false, true).GetString(memory.ToArray());
         }
 
         private void WriteJsonResponse(HttpListenerResponse response, HttpStatusCode statusCode, object value)

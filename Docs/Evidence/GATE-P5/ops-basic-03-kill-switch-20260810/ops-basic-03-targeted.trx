@@ -1,0 +1,64 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="dd5715e0-38cb-43d9-b9ef-58638e5c5950" name="luo@DESKTOP-4J13TH0 2026-08-10 09:43:03" runUser="DESKTOP-4J13TH0\luo" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-08-10T09:43:03.2490707+08:00" queuing="2026-08-10T09:43:03.2490712+08:00" start="2026-08-10T09:43:01.1460468+08:00" finish="2026-08-10T09:43:03.4167000+08:00" />
+  <TestSettings name="default" id="d1dffb5d-a7c5-434b-9faa-55c19f2f7083">
+    <Deployment runDeploymentRoot="luo_DESKTOP-4J13TH0_2026-08-10_09_43_03" />
+  </TestSettings>
+  <Results>
+    <UnitTestResult executionId="832d1708-74d1-40c9-9dec-928cf171e0ef" testId="cc8ce5ec-f4e3-ac75-c8e2-e26e6892faf9" testName="Base05.Tests.KillSwitchServiceTests.损坏缺字段或未知版本状态均失败关闭(payload: &quot;{}&quot;)" computerName="DESKTOP-4J13TH0" duration="00:00:00.0015835" startTime="2026-08-10T09:43:02.2043906+08:00" endTime="2026-08-10T09:43:02.2058295+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="832d1708-74d1-40c9-9dec-928cf171e0ef" />
+    <UnitTestResult executionId="8e9b08a3-92e8-4424-a5f3-07c7bec969b4" testId="ab78f59c-38cc-2aa8-1013-84292e5636db" testName="Base05.Tests.KillSwitchServiceTests.商城活动与高风险入口读取同一服务端开关" computerName="DESKTOP-4J13TH0" duration="00:00:00.0987994" startTime="2026-08-10T09:43:02.0730896+08:00" endTime="2026-08-10T09:43:02.1836653+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="8e9b08a3-92e8-4424-a5f3-07c7bec969b4" />
+    <UnitTestResult executionId="0312d566-29b2-417f-9ace-cbcb43410947" testId="d4e553ec-8d43-f6bf-6311-1ef737cfc78a" testName="Base05.Tests.KillSwitchServiceTests.损坏缺字段或未知版本状态均失败关闭(payload: &quot;{\&quot;FormatVersion\&quot;:2}&quot;)" computerName="DESKTOP-4J13TH0" duration="00:00:00.0175202" startTime="2026-08-10T09:43:02.1978527+08:00" endTime="2026-08-10T09:43:02.2019050+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="0312d566-29b2-417f-9ace-cbcb43410947" />
+    <UnitTestResult executionId="40245133-2568-494a-9b98-6126d62de97c" testId="c94ff527-3e2b-cccd-8741-fb0c87a911ce" testName="Base05.Tests.KillSwitchServiceTests.状态先原子持久化再发布且重启保持关闭" computerName="DESKTOP-4J13TH0" duration="00:00:00.0155311" startTime="2026-08-10T09:43:03.3223173+08:00" endTime="2026-08-10T09:43:03.3379038+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="40245133-2568-494a-9b98-6126d62de97c" />
+    <UnitTestResult executionId="22704463-5e13-4845-9833-7aec0b0c057b" testId="806e53fe-645c-13ee-55e8-1aa0a79b0d27" testName="Base05.Tests.KillSwitchServiceTests.损坏缺字段或未知版本状态均失败关闭(payload: &quot;not-json&quot;)" computerName="DESKTOP-4J13TH0" duration="00:00:00.0022698" startTime="2026-08-10T09:43:02.2026752+08:00" endTime="2026-08-10T09:43:02.2042648+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="22704463-5e13-4845-9833-7aec0b0c057b" />
+    <UnitTestResult executionId="e81ea0f7-f2b8-400c-8761-ad14d6bf65f4" testId="59a5a23a-fd98-e85f-5ac6-5b92d09e2e44" testName="Base05.Tests.KillSwitchServiceTests.操作员可查询管理员可修改且微端资源下载立即关闭" computerName="DESKTOP-4J13TH0" duration="00:00:01.1112059" startTime="2026-08-10T09:43:02.2060214+08:00" endTime="2026-08-10T09:43:03.3206214+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="e81ea0f7-f2b8-400c-8761-ad14d6bf65f4" />
+  </Results>
+  <TestDefinitions>
+    <UnitTest name="Base05.Tests.KillSwitchServiceTests.操作员可查询管理员可修改且微端资源下载立即关闭" storage="c:\users\luo\.codex\worktrees\p5-ops-basic-03-kill-switch-20260810\tests\base05.tests\bin\debug\net10.0\base05.tests.dll" id="59a5a23a-fd98-e85f-5ac6-5b92d09e2e44">
+      <Execution id="e81ea0f7-f2b8-400c-8761-ad14d6bf65f4" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p5-ops-basic-03-kill-switch-20260810\Tests\Base05.Tests\bin\Debug\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.KillSwitchServiceTests" name="操作员可查询管理员可修改且微端资源下载立即关闭" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.KillSwitchServiceTests.损坏缺字段或未知版本状态均失败关闭(payload: &quot;{\&quot;FormatVersion\&quot;:2}&quot;)" storage="c:\users\luo\.codex\worktrees\p5-ops-basic-03-kill-switch-20260810\tests\base05.tests\bin\debug\net10.0\base05.tests.dll" id="d4e553ec-8d43-f6bf-6311-1ef737cfc78a">
+      <Execution id="0312d566-29b2-417f-9ace-cbcb43410947" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p5-ops-basic-03-kill-switch-20260810\Tests\Base05.Tests\bin\Debug\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.KillSwitchServiceTests" name="损坏缺字段或未知版本状态均失败关闭" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.KillSwitchServiceTests.损坏缺字段或未知版本状态均失败关闭(payload: &quot;{}&quot;)" storage="c:\users\luo\.codex\worktrees\p5-ops-basic-03-kill-switch-20260810\tests\base05.tests\bin\debug\net10.0\base05.tests.dll" id="cc8ce5ec-f4e3-ac75-c8e2-e26e6892faf9">
+      <Execution id="832d1708-74d1-40c9-9dec-928cf171e0ef" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p5-ops-basic-03-kill-switch-20260810\Tests\Base05.Tests\bin\Debug\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.KillSwitchServiceTests" name="损坏缺字段或未知版本状态均失败关闭" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.KillSwitchServiceTests.状态先原子持久化再发布且重启保持关闭" storage="c:\users\luo\.codex\worktrees\p5-ops-basic-03-kill-switch-20260810\tests\base05.tests\bin\debug\net10.0\base05.tests.dll" id="c94ff527-3e2b-cccd-8741-fb0c87a911ce">
+      <Execution id="40245133-2568-494a-9b98-6126d62de97c" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p5-ops-basic-03-kill-switch-20260810\Tests\Base05.Tests\bin\Debug\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.KillSwitchServiceTests" name="状态先原子持久化再发布且重启保持关闭" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.KillSwitchServiceTests.损坏缺字段或未知版本状态均失败关闭(payload: &quot;not-json&quot;)" storage="c:\users\luo\.codex\worktrees\p5-ops-basic-03-kill-switch-20260810\tests\base05.tests\bin\debug\net10.0\base05.tests.dll" id="806e53fe-645c-13ee-55e8-1aa0a79b0d27">
+      <Execution id="22704463-5e13-4845-9833-7aec0b0c057b" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p5-ops-basic-03-kill-switch-20260810\Tests\Base05.Tests\bin\Debug\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.KillSwitchServiceTests" name="损坏缺字段或未知版本状态均失败关闭" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.KillSwitchServiceTests.商城活动与高风险入口读取同一服务端开关" storage="c:\users\luo\.codex\worktrees\p5-ops-basic-03-kill-switch-20260810\tests\base05.tests\bin\debug\net10.0\base05.tests.dll" id="ab78f59c-38cc-2aa8-1013-84292e5636db">
+      <Execution id="8e9b08a3-92e8-4424-a5f3-07c7bec969b4" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p5-ops-basic-03-kill-switch-20260810\Tests\Base05.Tests\bin\Debug\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.KillSwitchServiceTests" name="商城活动与高风险入口读取同一服务端开关" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestEntries>
+    <TestEntry testId="cc8ce5ec-f4e3-ac75-c8e2-e26e6892faf9" executionId="832d1708-74d1-40c9-9dec-928cf171e0ef" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="ab78f59c-38cc-2aa8-1013-84292e5636db" executionId="8e9b08a3-92e8-4424-a5f3-07c7bec969b4" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="d4e553ec-8d43-f6bf-6311-1ef737cfc78a" executionId="0312d566-29b2-417f-9ace-cbcb43410947" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="c94ff527-3e2b-cccd-8741-fb0c87a911ce" executionId="40245133-2568-494a-9b98-6126d62de97c" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="806e53fe-645c-13ee-55e8-1aa0a79b0d27" executionId="22704463-5e13-4845-9833-7aec0b0c057b" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="59a5a23a-fd98-e85f-5ac6-5b92d09e2e44" executionId="e81ea0f7-f2b8-400c-8761-ad14d6bf65f4" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+  </TestEntries>
+  <TestLists>
+    <TestList name="列表中未列出的结果" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="所有已加载的结果" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Completed">
+    <Counters total="6" executed="6" passed="6" failed="0" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <Output>
+      <StdOut>[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.0.2+dd36e86129 (64-bit .NET 10.0.4)&#xD;
+[xUnit.net 00:00:00.14]   Discovering: Base05.Tests&#xD;
+[xUnit.net 00:00:00.24]   Discovered:  Base05.Tests&#xD;
+[xUnit.net 00:00:00.28]   Starting:    Base05.Tests&#xD;
+[xUnit.net 00:00:01.58]   Finished:    Base05.Tests&#xD;
+</StdOut>
+    </Output>
+  </ResultSummary>
+</TestRun>
