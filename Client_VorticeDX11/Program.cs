@@ -2,6 +2,7 @@
 using Client.Bootstrap;
 using Client.Diagnostics;
 using Launcher;
+using Launcher.Remote;
 using System;
 using System.Diagnostics;
 using System.IO;
@@ -27,6 +28,8 @@ namespace Client
                 PcCrashDiagnostics.Capture(eventArgs.ExceptionObject as Exception ??
                     new InvalidOperationException("PC 客户端发生未知未处理异常"));
             bool runPreLoginUpdateCli = args.Any(item => string.Equals(item, "--prelogin-update-cli", StringComparison.OrdinalIgnoreCase));
+            bool gameInstance = GameLaunchArguments.TryParse(args, out GameLaunchOptions launchOptions);
+            bool gameInstanceRequested = args.Any(item => string.Equals(item, "--game-instance", StringComparison.OrdinalIgnoreCase));
 
             if (args.Length > 0)
             {
@@ -49,15 +52,25 @@ namespace Client
 
             try
             {
+                if (gameInstanceRequested && !gameInstance)
+                    throw new ArgumentException("游戏子进程启动参数不完整或无效");
+
                 Client.Utils.ResolutionTrace.StartSession("Client Startup");
                 System.Windows.Forms.Application.SetHighDpiMode(System.Windows.Forms.HighDpiMode.PerMonitorV2);
 
-                if (UpdatePatcher()) return;
+                if (!gameInstance && UpdatePatcher()) return;
 
                 if (RuntimePolicyHelper.LegacyV2RuntimeEnabledSuccessfully == true) { }
 
                 Packet.IsServer = false;
                 Settings.Load();
+                if (gameInstance)
+                {
+                    string microBaseUrl = launchOptions.MicroEnabled
+                        ? new UriBuilder(Uri.UriSchemeHttp, launchOptions.MicroAddress, launchOptions.MicroPort, "api/").Uri.AbsoluteUri
+                        : string.Empty;
+                    Settings.ApplyGameEndpointOverride(launchOptions.ServerAddress, launchOptions.ServerPort, microBaseUrl);
+                }
                 Client.Utils.ResolutionTrace.LogClientState("Program.Main", "After Settings.Load");
 
                 System.Windows.Forms.Application.EnableVisualStyles();
@@ -67,7 +80,9 @@ namespace Client
                 Client.Utils.ResolutionTrace.LogClientState("Program.Main", "After CheckResolutionSetting");
 
                 Launch = false;
-                if (Settings.P_Patcher)
+                if (gameInstance)
+                    Launch = true;
+                else if (Settings.P_Patcher)
                     System.Windows.Forms.Application.Run(PForm = new AMain());
                 else
                     Launch = true;
@@ -78,6 +93,10 @@ namespace Client
                     System.Windows.Forms.Application.Run(Form = new CMain());
                 }
 
+                if (gameInstance)
+                {
+                    Settings.ClearGameEndpointOverride();
+                }
                 Settings.Save();
 
                 if (Restart)

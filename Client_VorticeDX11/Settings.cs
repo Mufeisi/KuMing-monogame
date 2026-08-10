@@ -144,6 +144,36 @@ namespace Client
         public static string MicroBaseUrl = string.Empty;
         public static string MicroUser = string.Empty;
         public static string MicroCode = string.Empty;
+        private static bool _gameEndpointOverrideActive;
+        private static string _configuredIPAddress;
+        private static int _configuredPort;
+        private static int _configuredTlsPort;
+        private static string _configuredMicroBaseUrl;
+
+        public static void ApplyGameEndpointOverride(string address, int port, string microBaseUrl)
+        {
+            if (_gameEndpointOverrideActive) throw new InvalidOperationException("游戏入口已经被覆盖");
+            _configuredIPAddress = IPAddress;
+            _configuredPort = Port;
+            _configuredTlsPort = TlsPort;
+            _configuredMicroBaseUrl = MicroBaseUrl;
+            _gameEndpointOverrideActive = true;
+
+            IPAddress = address;
+            if (UseTlsV2) TlsPort = port;
+            else Port = port;
+            MicroBaseUrl = microBaseUrl;
+        }
+
+        public static void ClearGameEndpointOverride()
+        {
+            if (!_gameEndpointOverrideActive) return;
+            IPAddress = _configuredIPAddress;
+            Port = _configuredPort;
+            TlsPort = _configuredTlsPort;
+            MicroBaseUrl = _configuredMicroBaseUrl;
+            _gameEndpointOverrideActive = false;
+        }
 
         //Bootstrap（资源增量更新/分包下载）
         public static bool BootstrapPreLoginUpdate = true;
@@ -262,6 +292,7 @@ namespace Client
         public static string P_Login = string.Empty;
         public static string P_Password = string.Empty;
         public static string P_ServerName = string.Empty;
+        public static string P_ServerListUrl = string.Empty;
         public static string P_BrowserAddress = "http://127.0.0.1/mir2-patchsite/";//默认 https://www.lomcn.org/mir2-patchsite/
         public static string P_Client = Application.StartupPath + "\\";
         public static bool P_AutoStart = false;
@@ -392,6 +423,7 @@ namespace Client
             P_Password = string.Empty;
             P_AutoStart = Reader.ReadBoolean("Launcher", "AutoStart", P_AutoStart);
             P_ServerName = Reader.ReadString("Launcher", "ServerName", P_ServerName);
+            P_ServerListUrl = Reader.ReadString("Launcher", "ServerListUrl", P_ServerListUrl)?.Trim() ?? string.Empty;
             P_BrowserAddress = Reader.ReadString("Launcher", "Browser", P_BrowserAddress);
             P_Concurrency = Reader.ReadInt32("Launcher", "ConcurrentDownloads", P_Concurrency);
             
@@ -412,6 +444,37 @@ namespace Client
 
         public static void Save()
         {
+            using var mutex = new System.Threading.Mutex(false, @"Local\LyoCrystal.ClientSettings.Save");
+            bool acquired;
+            try
+            {
+                acquired = mutex.WaitOne(TimeSpan.FromSeconds(5));
+            }
+            catch (System.Threading.AbandonedMutexException)
+            {
+                acquired = true;
+            }
+
+            if (!acquired) return;
+            try
+            {
+                SaveCorePreservingGameEndpointOverride();
+            }
+            finally
+            {
+                mutex.ReleaseMutex();
+            }
+        }
+
+        private static void SaveCorePreservingGameEndpointOverride()
+        {
+            SaveCore(
+                _gameEndpointOverrideActive ? _configuredTlsPort : TlsPort,
+                _gameEndpointOverrideActive ? _configuredMicroBaseUrl : MicroBaseUrl);
+        }
+
+        private static void SaveCore(int persistedTlsPort, string persistedMicroBaseUrl)
+        {
             Reader ??= CreateReader(_useTestConfig ? @".\Mir2Test.ini" : @".\Mir2Config.ini");
             //Graphics
             Reader.Write("Graphics", "FullScreen", FullScreen);
@@ -429,7 +492,7 @@ namespace Client
 
             //Network TLS V2
             Reader.Write("Network", "UseTlsV2", UseTlsV2);
-            Reader.Write("Network", "TlsPort", TlsPort);
+            Reader.Write("Network", "TlsPort", persistedTlsPort);
             Reader.Write("Network", "TlsServerName", TlsServerName ?? string.Empty);
             Reader.Write("Network", "TlsSpkiSha256Pins", TlsSpkiSha256Pins ?? string.Empty);
 
@@ -440,7 +503,7 @@ namespace Client
             Reader.Write("Sound", "CleanMinutes", SoundCleanMinutes);
 
             //Micro
-            Reader.Write("Micro", "BaseUrl", MicroBaseUrl ?? string.Empty);
+            Reader.Write("Micro", "BaseUrl", persistedMicroBaseUrl ?? string.Empty);
             Reader.Write("Micro", "User", MicroUser ?? string.Empty);
             Reader.Write("Micro", "Code", MicroCode ?? string.Empty);
 
@@ -510,6 +573,7 @@ namespace Client
             Reader.Write("Launcher", "Login", P_Login);
             Shared.Security.PasswordStoragePolicy.ClearStoredCredentials(Reader, "Launcher");
             Reader.Write("Launcher", "ServerName", P_ServerName);
+            Reader.Write("Launcher", "ServerListUrl", P_ServerListUrl);
             Reader.Write("Launcher", "Browser", P_BrowserAddress);
             Reader.Write("Launcher", "AutoStart", P_AutoStart);
             Reader.Write("Launcher", "ConcurrentDownloads", P_Concurrency);
