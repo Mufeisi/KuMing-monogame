@@ -24,6 +24,11 @@ public sealed class SimulatedProtocolLoadTests
     private const string ChildModeVariable = "LYOCRYSTAL_SIM_LOAD_CHILD";
     private const string ChildResultVariable = "LYOCRYSTAL_SIM_LOAD_RESULT";
     private const string Password = "LoadPass1234";
+#if DEBUG
+    private const string TestConfiguration = "Debug";
+#else
+    private const string TestConfiguration = "Release";
+#endif
     private readonly ITestOutputHelper _output;
 
     public SimulatedProtocolLoadTests(ITestOutputHelper output) => _output = output;
@@ -115,7 +120,7 @@ public sealed class SimulatedProtocolLoadTests
             startInfo.ArgumentList.Add("test");
             startInfo.ArgumentList.Add(projectPath);
             startInfo.ArgumentList.Add("-c");
-            startInfo.ArgumentList.Add("Release");
+            startInfo.ArgumentList.Add(TestConfiguration);
             startInfo.ArgumentList.Add("--no-build");
             startInfo.ArgumentList.Add("--no-restore");
             startInfo.ArgumentList.Add("--filter");
@@ -127,14 +132,16 @@ public sealed class SimulatedProtocolLoadTests
             child = Process.Start(startInfo) ?? throw new InvalidOperationException("无法启动模拟压测隔离子进程。");
             Task<string> stdout = child.StandardOutput.ReadToEndAsync();
             Task<string> stderr = child.StandardError.ReadToEndAsync();
-            using var timeout = new CancellationTokenSource(TimeSpan.FromMinutes(4));
+            int durationSeconds = ReadBoundedSetting("LYOCRYSTAL_LOAD_DURATION_SECONDS", 4, 2, 600);
+            TimeSpan childTimeout = TimeSpan.FromSeconds(Math.Max(240, durationSeconds + 180));
+            using var timeout = new CancellationTokenSource(childTimeout);
             try
             {
                 await child.WaitForExitAsync(timeout.Token);
             }
             catch (OperationCanceledException)
             {
-                throw new TimeoutException("模拟压测隔离子进程未在 4 分钟内结束。");
+                throw new TimeoutException($"模拟压测隔离子进程未在 {childTimeout.TotalMinutes:F1} 分钟内结束。");
             }
 
             string capturedStdout = await stdout;
