@@ -192,6 +192,29 @@ public sealed class LauncherRemoteListTests
         }
     }
 
+    [Fact]
+    public async Task 超出整数范围的缓存版本会安全回退本地配置()
+    {
+        string root = CreateTemporaryRoot();
+        try
+        {
+            await File.WriteAllTextAsync(
+                Path.Combine(root, "RemoteLaunchManifest.json"),
+                "{\"cacheVersion\":999999999999999999999,\"listUrl\":\"https://list.example.com/list.txt\",\"manifest\":{}}");
+            using var httpClient = new HttpClient(new FailingResponseHandler());
+            var loader = new RemoteLaunchManifestLoader(httpClient, root, TimeSpan.FromSeconds(1));
+
+            LaunchManifestLoadResult result = await loader.LoadAsync("https://list.example.com/list.txt", CreateFallback());
+
+            Assert.Equal(LaunchManifestSource.Local, result.Source);
+            Assert.Contains("已使用本地配置", result.Warning);
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
     [Theory]
     [InlineData("\"maxInstances\": 0", "\"maxInstances\": 1")]
     [InlineData("\"maxInstances\": 11", "\"maxInstances\": 1")]

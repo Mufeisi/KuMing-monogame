@@ -152,7 +152,7 @@ namespace Launcher.Remote
                 JsonElement root = document.RootElement;
                 if (root.ValueKind == JsonValueKind.Object && root.TryGetProperty("cacheVersion", out _))
                 {
-                    if (root.GetProperty("cacheVersion").GetInt32() != 1)
+                    if (!root.GetProperty("cacheVersion").TryGetInt32(out int cacheVersion) || cacheVersion != 1)
                         throw new InvalidLaunchManifestException("区服列表缓存版本不受支持");
 
                     string listUrl = root.GetProperty("listUrl").GetString() ?? string.Empty;
