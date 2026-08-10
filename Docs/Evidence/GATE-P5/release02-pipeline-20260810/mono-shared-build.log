@@ -1,13 +1,13 @@
 **********************
 PowerShell transcript start
-Start time: 20260810144424
+Start time: 20260810151454
 Username: DESKTOP-4J13TH0\luo
 RunAs User: DESKTOP-4J13TH0\luo
 Configuration Name:
 Machine: DESKTOP-4J13TH0 (Microsoft Windows NT 10.0.19045.0)
 Host Application: C:\Program Files\PowerShell\7\pwsh.dll -Command try { [Console]::OutputEncoding=[System.Text.Encoding]::UTF8 } catch {}
-$e=(Resolve-Path 'Docs\Evidence\GATE-P5\release02-pipeline-20260810').Path; Start-Transcript -LiteralPath (Join-Path $e 'shared-build.log') -Force|Out-Null; dotnet build Shared\Shared.csproj -c Release --no-restore -v:minimal; "EXIT=$LASTEXITCODE"; Stop-Transcript|Out-Null; Start-Transcript -LiteralPath (Join-Path $e 'mono-shared-build.log') -Force|Out-Null; dotnet build Client_MonoGame.Shared\Client_MonoGame.Shared.csproj -f net10.0-android -c Release --no-restore -v:minimal; "EXIT=$LASTEXITCODE"; Stop-Transcript|Out-Null; Start-Transcript -LiteralPath (Join-Path $e 'pc-client-build.log') -Force|Out-Null; dotnet build Client_VorticeDX11\Client_VorticeDX11.csproj -c Release --no-restore -v:minimal; "EXIT=$LASTEXITCODE"; Stop-Transcript|Out-Null; if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}
-Process ID: 25576
+$evidence=(Resolve-Path 'Docs\Evidence\GATE-P5\release02-pipeline-20260810').Path; $log=Join-Path $evidence 'mono-shared-build.log'; Start-Transcript -LiteralPath $log -Force | Out-Null; 'COMMAND=dotnet build Client_MonoGame.Shared\Client_MonoGame.Shared.csproj -c Release -f net10.0 --no-restore --nologo'; dotnet build Client_MonoGame.Shared\Client_MonoGame.Shared.csproj -c Release -f net10.0 --no-restore --nologo; $code=$LASTEXITCODE; "EXIT=$code"; Stop-Transcript | Out-Null; exit $code
+Process ID: 23528
 PSVersion: 7.4.7
 PSEdition: Core
 GitCommitId: 7.4.7
@@ -18,9 +18,10 @@ PSRemotingProtocolVersion: 2.3
 SerializationVersion: 1.1.0.1
 WSManStackVersion: 3.0
 **********************
+COMMAND=dotnet build Client_MonoGame.Shared\Client_MonoGame.Shared.csproj -c Release -f net10.0 --no-restore --nologo
 
 EXIT=0
 **********************
 PowerShell transcript end
-End time: 20260810144445
+End time: 20260810151455
 **********************

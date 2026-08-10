@@ -362,13 +362,35 @@ namespace MonoShare
             if (updatePackages.Count > 0)
             {
                 var signedBundles = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                var rejectedBundles = new List<string>();
                 foreach (string directory in candidates)
                 {
                     if (BootstrapPackageUpdateRuntime.TryReadBundleDownloadMeta(directory, out BundleDownloadMetaView meta) &&
                         !string.IsNullOrWhiteSpace(meta?.PackageName) && updatePackages.Contains(meta.PackageName))
                     {
-                        signedBundles[meta.PackageName] = directory;
+                        if (BootstrapPackageUpdateRuntime.TryGetUpdateDesiredSha256(meta.PackageName, out string desiredSha256) &&
+                            string.Equals((meta.Sha256 ?? string.Empty).Trim(), desiredSha256, StringComparison.OrdinalIgnoreCase))
+                        {
+                            signedBundles[meta.PackageName] = directory;
+                        }
+                        else
+                        {
+                            rejectedBundles.Add(directory);
+                        }
                     }
+                }
+                foreach (string rejected in rejectedBundles)
+                {
+                    var rejectedResult = new BootstrapPackageApplyBundleResultView
+                    {
+                        SourceDirectory = rejected,
+                        SourceDirectoryExists = true,
+                        ErrorMessage = "Bundle 摘要与当前签名更新队列不一致。",
+                    };
+                    TryWriteBundleInboxApplyResult(rejected, rejectedResult);
+                    TryAppendBundleInboxLog(rejected, rejectedResult);
+                    TryMoveBundleInboxDirectory(rejected, BundleInboxFailedRoot, "signed-hash-mismatch");
+                    candidates.Remove(rejected);
                 }
                 if (updatePackages.All(signedBundles.ContainsKey))
                 {
@@ -395,7 +417,6 @@ namespace MonoShare
                         TryAppendBundleInboxLog(directory, releaseResult);
                         if (releaseResult.Completed)
                         {
-                            try { BootstrapPackageUpdateRuntime.TryOnBundleApplied(directory, releaseResult); } catch { }
                             TryMoveBundleInboxDirectory(directory, BundleInboxProcessedRoot, "release-applied");
                         }
                         else

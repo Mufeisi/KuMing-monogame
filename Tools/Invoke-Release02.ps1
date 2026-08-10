@@ -19,11 +19,13 @@
     [ValidateSet('UpdateAttempt', 'UpdateFailure', 'Launch', 'Crash', 'FatalCrash', 'HealthyLaunch')]
     [string]$EventType = 'Launch',
     [string]$EventId = '',
+    [string]$EventReleaseId = '',
     [string]$GatewayPrefix = 'http://127.0.0.1:18443/',
     [bool]$StartGateway = $true
 )
 
 $ErrorActionPreference = 'Stop'
+Add-Type -AssemblyName System.Security
 $utf8NoBom = [Text.UTF8Encoding]::new($false, $true)
 $stateFormat = 'lyocrystal-release-channel-v1'
 $metricsFormat = 'lyocrystal-release-metrics-v1'
@@ -32,6 +34,8 @@ $maximumUpdateFailureRate = 0.02
 $maximumCrashRate = 0.01
 $maximumConsecutiveFatalCrashes = 3
 $validatedArtifacts = @{}
+$collectorTokenEntropy = [Text.Encoding]::UTF8.GetBytes('LyoCrystal.Release02.CollectorToken.v1')
+$maximumEventBodyBytes = 4096L
 
 function Get-NormalizedDirectory([string]$Path, [string]$Label) {
     if ([string]::IsNullOrWhiteSpace($Path)) { throw "$Label 不能为空。" }
@@ -83,6 +87,61 @@ function Write-AtomicJson([string]$Path, [object]$Value) {
     }
     finally {
         if ([IO.File]::Exists($partial)) { [IO.File]::Delete($partial) }
+    }
+}
+
+function Write-AtomicBytes([string]$Path, [byte[]]$Bytes) {
+    $directory = Split-Path -Parent $Path
+    [IO.Directory]::CreateDirectory($directory) | Out-Null
+    $partial = "$Path.partial-$([Guid]::NewGuid().ToString('N'))"
+    try {
+        $stream = [IO.FileStream]::new($partial, [IO.FileMode]::CreateNew, [IO.FileAccess]::Write, [IO.FileShare]::None, 4096, [IO.FileOptions]::WriteThrough)
+        try { $stream.Write($Bytes, 0, $Bytes.Length); $stream.Flush($true) } finally { $stream.Dispose() }
+        if ([IO.File]::Exists($Path)) { throw "受保护采集令牌已经存在，拒绝覆盖：$Path。" }
+        [IO.File]::Move($partial, $Path)
+    }
+    finally { if ([IO.File]::Exists($partial)) { [IO.File]::Delete($partial) } }
+}
+
+function Get-OrCreateCollectorToken([string]$Root) {
+    $path = Join-Path $Root 'release-events-token.dpapi'
+    if (-not [IO.File]::Exists($path)) {
+        $random = New-Object byte[] 32
+        $rng = [Security.Cryptography.RandomNumberGenerator]::Create()
+        try { $rng.GetBytes($random) } finally { $rng.Dispose() }
+        $plainText = [Convert]::ToBase64String($random)
+        $plain = [Text.Encoding]::UTF8.GetBytes($plainText)
+        try {
+            $protected = [Security.Cryptography.ProtectedData]::Protect(
+                $plain, $collectorTokenEntropy, [Security.Cryptography.DataProtectionScope]::CurrentUser)
+            Write-AtomicBytes $path $protected
+        }
+        finally {
+            [Array]::Clear($plain, 0, $plain.Length)
+            [Array]::Clear($random, 0, $random.Length)
+            $plainText = $null
+        }
+    }
+    $protectedBytes = [IO.File]::ReadAllBytes($path)
+    $unprotected = [Security.Cryptography.ProtectedData]::Unprotect(
+        $protectedBytes, $collectorTokenEntropy, [Security.Cryptography.DataProtectionScope]::CurrentUser)
+    try { return [Text.Encoding]::UTF8.GetString($unprotected) }
+    finally { [Array]::Clear($unprotected, 0, $unprotected.Length) }
+}
+
+function Test-FixedTimeToken([string]$Actual, [string]$Expected) {
+    if ($null -eq $Actual -or $null -eq $Expected) { return $false }
+    $actualBytes = [Text.Encoding]::UTF8.GetBytes($Actual)
+    $expectedBytes = [Text.Encoding]::UTF8.GetBytes($Expected)
+    try {
+        if ($actualBytes.Length -ne $expectedBytes.Length) { return $false }
+        $difference = 0
+        for ($i = 0; $i -lt $actualBytes.Length; $i++) { $difference = $difference -bor ($actualBytes[$i] -bxor $expectedBytes[$i]) }
+        return $difference -eq 0
+    }
+    finally {
+        [Array]::Clear($actualBytes, 0, $actualBytes.Length)
+        [Array]::Clear($expectedBytes, 0, $expectedBytes.Length)
     }
 }
 
@@ -246,9 +305,18 @@ function Invoke-Evaluate([string]$Root, [string]$Path) {
     Write-Host "[保持] Release=$($state.CurrentReleaseId)，UpdateRate=$updateRate，CrashRate=$crashRate，$($state.Reason)"
 }
 
-function Record-ReleaseEvent([string]$Root, [string]$Type, [string]$Id) {
+function Record-ReleaseEvent([string]$Root, [string]$ObservedReleaseId, [string]$StableClientId, [string]$Type, [string]$Id) {
     if ($Id -notmatch '^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$') { throw 'EventId 格式无效。' }
+    Assert-ReleaseId $ObservedReleaseId
     $state = Read-ChannelState $Root
+    if ([string]$state.Status -eq 'RolledBack') { throw '当前灰度已经回滚，拒绝迟到事件。' }
+    if (-not [string]::Equals($ObservedReleaseId, [string]$state.CurrentReleaseId, [StringComparison]::Ordinal)) {
+        throw '事件 ReleaseId 不是当前灰度版本。'
+    }
+    $selection = Select-ReleaseForClient $Root $StableClientId | ConvertFrom-Json
+    if (-not [string]::Equals([string]$selection.ReleaseId, $ObservedReleaseId, [StringComparison]::Ordinal)) {
+        throw '事件客户端不属于当前灰度 cohort。'
+    }
     $path = Join-Path $Root 'channel-metrics.json'
     $metrics = if (Test-Path -LiteralPath $path -PathType Leaf) {
         Get-Content -LiteralPath $path -Raw -Encoding UTF8 | ConvertFrom-Json
@@ -293,6 +361,7 @@ function Invoke-WithChannelLock([string]$Root, [scriptblock]$Body) {
 
 function Start-ReleaseGateway([string]$Root, [string]$Prefix) {
     Assert-LoopbackGatewayPrefix $Prefix
+    $collectorToken = Get-OrCreateCollectorToken $Root
     $listener = [Net.HttpListener]::new()
     $listener.Prefixes.Add($Prefix)
     $listener.Start()
@@ -307,11 +376,29 @@ function Start-ReleaseGateway([string]$Root, [string]$Prefix) {
                     $body = Invoke-WithChannelLock $Root { Select-ReleaseForClient $Root $id }
                 }
                 elseif ($context.Request.HttpMethod -eq 'POST' -and $path -eq '/release/events') {
+                    $authorization = [string]$context.Request.Headers['Authorization']
+                    $suppliedToken = if ($authorization.StartsWith('Bearer ', [StringComparison]::Ordinal)) { $authorization.Substring(7) } else { '' }
+                    if (-not (Test-FixedTimeToken $suppliedToken $collectorToken)) {
+                        $context.Response.StatusCode = 401
+                        throw '发布观测事件鉴权失败。'
+                    }
+                    if ($context.Request.ContentLength64 -lt 0) {
+                        $context.Response.StatusCode = 411
+                        throw '发布观测事件必须声明 Content-Length。'
+                    }
+                    if ($context.Request.ContentLength64 -eq 0 -or $context.Request.ContentLength64 -gt $maximumEventBodyBytes) {
+                        $context.Response.StatusCode = 413
+                        throw '发布观测事件正文必须为 1～4096 字节。'
+                    }
+                    if ($context.Request.InputStream.CanTimeout) { $context.Request.InputStream.ReadTimeout = 5000 }
                     $reader = [IO.StreamReader]::new($context.Request.InputStream, [Text.Encoding]::UTF8)
                     try { $event = $reader.ReadToEnd() | ConvertFrom-Json } finally { $reader.Dispose() }
+                    if ([string]$event.Format -ne 'lyocrystal-release-event-v1') { throw '发布观测事件格式无效。' }
                     $type = [string]$event.EventType
                     if ($type -notin @('UpdateAttempt','UpdateFailure','Launch','Crash','FatalCrash','HealthyLaunch')) { throw 'EventType 无效。' }
-                    Invoke-WithChannelLock $Root { Record-ReleaseEvent $Root $type ([string]$event.EventId) }
+                    Invoke-WithChannelLock $Root {
+                        Record-ReleaseEvent $Root ([string]$event.ReleaseId) ([string]$event.ClientId) $type ([string]$event.EventId)
+                    }
                     $state = Read-ChannelState $Root
                     $body = [ordered]@{ Accepted=$true; CurrentReleaseId=[string]$state.CurrentReleaseId; Status=[string]$state.Status } | ConvertTo-Json -Compress
                 }
@@ -339,7 +426,7 @@ function Start-ReleaseGateway([string]$Root, [string]$Prefix) {
                 else { $context.Response.StatusCode = 404; $body = '{"error":"not_found"}' }
             }
             catch {
-                $context.Response.StatusCode = 400
+                if ($context.Response.StatusCode -lt 400) { $context.Response.StatusCode = 400 }
                 $body = [ordered]@{ error=$_.Exception.Message } | ConvertTo-Json -Compress
             }
             $bytes = $utf8NoBom.GetBytes([string]$body)
@@ -491,7 +578,7 @@ else {
         'Evaluate' { Invoke-Evaluate $normalizedChannelRoot $MetricsPath }
         'Rollback' { Invoke-Rollback $normalizedChannelRoot '人工回滚' }
         'Select' { Select-ReleaseForClient $normalizedChannelRoot $ClientId }
-        'Record' { Record-ReleaseEvent $normalizedChannelRoot $EventType $EventId }
+        'Record' { Record-ReleaseEvent $normalizedChannelRoot $EventReleaseId $ClientId $EventType $EventId }
         'StartGateway' { Ensure-ReleaseGatewayStarted $normalizedChannelRoot }
     }
     }

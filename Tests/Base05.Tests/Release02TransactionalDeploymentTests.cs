@@ -53,6 +53,55 @@ public sealed class Release02TransactionalDeploymentTests
     }
 
     [Fact]
+    public void 整版资源与版本队列同事务提交并可在重启后读取()
+    {
+        using var fixture = new DeploymentFixture();
+        string asset = fixture.Target("Packages/pack-a/data.bin", "old-asset");
+        string versions = fixture.Target("State/BootstrapPackageVersions.json", "{\"Packages\":[]}");
+        string queue = fixture.Target("State/BootstrapPackageUpdateQueue.json", "{\"Packages\":[{\"Name\":\"pack-a\"}]}");
+
+        TransactionalFileDeployment.Apply(
+            fixture.TransactionRoot,
+            new[] { fixture.TargetRoot },
+            new[]
+            {
+                fixture.Entry("incoming/data.bin", "new-asset", asset),
+                fixture.Entry("incoming/versions.json", "{\"Packages\":[{\"Name\":\"pack-a\",\"Sha256\":\"abc\"}]}", versions),
+                fixture.Entry("incoming/queue.json", "{\"Packages\":[]}", queue),
+            });
+
+        Assert.Equal("new-asset", File.ReadAllText(asset));
+        using JsonDocument restartedVersions = JsonDocument.Parse(File.ReadAllText(versions));
+        using JsonDocument restartedQueue = JsonDocument.Parse(File.ReadAllText(queue));
+        Assert.Equal("pack-a", restartedVersions.RootElement.GetProperty("Packages")[0].GetProperty("Name").GetString());
+        Assert.Empty(restartedQueue.RootElement.GetProperty("Packages").EnumerateArray());
+    }
+
+    [Fact]
+    public void 整版状态验证失败同时恢复资源版本和待更新队列()
+    {
+        using var fixture = new DeploymentFixture();
+        string asset = fixture.Target("Packages/pack-a/data.bin", "old-asset");
+        string versions = fixture.Target("State/BootstrapPackageVersions.json", "old-versions");
+        string queue = fixture.Target("State/BootstrapPackageUpdateQueue.json", "old-queue");
+
+        Assert.Throws<InvalidDataException>(() => TransactionalFileDeployment.Apply(
+            fixture.TransactionRoot,
+            new[] { fixture.TargetRoot },
+            new[]
+            {
+                fixture.Entry("incoming/data.bin", "new-asset", asset),
+                fixture.Entry("incoming/versions.json", "new-versions", versions),
+                fixture.Entry("incoming/queue.json", "new-queue", queue),
+            },
+            verifyAfterPublish: () => false));
+
+        Assert.Equal("old-asset", File.ReadAllText(asset));
+        Assert.Equal("old-versions", File.ReadAllText(versions));
+        Assert.Equal("old-queue", File.ReadAllText(queue));
+    }
+
+    [Fact]
     public void 重启恢复未完成事务并保持上一版本()
     {
         using var fixture = new DeploymentFixture();

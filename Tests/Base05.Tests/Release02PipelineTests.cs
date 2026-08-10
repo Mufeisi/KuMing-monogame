@@ -40,7 +40,10 @@ public sealed class Release02PipelineTests
         Assert.DoesNotContain("InstallExtractedPackageToClient(stagingRoot, packageName)", pc, StringComparison.Ordinal);
         Assert.Contains("updatePackages.All(signedBundles.ContainsKey)", mobile, StringComparison.Ordinal);
         Assert.Contains("TryApplyPackageBundleSetTransactionally", mobile, StringComparison.Ordinal);
+        Assert.Contains("TryGetUpdateDesiredSha256(meta.PackageName", mobile, StringComparison.Ordinal);
+        Assert.DoesNotContain("TryOnBundleApplied(directory, releaseResult)", mobile, StringComparison.Ordinal);
         Assert.Contains("BuildBundleDeclaredPackages(sourceDirectory, installManifestBundle)", mobileRuntime, StringComparison.Ordinal);
+        Assert.Contains("BuildReleaseCommitEntries(required, stateStagingDirectory)", mobileRuntime, StringComparison.Ordinal);
         Assert.Contains("事务资源版本缺少清单声明文件", mobileRuntime, StringComparison.Ordinal);
         int callbackStart = mobileRuntime.IndexOf("verifyAfterPublish: () =>", StringComparison.Ordinal);
         int callbackEnd = mobileRuntime.IndexOf("ClientResourceLayout.ReloadBootstrapMetadata();", callbackStart, StringComparison.Ordinal);
@@ -52,6 +55,7 @@ public sealed class Release02PipelineTests
     {
         using var fixture = new PipelineFixture();
         fixture.WriteState("release-new", "release-old");
+        Assert.DoesNotContain(fixture.CollectorToken, Encoding.UTF8.GetString(File.ReadAllBytes(fixture.CollectorTokenPath)), StringComparison.Ordinal);
         fixture.WriteMetrics("release-new", updateAttempts: 100, updateFailures: 3, launches: 100, crashes: 0, fatal: 0);
 
         ProcessResult result = fixture.Run("Evaluate");
@@ -157,10 +161,11 @@ public sealed class Release02PipelineTests
     {
         using var fixture = new PipelineFixture();
         fixture.WriteState("release-new", "release-old");
-        fixture.Run("Record", "-EventType", "FatalCrash", "-EventId", "fatal-1");
-        fixture.Run("Record", "-EventType", "FatalCrash", "-EventId", "fatal-1");
-        fixture.Run("Record", "-EventType", "FatalCrash", "-EventId", "fatal-2");
-        fixture.Run("Record", "-EventType", "FatalCrash", "-EventId", "fatal-3");
+        string canaryId = Enumerable.Range(0, 10000).Select(i => "record-client-" + i).First(id => Bucket(id) < 5);
+        fixture.Run("Record", "-EventReleaseId", "release-new", "-ClientId", canaryId, "-EventType", "FatalCrash", "-EventId", "fatal-1");
+        fixture.Run("Record", "-EventReleaseId", "release-new", "-ClientId", canaryId, "-EventType", "FatalCrash", "-EventId", "fatal-1");
+        fixture.Run("Record", "-EventReleaseId", "release-new", "-ClientId", canaryId, "-EventType", "FatalCrash", "-EventId", "fatal-2");
+        fixture.Run("Record", "-EventReleaseId", "release-new", "-ClientId", canaryId, "-EventType", "FatalCrash", "-EventId", "fatal-3");
 
         using JsonDocument state = JsonDocument.Parse(File.ReadAllText(fixture.StatePath));
         Assert.Equal("release-old", state.RootElement.GetProperty("CurrentReleaseId").GetString());
@@ -187,26 +192,66 @@ public sealed class Release02PipelineTests
                 await Task.Delay(100);
             }
             string canaryId = Enumerable.Range(0, 10000).Select(i => "gateway-client-" + i).First(id => Bucket(id) < 5);
+            string stableId = Enumerable.Range(0, 10000).Select(i => "gateway-stable-" + i).First(id => Bucket(id) >= 5);
             string selection = await http.GetStringAsync(prefix + "release/select?clientId=" + Uri.EscapeDataString(canaryId));
             Assert.Contains("\"ReleaseId\":\"release-new\"", selection, StringComparison.Ordinal);
             using JsonDocument selected = JsonDocument.Parse(selection);
             string resourcePath = selected.RootElement.GetProperty("ResourceRepositoryPath").GetString()!;
             string signedIndex = await http.GetStringAsync(prefix.TrimEnd('/') + resourcePath + "Packages/bootstrap-package-index.signed.json");
             Assert.Equal("{\"signed\":true}", signedIndex);
+
+            using (var unauthorizedContent = EventContent("release-new", canaryId, "FatalCrash", "unauthorized"))
+            using (HttpResponseMessage unauthorized = await http.PostAsync(prefix + "release/events", unauthorizedContent))
+                Assert.Equal(HttpStatusCode.Unauthorized, unauthorized.StatusCode);
+
+            using (var stableContent = EventContent("release-new", stableId, "FatalCrash", "stable-cohort"))
+            using (var stableRequest = new HttpRequestMessage(HttpMethod.Post, prefix + "release/events") { Content = stableContent })
+            {
+                stableRequest.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", fixture.CollectorToken);
+                using HttpResponseMessage stable = await http.SendAsync(stableRequest);
+                Assert.Equal(HttpStatusCode.BadRequest, stable.StatusCode);
+            }
+
+            using (var oversizedContent = new StringContent(new string('x', 5000), Encoding.UTF8, "application/json"))
+            using (var oversizedRequest = new HttpRequestMessage(HttpMethod.Post, prefix + "release/events") { Content = oversizedContent })
+            {
+                oversizedRequest.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", fixture.CollectorToken);
+                using HttpResponseMessage oversized = await http.SendAsync(oversizedRequest);
+                Assert.Equal(HttpStatusCode.RequestEntityTooLarge, oversized.StatusCode);
+            }
+
             for (int i = 1; i <= 3; i++)
             {
-                using var content = new StringContent(JsonSerializer.Serialize(new { EventType = "FatalCrash", EventId = "gateway-fatal-" + i }), Encoding.UTF8, "application/json");
-                using HttpResponseMessage response = await http.PostAsync(prefix + "release/events", content);
+                using var content = EventContent("release-new", canaryId, "FatalCrash", "gateway-fatal-" + i);
+                using var request = new HttpRequestMessage(HttpMethod.Post, prefix + "release/events") { Content = content };
+                request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", fixture.CollectorToken);
+                using HttpResponseMessage response = await http.SendAsync(request);
                 Assert.True(response.IsSuccessStatusCode, await response.Content.ReadAsStringAsync());
             }
             using JsonDocument state = JsonDocument.Parse(File.ReadAllText(fixture.StatePath));
             Assert.Equal("release-old", state.RootElement.GetProperty("CurrentReleaseId").GetString());
+
+            using var lateContent = EventContent("release-new", canaryId, "FatalCrash", "late-after-rollback");
+            using var lateRequest = new HttpRequestMessage(HttpMethod.Post, prefix + "release/events") { Content = lateContent };
+            lateRequest.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", fixture.CollectorToken);
+            using HttpResponseMessage late = await http.SendAsync(lateRequest);
+            Assert.Equal(HttpStatusCode.BadRequest, late.StatusCode);
         }
         finally
         {
             if (!gateway.HasExited) gateway.Kill(entireProcessTree: true);
         }
     }
+
+    private static StringContent EventContent(string releaseId, string clientId, string eventType, string eventId) =>
+        new(JsonSerializer.Serialize(new
+        {
+            Format = "lyocrystal-release-event-v1",
+            ReleaseId = releaseId,
+            ClientId = clientId,
+            EventType = eventType,
+            EventId = eventId,
+        }), Encoding.UTF8, "application/json");
 
     private static int Bucket(string id)
     {
@@ -233,9 +278,18 @@ public sealed class Release02PipelineTests
         {
             WriteRelease("release-old");
             WriteRelease("release-new");
+            byte[] plain = Encoding.UTF8.GetBytes(CollectorToken);
+            byte[] protectedToken = ProtectedData.Protect(
+                plain,
+                Encoding.UTF8.GetBytes("LyoCrystal.Release02.CollectorToken.v1"),
+                DataProtectionScope.CurrentUser);
+            File.WriteAllBytes(Path.Combine(_root, "release-events-token.dpapi"), protectedToken);
+            CryptographicOperations.ZeroMemory(plain);
         }
 
         public string Root => _root;
+        public string CollectorToken { get; } = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32));
+        public string CollectorTokenPath => Path.Combine(_root, "release-events-token.dpapi");
         public string StatePath => Path.Combine(_root, "channel-state.json");
         private string MetricsPath => Path.Combine(_root, "metrics.json");
 

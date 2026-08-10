@@ -6,5 +6,5 @@
     "RolloutPercent":  5,
     "Status":  "CanaryObserving",
     "Reason":  "样本不足，保持当前灰度比例",
-    "UpdatedUtc":  "2026-08-10T06:38:06.5810679Z"
+    "UpdatedUtc":  "2026-08-10T07:12:23.9808128Z"
 }

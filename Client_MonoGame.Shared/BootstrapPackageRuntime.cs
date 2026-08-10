@@ -805,11 +805,26 @@ namespace MonoShare
                         AddTransactionalEntry(entries, source, hydratedTarget);
                 }
             }
-            TransactionalFileDeployment.Apply(
-                Path.Combine(ClientResourceLayout.RuntimeRoot, "ReleaseTransactions"),
-                new[] { ClientResourceLayout.ClientRoot },
-                entries.Values,
-                () => entries.Values.All(entry => TransactionalFilesMatch(entry.SourcePath, entry.TargetPath)));
+            string transactionRoot = Path.Combine(ClientResourceLayout.RuntimeRoot, "ReleaseTransactions");
+            string stateStagingDirectory = Path.Combine(transactionRoot, "state-" + Guid.NewGuid().ToString("N"));
+            try
+            {
+                foreach (TransactionalFileDeploymentEntry stateEntry in
+                         BootstrapPackageUpdateRuntime.BuildReleaseCommitEntries(required, stateStagingDirectory))
+                {
+                    AddTransactionalEntry(entries, stateEntry.SourcePath, stateEntry.TargetPath);
+                }
+                TransactionalFileDeployment.Apply(
+                    transactionRoot,
+                    new[] { ClientResourceLayout.ClientRoot },
+                    entries.Values,
+                    () => entries.Values.All(entry => TransactionalFilesMatch(entry.SourcePath, entry.TargetPath)));
+            }
+            finally
+            {
+                try { if (Directory.Exists(stateStagingDirectory)) Directory.Delete(stateStagingDirectory, recursive: true); }
+                catch { }
+            }
             ClientResourceLayout.ReloadBootstrapMetadata();
             return new BootstrapPackageApplyBundleResultView
             {
