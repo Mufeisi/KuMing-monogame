@@ -1,0 +1,38 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="d51beab4-3a32-4a13-a340-58397db300c9" name="luo@DESKTOP-4J13TH0 2026-08-10 11:38:21" runUser="DESKTOP-4J13TH0\luo" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-08-10T11:38:21.3237434+08:00" queuing="2026-08-10T11:38:21.3237438+08:00" start="2026-08-10T11:37:20.4344384+08:00" finish="2026-08-10T11:38:21.3292765+08:00" />
+  <TestSettings name="default" id="caeb48e1-e7f9-4659-99bb-d6554d940ca8">
+    <Deployment runDeploymentRoot="luo_DESKTOP-4J13TH0_2026-08-10_11_38_21" />
+  </TestSettings>
+  <Results>
+    <UnitTestResult executionId="05a76a22-8de2-41ec-bc71-9e50d9581a40" testId="c765d883-84c4-12f1-cebe-f61a37117166" testName="Base05.Tests.SimulatedProtocolLoadTests.模拟客户端维持连接并完成登录心跳与掉线补连" computerName="DESKTOP-4J13TH0" duration="00:00:59.8208977" startTime="2026-08-10T11:37:21.3437638+08:00" endTime="2026-08-10T11:38:21.1775545+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="05a76a22-8de2-41ec-bc71-9e50d9581a40">
+      <Output>
+        <StdOut>SIMULATED_LOAD_RESULT target=300 active=100 peak=300 logins=101 keepAliveReplies=23458 replenishments=1 connectionRetries=0 protocolFailures=0 keepAliveP95Ms=580.18 tickP95Ms=0.00 gcPauseP95Ms=19.66 queueHighWater=300</StdOut>
+      </Output>
+    </UnitTestResult>
+  </Results>
+  <TestDefinitions>
+    <UnitTest name="Base05.Tests.SimulatedProtocolLoadTests.模拟客户端维持连接并完成登录心跳与掉线补连" storage="c:\users\luo\.codex\worktrees\p4-simulated-load-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="c765d883-84c4-12f1-cebe-f61a37117166">
+      <Execution id="05a76a22-8de2-41ec-bc71-9e50d9581a40" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p4-simulated-load-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.SimulatedProtocolLoadTests" name="模拟客户端维持连接并完成登录心跳与掉线补连" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestEntries>
+    <TestEntry testId="c765d883-84c4-12f1-cebe-f61a37117166" executionId="05a76a22-8de2-41ec-bc71-9e50d9581a40" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+  </TestEntries>
+  <TestLists>
+    <TestList name="列表中未列出的结果" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="所有已加载的结果" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Completed">
+    <Counters total="1" executed="1" passed="1" failed="0" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <Output>
+      <StdOut>[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.0.2+dd36e86129 (64-bit .NET 10.0.4)&#xD;
+[xUnit.net 00:00:00.13]   Discovering: Base05.Tests&#xD;
+[xUnit.net 00:00:00.24]   Discovered:  Base05.Tests&#xD;
+[xUnit.net 00:00:00.28]   Starting:    Base05.Tests&#xD;
+[xUnit.net 00:01:00.16]   Finished:    Base05.Tests&#xD;
+</StdOut>
+    </Output>
+  </ResultSummary>
+</TestRun>
