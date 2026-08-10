@@ -30,6 +30,19 @@ public sealed class MainActivity : AndroidGameActivity
     {
         base.OnCreate(savedInstanceState);
 
+        try
+        {
+            StartGame();
+        }
+        catch (Exception exception)
+        {
+            MobileCrashDiagnostics.Capture(exception, FileSystem.AppDataDirectory);
+            throw;
+        }
+    }
+
+    private void StartGame()
+    {
         var coordinator = new MobileBootstrapCoordinator();
         coordinator.EnsureInitializedAsync().GetAwaiter().GetResult();
 

@@ -1787,6 +1787,8 @@ namespace MonoShare
 	                    try
 	                    {
 	                        SaveError($"UnhandledException: {args.ExceptionObject}");
+	                        MobileCrashDiagnostics.Capture(args.ExceptionObject as Exception ??
+	                            new InvalidOperationException("移动客户端发生未知未处理异常"));
 	                    }
 	                    catch
 	                    {

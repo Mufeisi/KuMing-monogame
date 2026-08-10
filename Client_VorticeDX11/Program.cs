@@ -1,5 +1,6 @@
 ﻿using Client.Resolution;
 using Client.Bootstrap;
+using Client.Diagnostics;
 using Launcher;
 using System;
 using System.Diagnostics;
@@ -22,6 +23,9 @@ namespace Client
         [STAThread]
         private static void Main(string[] args)
         {
+            AppDomain.CurrentDomain.UnhandledException += (_, eventArgs) =>
+                PcCrashDiagnostics.Capture(eventArgs.ExceptionObject as Exception ??
+                    new InvalidOperationException("PC 客户端发生未知未处理异常"));
             bool runPreLoginUpdateCli = args.Any(item => string.Equals(item, "--prelogin-update-cli", StringComparison.OrdinalIgnoreCase));
 
             if (args.Length > 0)
@@ -84,6 +88,7 @@ namespace Client
             catch (Exception ex)
             {
                 CMain.SaveError(ex.ToString());
+                PcCrashDiagnostics.Capture(ex);
             }
         }
 

@@ -1,5 +1,6 @@
 ﻿using log4net;
 using Server.Persistence.Sql;
+using Server.Diagnostics;
 using System.Reflection;
 using System.Runtime.InteropServices;
 
@@ -13,6 +14,10 @@ namespace Server.MirForms
         [STAThread]
         static void Main(string[] args)
         {
+            AppDomain.CurrentDomain.UnhandledException += (_, eventArgs) =>
+                ServerCrashDiagnostics.Capture(eventArgs.ExceptionObject as Exception ??
+                    new InvalidOperationException("服务器发生未知未处理异常"));
+
             if (args.Length > 0)
             {
                 Environment.ExitCode = RunCommandLine(args);
@@ -39,7 +44,7 @@ namespace Server.MirForms
             }
             catch(Exception ex)
             {
-                //Logger.GetLogger().Error(ex);
+                ServerCrashDiagnostics.Capture(ex);
             }
         }
 
