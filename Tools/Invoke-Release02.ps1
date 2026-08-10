@@ -1,5 +1,5 @@
 ﻿param(
-    [ValidateSet('Prepare', 'Evaluate', 'Rollback')]
+    [ValidateSet('Prepare', 'Evaluate', 'Rollback', 'Select', 'Record', 'Serve', 'StartGateway')]
     [string]$Action = 'Prepare',
     [string]$RepositoryRoot = (Get-Location).Path,
     [Parameter(Mandatory = $true)]
@@ -14,7 +14,13 @@
     [string]$AndroidKeyPurpose = 'android-apk-2026',
     [string]$AndroidKeyAlias = 'lyocrystal-release-2026',
     [string]$JavaHome = '',
-    [string]$MetricsPath = ''
+    [string]$MetricsPath = '',
+    [string]$ClientId = '',
+    [ValidateSet('UpdateAttempt', 'UpdateFailure', 'Launch', 'Crash', 'FatalCrash', 'HealthyLaunch')]
+    [string]$EventType = 'Launch',
+    [string]$EventId = '',
+    [string]$GatewayPrefix = 'http://127.0.0.1:18443/',
+    [bool]$StartGateway = $true
 )
 
 $ErrorActionPreference = 'Stop'
@@ -25,6 +31,7 @@ $minimumSample = 100
 $maximumUpdateFailureRate = 0.02
 $maximumCrashRate = 0.01
 $maximumConsecutiveFatalCrashes = 3
+$validatedArtifacts = @{}
 
 function Get-NormalizedDirectory([string]$Path, [string]$Label) {
     if ([string]::IsNullOrWhiteSpace($Path)) { throw "$Label 不能为空。" }
@@ -64,8 +71,11 @@ function Write-AtomicJson([string]$Path, [object]$Value) {
         finally { $stream.Dispose() }
         if ([IO.File]::Exists($Path)) {
             $backup = "$Path.replace-backup-$([Guid]::NewGuid().ToString('N'))"
-            try { [IO.File]::Replace($partial, $Path, $backup) }
-            finally { if ([IO.File]::Exists($backup)) { [IO.File]::Delete($backup) } }
+            [IO.File]::Replace($partial, $Path, $backup)
+            if ([IO.File]::Exists($backup)) {
+                try { [IO.File]::Delete($backup) }
+                catch { Write-Warning "状态已经原子提交，但旧状态备份清理失败：$backup。" }
+            }
         }
         else {
             [IO.File]::Move($partial, $Path)
@@ -110,29 +120,88 @@ function Copy-DirectoryStrict([string]$Source, [string]$Target) {
     }
 }
 
+function Get-Sha256Hex([string]$Path) {
+    $sha = [Security.Cryptography.SHA256]::Create()
+    $stream = [IO.File]::OpenRead($Path)
+    try { return ([BitConverter]::ToString($sha.ComputeHash($stream))).Replace('-', '').ToLowerInvariant() }
+    finally { $stream.Dispose(); $sha.Dispose() }
+}
+
 function Get-FileProof([string]$Root) {
     $rootLength = (Get-NormalizedDirectory $Root '工件根').Length + 1
     return @(Get-ChildItem -LiteralPath $Root -File -Recurse | Sort-Object FullName | ForEach-Object {
         [ordered]@{
             Path = $_.FullName.Substring($rootLength).Replace('\', '/')
             Size = [long]$_.Length
-            Sha256 = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+            Sha256 = Get-Sha256Hex $_.FullName
         }
     })
 }
 
+function Assert-ReleaseArtifact([string]$Root, [string]$ExpectedReleaseId, [bool]$Force = $false) {
+    $releaseDirectory = Assert-PathWithin (Join-Path (Join-Path $Root 'releases') $ExpectedReleaseId) $Root '发布版本目录'
+    $manifestPath = Join-Path $releaseDirectory 'release-manifest.json'
+    if (-not (Test-Path -LiteralPath $manifestPath -PathType Leaf)) { throw "发布清单不存在：$manifestPath。" }
+    $manifestInfo = Get-Item -LiteralPath $manifestPath
+    $cacheKey = "$ExpectedReleaseId|$($manifestInfo.Length)|$($manifestInfo.LastWriteTimeUtc.Ticks)"
+    if (-not $Force -and $validatedArtifacts.ContainsKey($cacheKey)) { return $releaseDirectory }
+    $manifest = Get-Content -LiteralPath $manifestPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    if ($manifest.Format -ne 'lyocrystal-release-artifact-v1' -or $manifest.ReleaseId -ne $ExpectedReleaseId) {
+        throw '发布清单格式或 ReleaseId 不一致。'
+    }
+    $declared = [Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
+    foreach ($file in @($manifest.Files)) {
+        $relative = [string]$file.Path
+        if ([string]::IsNullOrWhiteSpace($relative) -or $relative.Contains('..')) { throw '发布清单包含无效相对路径。' }
+        if (-not $declared.Add($relative.Replace('\', '/'))) { throw "发布清单包含重复文件：$relative。" }
+        $path = Assert-PathWithin (Join-Path $releaseDirectory ($relative.Replace('/', '\'))) $releaseDirectory '发布文件'
+        if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { throw "发布文件缺失：$relative。" }
+        if ((Get-Item -LiteralPath $path).Length -ne [long]$file.Size -or
+            (Get-Sha256Hex $path) -ne [string]$file.Sha256) {
+            throw "发布文件完整性不匹配：$relative。"
+        }
+    }
+    $actual = @(Get-ChildItem -LiteralPath $releaseDirectory -File -Recurse | ForEach-Object {
+        $_.FullName.Substring($releaseDirectory.Length + 1).Replace('\', '/')
+    } | Where-Object { $_ -ne 'release-manifest.json' })
+    $extra = @($actual | Where-Object { -not $declared.Contains($_) })
+    if ($extra.Count -gt 0) { throw "发布目录存在清单外文件：$($extra[0])。" }
+    $signedIndex = Join-Path $releaseDirectory 'resources\Packages\bootstrap-package-index.signed.json'
+    if (-not (Test-Path -LiteralPath $signedIndex -PathType Leaf)) { throw '发布版本缺少签名资源索引。' }
+    $validatedArtifacts[$cacheKey] = $true
+    return $releaseDirectory
+}
+
+function Select-ReleaseForClient([string]$Root, [string]$StableClientId) {
+    if ([string]::IsNullOrWhiteSpace($StableClientId) -or $StableClientId.Length -gt 256) { throw 'ClientId 必须为 1～256 个字符。' }
+    $state = Read-ChannelState $Root
+    $selected = [string]$state.CurrentReleaseId
+    if ([int]$state.RolloutPercent -lt 100 -and -not [string]::IsNullOrWhiteSpace([string]$state.PreviousReleaseId)) {
+        $bytes = [Text.Encoding]::UTF8.GetBytes($StableClientId)
+        $sha = [Security.Cryptography.SHA256]::Create()
+        try { $hash = $sha.ComputeHash($bytes) } finally { $sha.Dispose() }
+        $bucket = (([int]$hash[0] -shl 8) -bor [int]$hash[1]) % 100
+        if ($bucket -ge [int]$state.RolloutPercent) { $selected = [string]$state.PreviousReleaseId }
+    }
+    Assert-ReleaseArtifact $Root $selected | Out-Null
+    [ordered]@{ Format='lyocrystal-release-selection-v1'; ReleaseId=$selected; CurrentReleaseId=[string]$state.CurrentReleaseId; RolloutPercent=[int]$state.RolloutPercent; ArtifactBasePath="/releases/$selected/"; ResourceRepositoryPath="/releases/$selected/resources/" } |
+        ConvertTo-Json -Compress
+}
+
 function Invoke-Rollback([string]$Root, [string]$Reason) {
     $state = Read-ChannelState $Root
+    if ([string]$state.Status -eq 'RolledBack') { throw '当前版本已经回滚；没有新发布时拒绝重复回滚。' }
     if ([string]::IsNullOrWhiteSpace([string]$state.PreviousReleaseId)) {
         throw '没有上一可运行版本，拒绝伪报回滚成功。'
     }
-    $previousDirectory = Assert-PathWithin (Join-Path (Join-Path $Root 'releases') ([string]$state.PreviousReleaseId)) $Root '上一版本目录'
-    if (-not (Test-Path -LiteralPath $previousDirectory -PathType Container)) {
-        throw "上一可运行版本工件不存在：$previousDirectory。"
-    }
+    Assert-ReleaseArtifact $Root ([string]$state.PreviousReleaseId) $true | Out-Null
     $oldCurrent = [string]$state.CurrentReleaseId
+    if ($null -eq $state.PSObject.Properties['FailedReleaseId']) {
+        $state | Add-Member -NotePropertyName FailedReleaseId -NotePropertyValue ''
+    }
     $state.CurrentReleaseId = [string]$state.PreviousReleaseId
-    $state.PreviousReleaseId = $oldCurrent
+    $state.PreviousReleaseId = ''
+    $state.FailedReleaseId = $oldCurrent
     $state.RolloutPercent = 100
     $state.Status = 'RolledBack'
     $state.Reason = $Reason
@@ -175,6 +244,127 @@ function Invoke-Evaluate([string]$Root, [string]$Path) {
     $state.UpdatedUtc = [DateTime]::UtcNow.ToString('O')
     Set-ChannelState $Root $state
     Write-Host "[保持] Release=$($state.CurrentReleaseId)，UpdateRate=$updateRate，CrashRate=$crashRate，$($state.Reason)"
+}
+
+function Record-ReleaseEvent([string]$Root, [string]$Type, [string]$Id) {
+    if ($Id -notmatch '^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$') { throw 'EventId 格式无效。' }
+    $state = Read-ChannelState $Root
+    $path = Join-Path $Root 'channel-metrics.json'
+    $metrics = if (Test-Path -LiteralPath $path -PathType Leaf) {
+        Get-Content -LiteralPath $path -Raw -Encoding UTF8 | ConvertFrom-Json
+    } else { $null }
+    if ($null -eq $metrics -or $metrics.Format -ne $metricsFormat -or $metrics.ReleaseId -ne $state.CurrentReleaseId) {
+        $metrics = [pscustomobject][ordered]@{
+            Format=$metricsFormat; ReleaseId=[string]$state.CurrentReleaseId
+            UpdateAttempts=0L; UpdateFailures=0L; Launches=0L; Crashes=0L; ConsecutiveFatalCrashes=0L
+            SeenEventIds=@(); UpdatedUtc=[DateTime]::UtcNow.ToString('O')
+        }
+    }
+    $seen = [Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
+    foreach ($existing in @($metrics.SeenEventIds)) { [void]$seen.Add([string]$existing) }
+    if (-not $seen.Add($Id)) { Write-Host "[忽略] 重复发布观测事件：$Id"; return }
+    switch ($Type) {
+        'UpdateAttempt' { $metrics.UpdateAttempts = [long]$metrics.UpdateAttempts + 1 }
+        'UpdateFailure' { $metrics.UpdateAttempts = [long]$metrics.UpdateAttempts + 1; $metrics.UpdateFailures = [long]$metrics.UpdateFailures + 1 }
+        'Launch' { $metrics.Launches = [long]$metrics.Launches + 1 }
+        'Crash' { $metrics.Launches = [long]$metrics.Launches + 1; $metrics.Crashes = [long]$metrics.Crashes + 1 }
+        'FatalCrash' { $metrics.Launches = [long]$metrics.Launches + 1; $metrics.Crashes = [long]$metrics.Crashes + 1; $metrics.ConsecutiveFatalCrashes = [long]$metrics.ConsecutiveFatalCrashes + 1 }
+        'HealthyLaunch' { $metrics.Launches = [long]$metrics.Launches + 1; $metrics.ConsecutiveFatalCrashes = 0L }
+    }
+    $metrics.SeenEventIds = @($seen | Select-Object -Last 10000)
+    $metrics.UpdatedUtc = [DateTime]::UtcNow.ToString('O')
+    Write-AtomicJson $path $metrics
+    Invoke-Evaluate $Root $path
+}
+
+function Assert-LoopbackGatewayPrefix([string]$Prefix) {
+    $uri = [Uri]$Prefix
+    if ($uri.Scheme -ne 'http' -or ($uri.Host -ne '127.0.0.1' -and $uri.Host -ne 'localhost')) {
+        throw '发布网关只允许监听 loopback HTTP；对外发布必须由既有 TLS 反向代理转发。'
+    }
+    if (-not $Prefix.EndsWith('/')) { throw 'GatewayPrefix 必须以斜杠结尾。' }
+}
+
+function Invoke-WithChannelLock([string]$Root, [scriptblock]$Body) {
+    $lockPath = Join-Path $Root 'release-channel.lock'
+    $stream = [IO.FileStream]::new($lockPath, [IO.FileMode]::OpenOrCreate, [IO.FileAccess]::ReadWrite, [IO.FileShare]::None)
+    try { & $Body } finally { $stream.Dispose() }
+}
+
+function Start-ReleaseGateway([string]$Root, [string]$Prefix) {
+    Assert-LoopbackGatewayPrefix $Prefix
+    $listener = [Net.HttpListener]::new()
+    $listener.Prefixes.Add($Prefix)
+    $listener.Start()
+    Write-Host "[网关] 正在监听 $Prefix"
+    try {
+        while ($listener.IsListening) {
+            $context = $listener.GetContext()
+            try {
+                $path = $context.Request.Url.AbsolutePath.TrimEnd('/')
+                if ($context.Request.HttpMethod -eq 'GET' -and $path -eq '/release/select') {
+                    $id = [string]$context.Request.QueryString['clientId']
+                    $body = Invoke-WithChannelLock $Root { Select-ReleaseForClient $Root $id }
+                }
+                elseif ($context.Request.HttpMethod -eq 'POST' -and $path -eq '/release/events') {
+                    $reader = [IO.StreamReader]::new($context.Request.InputStream, [Text.Encoding]::UTF8)
+                    try { $event = $reader.ReadToEnd() | ConvertFrom-Json } finally { $reader.Dispose() }
+                    $type = [string]$event.EventType
+                    if ($type -notin @('UpdateAttempt','UpdateFailure','Launch','Crash','FatalCrash','HealthyLaunch')) { throw 'EventType 无效。' }
+                    Invoke-WithChannelLock $Root { Record-ReleaseEvent $Root $type ([string]$event.EventId) }
+                    $state = Read-ChannelState $Root
+                    $body = [ordered]@{ Accepted=$true; CurrentReleaseId=[string]$state.CurrentReleaseId; Status=[string]$state.Status } | ConvertTo-Json -Compress
+                }
+                elseif ($context.Request.HttpMethod -eq 'GET' -and $path.StartsWith('/releases/', [StringComparison]::Ordinal)) {
+                    $relative = [Uri]::UnescapeDataString($path.Substring('/releases/'.Length))
+                    $separator = $relative.IndexOf('/')
+                    if ($separator -le 0) { throw '发布文件路径缺少 ReleaseId。' }
+                    $requestedRelease = $relative.Substring(0, $separator)
+                    Assert-ReleaseId $requestedRelease
+                    $releaseRoot = Assert-ReleaseArtifact $Root $requestedRelease
+                    $fileRelative = $relative.Substring($separator + 1).Replace('/', [IO.Path]::DirectorySeparatorChar)
+                    if ([string]::IsNullOrWhiteSpace($fileRelative) -or $fileRelative.Contains('..')) { throw '发布文件相对路径无效。' }
+                    $filePath = Assert-PathWithin (Join-Path $releaseRoot $fileRelative) $releaseRoot '发布下载文件'
+                    if (-not (Test-Path -LiteralPath $filePath -PathType Leaf)) { $context.Response.StatusCode = 404; throw '发布文件不存在。' }
+                    $info = Get-Item -LiteralPath $filePath
+                    $context.Response.ContentType = 'application/octet-stream'
+                    $context.Response.ContentLength64 = $info.Length
+                    $stream = [IO.File]::OpenRead($filePath)
+                    try { $stream.CopyTo($context.Response.OutputStream) } finally { $stream.Dispose(); $context.Response.Close() }
+                    continue
+                }
+                elseif ($context.Request.HttpMethod -eq 'GET' -and $path -eq '/health') {
+                    $body = '{"status":"ok"}'
+                }
+                else { $context.Response.StatusCode = 404; $body = '{"error":"not_found"}' }
+            }
+            catch {
+                $context.Response.StatusCode = 400
+                $body = [ordered]@{ error=$_.Exception.Message } | ConvertTo-Json -Compress
+            }
+            $bytes = $utf8NoBom.GetBytes([string]$body)
+            $context.Response.ContentType = 'application/json; charset=utf-8'
+            $context.Response.ContentLength64 = $bytes.Length
+            $context.Response.OutputStream.Write($bytes, 0, $bytes.Length)
+            $context.Response.Close()
+        }
+    }
+    finally { $listener.Stop(); $listener.Close() }
+}
+
+function Ensure-ReleaseGatewayStarted([string]$Root) {
+    Assert-LoopbackGatewayPrefix $GatewayPrefix
+    $pidPath = Join-Path $Root 'release-gateway.pid'
+    if (Test-Path -LiteralPath $pidPath -PathType Leaf) {
+        try {
+            $oldPid = [int](Get-Content -LiteralPath $pidPath -Raw -Encoding UTF8 | ConvertFrom-Json).ProcessId
+            if (Get-Process -Id $oldPid -ErrorAction SilentlyContinue) { return }
+        } catch { }
+    }
+    $process = Start-Process -FilePath 'powershell.exe' -ArgumentList @(
+        '-NoProfile','-ExecutionPolicy','Bypass','-File',$PSCommandPath,'-Action','Serve','-ChannelRoot',$Root,'-GatewayPrefix',$GatewayPrefix
+    ) -WindowStyle Hidden -PassThru
+    Write-AtomicJson $pidPath ([ordered]@{ ProcessId=$process.Id; Prefix=$GatewayPrefix; StartedUtc=[DateTime]::UtcNow.ToString('O') })
 }
 
 function Invoke-Prepare {
@@ -262,17 +452,22 @@ function Invoke-Prepare {
         [IO.Directory]::Move($partial, $releaseDirectory)
         $previous = ''
         $statePath = Join-Path $channel 'channel-state.json'
-        if (Test-Path -LiteralPath $statePath -PathType Leaf) { $previous = [string](Read-ChannelState $channel).CurrentReleaseId }
+        if (Test-Path -LiteralPath $statePath -PathType Leaf) {
+            $previous = [string](Read-ChannelState $channel).CurrentReleaseId
+            Assert-ReleaseArtifact $channel $previous | Out-Null
+        }
         $state = [ordered]@{
             Format = $stateFormat
             CurrentReleaseId = $ReleaseId
             PreviousReleaseId = $previous
+            FailedReleaseId = ''
             RolloutPercent = 5
             Status = 'Canary'
             Reason = '构建、冒烟、导出、签名与工件校验通过'
             UpdatedUtc = [DateTime]::UtcNow.ToString('O')
         }
         Set-ChannelState $channel $state
+        if ($StartGateway) { Ensure-ReleaseGatewayStarted $channel }
         Write-Host "[完成] RELEASE-02 一键发布已进入 5% 灰度：$ReleaseId。"
     }
     catch {
@@ -286,13 +481,18 @@ function Invoke-Prepare {
 
 $normalizedChannelRoot = Get-NormalizedDirectory $ChannelRoot '发布渠道根目录'
 [IO.Directory]::CreateDirectory($normalizedChannelRoot) | Out-Null
-$channelLockPath = Join-Path $normalizedChannelRoot 'release-channel.lock'
-$channelLock = [IO.FileStream]::new($channelLockPath, [IO.FileMode]::OpenOrCreate, [IO.FileAccess]::ReadWrite, [IO.FileShare]::None)
-try {
+if ($Action -eq 'Serve') {
+    Start-ReleaseGateway $normalizedChannelRoot $GatewayPrefix
+}
+else {
+    Invoke-WithChannelLock $normalizedChannelRoot {
     switch ($Action) {
         'Prepare' { Invoke-Prepare }
         'Evaluate' { Invoke-Evaluate $normalizedChannelRoot $MetricsPath }
         'Rollback' { Invoke-Rollback $normalizedChannelRoot '人工回滚' }
+        'Select' { Select-ReleaseForClient $normalizedChannelRoot $ClientId }
+        'Record' { Record-ReleaseEvent $normalizedChannelRoot $EventType $EventId }
+        'StartGateway' { Ensure-ReleaseGatewayStarted $normalizedChannelRoot }
+    }
     }
 }
-finally { $channelLock.Dispose() }

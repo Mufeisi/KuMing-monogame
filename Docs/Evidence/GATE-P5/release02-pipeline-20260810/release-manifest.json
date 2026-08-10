@@ -1,20 +1,20 @@
 {
     "Format":  "lyocrystal-release-artifact-v1",
-    "ReleaseId":  "release02-20260810-r2",
-    "Sequence":  3,
+    "ReleaseId":  "release02-20260810-r3",
+    "Sequence":  4,
     "MinimumClientVersion":  "1.0.0",
     "ResourceKeyId":  "resource-2026-a",
-    "CreatedUtc":  "2026-08-10T05:55:26.3963343Z",
+    "CreatedUtc":  "2026-08-10T06:35:21.0391669Z",
     "Files":  [
                   {
                       "Path":  "android-signing-build.log",
-                      "Size":  975346,
-                      "Sha256":  "e3af8e4a8b24b9df972aade038d991b817691c21126853b8092c17d9eb144602"
+                      "Size":  977161,
+                      "Sha256":  "7ccf06e85007fa344f474635b3422d281c5d8ef93dafb1f6bcaac496cbcbb39a"
                   },
                   {
                       "Path":  "com.lommir.client.monogame.android-Signed.apk",
-                      "Size":  89132742,
-                      "Sha256":  "81b954d522d865037348f7c789d6262cb46cf9a8f300f185d44da21395b0ed9e"
+                      "Size":  89479776,
+                      "Sha256":  "bac300b14c22b06ef636888c77e7eaf3a4b4c0f7a846709de53c859f6e185b67"
                   },
                   {
                       "Path":  "pc/BootstrapAssets/bootstrap-package-index.json",
@@ -1333,18 +1333,18 @@
                   },
                   {
                       "Path":  "pc/Client.dll",
-                      "Size":  2807296,
-                      "Sha256":  "f560498cb32676821b375753ca06909b788dc09238051fc78b22d5ec80ef8903"
+                      "Size":  2809344,
+                      "Sha256":  "e5bd9915e470c872b4da4c9f7d8a006cefac40648f6aeaf1f5664f1a951ff616"
                   },
                   {
                       "Path":  "pc/Client.exe",
                       "Size":  179712,
-                      "Sha256":  "ca40ec6d6b868d5a3ca32eb3442a085b122dd191bbba607dbbea6d58726f7829"
+                      "Sha256":  "33768a78885e39d916fb473816a10dbf04678a56ee6cb40e0a19caa36d2488b6"
                   },
                   {
                       "Path":  "pc/Client.pdb",
-                      "Size":  434884,
-                      "Sha256":  "45629e7e6ce83be26ca7a6a878862bf9d4a6cb35e47eb9b1f176a8c005cb1a32"
+                      "Size":  435780,
+                      "Sha256":  "af2f6c1859c1082b0e683d4bc1e3f9603bb9a87c87c2fb781b3f8e56018769bd"
                   },
                   {
                       "Path":  "pc/Client.runtimeconfig.json",
@@ -1533,13 +1533,13 @@
                   },
                   {
                       "Path":  "pc/Shared.dll",
-                      "Size":  306176,
-                      "Sha256":  "6aea66c3c1d8e8f2f383007c23763f3ce4d3268e6eb6ba368ce55b883691cd4a"
+                      "Size":  306688,
+                      "Sha256":  "48394fff2c0f633148bd67d169f6ac48cce07094a563b0250df8da092e7b5025"
                   },
                   {
                       "Path":  "pc/Shared.pdb",
-                      "Size":  124684,
-                      "Sha256":  "0d0f9c6b526d646b0e85a8c0790ea5d2d8c959815e314428465c2808d6f7456f"
+                      "Size":  116420,
+                      "Sha256":  "58dc945e4e1989eb2f41520001d13e604df1c3aeb5905ec20291e5e4fb927706"
                   },
                   {
                       "Path":  "pc/SharpGen.Runtime.COM.dll",
@@ -1602,14 +1602,19 @@
                       "Sha256":  "dfea69a9e5d5f091b58afd1cec32f7f4da0aa7164ab00a9c2f8cd6f56680105e"
                   },
                   {
+                      "Path":  "release-run-transcript.txt",
+                      "Size":  4045,
+                      "Sha256":  "e7d58bdde26a145c80c781377b4d5023bc65ee709787e8f731b793e76298d55f"
+                  },
+                  {
                       "Path":  "resources/Packages/bootstrap-package-index.json",
                       "Size":  40563,
                       "Sha256":  "bb732bab7978e60f494df521b19fbdfc9d32587d1dc71ba0272e19841dc70670"
                   },
                   {
                       "Path":  "resources/Packages/bootstrap-package-index.signed.json",
-                      "Size":  40856,
-                      "Sha256":  "bede987db0776c3da95aecdaf16a7d9fa1bef747ba971bf10cb22058189c7851"
+                      "Size":  40851,
+                      "Sha256":  "01490772c6cf3f0c448b2d0b3b636f19b4e2b5875af0a244067467c044014d49"
                   },
                   {
                       "Path":  "resources/Packages/core-startup.zip",
@@ -5204,22 +5209,22 @@
                   {
                       "Path":  "server/Server.dll",
                       "Size":  1540608,
-                      "Sha256":  "3c5b1ec8c049592bd1ecdc6ac24dabf5cdab80ecb6b3a7a851698a4444ce0db1"
+                      "Sha256":  "eb50bf0ce8dcbec8da7e08d5f0fa5123825b7adeee630cbce2f66afafc762add"
                   },
                   {
                       "Path":  "server/Server.exe",
                       "Size":  729088,
-                      "Sha256":  "47bf24342ab068868db8eaa9fd13f8a3618cd6a80a1998a06d5492254a163bcb"
+                      "Sha256":  "a6d134cb8c1caa26b7ff0bd005784d42c23e501796b772f1d8f08474f5805dd1"
                   },
                   {
                       "Path":  "server/Server.Library.dll",
                       "Size":  2254336,
-                      "Sha256":  "346d4eb85507faff87a5d5793b55345be2f4503c170196bfe233be18bab3f7a8"
+                      "Sha256":  "fbe8e17869a14062a974519809c46cf12dcb2400df0290048d8d9fee293b12f6"
                   },
                   {
                       "Path":  "server/Server.Library.pdb",
                       "Size":  829332,
-                      "Sha256":  "3250b5c51972b5947a7897189470082b518da1bdab0494d33bf25b783dc751f8"
+                      "Sha256":  "281712bcbd5886d96557d40b94d9be079b31c21d52e5a98220a47e1211e4c1cb"
                   },
                   {
                       "Path":  "server/Server.runtimeconfig.json",
@@ -5228,13 +5233,13 @@
                   },
                   {
                       "Path":  "server/Shared.dll",
-                      "Size":  306176,
-                      "Sha256":  "6aea66c3c1d8e8f2f383007c23763f3ce4d3268e6eb6ba368ce55b883691cd4a"
+                      "Size":  306688,
+                      "Sha256":  "48394fff2c0f633148bd67d169f6ac48cce07094a563b0250df8da092e7b5025"
                   },
                   {
                       "Path":  "server/Shared.pdb",
-                      "Size":  124684,
-                      "Sha256":  "0d0f9c6b526d646b0e85a8c0790ea5d2d8c959815e314428465c2808d6f7456f"
+                      "Size":  116420,
+                      "Sha256":  "58dc945e4e1989eb2f41520001d13e604df1c3aeb5905ec20291e5e4fb927706"
                   },
                   {
                       "Path":  "server/SQLitePCLRaw.batteries_v2.dll",

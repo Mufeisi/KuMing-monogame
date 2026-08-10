@@ -1,0 +1,44 @@
+﻿**********************
+Windows PowerShell transcript start
+Start time: 20260810142744
+Username: DESKTOP-4J13TH0\luo
+RunAs User: DESKTOP-4J13TH0\luo
+Configuration Name:
+Machine: DESKTOP-4J13TH0 (Microsoft Windows NT 10.0.19045.0)
+Host Application: C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe -NoProfile -ExecutionPolicy Bypass -File Tools\Invoke-Release02.ps1 -Action Prepare -RepositoryRoot C:\Users\luo\.codex\worktrees\p5-release02-20260810 -ChannelRoot C:\Users\luo\.codex\release-channels\lyocrystal-canary -ReleaseId release02-20260810-r3 -Sequence 4 -MinimumClientVersion 1.0.0 -GatewayPrefix http://127.0.0.1:18443/
+Process ID: 24448
+PSVersion: 5.1.19041.6693
+PSEdition: Desktop
+PSCompatibleVersions: 1.0, 2.0, 3.0, 4.0, 5.0, 5.1.19041.6693
+BuildVersion: 10.0.19041.6693
+CLRVersion: 4.0.30319.42000
+WSManStackVersion: 3.0
+PSRemotingProtocolVersion: 2.3
+SerializationVersion: 1.1.0.1
+**********************
+[运行] dotnet test Tests/Base05.Tests/Base05.Tests.csproj -c Release
+
+[运行] dotnet publish Client_VorticeDX11/Client_VorticeDX11.csproj -c Release -o C:\Users\luo\.codex\release-channels\lyocrystal-canary\releases\release02-20260810-r3.partial-ab8abc2659d94823ae1876863b094b16\pc
+
+[运行] dotnet publish Server.MirForms/Server.csproj -c Release -o C:\Users\luo\.codex\release-channels\lyocrystal-canary\releases\release02-20260810-r3.partial-ab8abc2659d94823ae1876863b094b16\server
+
+[运行] dotnet restore Tools/ReleaseSigningTool/ReleaseSigningTool.csproj --verbosity minimal
+
+[运行] dotnet build Tools/ReleaseSigningTool/ReleaseSigningTool.csproj -c Release --no-restore
+
+[运行] dotnet restore Client_MonoGame.Android/Client_MonoGame.Android.csproj -r android-arm64 --verbosity minimal
+
+[运行] pwsh -NoProfile -File C:\Users\luo\.codex\worktrees\p5-release02-20260810\Tools\Mobile-BootstrapPackageRepoExport.ps1 -RepositoryRoot C:\Users\luo\.codex\worktrees\p5-release02-20260810 -OutputRoot C:\Users\luo\.codex\release-channels\lyocrystal-canary\releases\release02-20260810-r3.partial-ab8abc2659d94823ae1876863b094b16\resources
+
+[运行] dotnet run --project Tools/ReleaseSigningTool/ReleaseSigningTool.csproj -c Release --no-build -- sign-resource-index C:\Users\luo\.codex\release-channels\lyocrystal-canary\releases\release02-20260810-r3.partial-ab8abc2659d94823ae1876863b094b16\resources\packages\bootstrap-package-index.json C:\Users\luo\.codex\release-channels\lyocrystal-canary\releases\release02-20260810-r3.partial-ab8abc2659d94823ae1876863b094b16\resources\packages\bootstrap-package-index.signed.json resource-2026-a 4 1.0.0 C:\Users\luo\.codex\worktrees\p5-release02-20260810\Configs\ReleaseSecrets\resource-2026-a.pkcs8.dpapi
+
+[运行] dotnet run --project Tools/ReleaseSigningTool/ReleaseSigningTool.csproj -c Release --no-build -- verify-resource-index C:\Users\luo\.codex\release-channels\lyocrystal-canary\releases\release02-20260810-r3.partial-ab8abc2659d94823ae1876863b094b16\resources\packages\bootstrap-package-index.signed.json 1.0.0
+
+[运行] dotnet run --project Tools/ReleaseSigningTool/ReleaseSigningTool.csproj -c Release --no-build -- publish-signed-android Client_MonoGame.Android/Client_MonoGame.Android.csproj C:\Users\luo\.codex\worktrees\p5-release02-20260810\Configs\ReleaseSecrets\lyocrystal-android-2026-r2.keystore C:\Users\luo\.codex\worktrees\p5-release02-20260810\Configs\ReleaseSecrets\lyocrystal-android-2026-r2-password.dpapi android-apk-2026 lyocrystal-release-2026 C:\Users\luo\.codex\release-channels\lyocrystal-canary\releases\release02-20260810-r3.partial-ab8abc2659d94823ae1876863b094b16\android-signing-build.log
+
+[运行] C:\Users\luo\AppData\Local\Android\Sdk\build-tools\36.1.0\apksigner.bat verify --verbose --print-certs C:\Users\luo\.codex\worktrees\p5-release02-20260810\Client_MonoGame.Android\bin\Release\net10.0-android\android-arm64\publish\com.lommir.client.monogame.android-Signed.apk
+
+**********************
+Windows PowerShell transcript end
+End time: 20260810143520
+**********************

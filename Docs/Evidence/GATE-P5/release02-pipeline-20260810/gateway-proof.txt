@@ -1,0 +1,44 @@
+**********************
+PowerShell transcript start
+Start time: 20260810144713
+Username: DESKTOP-4J13TH0\luo
+RunAs User: DESKTOP-4J13TH0\luo
+Configuration Name:
+Machine: DESKTOP-4J13TH0 (Microsoft Windows NT 10.0.19045.0)
+Host Application: C:\Program Files\PowerShell\7\pwsh.dll -Command try { [Console]::OutputEncoding=[System.Text.Encoding]::UTF8 } catch {}
+$evidence=(Resolve-Path 'Docs\Evidence\GATE-P5\release02-pipeline-20260810').Path; Start-Transcript -LiteralPath (Join-Path $evidence 'gateway-proof.txt') -Force|Out-Null; $selection=Invoke-RestMethod -Uri 'http://127.0.0.1:18443/release/select?clientId=proof-canary-9' -TimeoutSec 90; 'CLIENT_ID=proof-canary-9'; 'BUCKET=4'; $selection|ConvertTo-Json -Compress; $download='http://127.0.0.1:18443'+$selection.ResourceRepositoryPath+'Packages/bootstrap-package-index.signed.json'; $client=[Net.WebClient]::new(); try{$bytes=$client.DownloadData($download)}finally{$client.Dispose()}; $sha=[Security.Cryptography.SHA256]::Create(); try{$hash=[BitConverter]::ToString($sha.ComputeHash($bytes)).Replace('-','')}finally{$sha.Dispose()}; "DOWNLOAD_URL=$download"; "DOWNLOAD_BYTES=$($bytes.Length)"; "DOWNLOAD_SHA256=$hash"; $body=@{EventType='HealthyLaunch';EventId='release02-proof-healthy-001'}|ConvertTo-Json -Compress; Invoke-RestMethod -Uri 'http://127.0.0.1:18443/release/events' -Method Post -ContentType 'application/json' -Body $body | ConvertTo-Json -Compress; Get-Content 'C:\Users\luo\.codex\release-channels\lyocrystal-canary\channel-metrics.json' -Raw; Stop-Transcript|Out-Null
+Process ID: 17512
+PSVersion: 7.4.7
+PSEdition: Core
+GitCommitId: 7.4.7
+OS: Microsoft Windows 10.0.19045
+Platform: Win32NT
+PSCompatibleVersions: 1.0, 2.0, 3.0, 4.0, 5.0, 5.1, 6.0, 7.0
+PSRemotingProtocolVersion: 2.3
+SerializationVersion: 1.1.0.1
+WSManStackVersion: 3.0
+**********************
+CLIENT_ID=proof-canary-9
+BUCKET=4
+{"Format":"lyocrystal-release-selection-v1","ReleaseId":"release02-20260810-r3","CurrentReleaseId":"release02-20260810-r3","RolloutPercent":5,"ArtifactBasePath":"/releases/release02-20260810-r3/","ResourceRepositoryPath":"/releases/release02-20260810-r3/resources/"}
+DOWNLOAD_URL=http://127.0.0.1:18443/releases/release02-20260810-r3/resources/Packages/bootstrap-package-index.signed.json
+DOWNLOAD_BYTES=40851
+DOWNLOAD_SHA256=01490772C6CF3F0C448B2D0B3B636F19B4E2B5875AF0A244067467C044014D49
+{"Accepted":true,"CurrentReleaseId":"release02-20260810-r3","Status":"CanaryObserving"}
+{
+    "Format":  "lyocrystal-release-metrics-v1",
+    "ReleaseId":  "release02-20260810-r3",
+    "UpdateAttempts":  0,
+    "UpdateFailures":  0,
+    "Launches":  1,
+    "Crashes":  0,
+    "ConsecutiveFatalCrashes":  0,
+    "SeenEventIds":  [
+                         "release02-proof-healthy-001"
+                     ],
+    "UpdatedUtc":  "2026-08-10T06:38:06.5176021Z"
+}
+**********************
+PowerShell transcript end
+End time: 20260810144745
+**********************

@@ -98,6 +98,35 @@ public sealed class Release02TransactionalDeploymentTests
         Assert.False(File.Exists(outside));
     }
 
+    [Fact]
+    public async Task 跨进程文件锁阻止恢复器碰触正在提交的事务()
+    {
+        using var fixture = new DeploymentFixture();
+        string target = fixture.Target("Data/live.bin", "old");
+        using var enteredVerify = new ManualResetEventSlim(false);
+        using var releaseVerify = new ManualResetEventSlim(false);
+        Task apply = Task.Run(() => TransactionalFileDeployment.Apply(
+            fixture.TransactionRoot,
+            new[] { fixture.TargetRoot },
+            new[] { fixture.Entry("incoming-live.bin", "new", target) },
+            () =>
+            {
+                enteredVerify.Set();
+                releaseVerify.Wait(TimeSpan.FromSeconds(10));
+                return true;
+            }));
+        Assert.True(enteredVerify.Wait(TimeSpan.FromSeconds(5)));
+
+        Task<int> recover = Task.Run(() => TransactionalFileDeployment.RecoverIncomplete(fixture.TransactionRoot, new[] { fixture.TargetRoot }));
+        await Task.Delay(200);
+        Assert.False(recover.IsCompleted);
+        releaseVerify.Set();
+        await apply;
+
+        Assert.Equal(0, await recover);
+        Assert.Equal("new", File.ReadAllText(target));
+    }
+
     private sealed class DeploymentFixture : IDisposable
     {
         public DeploymentFixture()

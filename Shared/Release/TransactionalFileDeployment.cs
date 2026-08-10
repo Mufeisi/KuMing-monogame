@@ -24,6 +24,7 @@ public static class TransactionalFileDeployment
 {
     public const string JournalFileName = "deployment-journal.json";
     public const string JournalFormat = "lyocrystal-file-deployment-v1";
+    public const string ProcessLockFileName = "deployment.lock";
     private static readonly UTF8Encoding Utf8NoBom = new(false, true);
     private static readonly object Gate = new();
     private static readonly JsonSerializerOptions JsonOptions = new()
@@ -64,7 +65,8 @@ public static class TransactionalFileDeployment
             throw new ArgumentException("事务发布没有文件。", nameof(entries));
 
         Directory.CreateDirectory(normalizedTransactionRoot);
-        RecoverIncomplete(normalizedTransactionRoot, normalizedAllowedRoots);
+        using FileStream processLock = AcquireProcessLock(normalizedTransactionRoot);
+        RecoverIncompleteWhileLocked(normalizedTransactionRoot, normalizedAllowedRoots);
 
         string transactionDirectory = Path.Combine(normalizedTransactionRoot, "txn-" + Guid.NewGuid().ToString("N"));
         string backupDirectory = Path.Combine(transactionDirectory, "backups");
@@ -101,7 +103,7 @@ public static class TransactionalFileDeployment
 
             journal.Status = "Committed";
             WriteJournal(transactionDirectory, journal);
-            Directory.Delete(transactionDirectory, recursive: true);
+            TryDeleteDirectory(transactionDirectory);
             return new TransactionalFileDeploymentResult
             {
                 PublishedFileCount = journal.Entries.Count,
@@ -140,6 +142,14 @@ public static class TransactionalFileDeployment
         if (!Directory.Exists(normalizedTransactionRoot))
             return 0;
 
+        using FileStream processLock = AcquireProcessLock(normalizedTransactionRoot);
+
+        return RecoverIncompleteWhileLocked(normalizedTransactionRoot, normalizedAllowedRoots);
+    }
+
+    private static int RecoverIncompleteWhileLocked(string normalizedTransactionRoot, string[] normalizedAllowedRoots)
+    {
+
         int recovered = 0;
         foreach (string directory in Directory.GetDirectories(normalizedTransactionRoot, "txn-*", SearchOption.TopDirectoryOnly))
         {
@@ -163,6 +173,36 @@ public static class TransactionalFileDeployment
             recovered++;
         }
         return recovered;
+    }
+
+    private static FileStream AcquireProcessLock(string transactionRoot)
+    {
+        Directory.CreateDirectory(transactionRoot);
+        string lockPath = Path.Combine(transactionRoot, ProcessLockFileName);
+        DateTime deadline = DateTime.UtcNow.AddSeconds(30);
+        while (true)
+        {
+            try
+            {
+                return new FileStream(lockPath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
+            }
+            catch (IOException) when (DateTime.UtcNow < deadline)
+            {
+                System.Threading.Thread.Sleep(50);
+            }
+        }
+    }
+
+    private static void TryDeleteDirectory(string directory)
+    {
+        try
+        {
+            if (Directory.Exists(directory)) Directory.Delete(directory, recursive: true);
+        }
+        catch
+        {
+            // Committed 是不可逆提交点；残留只由下次 RecoverIncomplete 清理，不能伪报发布失败。
+        }
     }
 
     private static void Rollback(string transactionDirectory, DeploymentJournal journal, IReadOnlyCollection<string> allowedRoots)

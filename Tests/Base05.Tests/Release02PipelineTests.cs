@@ -1,5 +1,9 @@
 using System.Diagnostics;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
+using System.Net;
+using System.Net.Sockets;
 using Xunit;
 
 namespace Base05.Tests;
@@ -25,6 +29,22 @@ public sealed class Release02PipelineTests
         Assert.Contains("release-run-transcript.txt", script, StringComparison.Ordinal);
         Assert.Contains("RolloutPercent = 5", script, StringComparison.Ordinal);
         Assert.Contains("[IO.Directory]::Move($partial, $releaseDirectory)", script, StringComparison.Ordinal);
+        Assert.Contains("Start-ReleaseGateway", script, StringComparison.Ordinal);
+        Assert.Contains("/release/select", script, StringComparison.Ordinal);
+        Assert.Contains("/release/events", script, StringComparison.Ordinal);
+
+        string pc = File.ReadAllText(Path.Combine(FindRepositoryRoot(), "Client_VorticeDX11", "Bootstrap", "PcBootstrapPreLoginUpdateService.cs"));
+        string mobile = File.ReadAllText(Path.Combine(FindRepositoryRoot(), "Client_MonoGame.Shared", "ClientResourceLayout.cs"));
+        string mobileRuntime = File.ReadAllText(Path.Combine(FindRepositoryRoot(), "Client_MonoGame.Shared", "BootstrapPackageRuntime.cs"));
+        Assert.Contains("InstallExtractedPackagesToClient(preparedPackages, stateEntries)", pc, StringComparison.Ordinal);
+        Assert.DoesNotContain("InstallExtractedPackageToClient(stagingRoot, packageName)", pc, StringComparison.Ordinal);
+        Assert.Contains("updatePackages.All(signedBundles.ContainsKey)", mobile, StringComparison.Ordinal);
+        Assert.Contains("TryApplyPackageBundleSetTransactionally", mobile, StringComparison.Ordinal);
+        Assert.Contains("BuildBundleDeclaredPackages(sourceDirectory, installManifestBundle)", mobileRuntime, StringComparison.Ordinal);
+        Assert.Contains("事务资源版本缺少清单声明文件", mobileRuntime, StringComparison.Ordinal);
+        int callbackStart = mobileRuntime.IndexOf("verifyAfterPublish: () =>", StringComparison.Ordinal);
+        int callbackEnd = mobileRuntime.IndexOf("ClientResourceLayout.ReloadBootstrapMetadata();", callbackStart, StringComparison.Ordinal);
+        Assert.DoesNotContain("TryApplyPackageBundleFromDirectory", mobileRuntime[callbackStart..callbackEnd], StringComparison.Ordinal);
     }
 
     [Fact]
@@ -39,7 +59,8 @@ public sealed class Release02PipelineTests
         Assert.Equal(0, result.ExitCode);
         using JsonDocument state = JsonDocument.Parse(File.ReadAllText(fixture.StatePath));
         Assert.Equal("release-old", state.RootElement.GetProperty("CurrentReleaseId").GetString());
-        Assert.Equal("release-new", state.RootElement.GetProperty("PreviousReleaseId").GetString());
+        Assert.Equal(string.Empty, state.RootElement.GetProperty("PreviousReleaseId").GetString());
+        Assert.Equal("release-new", state.RootElement.GetProperty("FailedReleaseId").GetString());
         Assert.Equal("RolledBack", state.RootElement.GetProperty("Status").GetString());
         Assert.Contains("更新失败率", state.RootElement.GetProperty("Reason").GetString(), StringComparison.Ordinal);
     }
@@ -89,6 +110,110 @@ public sealed class Release02PipelineTests
         Assert.Contains("连续致命崩溃", state.RootElement.GetProperty("Reason").GetString(), StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void 重复回滚不会把失败版本重新切回当前()
+    {
+        using var fixture = new PipelineFixture();
+        fixture.WriteState("release-new", "release-old");
+        fixture.WriteMetrics("release-new", 100, 3, 100, 0, 0);
+        fixture.Run("Evaluate");
+
+        ProcessResult second = fixture.RunExpectFailure("Rollback");
+
+        Assert.NotEqual(0, second.ExitCode);
+        using JsonDocument state = JsonDocument.Parse(File.ReadAllText(fixture.StatePath));
+        Assert.Equal("release-old", state.RootElement.GetProperty("CurrentReleaseId").GetString());
+        Assert.Equal("release-new", state.RootElement.GetProperty("FailedReleaseId").GetString());
+    }
+
+    [Fact]
+    public void 损坏的上一版本拒绝回滚()
+    {
+        using var fixture = new PipelineFixture();
+        fixture.WriteState("release-new", "release-old");
+        File.AppendAllText(Path.Combine(fixture.Root, "releases", "release-old", "resources", "Packages", "bootstrap-package-index.signed.json"), "tampered");
+
+        ProcessResult result = fixture.RunExpectFailure("Rollback");
+
+        Assert.NotEqual(0, result.ExitCode);
+        using JsonDocument state = JsonDocument.Parse(File.ReadAllText(fixture.StatePath));
+        Assert.Equal("release-new", state.RootElement.GetProperty("CurrentReleaseId").GetString());
+    }
+
+    [Fact]
+    public void 稳定客户端标识真实选择百分之五灰度或健康版本()
+    {
+        using var fixture = new PipelineFixture();
+        fixture.WriteState("release-new", "release-old");
+        string canaryId = Enumerable.Range(0, 10000).Select(i => "client-" + i).First(id => Bucket(id) < 5);
+        string stableId = Enumerable.Range(0, 10000).Select(i => "client-" + i).First(id => Bucket(id) >= 5);
+
+        Assert.Contains("\"ReleaseId\":\"release-new\"", fixture.Run("Select", "-ClientId", canaryId).Output, StringComparison.Ordinal);
+        Assert.Contains("\"ReleaseId\":\"release-old\"", fixture.Run("Select", "-ClientId", stableId).Output, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void 发布观测事件写入即自动触发回滚且事件幂等()
+    {
+        using var fixture = new PipelineFixture();
+        fixture.WriteState("release-new", "release-old");
+        fixture.Run("Record", "-EventType", "FatalCrash", "-EventId", "fatal-1");
+        fixture.Run("Record", "-EventType", "FatalCrash", "-EventId", "fatal-1");
+        fixture.Run("Record", "-EventType", "FatalCrash", "-EventId", "fatal-2");
+        fixture.Run("Record", "-EventType", "FatalCrash", "-EventId", "fatal-3");
+
+        using JsonDocument state = JsonDocument.Parse(File.ReadAllText(fixture.StatePath));
+        Assert.Equal("release-old", state.RootElement.GetProperty("CurrentReleaseId").GetString());
+    }
+
+    [Fact]
+    public async Task 本地发布网关真实消费灰度选择并在事件到达时自动回滚()
+    {
+        using var fixture = new PipelineFixture();
+        fixture.WriteState("release-new", "release-old");
+        int port;
+        var reservation = new TcpListener(IPAddress.Loopback, 0);
+        reservation.Start();
+        port = ((IPEndPoint)reservation.LocalEndpoint).Port;
+        reservation.Stop();
+        string prefix = $"http://127.0.0.1:{port}/";
+        using Process gateway = fixture.StartGateway(prefix);
+        try
+        {
+            using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(5) };
+            for (int i = 0; i < 30; i++)
+            {
+                try { if ((await http.GetAsync(prefix + "health")).IsSuccessStatusCode) break; } catch { }
+                await Task.Delay(100);
+            }
+            string canaryId = Enumerable.Range(0, 10000).Select(i => "gateway-client-" + i).First(id => Bucket(id) < 5);
+            string selection = await http.GetStringAsync(prefix + "release/select?clientId=" + Uri.EscapeDataString(canaryId));
+            Assert.Contains("\"ReleaseId\":\"release-new\"", selection, StringComparison.Ordinal);
+            using JsonDocument selected = JsonDocument.Parse(selection);
+            string resourcePath = selected.RootElement.GetProperty("ResourceRepositoryPath").GetString()!;
+            string signedIndex = await http.GetStringAsync(prefix.TrimEnd('/') + resourcePath + "Packages/bootstrap-package-index.signed.json");
+            Assert.Equal("{\"signed\":true}", signedIndex);
+            for (int i = 1; i <= 3; i++)
+            {
+                using var content = new StringContent(JsonSerializer.Serialize(new { EventType = "FatalCrash", EventId = "gateway-fatal-" + i }), Encoding.UTF8, "application/json");
+                using HttpResponseMessage response = await http.PostAsync(prefix + "release/events", content);
+                Assert.True(response.IsSuccessStatusCode, await response.Content.ReadAsStringAsync());
+            }
+            using JsonDocument state = JsonDocument.Parse(File.ReadAllText(fixture.StatePath));
+            Assert.Equal("release-old", state.RootElement.GetProperty("CurrentReleaseId").GetString());
+        }
+        finally
+        {
+            if (!gateway.HasExited) gateway.Kill(entireProcessTree: true);
+        }
+    }
+
+    private static int Bucket(string id)
+    {
+        byte[] hash = SHA256.HashData(Encoding.UTF8.GetBytes(id));
+        return (((int)hash[0] << 8) | hash[1]) % 100;
+    }
+
     private static string FindRepositoryRoot()
     {
         DirectoryInfo? current = new(AppContext.BaseDirectory);
@@ -106,10 +231,11 @@ public sealed class Release02PipelineTests
 
         public PipelineFixture()
         {
-            Directory.CreateDirectory(Path.Combine(_root, "releases", "release-old"));
-            Directory.CreateDirectory(Path.Combine(_root, "releases", "release-new"));
+            WriteRelease("release-old");
+            WriteRelease("release-new");
         }
 
+        public string Root => _root;
         public string StatePath => Path.Combine(_root, "channel-state.json");
         private string MetricsPath => Path.Combine(_root, "metrics.json");
 
@@ -141,7 +267,7 @@ public sealed class Release02PipelineTests
             }));
         }
 
-        public ProcessResult Run(string action)
+        public ProcessResult Run(string action, params string[] extraArguments)
         {
             string script = Path.Combine(FindRepositoryRoot(), "Tools", "Invoke-Release02.ps1");
             var start = new ProcessStartInfo("powershell.exe")
@@ -152,12 +278,49 @@ public sealed class Release02PipelineTests
             };
             foreach (string argument in new[] { "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", script, "-Action", action, "-ChannelRoot", _root, "-MetricsPath", MetricsPath })
                 start.ArgumentList.Add(argument);
+            foreach (string argument in extraArguments) start.ArgumentList.Add(argument);
             using Process process = Process.Start(start) ?? throw new InvalidOperationException("无法启动 RELEASE-02 测试入口。");
             string output = process.StandardOutput.ReadToEnd();
             string error = process.StandardError.ReadToEnd();
             process.WaitForExit();
             Assert.True(process.ExitCode == 0, output + Environment.NewLine + error);
             return new ProcessResult(process.ExitCode, output, error);
+        }
+
+        public ProcessResult RunExpectFailure(string action, params string[] extraArguments)
+        {
+            string script = Path.Combine(FindRepositoryRoot(), "Tools", "Invoke-Release02.ps1");
+            var start = new ProcessStartInfo("powershell.exe") { RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false };
+            foreach (string argument in new[] { "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", script, "-Action", action, "-ChannelRoot", _root }) start.ArgumentList.Add(argument);
+            foreach (string argument in extraArguments) start.ArgumentList.Add(argument);
+            using Process process = Process.Start(start) ?? throw new InvalidOperationException("无法启动 RELEASE-02 测试入口。");
+            string output = process.StandardOutput.ReadToEnd();
+            string error = process.StandardError.ReadToEnd();
+            process.WaitForExit();
+            return new ProcessResult(process.ExitCode, output, error);
+        }
+
+        public Process StartGateway(string prefix)
+        {
+            string script = Path.Combine(FindRepositoryRoot(), "Tools", "Invoke-Release02.ps1");
+            var start = new ProcessStartInfo("powershell.exe") { RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false };
+            foreach (string argument in new[] { "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", script, "-Action", "Serve", "-ChannelRoot", _root, "-GatewayPrefix", prefix }) start.ArgumentList.Add(argument);
+            return Process.Start(start) ?? throw new InvalidOperationException("无法启动发布网关。");
+        }
+
+        private void WriteRelease(string releaseId)
+        {
+            string root = Path.Combine(_root, "releases", releaseId);
+            string signed = Path.Combine(root, "resources", "Packages", "bootstrap-package-index.signed.json");
+            Directory.CreateDirectory(Path.GetDirectoryName(signed)!);
+            File.WriteAllText(signed, "{\"signed\":true}");
+            byte[] bytes = File.ReadAllBytes(signed);
+            File.WriteAllText(Path.Combine(root, "release-manifest.json"), JsonSerializer.Serialize(new
+            {
+                Format = "lyocrystal-release-artifact-v1",
+                ReleaseId = releaseId,
+                Files = new[] { new { Path = "resources/Packages/bootstrap-package-index.signed.json", Size = bytes.LongLength, Sha256 = Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant() } },
+            }));
         }
 
         public void Dispose()

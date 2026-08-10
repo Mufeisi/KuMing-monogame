@@ -359,6 +359,54 @@ namespace MonoShare
 
             candidates.Sort(StringComparer.OrdinalIgnoreCase);
 
+            if (updatePackages.Count > 0)
+            {
+                var signedBundles = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                foreach (string directory in candidates)
+                {
+                    if (BootstrapPackageUpdateRuntime.TryReadBundleDownloadMeta(directory, out BundleDownloadMetaView meta) &&
+                        !string.IsNullOrWhiteSpace(meta?.PackageName) && updatePackages.Contains(meta.PackageName))
+                    {
+                        signedBundles[meta.PackageName] = directory;
+                    }
+                }
+                if (updatePackages.All(signedBundles.ContainsKey))
+                {
+                    List<string> releaseDirectories = updatePackages.Select(name => signedBundles[name]).ToList();
+                    BootstrapPackageApplyBundleResultView releaseResult;
+                    try
+                    {
+                        releaseResult = BootstrapPackageRuntime.TryApplyPackageBundleSetTransactionally(
+                            releaseDirectories,
+                            updatePackages);
+                    }
+                    catch (Exception ex)
+                    {
+                        releaseResult = new BootstrapPackageApplyBundleResultView
+                        {
+                            SourceDirectory = string.Join(";", releaseDirectories),
+                            SourceDirectoryExists = true,
+                            ErrorMessage = ex.Message,
+                        };
+                    }
+                    foreach (string directory in releaseDirectories)
+                    {
+                        TryWriteBundleInboxApplyResult(directory, releaseResult);
+                        TryAppendBundleInboxLog(directory, releaseResult);
+                        if (releaseResult.Completed)
+                        {
+                            try { BootstrapPackageUpdateRuntime.TryOnBundleApplied(directory, releaseResult); } catch { }
+                            TryMoveBundleInboxDirectory(directory, BundleInboxProcessedRoot, "release-applied");
+                        }
+                        else
+                        {
+                            TryMoveBundleInboxDirectory(directory, BundleInboxFailedRoot, "release-failed");
+                        }
+                        candidates.Remove(directory);
+                    }
+                }
+            }
+
             for (int i = 0; i < candidates.Count; i++)
             {
                 string bundleDirectory = candidates[i];

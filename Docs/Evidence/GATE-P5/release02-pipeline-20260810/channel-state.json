@@ -1,9 +1,10 @@
 {
     "Format":  "lyocrystal-release-channel-v1",
-    "CurrentReleaseId":  "release02-20260810-r2",
-    "PreviousReleaseId":  "release02-20260810",
+    "CurrentReleaseId":  "release02-20260810-r3",
+    "PreviousReleaseId":  "release02-20260810-r2",
+    "FailedReleaseId":  "",
     "RolloutPercent":  5,
-    "Status":  "Canary",
-    "Reason":  "构建、冒烟、导出、签名与工件校验通过",
-    "UpdatedUtc":  "2026-08-10T05:55:37.5554971Z"
+    "Status":  "CanaryObserving",
+    "Reason":  "样本不足，保持当前灰度比例",
+    "UpdatedUtc":  "2026-08-10T06:38:06.5810679Z"
 }
