@@ -1,7 +1,7 @@
 工作目录：C:\Users\luo\.codex\worktrees\p5-proto02-03-20260810
 
 1. dotnet test Tests/Base05.Tests/Base05.Tests.csproj --configuration Release --no-build --filter "FullyQualifiedName~ProtocolGeneratedManifestTests|FullyQualifiedName~ProtocolGoldenTests" --logger "trx;LogFileName=proto02-03-targeted.trx" --results-directory "Docs/Evidence/GATE-P5/proto02-03-unification-20260810" --verbosity minimal
-退出码：0；13/13 通过。
+退出码：0；14/14 通过。
 
 2. dotnet run --project Tools/ProtocolManifestGenerator/ProtocolManifestGenerator.csproj --configuration Release --no-restore -- --verify Docs/protocol-wire-manifest.generated.json
 退出码：0；协议清单无漂移。
@@ -19,9 +19,18 @@
 退出码：0；8 个警告，0 个错误。
 
 7. dotnet test Tests/Base05.Tests/Base05.Tests.csproj --configuration Release --no-build --logger "trx;LogFileName=proto02-03-base05-full.trx" --results-directory "Docs/Evidence/GATE-P5/proto02-03-unification-20260810" --verbosity minimal
-退出码：0；347/347 通过；持续时间约 1 分 25 秒。
+退出码：0；348/348 通过；持续时间约 1 分 21 秒。
 
-8. git diff --check 3bd9403..HEAD
+8. dotnet restore Client_MonoGame.Android/Client_MonoGame.Android.csproj --verbosity minimal
 退出码：0。
 
-说明：PC 第一次带 --no-restore 构建因隔离工作树尚无 project.assets.json 而退出 1；执行正常 restore 后，同一 Release 构建命令退出 0。该项为环境前置缺失，不是代码编译失败。
+9. dotnet build Client_MonoGame.Android/Client_MonoGame.Android.csproj -f net10.0-android -c Release --no-restore --verbosity quiet
+退出码：0；2869 个既有警告，0 个错误；生成 arm64 APK。
+
+10. 在 `core.autocrlf=false` 的临时克隆内，把 `Shared` C# 工作树统一为 LF 后运行：dotnet run --project Tools/ProtocolManifestGenerator/ProtocolManifestGenerator.csproj --configuration Release --no-restore -- --verify Docs/protocol-wire-manifest.generated.json
+退出码：0；`git ls-files --eol` 显示 `Shared/Packet.cs` 与 `Shared/ClientPackets.cs` 均为 `w/lf`。
+
+11. git diff --check 3bd9403..HEAD
+退出码：0。
+
+说明：PC 和 Android 正式宿主第一次带 `--no-restore` 构建均因隔离工作树尚无 `project.assets.json` 而退出 1；执行正常 restore 后，同一 Release 构建命令退出 0。两项均为环境前置缺失，不是代码编译失败。

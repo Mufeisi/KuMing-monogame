@@ -1,105 +1,111 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<TestRun id="359f8613-2e58-4c34-8e06-e36a65427bda" name="luo@DESKTOP-4J13TH0 2026-08-10 12:07:09" runUser="DESKTOP-4J13TH0\luo" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
-  <Times creation="2026-08-10T12:07:09.3920047+08:00" queuing="2026-08-10T12:07:09.3920050+08:00" start="2026-08-10T12:07:08.2473606+08:00" finish="2026-08-10T12:07:09.4339955+08:00" />
-  <TestSettings name="default" id="00bb37b0-3113-4041-bafd-ee4169167b9f">
-    <Deployment runDeploymentRoot="luo_DESKTOP-4J13TH0_2026-08-10_12_07_09" />
+<TestRun id="30756fc9-0105-458b-8d6e-ad8b77f9082c" name="luo@DESKTOP-4J13TH0 2026-08-10 12:26:45" runUser="DESKTOP-4J13TH0\luo" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-08-10T12:26:45.6409704+08:00" queuing="2026-08-10T12:26:45.6409707+08:00" start="2026-08-10T12:26:44.5601295+08:00" finish="2026-08-10T12:26:45.6961402+08:00" />
+  <TestSettings name="default" id="65d50f59-b076-4ce8-bc0d-fd3817793c8e">
+    <Deployment runDeploymentRoot="luo_DESKTOP-4J13TH0_2026-08-10_12_26_45" />
   </TestSettings>
   <Results>
-    <UnitTestResult executionId="1ea2c5d5-fe8c-4cbb-b725-8a9829179a4c" testId="84ba46c0-8dc1-182d-d3f3-b18e1a239715" testName="Base05.Tests.ProtocolGoldenTests.Monster_packet_reader_and_writer_exposes_value_fork" computerName="DESKTOP-4J13TH0" duration="00:00:00.0252153" startTime="2026-08-10T12:07:09.1663623+08:00" endTime="2026-08-10T12:07:09.1886684+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="1ea2c5d5-fe8c-4cbb-b725-8a9829179a4c" />
-    <UnitTestResult executionId="4ed5e0b5-8a7b-49a4-8b05-17143ecba137" testId="b34cc1f8-affd-3623-fc13-7baec06ddb2f" testName="Base05.Tests.ProtocolGoldenTests.SpellEffect_packet_reader_and_writer_exposes_value_fork" computerName="DESKTOP-4J13TH0" duration="00:00:00.0066850" startTime="2026-08-10T12:07:09.3502056+08:00" endTime="2026-08-10T12:07:09.3502550+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="4ed5e0b5-8a7b-49a4-8b05-17143ecba137" />
-    <UnitTestResult executionId="7965de58-b4b1-4afc-9458-201e8b0d597f" testId="5d3bd46f-3383-3fff-645b-cc9a1c1781cd" testName="Base05.Tests.ProtocolGoldenTests.Manifest_is_machine_readable_and_covers_packet_and_enum_metadata" computerName="DESKTOP-4J13TH0" duration="00:00:00.0375917" startTime="2026-08-10T12:07:09.2674500+08:00" endTime="2026-08-10T12:07:09.3049286+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="7965de58-b4b1-4afc-9458-201e8b0d597f" />
-    <UnitTestResult executionId="349d4696-0740-49d1-9c77-88b08cd97a70" testId="0e7d818a-653b-ddbd-eb4a-f52fae6b613d" testName="Base05.Tests.ProtocolGoldenTests.Rental_slot_responses_round_trip_through_shared_wire_codec" computerName="DESKTOP-4J13TH0" duration="00:00:00.0007331" startTime="2026-08-10T12:07:09.3505937+08:00" endTime="2026-08-10T12:07:09.3506404+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="349d4696-0740-49d1-9c77-88b08cd97a70" />
-    <UnitTestResult executionId="aca176e6-bb59-480e-83f1-35186fa50063" testId="cd2f071d-6da0-5198-cbcb-68603295130d" testName="Base05.Tests.ProtocolGeneratedManifestTests.AndroidFormalBuildLinksCanonicalSharedProtocolSources" computerName="DESKTOP-4J13TH0" duration="00:00:00.0089764" startTime="2026-08-10T12:07:09.1628943+08:00" endTime="2026-08-10T12:07:09.1631818+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="aca176e6-bb59-480e-83f1-35186fa50063" />
-    <UnitTestResult executionId="b46bd584-e7ab-4406-b9d4-7d1892320449" testId="2a5ce395-1da7-a256-529a-cc81beaf2348" testName="Base05.Tests.ProtocolGoldenTests.Login_packet_round_trips_fixed_golden_vector" computerName="DESKTOP-4J13TH0" duration="00:00:00.0020664" startTime="2026-08-10T12:07:09.2032456+08:00" endTime="2026-08-10T12:07:09.2051903+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="b46bd584-e7ab-4406-b9d4-7d1892320449" />
-    <UnitTestResult executionId="eeb1ac44-7c15-4332-b844-18931016cc0e" testId="dd71ad48-2522-fb44-e193-3ade2a8a73c6" testName="Base05.Tests.ProtocolGoldenTests.LevelEffects_wire_width_matches_shared_and_share_packets" computerName="DESKTOP-4J13TH0" duration="00:00:00.0104867" startTime="2026-08-10T12:07:09.3504081+08:00" endTime="2026-08-10T12:07:09.3504555+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="eeb1ac44-7c15-4332-b844-18931016cc0e" />
-    <UnitTestResult executionId="d04d1d13-d1c6-468d-ac99-79b3fb68dcfe" testId="c05c83ee-c8fb-1d47-f297-e94b6a94abf3" testName="Base05.Tests.ProtocolGoldenTests.GuildNoticeChange_negative_update_is_a_wire_sentinel" computerName="DESKTOP-4J13TH0" duration="00:00:00.0035596" startTime="2026-08-10T12:07:09.2637609+08:00" endTime="2026-08-10T12:07:09.2671969+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="d04d1d13-d1c6-468d-ac99-79b3fb68dcfe" />
-    <UnitTestResult executionId="ecd6d5f7-c892-45b4-8097-a8f5a173e325" testId="68a5fec6-a282-200f-0623-e96c8305d46f" testName="Base05.Tests.ProtocolGoldenTests.Fishing_packets_keep_fixed_ids_and_field_order_on_wire" computerName="DESKTOP-4J13TH0" duration="00:00:00.0142333" startTime="2026-08-10T12:07:09.1889511+08:00" endTime="2026-08-10T12:07:09.2030116+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="ecd6d5f7-c892-45b4-8097-a8f5a173e325" />
-    <UnitTestResult executionId="7940b5c4-caff-4bbf-8a88-84560cb5871b" testId="442db462-8cc9-7079-8518-483e93e5310f" testName="Base05.Tests.ProtocolGoldenTests.BuffType_packet_reader_and_writer_exposes_value_fork" computerName="DESKTOP-4J13TH0" duration="00:00:00.0058883" startTime="2026-08-10T12:07:09.3498047+08:00" endTime="2026-08-10T12:07:09.3498771+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="7940b5c4-caff-4bbf-8a88-84560cb5871b" />
-    <UnitTestResult executionId="d61eaf92-2936-4e52-b485-02204126785a" testId="0633cf54-056f-32b9-310a-766eb394dd64" testName="Base05.Tests.ProtocolGoldenTests.Enum_forks_match_manifest_and_source_declarations" computerName="DESKTOP-4J13TH0" duration="00:00:00.0527578" startTime="2026-08-10T12:07:09.2108313+08:00" endTime="2026-08-10T12:07:09.2635140+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="d61eaf92-2936-4e52-b485-02204126785a" />
-    <UnitTestResult executionId="574105a0-24d0-46fa-aa82-e49fccfba7c8" testId="d1742453-eb22-2c1d-8a67-9051b187b0fd" testName="Base05.Tests.ProtocolGeneratedManifestTests.GeneratedManifestHasCompleteDeterministicCoverage" computerName="DESKTOP-4J13TH0" duration="00:00:00.0439472" startTime="2026-08-10T12:07:09.0903500+08:00" endTime="2026-08-10T12:07:09.1479291+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="574105a0-24d0-46fa-aa82-e49fccfba7c8" />
-    <UnitTestResult executionId="2b710ffd-ad63-4f9e-b0c9-d1e88cf90844" testId="e5884139-2691-220e-41f3-d622cd45b88b" testName="Base05.Tests.ProtocolGoldenTests.Spell_packet_reader_and_writer_exposes_value_fork" computerName="DESKTOP-4J13TH0" duration="00:00:00.0053243" startTime="2026-08-10T12:07:09.2054023+08:00" endTime="2026-08-10T12:07:09.2106055+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="2b710ffd-ad63-4f9e-b0c9-d1e88cf90844" />
+    <UnitTestResult executionId="c2f94abc-a92c-4e65-8515-79dd18a83156" testId="5d3bd46f-3383-3fff-645b-cc9a1c1781cd" testName="Base05.Tests.ProtocolGoldenTests.Manifest_is_machine_readable_and_covers_packet_and_enum_metadata" computerName="DESKTOP-4J13TH0" duration="00:00:00.0306303" startTime="2026-08-10T12:26:45.6078229+08:00" endTime="2026-08-10T12:26:45.6107476+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="c2f94abc-a92c-4e65-8515-79dd18a83156" />
+    <UnitTestResult executionId="b06b1019-0440-44d7-96c3-446406a0a7ea" testId="c05c83ee-c8fb-1d47-f297-e94b6a94abf3" testName="Base05.Tests.ProtocolGoldenTests.GuildNoticeChange_negative_update_is_a_wire_sentinel" computerName="DESKTOP-4J13TH0" duration="00:00:00.0019821" startTime="2026-08-10T12:26:45.5739571+08:00" endTime="2026-08-10T12:26:45.5758475+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="b06b1019-0440-44d7-96c3-446406a0a7ea" />
+    <UnitTestResult executionId="cbceca44-8ac1-4d54-a18c-04b6a81dccb5" testId="cd2f071d-6da0-5198-cbcb-68603295130d" testName="Base05.Tests.ProtocolGeneratedManifestTests.AndroidFormalBuildLinksCanonicalSharedProtocolSources" computerName="DESKTOP-4J13TH0" duration="00:00:00.0076165" startTime="2026-08-10T12:26:45.4971769+08:00" endTime="2026-08-10T12:26:45.4983541+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="cbceca44-8ac1-4d54-a18c-04b6a81dccb5" />
+    <UnitTestResult executionId="561dd8a4-ed3a-423b-9919-dfa6b8765d80" testId="62f9e936-b97b-0109-82d7-23281cd6769a" testName="Base05.Tests.ProtocolGeneratedManifestTests.CompatibilityMatrixMatchesTrackedRuntimeVersions" computerName="DESKTOP-4J13TH0" duration="00:00:00.0053638" startTime="2026-08-10T12:26:45.4964028+08:00" endTime="2026-08-10T12:26:45.4964929+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="561dd8a4-ed3a-423b-9919-dfa6b8765d80" />
+    <UnitTestResult executionId="8cbf29c8-1651-4206-9720-4bac6eb80455" testId="dd71ad48-2522-fb44-e193-3ade2a8a73c6" testName="Base05.Tests.ProtocolGoldenTests.LevelEffects_wire_width_matches_shared_and_share_packets" computerName="DESKTOP-4J13TH0" duration="00:00:00.0099474" startTime="2026-08-10T12:26:45.6197533+08:00" endTime="2026-08-10T12:26:45.6296478+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="8cbf29c8-1651-4206-9720-4bac6eb80455" />
+    <UnitTestResult executionId="ff40c6a7-41fa-4a63-a9fd-3be35c283e40" testId="442db462-8cc9-7079-8518-483e93e5310f" testName="Base05.Tests.ProtocolGoldenTests.BuffType_packet_reader_and_writer_exposes_value_fork" computerName="DESKTOP-4J13TH0" duration="00:00:00.0082116" startTime="2026-08-10T12:26:45.6113264+08:00" endTime="2026-08-10T12:26:45.6148503+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="ff40c6a7-41fa-4a63-a9fd-3be35c283e40" />
+    <UnitTestResult executionId="d820c892-d515-42e8-bb2b-103de54071f1" testId="84ba46c0-8dc1-182d-d3f3-b18e1a239715" testName="Base05.Tests.ProtocolGoldenTests.Monster_packet_reader_and_writer_exposes_value_fork" computerName="DESKTOP-4J13TH0" duration="00:00:00.0231799" startTime="2026-08-10T12:26:45.5014670+08:00" endTime="2026-08-10T12:26:45.5246715+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="d820c892-d515-42e8-bb2b-103de54071f1" />
+    <UnitTestResult executionId="00f2f846-a492-490e-9a5f-1e597d384428" testId="e5884139-2691-220e-41f3-d622cd45b88b" testName="Base05.Tests.ProtocolGoldenTests.Spell_packet_reader_and_writer_exposes_value_fork" computerName="DESKTOP-4J13TH0" duration="00:00:00.0051763" startTime="2026-08-10T12:26:45.5360189+08:00" endTime="2026-08-10T12:26:45.5411312+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="00f2f846-a492-490e-9a5f-1e597d384428" />
+    <UnitTestResult executionId="061a8baf-77b0-46c4-a036-b196e527da83" testId="68a5fec6-a282-200f-0623-e96c8305d46f" testName="Base05.Tests.ProtocolGoldenTests.Fishing_packets_keep_fixed_ids_and_field_order_on_wire" computerName="DESKTOP-4J13TH0" duration="00:00:00.0097312" startTime="2026-08-10T12:26:45.5248456+08:00" endTime="2026-08-10T12:26:45.5344473+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="061a8baf-77b0-46c4-a036-b196e527da83" />
+    <UnitTestResult executionId="e4021a5a-490d-44f9-8009-26276bd569a3" testId="0633cf54-056f-32b9-310a-766eb394dd64" testName="Base05.Tests.ProtocolGoldenTests.Enum_forks_match_manifest_and_source_declarations" computerName="DESKTOP-4J13TH0" duration="00:00:00.0325704" startTime="2026-08-10T12:26:45.5413670+08:00" endTime="2026-08-10T12:26:45.5737840+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="e4021a5a-490d-44f9-8009-26276bd569a3" />
+    <UnitTestResult executionId="3cb6c2f1-44ee-42a5-9bc1-e101ffe251df" testId="b34cc1f8-affd-3623-fc13-7baec06ddb2f" testName="Base05.Tests.ProtocolGoldenTests.SpellEffect_packet_reader_and_writer_exposes_value_fork" computerName="DESKTOP-4J13TH0" duration="00:00:00.0046545" startTime="2026-08-10T12:26:45.6150175+08:00" endTime="2026-08-10T12:26:45.6195724+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="3cb6c2f1-44ee-42a5-9bc1-e101ffe251df" />
+    <UnitTestResult executionId="42f0aa3c-0077-4295-a000-91768862d7d8" testId="d1742453-eb22-2c1d-8a67-9051b187b0fd" testName="Base05.Tests.ProtocolGeneratedManifestTests.GeneratedManifestHasCompleteDeterministicCoverage" computerName="DESKTOP-4J13TH0" duration="00:00:00.0465224" startTime="2026-08-10T12:26:45.4289072+08:00" endTime="2026-08-10T12:26:45.4845767+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="42f0aa3c-0077-4295-a000-91768862d7d8" />
+    <UnitTestResult executionId="04fa3470-f6f0-44e2-a5e7-c997e9ada5a9" testId="2a5ce395-1da7-a256-529a-cc81beaf2348" testName="Base05.Tests.ProtocolGoldenTests.Login_packet_round_trips_fixed_golden_vector" computerName="DESKTOP-4J13TH0" duration="00:00:00.0013624" startTime="2026-08-10T12:26:45.5345956+08:00" endTime="2026-08-10T12:26:45.5358746+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="04fa3470-f6f0-44e2-a5e7-c997e9ada5a9" />
+    <UnitTestResult executionId="0c14a814-0bfd-4aa3-9dae-525bf60f3290" testId="0e7d818a-653b-ddbd-eb4a-f52fae6b613d" testName="Base05.Tests.ProtocolGoldenTests.Rental_slot_responses_round_trip_through_shared_wire_codec" computerName="DESKTOP-4J13TH0" duration="00:00:00.0008470" startTime="2026-08-10T12:26:45.6298218+08:00" endTime="2026-08-10T12:26:45.6305337+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="0c14a814-0bfd-4aa3-9dae-525bf60f3290" />
   </Results>
   <TestDefinitions>
     <UnitTest name="Base05.Tests.ProtocolGoldenTests.Monster_packet_reader_and_writer_exposes_value_fork" storage="c:\users\luo\.codex\worktrees\p5-proto02-03-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="84ba46c0-8dc1-182d-d3f3-b18e1a239715">
-      <Execution id="1ea2c5d5-fe8c-4cbb-b725-8a9829179a4c" />
+      <Execution id="d820c892-d515-42e8-bb2b-103de54071f1" />
       <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p5-proto02-03-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.ProtocolGoldenTests" name="Monster_packet_reader_and_writer_exposes_value_fork" />
     </UnitTest>
     <UnitTest name="Base05.Tests.ProtocolGoldenTests.Spell_packet_reader_and_writer_exposes_value_fork" storage="c:\users\luo\.codex\worktrees\p5-proto02-03-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="e5884139-2691-220e-41f3-d622cd45b88b">
-      <Execution id="2b710ffd-ad63-4f9e-b0c9-d1e88cf90844" />
+      <Execution id="00f2f846-a492-490e-9a5f-1e597d384428" />
       <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p5-proto02-03-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.ProtocolGoldenTests" name="Spell_packet_reader_and_writer_exposes_value_fork" />
     </UnitTest>
     <UnitTest name="Base05.Tests.ProtocolGoldenTests.Rental_slot_responses_round_trip_through_shared_wire_codec" storage="c:\users\luo\.codex\worktrees\p5-proto02-03-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="0e7d818a-653b-ddbd-eb4a-f52fae6b613d">
-      <Execution id="349d4696-0740-49d1-9c77-88b08cd97a70" />
+      <Execution id="0c14a814-0bfd-4aa3-9dae-525bf60f3290" />
       <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p5-proto02-03-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.ProtocolGoldenTests" name="Rental_slot_responses_round_trip_through_shared_wire_codec" />
     </UnitTest>
     <UnitTest name="Base05.Tests.ProtocolGoldenTests.Fishing_packets_keep_fixed_ids_and_field_order_on_wire" storage="c:\users\luo\.codex\worktrees\p5-proto02-03-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="68a5fec6-a282-200f-0623-e96c8305d46f">
-      <Execution id="ecd6d5f7-c892-45b4-8097-a8f5a173e325" />
+      <Execution id="061a8baf-77b0-46c4-a036-b196e527da83" />
       <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p5-proto02-03-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.ProtocolGoldenTests" name="Fishing_packets_keep_fixed_ids_and_field_order_on_wire" />
     </UnitTest>
     <UnitTest name="Base05.Tests.ProtocolGeneratedManifestTests.AndroidFormalBuildLinksCanonicalSharedProtocolSources" storage="c:\users\luo\.codex\worktrees\p5-proto02-03-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="cd2f071d-6da0-5198-cbcb-68603295130d">
-      <Execution id="aca176e6-bb59-480e-83f1-35186fa50063" />
+      <Execution id="cbceca44-8ac1-4d54-a18c-04b6a81dccb5" />
       <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p5-proto02-03-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.ProtocolGeneratedManifestTests" name="AndroidFormalBuildLinksCanonicalSharedProtocolSources" />
     </UnitTest>
     <UnitTest name="Base05.Tests.ProtocolGoldenTests.BuffType_packet_reader_and_writer_exposes_value_fork" storage="c:\users\luo\.codex\worktrees\p5-proto02-03-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="442db462-8cc9-7079-8518-483e93e5310f">
-      <Execution id="7940b5c4-caff-4bbf-8a88-84560cb5871b" />
+      <Execution id="ff40c6a7-41fa-4a63-a9fd-3be35c283e40" />
       <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p5-proto02-03-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.ProtocolGoldenTests" name="BuffType_packet_reader_and_writer_exposes_value_fork" />
     </UnitTest>
     <UnitTest name="Base05.Tests.ProtocolGoldenTests.LevelEffects_wire_width_matches_shared_and_share_packets" storage="c:\users\luo\.codex\worktrees\p5-proto02-03-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="dd71ad48-2522-fb44-e193-3ade2a8a73c6">
-      <Execution id="eeb1ac44-7c15-4332-b844-18931016cc0e" />
+      <Execution id="8cbf29c8-1651-4206-9720-4bac6eb80455" />
       <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p5-proto02-03-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.ProtocolGoldenTests" name="LevelEffects_wire_width_matches_shared_and_share_packets" />
     </UnitTest>
     <UnitTest name="Base05.Tests.ProtocolGoldenTests.SpellEffect_packet_reader_and_writer_exposes_value_fork" storage="c:\users\luo\.codex\worktrees\p5-proto02-03-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="b34cc1f8-affd-3623-fc13-7baec06ddb2f">
-      <Execution id="4ed5e0b5-8a7b-49a4-8b05-17143ecba137" />
+      <Execution id="3cb6c2f1-44ee-42a5-9bc1-e101ffe251df" />
       <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p5-proto02-03-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.ProtocolGoldenTests" name="SpellEffect_packet_reader_and_writer_exposes_value_fork" />
     </UnitTest>
+    <UnitTest name="Base05.Tests.ProtocolGeneratedManifestTests.CompatibilityMatrixMatchesTrackedRuntimeVersions" storage="c:\users\luo\.codex\worktrees\p5-proto02-03-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="62f9e936-b97b-0109-82d7-23281cd6769a">
+      <Execution id="561dd8a4-ed3a-423b-9919-dfa6b8765d80" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p5-proto02-03-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.ProtocolGeneratedManifestTests" name="CompatibilityMatrixMatchesTrackedRuntimeVersions" />
+    </UnitTest>
     <UnitTest name="Base05.Tests.ProtocolGoldenTests.Manifest_is_machine_readable_and_covers_packet_and_enum_metadata" storage="c:\users\luo\.codex\worktrees\p5-proto02-03-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="5d3bd46f-3383-3fff-645b-cc9a1c1781cd">
-      <Execution id="7965de58-b4b1-4afc-9458-201e8b0d597f" />
+      <Execution id="c2f94abc-a92c-4e65-8515-79dd18a83156" />
       <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p5-proto02-03-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.ProtocolGoldenTests" name="Manifest_is_machine_readable_and_covers_packet_and_enum_metadata" />
     </UnitTest>
     <UnitTest name="Base05.Tests.ProtocolGoldenTests.Login_packet_round_trips_fixed_golden_vector" storage="c:\users\luo\.codex\worktrees\p5-proto02-03-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="2a5ce395-1da7-a256-529a-cc81beaf2348">
-      <Execution id="b46bd584-e7ab-4406-b9d4-7d1892320449" />
+      <Execution id="04fa3470-f6f0-44e2-a5e7-c997e9ada5a9" />
       <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p5-proto02-03-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.ProtocolGoldenTests" name="Login_packet_round_trips_fixed_golden_vector" />
     </UnitTest>
     <UnitTest name="Base05.Tests.ProtocolGeneratedManifestTests.GeneratedManifestHasCompleteDeterministicCoverage" storage="c:\users\luo\.codex\worktrees\p5-proto02-03-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="d1742453-eb22-2c1d-8a67-9051b187b0fd">
-      <Execution id="574105a0-24d0-46fa-aa82-e49fccfba7c8" />
+      <Execution id="42f0aa3c-0077-4295-a000-91768862d7d8" />
       <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p5-proto02-03-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.ProtocolGeneratedManifestTests" name="GeneratedManifestHasCompleteDeterministicCoverage" />
     </UnitTest>
     <UnitTest name="Base05.Tests.ProtocolGoldenTests.GuildNoticeChange_negative_update_is_a_wire_sentinel" storage="c:\users\luo\.codex\worktrees\p5-proto02-03-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="c05c83ee-c8fb-1d47-f297-e94b6a94abf3">
-      <Execution id="d04d1d13-d1c6-468d-ac99-79b3fb68dcfe" />
+      <Execution id="b06b1019-0440-44d7-96c3-446406a0a7ea" />
       <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p5-proto02-03-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.ProtocolGoldenTests" name="GuildNoticeChange_negative_update_is_a_wire_sentinel" />
     </UnitTest>
     <UnitTest name="Base05.Tests.ProtocolGoldenTests.Enum_forks_match_manifest_and_source_declarations" storage="c:\users\luo\.codex\worktrees\p5-proto02-03-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="0633cf54-056f-32b9-310a-766eb394dd64">
-      <Execution id="d61eaf92-2936-4e52-b485-02204126785a" />
+      <Execution id="e4021a5a-490d-44f9-8009-26276bd569a3" />
       <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p5-proto02-03-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.ProtocolGoldenTests" name="Enum_forks_match_manifest_and_source_declarations" />
     </UnitTest>
   </TestDefinitions>
   <TestEntries>
-    <TestEntry testId="84ba46c0-8dc1-182d-d3f3-b18e1a239715" executionId="1ea2c5d5-fe8c-4cbb-b725-8a9829179a4c" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
-    <TestEntry testId="b34cc1f8-affd-3623-fc13-7baec06ddb2f" executionId="4ed5e0b5-8a7b-49a4-8b05-17143ecba137" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
-    <TestEntry testId="5d3bd46f-3383-3fff-645b-cc9a1c1781cd" executionId="7965de58-b4b1-4afc-9458-201e8b0d597f" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
-    <TestEntry testId="0e7d818a-653b-ddbd-eb4a-f52fae6b613d" executionId="349d4696-0740-49d1-9c77-88b08cd97a70" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
-    <TestEntry testId="cd2f071d-6da0-5198-cbcb-68603295130d" executionId="aca176e6-bb59-480e-83f1-35186fa50063" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
-    <TestEntry testId="2a5ce395-1da7-a256-529a-cc81beaf2348" executionId="b46bd584-e7ab-4406-b9d4-7d1892320449" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
-    <TestEntry testId="dd71ad48-2522-fb44-e193-3ade2a8a73c6" executionId="eeb1ac44-7c15-4332-b844-18931016cc0e" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
-    <TestEntry testId="c05c83ee-c8fb-1d47-f297-e94b6a94abf3" executionId="d04d1d13-d1c6-468d-ac99-79b3fb68dcfe" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
-    <TestEntry testId="68a5fec6-a282-200f-0623-e96c8305d46f" executionId="ecd6d5f7-c892-45b4-8097-a8f5a173e325" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
-    <TestEntry testId="442db462-8cc9-7079-8518-483e93e5310f" executionId="7940b5c4-caff-4bbf-8a88-84560cb5871b" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
-    <TestEntry testId="0633cf54-056f-32b9-310a-766eb394dd64" executionId="d61eaf92-2936-4e52-b485-02204126785a" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
-    <TestEntry testId="d1742453-eb22-2c1d-8a67-9051b187b0fd" executionId="574105a0-24d0-46fa-aa82-e49fccfba7c8" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
-    <TestEntry testId="e5884139-2691-220e-41f3-d622cd45b88b" executionId="2b710ffd-ad63-4f9e-b0c9-d1e88cf90844" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="5d3bd46f-3383-3fff-645b-cc9a1c1781cd" executionId="c2f94abc-a92c-4e65-8515-79dd18a83156" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="c05c83ee-c8fb-1d47-f297-e94b6a94abf3" executionId="b06b1019-0440-44d7-96c3-446406a0a7ea" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="cd2f071d-6da0-5198-cbcb-68603295130d" executionId="cbceca44-8ac1-4d54-a18c-04b6a81dccb5" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="62f9e936-b97b-0109-82d7-23281cd6769a" executionId="561dd8a4-ed3a-423b-9919-dfa6b8765d80" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="dd71ad48-2522-fb44-e193-3ade2a8a73c6" executionId="8cbf29c8-1651-4206-9720-4bac6eb80455" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="442db462-8cc9-7079-8518-483e93e5310f" executionId="ff40c6a7-41fa-4a63-a9fd-3be35c283e40" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="84ba46c0-8dc1-182d-d3f3-b18e1a239715" executionId="d820c892-d515-42e8-bb2b-103de54071f1" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="e5884139-2691-220e-41f3-d622cd45b88b" executionId="00f2f846-a492-490e-9a5f-1e597d384428" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="68a5fec6-a282-200f-0623-e96c8305d46f" executionId="061a8baf-77b0-46c4-a036-b196e527da83" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="0633cf54-056f-32b9-310a-766eb394dd64" executionId="e4021a5a-490d-44f9-8009-26276bd569a3" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="b34cc1f8-affd-3623-fc13-7baec06ddb2f" executionId="3cb6c2f1-44ee-42a5-9bc1-e101ffe251df" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="d1742453-eb22-2c1d-8a67-9051b187b0fd" executionId="42f0aa3c-0077-4295-a000-91768862d7d8" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="2a5ce395-1da7-a256-529a-cc81beaf2348" executionId="04fa3470-f6f0-44e2-a5e7-c997e9ada5a9" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="0e7d818a-653b-ddbd-eb4a-f52fae6b613d" executionId="0c14a814-0bfd-4aa3-9dae-525bf60f3290" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
   </TestEntries>
   <TestLists>
     <TestList name="列表中未列出的结果" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
     <TestList name="所有已加载的结果" id="19431567-8539-422a-85d7-44ee4e166bda" />
   </TestLists>
   <ResultSummary outcome="Completed">
-    <Counters total="13" executed="13" passed="13" failed="0" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <Counters total="14" executed="14" passed="14" failed="0" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
     <Output>
       <StdOut>[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.0.2+dd36e86129 (64-bit .NET 10.0.4)&#xD;
-[xUnit.net 00:00:00.11]   Discovering: Base05.Tests&#xD;
-[xUnit.net 00:00:00.21]   Discovered:  Base05.Tests&#xD;
-[xUnit.net 00:00:00.24]   Starting:    Base05.Tests&#xD;
-[xUnit.net 00:00:00.53]   Finished:    Base05.Tests&#xD;
+[xUnit.net 00:00:00.14]   Discovering: Base05.Tests&#xD;
+[xUnit.net 00:00:00.24]   Discovered:  Base05.Tests&#xD;
+[xUnit.net 00:00:00.27]   Starting:    Base05.Tests&#xD;
+[xUnit.net 00:00:00.49]   Finished:    Base05.Tests&#xD;
 </StdOut>
     </Output>
   </ResultSummary>

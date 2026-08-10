@@ -1,0 +1,18 @@
+当前 Release 程序与资源版本：
+
+- Client_VorticeDX11/bin/Release/Client.dll：AssemblyVersion 1.0.0.0。
+- Server/bin/Release/Server.Library.dll：AssemblyVersion 1.0.0.0。
+- Client_MonoGame.Shared/bin/Release/net10.0-android/Client_MonoGame.Shared.dll：AssemblyVersion 1.0.0.0。
+- Client_MonoGame.Android.csproj：ApplicationDisplayVersion 2.0.0，ApplicationVersion 20000。
+- PC 资源兼容版本：1.0.0。
+- Android 资源兼容版本：2.0.0。
+- PC/Android 当前随包资源版本：content-988b1bb85432df58363d3b307b7971157680b207fcd3213f12eb520c032176c9。
+
+Android 正式宿主构建产物：
+
+- com.lommir.client.monogame.android-Signed.apk
+  - 字节数：89112262
+  - SHA-256：36AA873B3768885AA26CB11DF5247814FA20481C0A0042EC3CF700ACE5C9270C
+- com.lommir.client.monogame.android.apk
+  - 字节数：89000788
+  - SHA-256：ACA973908B35810AA41701055D9322568335372EB121E614ED008B2483BF6B71
