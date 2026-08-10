@@ -6,7 +6,7 @@
          MonoAndroid Tools: C:\Program Files\dotnet\packs\Microsoft.Android.Sdk.Windows\36.1.43\tools\
          Android Platform API level: 36
          TargetFrameworkVersion: v10.0
-         Android NDK: 
+         Android NDK:
          Android SDK: C:\Program Files (x86)\Android\android-sdk\
          Android SDK Build Tools: C:\Program Files (x86)\Android\android-sdk\build-tools\36.0.0\
          Java SDK: C:\Program Files\Android\openjdk\jdk-21.0.8\
@@ -20,7 +20,7 @@
        _ExtractAar:
        正在跳过目标“_ExtractAar”，因为它没有输入。
        _SetupDesignerProperties:
-         _OuterIntermediateOutputPath: 
+         _OuterIntermediateOutputPath:
          IntermediateOutputPath: obj\Release\net10.0-android\
        _ResolveLibraryProjectImports:
        正在跳过目标“_ResolveLibraryProjectImports”，因为所有输出文件相对于输入文件而言都是最新的。
@@ -2941,7 +2941,7 @@
 已成功生成。
 
        “C:\Users\luo\.codex\worktrees\p5-proto02-03-20260810\Client_MonoGame.Shared\Client_MonoGame.Shared.csproj”(默认目标) (1) ->
-       (CoreCompile 目标) -> 
+       (CoreCompile 目标) ->
          C:\Users\luo\.codex\worktrees\p5-proto02-03-20260810\Client_MonoGame.Shared\UI\FairyGui\Runtime\Core\Image.cs(37,7): warning CS1570: XML 注释出现 XML 格式错误 --“在此位置不应为结束标记。” [C:\Users\luo\.codex\worktrees\p5-proto02-03-20260810\Client_MonoGame.Shared\Client_MonoGame.Shared.csproj::TargetFramework=net10.0-android]
          C:\Users\luo\.codex\worktrees\p5-proto02-03-20260810\Client_MonoGame.Shared\UI\FairyGui\Runtime\Tween\GPath.cs(424,56): warning CS1570: XML 注释出现 XML 格式错误 --“应为标识符。” [C:\Users\luo\.codex\worktrees\p5-proto02-03-20260810\Client_MonoGame.Shared\Client_MonoGame.Shared.csproj::TargetFramework=net10.0-android]
          C:\Users\luo\.codex\worktrees\p5-proto02-03-20260810\Client_MonoGame.Shared\UI\FairyGui\Runtime\Tween\GPath.cs(424,56): warning CS1570: XML 注释出现 XML 格式错误 --“此位置无法使用字符“=”。” [C:\Users\luo\.codex\worktrees\p5-proto02-03-20260810\Client_MonoGame.Shared\Client_MonoGame.Shared.csproj::TargetFramework=net10.0-android]

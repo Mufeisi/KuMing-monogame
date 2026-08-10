@@ -426,7 +426,7 @@ C:\Program Files\dotnet\sdk\10.0.200\Microsoft.Common.CurrentVersion.targets(245
 已成功生成。
 
        “C:\Users\luo\.codex\worktrees\p5-proto02-03-20260810\Client_VorticeDX11\Client_VorticeDX11.csproj”(默认目标) (1) ->
-       (ResolveAssemblyReferences 目标) -> 
+       (ResolveAssemblyReferences 目标) ->
          C:\Program Files\dotnet\sdk\10.0.200\Microsoft.Common.CurrentVersion.targets(2451,5): warning MSB3277: 发现无法解析的“WindowsBase”的不同版本之间存在冲突。 [C:\Users\luo\.codex\worktrees\p5-proto02-03-20260810\Client_VorticeDX11\Client_VorticeDX11.csproj]
        C:\Program Files\dotnet\sdk\10.0.200\Microsoft.Common.CurrentVersion.targets(2451,5): warning MSB3277: “WindowsBase, Version=4.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35”与“WindowsBase, Version=5.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35”之间存在冲突。 [C:\Users\luo\.codex\worktrees\p5-proto02-03-20260810\Client_VorticeDX11\Client_VorticeDX11.csproj]
        C:\Program Files\dotnet\sdk\10.0.200\Microsoft.Common.CurrentVersion.targets(2451,5): warning MSB3277:     已选择“WindowsBase, Version=4.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35”，因为它是主版本而“WindowsBase, Version=5.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35”不是。 [C:\Users\luo\.codex\worktrees\p5-proto02-03-20260810\Client_VorticeDX11\Client_VorticeDX11.csproj]
@@ -441,7 +441,7 @@ C:\Program Files\dotnet\sdk\10.0.200\Microsoft.Common.CurrentVersion.targets(245
 
 
        “C:\Users\luo\.codex\worktrees\p5-proto02-03-20260810\Client_VorticeDX11\Client_VorticeDX11.csproj”(默认目标) (1) ->
-       (CoreCompile 目标) -> 
+       (CoreCompile 目标) ->
          C:\Users\luo\.codex\worktrees\p5-proto02-03-20260810\Client_VorticeDX11\UI\UIManager.cs(13,52): warning CS8632: 只能在 "#nullable" 注释上下文内的代码中使用可为 null 的引用类型的注释。 [C:\Users\luo\.codex\worktrees\p5-proto02-03-20260810\Client_VorticeDX11\Client_VorticeDX11.csproj]
          C:\Users\luo\.codex\worktrees\p5-proto02-03-20260810\Client_VorticeDX11\Forms\AMain.cs(117,17): warning SYSLIB0014: “ServicePointManager”已过时:“WebRequest, HttpWebRequest, ServicePoint, and WebClient are obsolete. Use HttpClient instead. Settings on ServicePointManager no longer affect SslStream or HttpClient.” (https://aka.ms/dotnet-warnings/SYSLIB0014) [C:\Users\luo\.codex\worktrees\p5-proto02-03-20260810\Client_VorticeDX11\Client_VorticeDX11.csproj]
          C:\Users\luo\.codex\worktrees\p5-proto02-03-20260810\Client_VorticeDX11\Forms\CMain.cs(732,30): warning CS0168: 声明了变量“ex”，但从未使用过 [C:\Users\luo\.codex\worktrees\p5-proto02-03-20260810\Client_VorticeDX11\Client_VorticeDX11.csproj]

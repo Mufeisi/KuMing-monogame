@@ -56,7 +56,7 @@
 已成功生成。
 
        “C:\Users\luo\.codex\worktrees\p5-proto02-03-20260810\Server\Server.Library.csproj”(默认目标) (1) ->
-       (CoreCompile 目标) -> 
+       (CoreCompile 目标) ->
          C:\Users\luo\.codex\worktrees\p5-proto02-03-20260810\Server\Scripting\Ai\AiScriptOutputGuard.cs(48,57): warning CS8632: 只能在 "#nullable" 注释上下文内的代码中使用可为 null 的引用类型的注释。 [C:\Users\luo\.codex\worktrees\p5-proto02-03-20260810\Server\Server.Library.csproj]
          C:\Users\luo\.codex\worktrees\p5-proto02-03-20260810\Server\MirEnvir\Envir.cs(98,35): warning CS8632: 只能在 "#nullable" 注释上下文内的代码中使用可为 null 的引用类型的注释。 [C:\Users\luo\.codex\worktrees\p5-proto02-03-20260810\Server\Server.Library.csproj]
          C:\Users\luo\.codex\worktrees\p5-proto02-03-20260810\Server\Scripting\TxtUsageTracker.cs(66,29): warning CS8632: 只能在 "#nullable" 注释上下文内的代码中使用可为 null 的引用类型的注释。 [C:\Users\luo\.codex\worktrees\p5-proto02-03-20260810\Server\Server.Library.csproj]
