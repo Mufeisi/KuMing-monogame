@@ -2,6 +2,7 @@ using System.Net;
 using System.Security.Cryptography;
 using System.Text;
 using Server.Persistence.Sql;
+using Server.Operations;
 
 namespace Server.Security;
 
@@ -31,6 +32,7 @@ internal static class ProductionSecurityPolicy
         if (Settings.StartHTTPService)
         {
             AdminSecurityPolicy.ValidateListener(Settings.HTTPIPAddress);
+            BasicOperationsThresholds.FromSettings();
             ValidateTrustedAddress(Settings.HTTPTrustedIPAddress);
             string administrator = Require(ProtectedSecretStore.AdministratorToken, "管理端 Administrator 令牌");
             if (administrator.Length < 32)

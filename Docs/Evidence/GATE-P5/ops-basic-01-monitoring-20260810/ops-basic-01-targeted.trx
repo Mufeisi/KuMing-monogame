@@ -1,0 +1,76 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="97ac2067-73c9-4a40-a6c3-6bfe812a109b" name="luo@DESKTOP-4J13TH0 2026-08-10 08:36:27" runUser="DESKTOP-4J13TH0\luo" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-08-10T08:36:27.9338433+08:00" queuing="2026-08-10T08:36:27.9338436+08:00" start="2026-08-10T08:36:25.7555139+08:00" finish="2026-08-10T08:36:28.0041220+08:00" />
+  <TestSettings name="default" id="88b94b38-3500-4644-8062-e5405fc141f3">
+    <Deployment runDeploymentRoot="luo_DESKTOP-4J13TH0_2026-08-10_08_36_27" />
+  </TestSettings>
+  <Results>
+    <UnitTestResult executionId="196b2863-ec6c-4c8d-87ce-7bfb43cd2f6c" testId="dae45c35-433a-0ecf-d13a-5ca87482d567" testName="Base05.Tests.BasicOperationsMonitorTests.非Sqlite部署不会把无备份服务误报为故障" computerName="DESKTOP-4J13TH0" duration="00:00:00.0014798" startTime="2026-08-10T08:36:27.9052071+08:00" endTime="2026-08-10T08:36:27.9065668+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="196b2863-ec6c-4c8d-87ce-7bfb43cd2f6c" />
+    <UnitTestResult executionId="db8a1993-9dd1-499a-95f0-3b563f5ee891" testId="fb0abd80-970e-c609-0a1a-d3bb2afa32d6" testName="Base05.Tests.BasicOperationsMonitorTests.操作员凭据可读取真实Http监控Json" computerName="DESKTOP-4J13TH0" duration="00:00:01.1599733" startTime="2026-08-10T08:36:26.7427564+08:00" endTime="2026-08-10T08:36:27.8985893+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="db8a1993-9dd1-499a-95f0-3b563f5ee891" />
+    <UnitTestResult executionId="b90dfd9e-08b7-4184-aa7f-304299cdf6ca" testId="99b87452-f9f4-4fff-a38b-468466615e35" testName="Base05.Tests.BasicOperationsMonitorTests.告警只在触发和恢复状态转换时写入一次" computerName="DESKTOP-4J13TH0" duration="00:00:00.0128343" startTime="2026-08-10T08:36:27.9068559+08:00" endTime="2026-08-10T08:36:27.9195466+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="b90dfd9e-08b7-4184-aa7f-304299cdf6ca" />
+    <UnitTestResult executionId="4c50b325-8ce3-49e8-aa81-962d6c535ea8" testId="2d4661f6-779d-eddc-aa02-db1371ffe20e" testName="Base05.Tests.BasicOperationsMetricsIntegrationTests.基础监控直接消费Perf00真实快照" computerName="DESKTOP-4J13TH0" duration="00:00:00.0311637" startTime="2026-08-10T08:36:26.6818644+08:00" endTime="2026-08-10T08:36:26.7241205+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="4c50b325-8ce3-49e8-aa81-962d6c535ea8" />
+    <UnitTestResult executionId="a4432a18-b6d9-4159-8531-4c2ff7ec8d5d" testId="8e8d3fd2-94d4-50c6-3d5d-ad876cf35bd5" testName="Base05.Tests.BasicOperationsMonitorTests.超阈值和保存备份失败均生成明确告警" computerName="DESKTOP-4J13TH0" duration="00:00:00.0088762" startTime="2026-08-10T08:36:27.9210853+08:00" endTime="2026-08-10T08:36:27.9299130+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="a4432a18-b6d9-4159-8531-4c2ff7ec8d5d" />
+    <UnitTestResult executionId="4edef3d6-af6c-4480-85e5-e6f630564f02" testId="9de24466-f36c-7301-8615-8bf02ba1c8b0" testName="Base05.Tests.BasicOperationsMonitorTests.首次备份长期运行或从未开始都会触发时效告警" computerName="DESKTOP-4J13TH0" duration="00:00:00.0012845" startTime="2026-08-10T08:36:27.9198523+08:00" endTime="2026-08-10T08:36:27.9209037+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="4edef3d6-af6c-4480-85e5-e6f630564f02" />
+    <UnitTestResult executionId="e4ae6a39-20e2-49ac-b97c-5768e914b0d6" testId="7b481267-bdb7-3998-62c7-d829ab99f97a" testName="Base05.Tests.BasicOperationsMonitorTests.状态快照组合既有核心指标和备份状态" computerName="DESKTOP-4J13TH0" duration="00:00:00.0069858" startTime="2026-08-10T08:36:26.7414733+08:00" endTime="2026-08-10T08:36:26.7416218+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="e4ae6a39-20e2-49ac-b97c-5768e914b0d6" />
+    <UnitTestResult executionId="372ba69c-a894-4fc5-b275-2aca11eca1d2" testId="99cc3d4f-af52-eb6e-f624-a8bbd9b2dc69" testName="Base05.Tests.BasicOperationsMonitorTests.告警日志失败后保留未发布状态并在下轮重试" computerName="DESKTOP-4J13TH0" duration="00:00:00.0047748" startTime="2026-08-10T08:36:27.9020959+08:00" endTime="2026-08-10T08:36:27.9049446+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="372ba69c-a894-4fc5-b275-2aca11eca1d2" />
+  </Results>
+  <TestDefinitions>
+    <UnitTest name="Base05.Tests.BasicOperationsMetricsIntegrationTests.基础监控直接消费Perf00真实快照" storage="c:\users\luo\.codex\worktrees\p5-ops-basic-01-monitoring-20260810\tests\base05.tests\bin\debug\net10.0\base05.tests.dll" id="2d4661f6-779d-eddc-aa02-db1371ffe20e">
+      <Execution id="4c50b325-8ce3-49e8-aa81-962d6c535ea8" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p5-ops-basic-01-monitoring-20260810\Tests\Base05.Tests\bin\Debug\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.BasicOperationsMetricsIntegrationTests" name="基础监控直接消费Perf00真实快照" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.BasicOperationsMonitorTests.首次备份长期运行或从未开始都会触发时效告警" storage="c:\users\luo\.codex\worktrees\p5-ops-basic-01-monitoring-20260810\tests\base05.tests\bin\debug\net10.0\base05.tests.dll" id="9de24466-f36c-7301-8615-8bf02ba1c8b0">
+      <Execution id="4edef3d6-af6c-4480-85e5-e6f630564f02" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p5-ops-basic-01-monitoring-20260810\Tests\Base05.Tests\bin\Debug\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.BasicOperationsMonitorTests" name="首次备份长期运行或从未开始都会触发时效告警" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.BasicOperationsMonitorTests.告警只在触发和恢复状态转换时写入一次" storage="c:\users\luo\.codex\worktrees\p5-ops-basic-01-monitoring-20260810\tests\base05.tests\bin\debug\net10.0\base05.tests.dll" id="99b87452-f9f4-4fff-a38b-468466615e35">
+      <Execution id="b90dfd9e-08b7-4184-aa7f-304299cdf6ca" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p5-ops-basic-01-monitoring-20260810\Tests\Base05.Tests\bin\Debug\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.BasicOperationsMonitorTests" name="告警只在触发和恢复状态转换时写入一次" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.BasicOperationsMonitorTests.告警日志失败后保留未发布状态并在下轮重试" storage="c:\users\luo\.codex\worktrees\p5-ops-basic-01-monitoring-20260810\tests\base05.tests\bin\debug\net10.0\base05.tests.dll" id="99cc3d4f-af52-eb6e-f624-a8bbd9b2dc69">
+      <Execution id="372ba69c-a894-4fc5-b275-2aca11eca1d2" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p5-ops-basic-01-monitoring-20260810\Tests\Base05.Tests\bin\Debug\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.BasicOperationsMonitorTests" name="告警日志失败后保留未发布状态并在下轮重试" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.BasicOperationsMonitorTests.状态快照组合既有核心指标和备份状态" storage="c:\users\luo\.codex\worktrees\p5-ops-basic-01-monitoring-20260810\tests\base05.tests\bin\debug\net10.0\base05.tests.dll" id="7b481267-bdb7-3998-62c7-d829ab99f97a">
+      <Execution id="e4ae6a39-20e2-49ac-b97c-5768e914b0d6" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p5-ops-basic-01-monitoring-20260810\Tests\Base05.Tests\bin\Debug\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.BasicOperationsMonitorTests" name="状态快照组合既有核心指标和备份状态" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.BasicOperationsMonitorTests.超阈值和保存备份失败均生成明确告警" storage="c:\users\luo\.codex\worktrees\p5-ops-basic-01-monitoring-20260810\tests\base05.tests\bin\debug\net10.0\base05.tests.dll" id="8e8d3fd2-94d4-50c6-3d5d-ad876cf35bd5">
+      <Execution id="a4432a18-b6d9-4159-8531-4c2ff7ec8d5d" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p5-ops-basic-01-monitoring-20260810\Tests\Base05.Tests\bin\Debug\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.BasicOperationsMonitorTests" name="超阈值和保存备份失败均生成明确告警" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.BasicOperationsMonitorTests.非Sqlite部署不会把无备份服务误报为故障" storage="c:\users\luo\.codex\worktrees\p5-ops-basic-01-monitoring-20260810\tests\base05.tests\bin\debug\net10.0\base05.tests.dll" id="dae45c35-433a-0ecf-d13a-5ca87482d567">
+      <Execution id="196b2863-ec6c-4c8d-87ce-7bfb43cd2f6c" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p5-ops-basic-01-monitoring-20260810\Tests\Base05.Tests\bin\Debug\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.BasicOperationsMonitorTests" name="非Sqlite部署不会把无备份服务误报为故障" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.BasicOperationsMonitorTests.操作员凭据可读取真实Http监控Json" storage="c:\users\luo\.codex\worktrees\p5-ops-basic-01-monitoring-20260810\tests\base05.tests\bin\debug\net10.0\base05.tests.dll" id="fb0abd80-970e-c609-0a1a-d3bb2afa32d6">
+      <Execution id="db8a1993-9dd1-499a-95f0-3b563f5ee891" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p5-ops-basic-01-monitoring-20260810\Tests\Base05.Tests\bin\Debug\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.BasicOperationsMonitorTests" name="操作员凭据可读取真实Http监控Json" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestEntries>
+    <TestEntry testId="dae45c35-433a-0ecf-d13a-5ca87482d567" executionId="196b2863-ec6c-4c8d-87ce-7bfb43cd2f6c" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="fb0abd80-970e-c609-0a1a-d3bb2afa32d6" executionId="db8a1993-9dd1-499a-95f0-3b563f5ee891" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="99b87452-f9f4-4fff-a38b-468466615e35" executionId="b90dfd9e-08b7-4184-aa7f-304299cdf6ca" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="2d4661f6-779d-eddc-aa02-db1371ffe20e" executionId="4c50b325-8ce3-49e8-aa81-962d6c535ea8" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="8e8d3fd2-94d4-50c6-3d5d-ad876cf35bd5" executionId="a4432a18-b6d9-4159-8531-4c2ff7ec8d5d" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="9de24466-f36c-7301-8615-8bf02ba1c8b0" executionId="4edef3d6-af6c-4480-85e5-e6f630564f02" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="7b481267-bdb7-3998-62c7-d829ab99f97a" executionId="e4ae6a39-20e2-49ac-b97c-5768e914b0d6" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="99cc3d4f-af52-eb6e-f624-a8bbd9b2dc69" executionId="372ba69c-a894-4fc5-b275-2aca11eca1d2" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+  </TestEntries>
+  <TestLists>
+    <TestList name="列表中未列出的结果" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="所有已加载的结果" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Completed">
+    <Counters total="8" executed="8" passed="8" failed="0" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <Output>
+      <StdOut>[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.0.2+dd36e86129 (64-bit .NET 10.0.4)&#xD;
+[xUnit.net 00:00:00.11]   Discovering: Base05.Tests&#xD;
+[xUnit.net 00:00:00.22]   Discovered:  Base05.Tests&#xD;
+[xUnit.net 00:00:00.25]   Starting:    Base05.Tests&#xD;
+[xUnit.net 00:00:01.53]   Finished:    Base05.Tests&#xD;
+</StdOut>
+    </Output>
+  </ResultSummary>
+</TestRun>

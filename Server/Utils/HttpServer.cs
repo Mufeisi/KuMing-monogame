@@ -4,6 +4,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using Server.Security;
 using Server.Persistence.Sql;
+using Server.Operations;
 using S = ServerPackets;
 
 namespace Server.Library.Utils
@@ -19,6 +20,7 @@ namespace Server.Library.Utils
         private readonly string _administratorToken;
         private readonly string _operatorToken;
         private readonly SqliteBackupService _backupService;
+        private readonly BasicOperationsMonitor _operationsMonitor;
 
         private sealed class CachedSoundList
         {
@@ -27,17 +29,19 @@ namespace Server.Library.Utils
             public Dictionary<int, string> Entries = new();
         }
 
-        public HttpServer(SqliteBackupService backupService = null)
+        public HttpServer(SqliteBackupService backupService = null, BasicOperationsMonitor operationsMonitor = null)
         {
             Host = Settings.HTTPIPAddress;
             _administratorToken = ProtectedSecretStore.Read(ProtectedSecretStore.AdministratorToken);
             _operatorToken = ProtectedSecretStore.Read(ProtectedSecretStore.OperatorToken);
             _backupService = backupService;
+            _operationsMonitor = operationsMonitor ?? new BasicOperationsMonitor(backupService);
         }
 
         public void Start()
         {
             AdminSecurityPolicy.ValidateListener(Host);
+            _operationsMonitor.Start();
             _thread = new Thread(Listen);
             _thread.Start(tokenSource.Token);
         }
@@ -49,6 +53,7 @@ namespace Server.Library.Utils
             tokenSource.Cancel();
             Thread.Sleep(1000);
             tokenSource.Dispose();
+            _operationsMonitor.Dispose();
 
         }
 
@@ -121,6 +126,9 @@ namespace Server.Library.Utils
                             break;
                         }
                         WriteJsonResponse(response, HttpStatusCode.OK, _backupService.GetStatus());
+                        break;
+                    case "/operations/status":
+                        WriteJsonResponse(response, HttpStatusCode.OK, _operationsMonitor.CaptureStatus());
                         break;
                     default:
                         WriteResponse(response, "error");

@@ -96,6 +96,7 @@ namespace Server.MirEnvir
 
         private IServerPersistence? _persistence;
         internal SqliteBackupService SqliteBackup { get; private set; }
+        private bool _basicOperationsMetricsSession;
 
         private IServerPersistence Persistence => _persistence ??= ServerPersistenceFactory.CreateFromSettings();
 
@@ -992,6 +993,11 @@ namespace Server.MirEnvir
             try
             {
                 PerformanceMetrics.TryConfigureFromEnvironment(out _);
+                if (options.StartHttp && Settings.StartHTTPService && !PerformanceMetrics.Enabled)
+                {
+                    PerformanceMetrics.StartSession("server-operations");
+                    _basicOperationsMetricsSession = true;
+                }
                 Volatile.Write(ref _mainThreadId, Thread.CurrentThread.ManagedThreadId);
                 Time = options.ElapsedMillisecondsProvider?.Invoke() ?? Stopwatch.ElapsedMilliseconds;
 
@@ -3908,6 +3914,15 @@ namespace Server.MirEnvir
         {
             if (!PerformanceMetrics.Enabled)
                 return;
+
+            if (_basicOperationsMetricsSession)
+            {
+                PerformanceMetrics.FreezeSession();
+                PerformanceMetrics.Configure(enabled: false);
+                _basicOperationsMetricsSession = false;
+                MessageQueue.EnqueueDebugging($"[运维] {phase}：已结束基础监控指标会话。");
+                return;
+            }
 
             if (PerformanceMetrics.TryStopAndWriteConfiguredSnapshot(out _, out var error))
             {

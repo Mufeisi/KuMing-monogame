@@ -86,6 +86,10 @@ namespace Server
         public static bool StartHTTPService = false;
         public static string HTTPIPAddress = "http://127.0.0.1:7777/";
         public static string HTTPTrustedIPAddress = "127.0.0.1";
+        public static int OperationsTickP95WarningMilliseconds = 100;
+        public static int OperationsSaveP95WarningMilliseconds = 30000;
+        public static int OperationsNetworkQueueWarningDepth = 100;
+        public static int OperationsAlertCheckSeconds = 10;
 
         //Login protection
         public static int LoginAccountAttemptLimit = 30;
@@ -503,6 +507,10 @@ namespace Server
             StartHTTPService = Reader.ReadBoolean("Network", "StartHTTPService", StartHTTPService);
             HTTPIPAddress = Reader.ReadString("Network", "HTTPIPAddress", HTTPIPAddress);
             HTTPTrustedIPAddress = Reader.ReadString("Network", "HTTPTrustedIPAddress", HTTPTrustedIPAddress);
+            OperationsTickP95WarningMilliseconds = Reader.ReadInt32("Operations", "TickP95WarningMilliseconds", OperationsTickP95WarningMilliseconds);
+            OperationsSaveP95WarningMilliseconds = Reader.ReadInt32("Operations", "SaveP95WarningMilliseconds", OperationsSaveP95WarningMilliseconds);
+            OperationsNetworkQueueWarningDepth = Reader.ReadInt32("Operations", "NetworkQueueWarningDepth", OperationsNetworkQueueWarningDepth);
+            OperationsAlertCheckSeconds = Reader.ReadInt32("Operations", "AlertCheckSeconds", OperationsAlertCheckSeconds);
 
             //Login protection
             LoginAccountAttemptLimit = Math.Max(1, Reader.ReadInt32("Security", "LoginAccountAttemptLimit", LoginAccountAttemptLimit));
@@ -824,6 +832,10 @@ namespace Server
             Reader.Write("Network", "StartHTTPService", StartHTTPService);
             Reader.Write("Network", "HTTPIPAddress", HTTPIPAddress);
             Reader.Write("Network", "HTTPTrustedIPAddress", HTTPTrustedIPAddress);
+            Reader.Write("Operations", "TickP95WarningMilliseconds", OperationsTickP95WarningMilliseconds);
+            Reader.Write("Operations", "SaveP95WarningMilliseconds", OperationsSaveP95WarningMilliseconds);
+            Reader.Write("Operations", "NetworkQueueWarningDepth", OperationsNetworkQueueWarningDepth);
+            Reader.Write("Operations", "AlertCheckSeconds", OperationsAlertCheckSeconds);
 
             //Login protection
             Reader.Write("Security", "LoginAccountAttemptLimit", LoginAccountAttemptLimit);

@@ -67,7 +67,8 @@ internal static class AdminSecurityPolicy
             return new AdminAuthorizationResult(AdminAuthorizationStatus.Unauthorized, role, action);
 
         bool allowed = role == AdminRole.Administrator ||
-            role == AdminRole.Operator && (action == "status" || action == "broadcast" || action == "backup-status");
+            role == AdminRole.Operator && (action == "status" || action == "broadcast" ||
+                                           action == "backup-status" || action == "operations-status");
         return new AdminAuthorizationResult(
             allowed ? AdminAuthorizationStatus.Authorized : AdminAuthorizationStatus.Forbidden,
             role,
@@ -90,6 +91,7 @@ internal static class AdminSecurityPolicy
         "/addnamelist" => "add-name-list",
         "/backup/status" => "backup-status",
         "/backup/run" => "backup-run",
+        "/operations/status" => "operations-status",
         _ => "unknown",
     };
 

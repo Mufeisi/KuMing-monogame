@@ -32,7 +32,7 @@
 | Save* | `Server/Persistence/Sql/SqlDomainTransactionRunner.cs` | `Save` 覆盖完整调用（快照、事务、重试和失败）；`SaveSnapshotCapture` 只覆盖快照工厂；`SaveTransactionCommit` 按每次事务尝试记录；瞬时重试失败计入 `SaveAttemptFailure`，仅重试耗尽或不可重试异常计入最终 `SaveFailure`。|
 | Network*/Connections | 服务端 `Envir` + `MirConnection`；PC/移动端 `MirNetwork/Network` + 主循环 | 入队/出队路径维护会话级逻辑总深度与高水位，方向字段分别维护，不把各连接或各队列的历史峰值相加；新会话首次访问时以当前深度重基线，采样即使队列已排空仍保留本会话峰值；服务端网络汇总每秒一次，避免每毫秒 O(连接数) 扫描；服务端连接数为 `Connections.Count`，活跃数为 `Players.Count`；断线在 `MirConnection.Disconnect` 计数。|
 
-性能会话只在环境变量或显式 `Configure(true, 场景名)`/`StartSession(场景名)` 后采样；发布默认关闭。环境变量入口示例：
+性能会话通常只在环境变量或显式 `Configure(true, 场景名)`/`StartSession(场景名)` 后采样；OPS-BASIC-01 完成后，服务端启用管理 HTTP 时会自动启动不导出的 `server-operations` 会话供基础监控读取，客户端发布默认仍关闭。环境变量入口示例：
 
 ```text
 set LYOCRYSTAL_PERF00_ENABLED=true
