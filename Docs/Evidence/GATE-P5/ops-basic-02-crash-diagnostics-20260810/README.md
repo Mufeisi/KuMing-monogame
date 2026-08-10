@@ -37,12 +37,13 @@ dotnet build Server.MirForms/Server.csproj --no-restore --nologo
 
 最终结果：
 
-- 专项 TRX：2/2 通过，0 失败，0 跳过。
-- Base05 完整 TRX：332/332 通过，0 失败，0 跳过。
+- 专项 TRX：3/3 通过，0 失败，0 跳过。
+- Base05 完整 TRX：333/333 通过，0 失败，0 跳过。
 - `Shared`、PC、MonoGame `net10.0`、Android arm64、`Server.Library` 与 `Server.MirForms`：均 0 错误。
+- 服务端构建目录存在 `resources.manifest.json`，与仓库根清单 SHA-256 同为 `48EAE88CE21C759ABEDCF2B8E05E293C127960BC12008C5B235F0C1FD7EF53B3`。
 - `git diff --check`：通过。
 
-隔离工作树第一次完整测试为 331/332，唯一失败是 DB-05 故障注入测试要求的 Release 子进程程序集尚未生成；先构建既有 `Base05.Tests` Release 工件后，未修改业务逻辑即重跑为 332/332。构建中的既有空值、分析器、`WindowsBase` 冲突以及 NuGet 漏洞警告不在本任务范围；依赖漏洞统一留在同阶段 OPS-BASIC-04 扫描与处置。
+隔离工作树第一次完整测试为 331/332，唯一失败是 DB-05 故障注入测试要求的 Release 子进程程序集尚未生成；先构建既有 `Base05.Tests` Release 工件后，未修改业务逻辑即重跑为 332/332。代码审查随后补强首次启动资源身份、Android 日志同步排空、JSON/Basic/连接串脱敏及脱敏后 64 KiB 上限，新增 1 项回归后最终全量为 333/333。构建中的既有空值、分析器、`WindowsBase` 冲突以及 NuGet 漏洞警告不在本任务范围；依赖漏洞统一留在同阶段 OPS-BASIC-04 扫描与处置。
 
 ## 每日工件检查
 

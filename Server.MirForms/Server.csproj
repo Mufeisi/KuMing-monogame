@@ -81,6 +81,9 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<None Include="..\resources.manifest.json" Link="resources.manifest.json">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
 		<ProjectReference Include="..\Server\Server.Library.csproj" />
 		<ProjectReference Include="..\Shared\Shared.csproj" />
 	</ItemGroup>

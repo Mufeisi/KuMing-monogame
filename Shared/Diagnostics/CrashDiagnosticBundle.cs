@@ -16,6 +16,8 @@ public sealed class CrashDiagnosticRequest
     public string Component { get; init; } = string.Empty;
     public string ProductVersion { get; init; } = string.Empty;
     public string ResourceVersionPath { get; init; } = string.Empty;
+    public string ResourceVersionFallbackPath { get; init; } = string.Empty;
+    public string ResourceVersionFallbackContent { get; init; } = string.Empty;
     public Exception Exception { get; init; }
     public IReadOnlyList<string> LogPaths { get; init; } = Array.Empty<string>();
     public IReadOnlyDictionary<string, string> Configuration { get; init; } =
@@ -45,10 +47,13 @@ public static class CrashDiagnosticBundle
         new(StringComparer.OrdinalIgnoreCase);
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
     private static readonly Regex AssignmentSecretPattern = new(
-        @"(?i)\b(password|passwd|pwd|token|secret|authorization|api[-_ ]?key)\b\s*[:=]\s*([^\s,;\]\}\r\n]+)",
+        @"(?i)\b(password|passwd|pwd|token|access[-_ ]?token|secret|client[-_ ]?secret|api[-_ ]?key|connection[-_ ]?string)\b[\""']?\s*[:=]\s*(?:[\""']([^\""'\r\n]*)[\""']|([^\s,;\]\}\r\n]+))",
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
-    private static readonly Regex BearerPattern = new(
-        @"(?i)\bbearer\s+[A-Za-z0-9._~+\-/]+=*",
+    private static readonly Regex AuthorizationAssignmentPattern = new(
+        @"(?i)\bauthorization\b[\""']?\s*[:=]\s*[\""']?[^\s,;\]\}\r\n]+",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant);
+    private static readonly Regex AuthorizationCredentialPattern = new(
+        @"(?i)\b(bearer|basic)\s+[A-Za-z0-9._~+\-/]+=*",
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
     private static readonly Regex EmailPattern = new(
         @"\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b",
@@ -101,7 +106,7 @@ public static class CrashDiagnosticBundle
 
         try
         {
-            string resourceVersion = ReadResourceVersion(request.ResourceVersionPath, out string resourceSha256);
+            string resourceVersion = ReadResourceVersion(request, out string resourceSha256);
             SortedDictionary<string, string> configuration = NormalizeConfiguration(request.Configuration);
             string configurationJson = JsonSerializer.Serialize(configuration);
             string configurationSha256 = Convert.ToHexString(
@@ -117,7 +122,8 @@ public static class CrashDiagnosticBundle
                 Directory.CreateDirectory(logsDirectory);
                 string fileName = SafeFileName(Path.GetFileName(logPath));
                 string relative = Path.Combine("logs", copiedLogs.Count.ToString("D2") + "-" + fileName + ".tail.txt");
-                WriteTextFlushed(Path.Combine(partial, relative), Redact(ReadTail(logPath)));
+                WriteTextFlushed(Path.Combine(partial, relative),
+                    LimitUtf8Tail(Redact(ReadTail(logPath)), MaximumTailBytes));
                 copiedLogs.Add(relative.Replace('\\', '/'));
             }
 
@@ -162,12 +168,36 @@ public static class CrashDiagnosticBundle
         return Encoding.UTF8.GetString(bytes, 0, read);
     }
 
-    private static string ReadResourceVersion(string path, out string sha256)
+    private static string ReadResourceVersion(CrashDiagnosticRequest request, out string sha256)
     {
         sha256 = string.Empty;
-        if (string.IsNullOrWhiteSpace(path) || !File.Exists(path)) return string.Empty;
-        byte[] bytes = File.ReadAllBytes(path);
-        sha256 = Convert.ToHexString(SHA256.HashData(bytes));
+        string[] candidates = { request.ResourceVersionPath, request.ResourceVersionFallbackPath };
+        foreach (string path in candidates)
+        {
+            if (string.IsNullOrWhiteSpace(path) || !File.Exists(path)) continue;
+            byte[] bytes = File.ReadAllBytes(path);
+            string version = ReadResourceVersion(bytes);
+            if (string.IsNullOrWhiteSpace(version)) continue;
+            sha256 = Convert.ToHexString(SHA256.HashData(bytes));
+            return version;
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.ResourceVersionFallbackContent))
+        {
+            byte[] bytes = Encoding.UTF8.GetBytes(request.ResourceVersionFallbackContent);
+            string version = ReadResourceVersion(bytes);
+            if (!string.IsNullOrWhiteSpace(version))
+            {
+                sha256 = Convert.ToHexString(SHA256.HashData(bytes));
+                return version;
+            }
+        }
+
+        return "unavailable";
+    }
+
+    private static string ReadResourceVersion(byte[] bytes)
+    {
         try
         {
             using JsonDocument document = JsonDocument.Parse(bytes);
@@ -223,11 +253,33 @@ public static class CrashDiagnosticBundle
     private static string Redact(string value)
     {
         if (string.IsNullOrEmpty(value)) return string.Empty;
-        string redacted = BearerPattern.Replace(value, "Bearer ***");
+        string redacted = AuthorizationCredentialPattern.Replace(value, match => $"{match.Groups[1].Value} ***");
+        redacted = AuthorizationAssignmentPattern.Replace(redacted, "authorization=***");
         redacted = AssignmentSecretPattern.Replace(redacted, match => $"{match.Groups[1].Value}=***");
         redacted = EmailPattern.Replace(redacted, "***@***");
         redacted = Ipv4Pattern.Replace(redacted, "***.***.***.***");
         return UserProfilePathPattern.Replace(redacted, "${prefix}***");
+    }
+
+    private static string LimitUtf8Tail(string value, int maximumBytes)
+    {
+        if (string.IsNullOrEmpty(value) || Encoding.UTF8.GetByteCount(value) <= maximumBytes)
+            return value ?? string.Empty;
+
+        int low = 0;
+        int high = value.Length;
+        while (low < high)
+        {
+            int middle = low + ((high - low) / 2);
+            if (Encoding.UTF8.GetByteCount(value.AsSpan(middle)) > maximumBytes)
+                low = middle + 1;
+            else
+                high = middle;
+        }
+
+        int start = low;
+        if (start < value.Length && char.IsLowSurrogate(value[start])) start++;
+        return value[start..];
     }
 
     private static string NormalizeComponent(string value)

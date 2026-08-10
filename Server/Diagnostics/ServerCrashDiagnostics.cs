@@ -14,33 +14,32 @@ public static class ServerCrashDiagnostics
         }
         catch { }
 
-        CrashDiagnosticBundle.TryWriteOnce(new CrashDiagnosticRequest
+        try
         {
-            OutputRoot = Path.Combine(AppContext.BaseDirectory, "CrashDiagnostics"),
-            Component = "server",
-            ProductVersion = Assembly.GetEntryAssembly()?.GetName().Version?.ToString() ?? Globals.ProductVersion,
-            ResourceVersionPath = ResolveResourceManifest(),
-            Exception = exception,
-            LogPaths = FindRecentLogs(),
-            Configuration = new Dictionary<string, string>
+            CrashDiagnosticBundle.TryWriteOnce(new CrashDiagnosticRequest
             {
-                ["DatabaseProvider"] = Settings.DatabaseProvider ?? string.Empty,
-                ["TestServer"] = Settings.TestServer.ToString(),
-                ["TlsEnabled"] = Settings.TlsEnabled.ToString(),
-                ["StartHTTPService"] = Settings.StartHTTPService.ToString(),
-                ["Multithreaded"] = Settings.Multithreaded.ToString(),
-                ["SqliteBackupEnabled"] = Settings.SqliteBackupEnabled.ToString(),
-                ["SaveDelayMinutes"] = Settings.SaveDelay.ToString(),
-            },
-        }, out _, out _);
-    }
-
-    private static string ResolveResourceManifest()
-    {
-        string besideExecutable = Path.Combine(AppContext.BaseDirectory, "resources.manifest.json");
-        return File.Exists(besideExecutable)
-            ? besideExecutable
-            : Path.Combine(Environment.CurrentDirectory, "resources.manifest.json");
+                OutputRoot = Path.Combine(AppContext.BaseDirectory, "CrashDiagnostics"),
+                Component = "server",
+                ProductVersion = Assembly.GetEntryAssembly()?.GetName().Version?.ToString() ?? Globals.ProductVersion,
+                ResourceVersionPath = Path.Combine(AppContext.BaseDirectory, "resources.manifest.json"),
+                ResourceVersionFallbackPath = Path.Combine(Environment.CurrentDirectory, "resources.manifest.json"),
+                Exception = exception,
+                LogPaths = FindRecentLogs(),
+                Configuration = new Dictionary<string, string>
+                {
+                    ["DatabaseProvider"] = Settings.DatabaseProvider ?? string.Empty,
+                    ["TestServer"] = Settings.TestServer.ToString(),
+                    ["TlsEnabled"] = Settings.TlsEnabled.ToString(),
+                    ["StartHTTPService"] = Settings.StartHTTPService.ToString(),
+                    ["Multithreaded"] = Settings.Multithreaded.ToString(),
+                    ["SqliteBackupEnabled"] = Settings.SqliteBackupEnabled.ToString(),
+                    ["SaveDelayMinutes"] = Settings.SaveDelay.ToString(),
+                },
+            }, out _, out _);
+        }
+        catch
+        {
+        }
     }
 
     private static IReadOnlyList<string> FindRecentLogs()

@@ -1,39 +1,45 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<TestRun id="fe438397-5a90-4873-8c6d-1db9d0844dff" name="luo@DESKTOP-4J13TH0 2026-08-10 08:55:38" runUser="DESKTOP-4J13TH0\luo" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
-  <Times creation="2026-08-10T08:55:38.3978237+08:00" queuing="2026-08-10T08:55:38.3978242+08:00" start="2026-08-10T08:55:37.2722523+08:00" finish="2026-08-10T08:55:38.4043318+08:00" />
-  <TestSettings name="default" id="15ed219f-4b9b-412d-a594-643af7f799d1">
-    <Deployment runDeploymentRoot="luo_DESKTOP-4J13TH0_2026-08-10_08_55_38" />
+<TestRun id="8819a85d-b9c9-4f96-82c8-8df3db505c1d" name="luo@DESKTOP-4J13TH0 2026-08-10 09:13:29" runUser="DESKTOP-4J13TH0\luo" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-08-10T09:13:29.2908242+08:00" queuing="2026-08-10T09:13:29.2908245+08:00" start="2026-08-10T09:13:28.0176476+08:00" finish="2026-08-10T09:13:29.2992622+08:00" />
+  <TestSettings name="default" id="d3e1f1f9-08a6-4145-8823-17c76a7eef7e">
+    <Deployment runDeploymentRoot="luo_DESKTOP-4J13TH0_2026-08-10_09_13_29" />
   </TestSettings>
   <Results>
-    <UnitTestResult executionId="ea5b1e41-2069-4f84-a705-5d375c94443a" testId="1b6d89fe-925f-a74c-4c38-7143ded3095e" testName="Base05.Tests.CrashDiagnosticBundleTests.失败发布会清理半成品目录" computerName="DESKTOP-4J13TH0" duration="00:00:00.0451445" startTime="2026-08-10T08:55:38.0796316+08:00" endTime="2026-08-10T08:55:38.1377281+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="ea5b1e41-2069-4f84-a705-5d375c94443a" />
-    <UnitTestResult executionId="b57708b3-3405-413e-8f9f-7bebc4f9ce0d" testId="73c2797d-a0ed-37d8-32c2-b9adfd9b1b3b" testName="Base05.Tests.CrashDiagnosticBundleTests.原子诊断包包含日志尾部版本资源版本和配置摘要" computerName="DESKTOP-4J13TH0" duration="00:00:00.1293039" startTime="2026-08-10T08:55:38.1549447+08:00" endTime="2026-08-10T08:55:38.2680047+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="b57708b3-3405-413e-8f9f-7bebc4f9ce0d" />
+    <UnitTestResult executionId="bca68d76-268f-47cc-9eb8-edfaac0aab01" testId="1b6d89fe-925f-a74c-4c38-7143ded3095e" testName="Base05.Tests.CrashDiagnosticBundleTests.失败发布会清理半成品目录" computerName="DESKTOP-4J13TH0" duration="00:00:00.0094591" startTime="2026-08-10T09:13:29.0456480+08:00" endTime="2026-08-10T09:13:29.0457409+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="bca68d76-268f-47cc-9eb8-edfaac0aab01" />
+    <UnitTestResult executionId="08d6cd72-8f4f-4e01-b1cb-627aff321a79" testId="a25b61f3-a487-14be-8f8c-2de9a12b25e4" testName="Base05.Tests.CrashDiagnosticBundleTests.已接受状态缺失时使用随包基线资源身份" computerName="DESKTOP-4J13TH0" duration="00:00:00.0946751" startTime="2026-08-10T09:13:28.9272683+08:00" endTime="2026-08-10T09:13:29.0321294+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="08d6cd72-8f4f-4e01-b1cb-627aff321a79" />
+    <UnitTestResult executionId="57cc40d8-1fc1-4066-bf16-995837bb3ab3" testId="73c2797d-a0ed-37d8-32c2-b9adfd9b1b3b" testName="Base05.Tests.CrashDiagnosticBundleTests.原子诊断包包含日志尾部版本资源版本和配置摘要" computerName="DESKTOP-4J13TH0" duration="00:00:00.1107691" startTime="2026-08-10T09:13:29.0464627+08:00" endTime="2026-08-10T09:13:29.1530107+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="57cc40d8-1fc1-4066-bf16-995837bb3ab3" />
   </Results>
   <TestDefinitions>
     <UnitTest name="Base05.Tests.CrashDiagnosticBundleTests.失败发布会清理半成品目录" storage="c:\users\luo\.codex\worktrees\p5-ops-basic-02-crash-diagnostics-20260810\tests\base05.tests\bin\debug\net10.0\base05.tests.dll" id="1b6d89fe-925f-a74c-4c38-7143ded3095e">
-      <Execution id="ea5b1e41-2069-4f84-a705-5d375c94443a" />
+      <Execution id="bca68d76-268f-47cc-9eb8-edfaac0aab01" />
       <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p5-ops-basic-02-crash-diagnostics-20260810\Tests\Base05.Tests\bin\Debug\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.CrashDiagnosticBundleTests" name="失败发布会清理半成品目录" />
     </UnitTest>
+    <UnitTest name="Base05.Tests.CrashDiagnosticBundleTests.已接受状态缺失时使用随包基线资源身份" storage="c:\users\luo\.codex\worktrees\p5-ops-basic-02-crash-diagnostics-20260810\tests\base05.tests\bin\debug\net10.0\base05.tests.dll" id="a25b61f3-a487-14be-8f8c-2de9a12b25e4">
+      <Execution id="08d6cd72-8f4f-4e01-b1cb-627aff321a79" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p5-ops-basic-02-crash-diagnostics-20260810\Tests\Base05.Tests\bin\Debug\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.CrashDiagnosticBundleTests" name="已接受状态缺失时使用随包基线资源身份" />
+    </UnitTest>
     <UnitTest name="Base05.Tests.CrashDiagnosticBundleTests.原子诊断包包含日志尾部版本资源版本和配置摘要" storage="c:\users\luo\.codex\worktrees\p5-ops-basic-02-crash-diagnostics-20260810\tests\base05.tests\bin\debug\net10.0\base05.tests.dll" id="73c2797d-a0ed-37d8-32c2-b9adfd9b1b3b">
-      <Execution id="b57708b3-3405-413e-8f9f-7bebc4f9ce0d" />
+      <Execution id="57cc40d8-1fc1-4066-bf16-995837bb3ab3" />
       <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p5-ops-basic-02-crash-diagnostics-20260810\Tests\Base05.Tests\bin\Debug\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.CrashDiagnosticBundleTests" name="原子诊断包包含日志尾部版本资源版本和配置摘要" />
     </UnitTest>
   </TestDefinitions>
   <TestEntries>
-    <TestEntry testId="1b6d89fe-925f-a74c-4c38-7143ded3095e" executionId="ea5b1e41-2069-4f84-a705-5d375c94443a" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
-    <TestEntry testId="73c2797d-a0ed-37d8-32c2-b9adfd9b1b3b" executionId="b57708b3-3405-413e-8f9f-7bebc4f9ce0d" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="1b6d89fe-925f-a74c-4c38-7143ded3095e" executionId="bca68d76-268f-47cc-9eb8-edfaac0aab01" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="a25b61f3-a487-14be-8f8c-2de9a12b25e4" executionId="08d6cd72-8f4f-4e01-b1cb-627aff321a79" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="73c2797d-a0ed-37d8-32c2-b9adfd9b1b3b" executionId="57cc40d8-1fc1-4066-bf16-995837bb3ab3" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
   </TestEntries>
   <TestLists>
     <TestList name="列表中未列出的结果" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
     <TestList name="所有已加载的结果" id="19431567-8539-422a-85d7-44ee4e166bda" />
   </TestLists>
   <ResultSummary outcome="Completed">
-    <Counters total="2" executed="2" passed="2" failed="0" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <Counters total="3" executed="3" passed="3" failed="0" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
     <Output>
       <StdOut>[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.0.2+dd36e86129 (64-bit .NET 10.0.4)&#xD;
-[xUnit.net 00:00:00.12]   Discovering: Base05.Tests&#xD;
-[xUnit.net 00:00:00.20]   Discovered:  Base05.Tests&#xD;
-[xUnit.net 00:00:00.23]   Starting:    Base05.Tests&#xD;
-[xUnit.net 00:00:00.45]   Finished:    Base05.Tests&#xD;
+[xUnit.net 00:00:00.14]   Discovering: Base05.Tests&#xD;
+[xUnit.net 00:00:00.24]   Discovered:  Base05.Tests&#xD;
+[xUnit.net 00:00:00.27]   Starting:    Base05.Tests&#xD;
+[xUnit.net 00:00:00.53]   Finished:    Base05.Tests&#xD;
 </StdOut>
     </Output>
   </ResultSummary>
