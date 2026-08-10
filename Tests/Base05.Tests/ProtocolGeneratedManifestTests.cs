@@ -1,4 +1,6 @@
 using System.Text.Json;
+using System.Security.Cryptography;
+using System.Text;
 using System.Xml.Linq;
 using Xunit;
 
@@ -37,7 +39,35 @@ public sealed class ProtocolGeneratedManifestTests
         Assert.Contains(sources, source => source.GetProperty("path").GetString() == "Shared/ServerPackets.cs");
         Assert.Contains(sources, source => source.GetProperty("path").GetString() == "Shared/Enums.cs");
         Assert.All(sources, source => AssertHash(source.GetProperty("sha256").GetString()));
+        Assert.All(sources, source =>
+        {
+            string relativePath = source.GetProperty("path").GetString()!;
+            string content = File.ReadAllText(Path.Combine(FindRepositoryRoot(AppContext.BaseDirectory), relativePath.Replace('/', Path.DirectorySeparatorChar)));
+            string normalized = content.Replace("\r\n", "\n", StringComparison.Ordinal).Replace("\r", "\n", StringComparison.Ordinal);
+            string expected = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(normalized))).ToLowerInvariant();
+            Assert.Equal(expected, source.GetProperty("sha256").GetString());
+        });
         Assert.Equal(64, root.GetProperty("enums").GetArrayLength());
+    }
+
+    [Fact]
+    public void CompatibilityMatrixMatchesTrackedRuntimeVersions()
+    {
+        string repositoryRoot = FindRepositoryRoot(AppContext.BaseDirectory);
+        string pcLayout = File.ReadAllText(Path.Combine(repositoryRoot, "Client_VorticeDX11", "Bootstrap", "PcBootstrapLayout.cs"));
+        string mobileLayout = File.ReadAllText(Path.Combine(repositoryRoot, "Client_MonoGame.Shared", "ClientResourceLayout.cs"));
+        string serverSettings = File.ReadAllText(Path.Combine(repositoryRoot, "Server", "Settings.cs"));
+        using JsonDocument index = JsonDocument.Parse(File.ReadAllText(Path.Combine(
+            repositoryRoot, "Client_MonoGame.Shared", "BootstrapAssets", "bootstrap-package-index.json")));
+        XDocument androidProject = XDocument.Load(Path.Combine(repositoryRoot, "Client_MonoGame.Android", "Client_MonoGame.Android.csproj"));
+
+        Assert.Contains("ClientCompatibilityVersion { get; } = new Version(1, 0, 0)", pcLayout, StringComparison.Ordinal);
+        Assert.Contains("BootstrapClientCompatibilityVersion { get; } = new Version(2, 0, 0)", mobileLayout, StringComparison.Ordinal);
+        Assert.Contains("public static bool CheckVersion = true", serverSettings, StringComparison.Ordinal);
+        Assert.Equal("2.0.0", androidProject.Descendants("ApplicationDisplayVersion").Single().Value);
+        Assert.Equal(
+            "content-988b1bb85432df58363d3b307b7971157680b207fcd3213f12eb520c032176c9",
+            index.RootElement.GetProperty("ResourceVersion").GetString());
     }
 
     [Fact]

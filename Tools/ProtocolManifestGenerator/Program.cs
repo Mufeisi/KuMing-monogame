@@ -68,7 +68,7 @@ internal static class Program
         string[] sourceFiles = ProtocolSourceFiles(repositoryRoot);
         var sources = sourceFiles.Select(path => new SourceEntry(
             Path.GetRelativePath(repositoryRoot, path).Replace('\\', '/'),
-            Sha256(File.ReadAllBytes(path))))
+            Sha256(Encoding.UTF8.GetBytes(NormalizeNewlines(File.ReadAllText(path))))))
             .ToArray();
 
         var manifest = new GeneratedManifest(
@@ -171,7 +171,9 @@ internal static class Program
     }
 
     private static string Sha256(byte[] bytes) => Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant();
-    private static string NormalizeNewlines(string value) => value.Replace("\r\n", "\n", StringComparison.Ordinal);
+    private static string NormalizeNewlines(string value) => value
+        .Replace("\r\n", "\n", StringComparison.Ordinal)
+        .Replace("\r", "\n", StringComparison.Ordinal);
 
     private sealed record GeneratedManifest(
         string SchemaVersion,

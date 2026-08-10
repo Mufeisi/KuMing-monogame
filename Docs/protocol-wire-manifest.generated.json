@@ -8,71 +8,71 @@
   "sources": [
     {
       "path": "Shared/BaseStats.cs",
-      "sha256": "b77d465c11ad0f76bf1c5dcea951a41a1e84be656d6838652b317588c2fd6619"
+      "sha256": "673773f9a1f28fbf5a2c1e5d2f862f78648277571cb3051395b2ce9928841fce"
     },
     {
       "path": "Shared/ClientPackets.cs",
-      "sha256": "e02cbbba961cdbc165ccebe349841ed4b4654c170495614ea09ef306feffc317"
+      "sha256": "1c8aa9a96c90e7617298c344f0a69dbc6137e5d1675a3db23dd1369a4462def1"
     },
     {
       "path": "Shared/Data/ClientData.cs",
-      "sha256": "2a40daa87fd7f9633bf12fedec4ac0d5cb7609d71a7bc9e5ffa0cf207d247cba"
+      "sha256": "d9a8c7f41376765eb182c6fb72361da1a278dac82d1282207d7960925e399667"
     },
     {
       "path": "Shared/Data/GuildData.cs",
-      "sha256": "8c52579b4942364401652544f517ce246736c394f8e05b1949a94bf2be3ab380"
+      "sha256": "41367d0492e9b88d7635262f367a2fa964a6d4ae97b1fbbd80be11585421ccd8"
     },
     {
       "path": "Shared/Data/IntelligentCreatureData.cs",
-      "sha256": "2c96064bb7355eed3ef32ba7805594407aaf8e14d539d723e246e6279c46a1bb"
+      "sha256": "254dd0b77f955aa5a655154fc1860224c16737ea8667a2cdec7bda00c93e8a24"
     },
     {
       "path": "Shared/Data/ItemData.cs",
-      "sha256": "45825c8cfa8362c17e0b77d2ea47f7e05bc1d4ad6fcd996b191bd92494997946"
+      "sha256": "4e4b87c4019ed9fd1babe0580495febc8520ba901c1bd87bd953f44bcf1177a1"
     },
     {
       "path": "Shared/Data/Notice.cs",
-      "sha256": "62e950b6903abf866c459bd19d1de62e3ca586ae3d4376acf19da917173f29f0"
+      "sha256": "a7cc21b2de50411e553547fb3992d01cc36ee12e89a9c0a15d98bec23b976f33"
     },
     {
       "path": "Shared/Data/SharedData.cs",
-      "sha256": "591ae3f9ed0f27e5e8c967640081aab10f4b1bd12d45c89d976badb8706c54e2"
+      "sha256": "f9aa421a3a66f9900dbdba66d57791b713df94ecb621eb86209cf2613193c5e8"
     },
     {
       "path": "Shared/Data/Stat.cs",
-      "sha256": "744b96bc26cb034fc6a022b8ce1ec3ca750d262b79f6e27c30b0252f973636c2"
+      "sha256": "a07e8e907f47c437de4128434501ccaa6148326aebbe70448bbab52f8df027dd"
     },
     {
       "path": "Shared/Enums.cs",
-      "sha256": "fcc7dab1a356274359a7fb65068c718e2c2caaecb821a8c7bebb747c80f09454"
+      "sha256": "adbc53adab771c9eed62a7ecab2104c1dc647039440b391025a8bbaa59a9eb51"
     },
     {
       "path": "Shared/Extensions/ExtensionMethods.cs",
-      "sha256": "161f5dc48742edc14b1fb6fb9cdc4e7eb4be21ecc2a8e59f0bdaa1d7a94b478e"
+      "sha256": "6f72c544670ebd808030c552008be2e264c34d1de9f3f470a80a0ae3fb9e1cae"
     },
     {
       "path": "Shared/Functions/Functions.cs",
-      "sha256": "72e57f2c4b156783f7ca74ecf6502b88a03f564b02783d9c189bb965b9237577"
+      "sha256": "95a013f59cd01af328c0fde3933f5823e89a6c1f660343638d3e760f07593bfb"
     },
     {
       "path": "Shared/Functions/RegexFunctions.cs",
-      "sha256": "701d30bb4530bce71437a33c144793fd5f461d199338a60f32362e573ae8f7f9"
+      "sha256": "78d908d1db669ab85bf0336a6f2e71b1d49504c62cbe93fcbdb412c487313ff3"
     },
     {
       "path": "Shared/Globals.cs",
-      "sha256": "cc513b1382d404ecca16335741797731c5285db6200606ba7bc221bce500b19e"
+      "sha256": "a3ee4238db43d68cc494539153f951fd57ad0f2ec4466827045c09f98d58a39e"
     },
     {
       "path": "Shared/Helpers/FileIO.cs",
-      "sha256": "e9aa7fdb6972685eceb5c9dbe2e5b712c464956e5d7749a98baa839b784b6fa2"
+      "sha256": "3601baefe1e54d7ffe8bc209e1d8543de5e414f9e0d319ac68d82e243fd6e433"
     },
     {
       "path": "Shared/Packet.cs",
-      "sha256": "dfa578877cb109cade6b3ddd3369adae6ff240cbf136102c7aace466b4a40e0c"
+      "sha256": "b9db200fc7f156e7d7fa590a2f63b2efea2db7a4423477dc14a59f396167b243"
     },
     {
       "path": "Shared/ServerPackets.cs",
-      "sha256": "fbec1dd7623f2e9d5c8516edb4a08be9764c14eec7bb7548a316a4cdd0837b6a"
+      "sha256": "251431fa90c8eee30732b887ca9094491eeee5eee4c0332352cac8345d2d90a6"
     }
   ],
   "packets": [
