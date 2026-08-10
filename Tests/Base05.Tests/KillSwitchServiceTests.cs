@@ -75,6 +75,30 @@ public sealed class KillSwitchServiceTests
         }
     }
 
+    [Fact]
+    public void 当前开关与连续审计重放结果不一致时失败关闭()
+    {
+        string root = NewRoot();
+        string path = Path.Combine(root, "kill-switches.json");
+        try
+        {
+            var service = new KillSwitchService(path, auditSink: _ => { });
+            service.Set(KillSwitchFeature.GameShop, false, "关闭商城入口", "Administrator");
+            string state = File.ReadAllText(path, Encoding.UTF8);
+            File.WriteAllText(path, state.Replace(
+                "\"GameShopEnabled\": false", "\"GameShopEnabled\": true", StringComparison.Ordinal),
+                new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+
+            InvalidOperationException error = Assert.Throws<InvalidOperationException>(() => new KillSwitchService(path));
+            Assert.Contains("拒绝启动", error.Message);
+            Assert.Contains("审计重放结果", error.InnerException?.Message);
+        }
+        finally
+        {
+            TryDelete(root);
+        }
+    }
+
     [Theory]
     [InlineData("{}")]
     [InlineData("{\"FormatVersion\":2}")]

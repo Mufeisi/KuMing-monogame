@@ -222,6 +222,10 @@ internal sealed class KillSwitchService
         if (snapshot.AuditTrail == null || snapshot.AuditTrail.Count != snapshot.Revision)
             throw new InvalidOperationException("Kill Switch 审计代次与状态不一致");
 
+        bool gameShopEnabled = true;
+        bool resourceUpdateEnabled = true;
+        bool activitiesEnabled = true;
+        bool highRiskOperationsEnabled = true;
         for (int index = 0; index < snapshot.AuditTrail.Count; index++)
         {
             KillSwitchAuditEntry entry = snapshot.AuditTrail[index];
@@ -229,7 +233,31 @@ internal sealed class KillSwitchService
                 string.IsNullOrWhiteSpace(entry.Principal) || string.IsNullOrWhiteSpace(entry.Reason) ||
                 entry.Reason.Length > MaxReasonCharacters || !Enum.IsDefined(entry.Feature))
                 throw new InvalidOperationException("Kill Switch 审计历史损坏");
+
+            switch (entry.Feature)
+            {
+                case KillSwitchFeature.GameShop:
+                    gameShopEnabled = entry.Enabled;
+                    break;
+                case KillSwitchFeature.ResourceUpdate:
+                    resourceUpdateEnabled = entry.Enabled;
+                    break;
+                case KillSwitchFeature.Activities:
+                    activitiesEnabled = entry.Enabled;
+                    break;
+                case KillSwitchFeature.HighRiskOperations:
+                    highRiskOperationsEnabled = entry.Enabled;
+                    break;
+                default:
+                    throw new InvalidOperationException("Kill Switch 审计功能无效");
+            }
         }
+
+        if (gameShopEnabled != snapshot.GameShopEnabled ||
+            resourceUpdateEnabled != snapshot.ResourceUpdateEnabled ||
+            activitiesEnabled != snapshot.ActivitiesEnabled ||
+            highRiskOperationsEnabled != snapshot.HighRiskOperationsEnabled)
+            throw new InvalidOperationException("Kill Switch 审计重放结果与当前状态不一致");
 
         if (snapshot.Revision > 0)
         {
