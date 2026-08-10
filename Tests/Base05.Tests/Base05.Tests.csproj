@@ -23,6 +23,12 @@
     <None Include="..\..\resources.manifest.json" Link="resources.manifest.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Include="..\..\Docs\Compliance\SBOM\manifest.spdx.json" Link="manifest.spdx.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="..\..\Docs\Compliance\external-assets.manifest.json" Link="external-assets.manifest.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <Compile Include="..\..\Client_MonoGame.Shared\MirScenes\GameShopState.cs" Link="Mobile\GameShopState.cs" />
     <Compile Include="..\..\Client_MonoGame.Shared\MirScenes\MobileHeroState.cs" Link="Mobile\MobileHeroState.cs" />
     <Compile Include="..\..\Client_MonoGame.Shared\MirScenes\MobileMentorState.cs" Link="Mobile\MobileMentorState.cs" />

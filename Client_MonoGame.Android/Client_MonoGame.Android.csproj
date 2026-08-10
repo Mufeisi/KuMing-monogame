@@ -55,5 +55,6 @@
 
   <ItemGroup>
     <MonoGameContentReference Include="Content\Content.mgcb" />
+    <MauiAsset Include="..\THIRD-PARTY-NOTICES.md" LogicalName="THIRD-PARTY-NOTICES.md" />
   </ItemGroup>
 </Project>

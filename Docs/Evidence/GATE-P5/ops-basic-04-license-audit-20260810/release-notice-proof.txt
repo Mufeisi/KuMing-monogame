@@ -1,0 +1,13 @@
+PC_NOTICE=True
+路径：Client_VorticeDX11/bin/Release/THIRD-PARTY-NOTICES.md
+
+SERVER_NOTICE=True
+路径：Server.MirForms/bin/Release/THIRD-PARTY-NOTICES.md
+
+ANDROID_APK_NOTICE=assets/THIRD-PARTY-NOTICES.md
+APK：Client_MonoGame.Android/bin/Release/net10.0-android/android-arm64/com.lommir.client.monogame.android-Signed.apk
+
+IOS_MAUI_ASSET=True
+Identity：..\THIRD-PARTY-NOTICES.md
+LogicalName：THIRD-PARTY-NOTICES.md
+验证命令：dotnet msbuild Client_MonoGame.iOS/Client_MonoGame.iOS.csproj -getItem:MauiAsset -p:TargetFramework=net10.0-ios -nologo
