@@ -15,6 +15,13 @@ public enum PlayerReplacementStatus
 
 public sealed record PlayerReplacementResult(PlayerReplacementStatus Status, string TargetPath, string PreviousPath);
 
+internal enum PlayerReplacementInterruptionPoint
+{
+    BeforeApplying,
+    AfterApplyingJournalPersisted,
+    AfterAtomicReplace,
+}
+
 public static class PlayerReplacementCoordinator
 {
     private const string JournalFormat = "lyocrystal-player-replacement-v1";
@@ -50,7 +57,23 @@ public static class PlayerReplacementCoordinator
         string journalPath,
         string targetPath,
         IReadOnlyDictionary<string, BootstrapManifestTrustedKey> trustedKeys,
-        Version currentClientVersion)
+        Version currentClientVersion) =>
+        ApplyPendingCore(journalPath, targetPath, trustedKeys, currentClientVersion, interruptionPoint: null);
+
+    internal static PlayerReplacementResult ApplyPendingForInterruptionTest(
+        string journalPath,
+        string targetPath,
+        IReadOnlyDictionary<string, BootstrapManifestTrustedKey> trustedKeys,
+        Version currentClientVersion,
+        Action<PlayerReplacementInterruptionPoint> interruptionPoint) =>
+        ApplyPendingCore(journalPath, targetPath, trustedKeys, currentClientVersion, interruptionPoint);
+
+    private static PlayerReplacementResult ApplyPendingCore(
+        string journalPath,
+        string targetPath,
+        IReadOnlyDictionary<string, BootstrapManifestTrustedKey> trustedKeys,
+        Version currentClientVersion,
+        Action<PlayerReplacementInterruptionPoint>? interruptionPoint)
     {
         ReplacementAuthorization authorization = LoadAuthorization(journalPath, targetPath, trustedKeys, currentClientVersion);
         PlayerReplacementJournal journal = authorization.Journal;
@@ -92,8 +115,10 @@ public static class PlayerReplacementCoordinator
             throw new InvalidDataException("玩家入口待替换文件不存在");
         }
 
+        interruptionPoint?.Invoke(PlayerReplacementInterruptionPoint.BeforeApplying);
         journal.Status = PlayerReplacementJournalStatus.Applying;
         WriteJournalAtomic(authorization.JournalPath, journal);
+        interruptionPoint?.Invoke(PlayerReplacementInterruptionPoint.AfterApplyingJournalPersisted);
         if (File.Exists(targetPath))
         {
             if (File.Exists(previousPath)) throw new InvalidDataException("玩家入口上一版本已存在，拒绝覆盖恢复点");
@@ -103,6 +128,7 @@ public static class PlayerReplacementCoordinator
         {
             File.Move(stagedPath, targetPath);
         }
+        interruptionPoint?.Invoke(PlayerReplacementInterruptionPoint.AfterAtomicReplace);
         try
         {
             VerifyPackage(targetPath, package);

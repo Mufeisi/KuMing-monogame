@@ -22,12 +22,6 @@ public static class BootstrapManifestSignaturePolicy
     private static readonly Regex ResourceVersionPattern = new("^[A-Za-z0-9._-]{1,128}$", RegexOptions.CultureInvariant);
     private static readonly Regex PackageNamePattern = new("^[A-Za-z0-9._-]{1,128}$", RegexOptions.CultureInvariant);
     private static readonly Regex Sha256Pattern = new("^[0-9a-f]{64}$", RegexOptions.CultureInvariant);
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        PropertyNameCaseInsensitive = false,
-        UnmappedMemberHandling = System.Text.Json.Serialization.JsonUnmappedMemberHandling.Disallow,
-    };
-
     public static BootstrapManifestVerificationResult Verify(
         string json,
         IReadOnlyDictionary<string, BootstrapManifestTrustedKey> trustedKeys,
@@ -49,7 +43,7 @@ public static class BootstrapManifestSignaturePolicy
             using JsonDocument document = JsonDocument.Parse(json.TrimStart('\uFEFF'));
             if (ContainsDuplicateProperty(document.RootElement))
                 return BootstrapManifestVerificationResult.Reject("签名资源索引 JSON 包含重复字段");
-            manifest = document.RootElement.Deserialize<BootstrapSignedManifest>(JsonOptions);
+            manifest = document.RootElement.Deserialize(BootstrapManifestJsonContext.Default.BootstrapSignedManifest);
         }
         catch (Exception ex) when (ex is JsonException or NotSupportedException)
         {

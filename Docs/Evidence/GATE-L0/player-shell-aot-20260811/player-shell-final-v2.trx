@@ -1,0 +1,76 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="8c9640f8-038e-4f12-9289-12f4688c9504" name="luo@DESKTOP-4J13TH0 2026-08-11 08:16:47" runUser="DESKTOP-4J13TH0\luo" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-08-11T08:16:47.5379853+08:00" queuing="2026-08-11T08:16:47.5379856+08:00" start="2026-08-11T08:16:46.2949748+08:00" finish="2026-08-11T08:16:47.5457772+08:00" />
+  <TestSettings name="default" id="e8e915e2-85ff-4e3d-9bef-d064b9ca7e54">
+    <Deployment runDeploymentRoot="luo_DESKTOP-4J13TH0_2026-08-11_08_16_47" />
+  </TestSettings>
+  <Results>
+    <UnitTestResult executionId="358bfb0c-6db9-446c-8534-4444e0d14f5c" testId="bf0cb94c-9303-0e34-1dc1-1b500864e204" testName="Launcher.PlayerShellIntegration.Windows.PlayerPayloadPackageTests.超过八十MiB时拒绝生成且不遗留正式入口" computerName="DESKTOP-4J13TH0" duration="00:00:00.1724041" startTime="2026-08-11T08:16:47.1714348+08:00" endTime="2026-08-11T08:16:47.3425873+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="358bfb0c-6db9-446c-8534-4444e0d14f5c" />
+    <UnitTestResult executionId="1dc49f98-f53e-4d2f-964b-cf3db82ee49c" testId="a503c561-d587-a0b3-d03e-6ba92a658f6d" testName="Launcher.PlayerShellIntegration.Windows.PlayerReplacementCoordinatorTests.强停发生在新版切换后会复验新版并提交日志" computerName="DESKTOP-4J13TH0" duration="00:00:00.1613146" startTime="2026-08-11T08:16:47.0508253+08:00" endTime="2026-08-11T08:16:47.2210470+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="1dc49f98-f53e-4d2f-964b-cf3db82ee49c" />
+    <UnitTestResult executionId="2b32eb51-ad6b-4b8a-934d-cafc3a7071c3" testId="c9e0aeaf-e00c-4eb1-201f-94b7d5ff2939" testName="Launcher.PlayerShellIntegration.Windows.PlayerReplacementCoordinatorTests.旧版路径缺失但恢复点完整时会继续完成新版切换" computerName="DESKTOP-4J13TH0" duration="00:00:00.0289932" startTime="2026-08-11T08:16:47.2213189+08:00" endTime="2026-08-11T08:16:47.2501589+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="2b32eb51-ad6b-4b8a-934d-cafc3a7071c3" />
+    <UnitTestResult executionId="6a6e252a-f8e0-4104-8817-a07b2ec814d4" testId="5ab52fa2-49db-b600-4a48-63bd9811cc76" testName="Launcher.PlayerShellIntegration.Windows.PlayerReplacementCoordinatorTests.待替换入口被篡改时拒绝替换且旧版保持完整" computerName="DESKTOP-4J13TH0" duration="00:00:00.0111363" startTime="2026-08-11T08:16:47.2504019+08:00" endTime="2026-08-11T08:16:47.2614255+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="6a6e252a-f8e0-4104-8817-a07b2ec814d4" />
+    <UnitTestResult executionId="d3e2ce37-2708-4cf7-a367-7c34e87f4d9e" testId="e3e378fc-cde2-29de-8579-b2e78bfe4f91" testName="Launcher.PlayerShellIntegration.Windows.PlayerPayloadPackageTests.玩家入口重命名后仍能校验并解包全部载荷" computerName="DESKTOP-4J13TH0" duration="00:00:00.1102783" startTime="2026-08-11T08:16:47.0530104+08:00" endTime="2026-08-11T08:16:47.1700626+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="d3e2ce37-2708-4cf7-a367-7c34e87f4d9e" />
+    <UnitTestResult executionId="573864bd-7052-4598-b574-b3f749b37209" testId="22f6eb1e-e32f-75b3-8b11-972c8b730249" testName="Launcher.PlayerShellIntegration.Windows.PlayerPayloadPackageTests.已解包载荷被修改后必须拒绝复用" computerName="DESKTOP-4J13TH0" duration="00:00:00.0263152" startTime="2026-08-11T08:16:47.3429720+08:00" endTime="2026-08-11T08:16:47.3690567+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="573864bd-7052-4598-b574-b3f749b37209" />
+    <UnitTestResult executionId="810e4e53-e82a-4f7b-b7fa-a134f5b80228" testId="8e46f264-82d2-cacc-99b6-ab09c9f12fe8" testName="Launcher.PlayerShellIntegration.Windows.PlayerReplacementCoordinatorTests.只有签名清单授权的新入口才会原子替换并保留旧版" computerName="DESKTOP-4J13TH0" duration="00:00:00.0259680" startTime="2026-08-11T08:16:47.2617405+08:00" endTime="2026-08-11T08:16:47.2875368+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="810e4e53-e82a-4f7b-b7fa-a134f5b80228" />
+    <UnitTestResult executionId="574e4864-6880-43b8-b244-4a141c6598c5" testId="13305e02-d2c1-c7f8-6da4-d4c0fe2af552" testName="Launcher.PlayerShellIntegration.Windows.NativeExecutableBrandingTests.Windows可以读取生成后玩家入口的品牌与版本资源" computerName="DESKTOP-4J13TH0" duration="00:00:00.0371687" startTime="2026-08-11T08:16:47.0529248+08:00" endTime="2026-08-11T08:16:47.1001456+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="574e4864-6880-43b8-b244-4a141c6598c5" />
+  </Results>
+  <TestDefinitions>
+    <UnitTest name="Launcher.PlayerShellIntegration.Windows.PlayerReplacementCoordinatorTests.旧版路径缺失但恢复点完整时会继续完成新版切换" storage="d:\chuanqi\kmyq\lyocrystal-main\windowsintegration\launcher.playershellintegration\bin\release\net10.0-windows\launcher.playershellintegration.windows.dll" id="c9e0aeaf-e00c-4eb1-201f-94b7d5ff2939">
+      <Execution id="2b32eb51-ad6b-4b8a-934d-cafc3a7071c3" />
+      <TestMethod codeBase="D:\ChuanQi\Kmyq\LyoCrystal-main\WindowsIntegration\Launcher.PlayerShellIntegration\bin\Release\net10.0-windows\Launcher.PlayerShellIntegration.Windows.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Launcher.PlayerShellIntegration.Windows.PlayerReplacementCoordinatorTests" name="旧版路径缺失但恢复点完整时会继续完成新版切换" />
+    </UnitTest>
+    <UnitTest name="Launcher.PlayerShellIntegration.Windows.PlayerReplacementCoordinatorTests.强停发生在新版切换后会复验新版并提交日志" storage="d:\chuanqi\kmyq\lyocrystal-main\windowsintegration\launcher.playershellintegration\bin\release\net10.0-windows\launcher.playershellintegration.windows.dll" id="a503c561-d587-a0b3-d03e-6ba92a658f6d">
+      <Execution id="1dc49f98-f53e-4d2f-964b-cf3db82ee49c" />
+      <TestMethod codeBase="D:\ChuanQi\Kmyq\LyoCrystal-main\WindowsIntegration\Launcher.PlayerShellIntegration\bin\Release\net10.0-windows\Launcher.PlayerShellIntegration.Windows.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Launcher.PlayerShellIntegration.Windows.PlayerReplacementCoordinatorTests" name="强停发生在新版切换后会复验新版并提交日志" />
+    </UnitTest>
+    <UnitTest name="Launcher.PlayerShellIntegration.Windows.PlayerReplacementCoordinatorTests.待替换入口被篡改时拒绝替换且旧版保持完整" storage="d:\chuanqi\kmyq\lyocrystal-main\windowsintegration\launcher.playershellintegration\bin\release\net10.0-windows\launcher.playershellintegration.windows.dll" id="5ab52fa2-49db-b600-4a48-63bd9811cc76">
+      <Execution id="6a6e252a-f8e0-4104-8817-a07b2ec814d4" />
+      <TestMethod codeBase="D:\ChuanQi\Kmyq\LyoCrystal-main\WindowsIntegration\Launcher.PlayerShellIntegration\bin\Release\net10.0-windows\Launcher.PlayerShellIntegration.Windows.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Launcher.PlayerShellIntegration.Windows.PlayerReplacementCoordinatorTests" name="待替换入口被篡改时拒绝替换且旧版保持完整" />
+    </UnitTest>
+    <UnitTest name="Launcher.PlayerShellIntegration.Windows.NativeExecutableBrandingTests.Windows可以读取生成后玩家入口的品牌与版本资源" storage="d:\chuanqi\kmyq\lyocrystal-main\windowsintegration\launcher.playershellintegration\bin\release\net10.0-windows\launcher.playershellintegration.windows.dll" id="13305e02-d2c1-c7f8-6da4-d4c0fe2af552">
+      <Execution id="574e4864-6880-43b8-b244-4a141c6598c5" />
+      <TestMethod codeBase="D:\ChuanQi\Kmyq\LyoCrystal-main\WindowsIntegration\Launcher.PlayerShellIntegration\bin\Release\net10.0-windows\Launcher.PlayerShellIntegration.Windows.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Launcher.PlayerShellIntegration.Windows.NativeExecutableBrandingTests" name="Windows可以读取生成后玩家入口的品牌与版本资源" />
+    </UnitTest>
+    <UnitTest name="Launcher.PlayerShellIntegration.Windows.PlayerPayloadPackageTests.超过八十MiB时拒绝生成且不遗留正式入口" storage="d:\chuanqi\kmyq\lyocrystal-main\windowsintegration\launcher.playershellintegration\bin\release\net10.0-windows\launcher.playershellintegration.windows.dll" id="bf0cb94c-9303-0e34-1dc1-1b500864e204">
+      <Execution id="358bfb0c-6db9-446c-8534-4444e0d14f5c" />
+      <TestMethod codeBase="D:\ChuanQi\Kmyq\LyoCrystal-main\WindowsIntegration\Launcher.PlayerShellIntegration\bin\Release\net10.0-windows\Launcher.PlayerShellIntegration.Windows.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Launcher.PlayerShellIntegration.Windows.PlayerPayloadPackageTests" name="超过八十MiB时拒绝生成且不遗留正式入口" />
+    </UnitTest>
+    <UnitTest name="Launcher.PlayerShellIntegration.Windows.PlayerReplacementCoordinatorTests.只有签名清单授权的新入口才会原子替换并保留旧版" storage="d:\chuanqi\kmyq\lyocrystal-main\windowsintegration\launcher.playershellintegration\bin\release\net10.0-windows\launcher.playershellintegration.windows.dll" id="8e46f264-82d2-cacc-99b6-ab09c9f12fe8">
+      <Execution id="810e4e53-e82a-4f7b-b7fa-a134f5b80228" />
+      <TestMethod codeBase="D:\ChuanQi\Kmyq\LyoCrystal-main\WindowsIntegration\Launcher.PlayerShellIntegration\bin\Release\net10.0-windows\Launcher.PlayerShellIntegration.Windows.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Launcher.PlayerShellIntegration.Windows.PlayerReplacementCoordinatorTests" name="只有签名清单授权的新入口才会原子替换并保留旧版" />
+    </UnitTest>
+    <UnitTest name="Launcher.PlayerShellIntegration.Windows.PlayerPayloadPackageTests.已解包载荷被修改后必须拒绝复用" storage="d:\chuanqi\kmyq\lyocrystal-main\windowsintegration\launcher.playershellintegration\bin\release\net10.0-windows\launcher.playershellintegration.windows.dll" id="22f6eb1e-e32f-75b3-8b11-972c8b730249">
+      <Execution id="573864bd-7052-4598-b574-b3f749b37209" />
+      <TestMethod codeBase="D:\ChuanQi\Kmyq\LyoCrystal-main\WindowsIntegration\Launcher.PlayerShellIntegration\bin\Release\net10.0-windows\Launcher.PlayerShellIntegration.Windows.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Launcher.PlayerShellIntegration.Windows.PlayerPayloadPackageTests" name="已解包载荷被修改后必须拒绝复用" />
+    </UnitTest>
+    <UnitTest name="Launcher.PlayerShellIntegration.Windows.PlayerPayloadPackageTests.玩家入口重命名后仍能校验并解包全部载荷" storage="d:\chuanqi\kmyq\lyocrystal-main\windowsintegration\launcher.playershellintegration\bin\release\net10.0-windows\launcher.playershellintegration.windows.dll" id="e3e378fc-cde2-29de-8579-b2e78bfe4f91">
+      <Execution id="d3e2ce37-2708-4cf7-a367-7c34e87f4d9e" />
+      <TestMethod codeBase="D:\ChuanQi\Kmyq\LyoCrystal-main\WindowsIntegration\Launcher.PlayerShellIntegration\bin\Release\net10.0-windows\Launcher.PlayerShellIntegration.Windows.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Launcher.PlayerShellIntegration.Windows.PlayerPayloadPackageTests" name="玩家入口重命名后仍能校验并解包全部载荷" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestEntries>
+    <TestEntry testId="bf0cb94c-9303-0e34-1dc1-1b500864e204" executionId="358bfb0c-6db9-446c-8534-4444e0d14f5c" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="a503c561-d587-a0b3-d03e-6ba92a658f6d" executionId="1dc49f98-f53e-4d2f-964b-cf3db82ee49c" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="c9e0aeaf-e00c-4eb1-201f-94b7d5ff2939" executionId="2b32eb51-ad6b-4b8a-934d-cafc3a7071c3" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="5ab52fa2-49db-b600-4a48-63bd9811cc76" executionId="6a6e252a-f8e0-4104-8817-a07b2ec814d4" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="e3e378fc-cde2-29de-8579-b2e78bfe4f91" executionId="d3e2ce37-2708-4cf7-a367-7c34e87f4d9e" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="22f6eb1e-e32f-75b3-8b11-972c8b730249" executionId="573864bd-7052-4598-b574-b3f749b37209" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="8e46f264-82d2-cacc-99b6-ab09c9f12fe8" executionId="810e4e53-e82a-4f7b-b7fa-a134f5b80228" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="13305e02-d2c1-c7f8-6da4-d4c0fe2af552" executionId="574e4864-6880-43b8-b244-4a141c6598c5" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+  </TestEntries>
+  <TestLists>
+    <TestList name="列表中未列出的结果" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="所有已加载的结果" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Completed">
+    <Counters total="8" executed="8" passed="8" failed="0" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <Output>
+      <StdOut>[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.0.2+dd36e86129 (64-bit .NET 10.0.4)&#xD;
+[xUnit.net 00:00:00.11]   Discovering: Launcher.PlayerShellIntegration.Windows&#xD;
+[xUnit.net 00:00:00.15]   Discovered:  Launcher.PlayerShellIntegration.Windows&#xD;
+[xUnit.net 00:00:00.18]   Starting:    Launcher.PlayerShellIntegration.Windows&#xD;
+[xUnit.net 00:00:00.53]   Finished:    Launcher.PlayerShellIntegration.Windows&#xD;
+</StdOut>
+    </Output>
+  </ResultSummary>
+</TestRun>

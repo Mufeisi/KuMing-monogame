@@ -1,0 +1,154 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="d130a624-cfea-4e04-8b31-127ebef79478" name="luo@DESKTOP-4J13TH0 2026-08-11 00:02:54" runUser="DESKTOP-4J13TH0\luo" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-08-11T00:02:54.3967282+08:00" queuing="2026-08-11T00:02:54.3967286+08:00" start="2026-08-11T00:02:52.2632201+08:00" finish="2026-08-11T00:02:59.0503813+08:00" />
+  <TestSettings name="default" id="372cfdad-4cae-47e3-a8ad-dec9ab965f14">
+    <Deployment runDeploymentRoot="luo_DESKTOP-4J13TH0_2026-08-11_00_02_54" />
+  </TestSettings>
+  <Results>
+    <UnitTestResult executionId="c1fa90ff-cc8e-4ec0-988f-02efa3cd40cd" testId="9de24466-f36c-7301-8615-8bf02ba1c8b0" testName="Base05.Tests.BasicOperationsMonitorTests.首次备份长期运行或从未开始都会触发时效告警" computerName="DESKTOP-4J13TH0" duration="00:00:00.0011720" startTime="2026-08-11T00:02:55.6211073+08:00" endTime="2026-08-11T00:02:55.6220631+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="c1fa90ff-cc8e-4ec0-988f-02efa3cd40cd" />
+    <UnitTestResult executionId="612dbd99-8699-4c8c-b291-db92b0ee544b" testId="806e53fe-645c-13ee-55e8-1aa0a79b0d27" testName="Base05.Tests.KillSwitchServiceTests.损坏缺字段或未知版本状态均失败关闭(payload: &quot;not-json&quot;)" computerName="DESKTOP-4J13TH0" duration="00:00:00.0027180" startTime="2026-08-11T00:02:55.6945515+08:00" endTime="2026-08-11T00:02:55.6971700+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="612dbd99-8699-4c8c-b291-db92b0ee544b" />
+    <UnitTestResult executionId="6b294dcd-ee24-470d-abda-96b2b334152e" testId="c94ff527-3e2b-cccd-8741-fb0c87a911ce" testName="Base05.Tests.KillSwitchServiceTests.状态先原子持久化再发布且重启保持关闭" computerName="DESKTOP-4J13TH0" duration="00:00:00.0188570" startTime="2026-08-11T00:02:56.7474786+08:00" endTime="2026-08-11T00:02:56.7662511+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="6b294dcd-ee24-470d-abda-96b2b334152e" />
+    <UnitTestResult executionId="b7eae9ac-101e-49b1-962d-37162d088fd4" testId="c63acc6b-85ad-cfb9-6342-0fb769fa6dc7" testName="Base05.Tests.AdminSecurityTests.独立令牌映射角色且操作员不能执行高权限操作" computerName="DESKTOP-4J13TH0" duration="00:00:00.0057400" startTime="2026-08-11T00:02:53.3020777+08:00" endTime="2026-08-11T00:02:53.3070030+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="b7eae9ac-101e-49b1-962d-37162d088fd4" />
+    <UnitTestResult executionId="4a4dde33-b22d-48be-a8d0-df65b5ace438" testId="3508a7fe-dfc3-5158-a63b-580abb920764" testName="Base05.Tests.KillSwitchServiceTests.当前开关与连续审计重放结果不一致时失败关闭" computerName="DESKTOP-4J13TH0" duration="00:00:00.0101166" startTime="2026-08-11T00:02:56.7664330+08:00" endTime="2026-08-11T00:02:56.7764823+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="4a4dde33-b22d-48be-a8d0-df65b5ace438" />
+    <UnitTestResult executionId="e4de86f8-6053-4236-9a5a-844e8578acde" testId="dae45c35-433a-0ecf-d13a-5ca87482d567" testName="Base05.Tests.BasicOperationsMonitorTests.非Sqlite部署不会把无备份服务误报为故障" computerName="DESKTOP-4J13TH0" duration="00:00:00.0009629" startTime="2026-08-11T00:02:55.6194109+08:00" endTime="2026-08-11T00:02:55.6201153+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="e4de86f8-6053-4236-9a5a-844e8578acde" />
+    <UnitTestResult executionId="d080a261-b20c-433b-9ffc-482d5d2d354b" testId="5908d694-6774-0663-776e-45b113d73c7c" testName="Base05.Tests.AdminSecurityTests.管理审计只记录动作角色来源与结果" computerName="DESKTOP-4J13TH0" duration="00:00:00.0307255" startTime="2026-08-11T00:02:53.2883941+08:00" endTime="2026-08-11T00:02:53.3011774+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="d080a261-b20c-433b-9ffc-482d5d2d354b" />
+    <UnitTestResult executionId="6af5784b-752f-4e84-ae35-f01121f626fe" testId="d6fe1e6b-883b-2d05-22ca-16451d531a9e" testName="Base05.Tests.AdminSecurityTests.管理监听仅允许回环明文或内网HTTPS" computerName="DESKTOP-4J13TH0" duration="00:00:00.0108317" startTime="2026-08-11T00:02:53.2468343+08:00" endTime="2026-08-11T00:02:53.2696696+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="6af5784b-752f-4e84-ae35-f01121f626fe" />
+    <UnitTestResult executionId="ce9c44af-0c0b-4e46-b94c-5bb0401ada8b" testId="59a5a23a-fd98-e85f-5ac6-5b92d09e2e44" testName="Base05.Tests.KillSwitchServiceTests.操作员可查询管理员可修改且微端资源下载立即关闭" computerName="DESKTOP-4J13TH0" duration="00:00:01.0466797" startTime="2026-08-11T00:02:55.7003709+08:00" endTime="2026-08-11T00:02:56.7472657+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="ce9c44af-0c0b-4e46-b94c-5bb0401ada8b" />
+    <UnitTestResult executionId="12603542-308a-44ce-b6e5-dfaea136a0e4" testId="cc8ce5ec-f4e3-ac75-c8e2-e26e6892faf9" testName="Base05.Tests.KillSwitchServiceTests.损坏缺字段或未知版本状态均失败关闭(payload: &quot;{}&quot;)" computerName="DESKTOP-4J13TH0" duration="00:00:00.0028297" startTime="2026-08-11T00:02:55.6974574+08:00" endTime="2026-08-11T00:02:55.7001049+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="12603542-308a-44ce-b6e5-dfaea136a0e4" />
+    <UnitTestResult executionId="eee1db8d-450f-42e0-a46a-2d5d9d9ae6ef" testId="d4e553ec-8d43-f6bf-6311-1ef737cfc78a" testName="Base05.Tests.KillSwitchServiceTests.损坏缺字段或未知版本状态均失败关闭(payload: &quot;{\&quot;FormatVersion\&quot;:2}&quot;)" computerName="DESKTOP-4J13TH0" duration="00:00:00.0048732" startTime="2026-08-11T00:02:55.6922475+08:00" endTime="2026-08-11T00:02:55.6943136+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="eee1db8d-450f-42e0-a46a-2d5d9d9ae6ef" />
+    <UnitTestResult executionId="998ec89f-d58b-49d3-a870-071851b8df83" testId="99cc3d4f-af52-eb6e-f624-a8bbd9b2dc69" testName="Base05.Tests.BasicOperationsMonitorTests.告警日志失败后保留未发布状态并在下轮重试" computerName="DESKTOP-4J13TH0" duration="00:00:00.0053944" startTime="2026-08-11T00:02:55.6140503+08:00" endTime="2026-08-11T00:02:55.6191021+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="998ec89f-d58b-49d3-a870-071851b8df83" />
+    <UnitTestResult executionId="66dd7865-1419-47a2-a4b3-315514aa6f5d" testId="ab78f59c-38cc-2aa8-1013-84292e5636db" testName="Base05.Tests.KillSwitchServiceTests.商城活动与高风险入口读取同一服务端开关" computerName="DESKTOP-4J13TH0" duration="00:00:00.0553655" startTime="2026-08-11T00:02:55.6338991+08:00" endTime="2026-08-11T00:02:55.6893155+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="66dd7865-1419-47a2-a4b3-315514aa6f5d" />
+    <UnitTestResult executionId="eb37a202-b3a8-4794-aed6-cd06cde35122" testId="22678f19-f1cc-fd11-52a6-f5dc3a6052d7" testName="Base05.Tests.AdminSecurityTests.真实管理端点拒绝缺失错误及越权凭据" computerName="DESKTOP-4J13TH0" duration="00:00:01.1981428" startTime="2026-08-11T00:02:53.3074933+08:00" endTime="2026-08-11T00:02:54.5084557+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="eb37a202-b3a8-4794-aed6-cd06cde35122" />
+    <UnitTestResult executionId="212b8d7c-4d9a-41b6-ac2b-bdb0f47dbb73" testId="fb0abd80-970e-c609-0a1a-d3bb2afa32d6" testName="Base05.Tests.BasicOperationsMonitorTests.操作员凭据可读取真实Http监控Json" computerName="DESKTOP-4J13TH0" duration="00:00:01.0926603" startTime="2026-08-11T00:02:54.5202636+08:00" endTime="2026-08-11T00:02:55.6134308+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="212b8d7c-4d9a-41b6-ac2b-bdb0f47dbb73" />
+    <UnitTestResult executionId="f5654075-3f74-481f-a226-6c59a4a43d9c" testId="99b87452-f9f4-4fff-a38b-468466615e35" testName="Base05.Tests.BasicOperationsMonitorTests.告警只在触发和恢复状态转换时写入一次" computerName="DESKTOP-4J13TH0" duration="00:00:00.0005984" startTime="2026-08-11T00:02:55.6203429+08:00" endTime="2026-08-11T00:02:55.6207905+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="f5654075-3f74-481f-a226-6c59a4a43d9c" />
+    <UnitTestResult executionId="fa40f7e7-dcea-4084-a5d8-54559507abfa" testId="7b481267-bdb7-3998-62c7-d829ab99f97a" testName="Base05.Tests.BasicOperationsMonitorTests.状态快照组合既有核心指标和备份状态" computerName="DESKTOP-4J13TH0" duration="00:00:00.0080386" startTime="2026-08-11T00:02:54.5124020+08:00" endTime="2026-08-11T00:02:54.5200001+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="fa40f7e7-dcea-4084-a5d8-54559507abfa" />
+    <UnitTestResult executionId="dfa764c3-5ec3-4bd0-8b66-bb3bffa148cf" testId="8e8d3fd2-94d4-50c6-3d5d-ad876cf35bd5" testName="Base05.Tests.BasicOperationsMonitorTests.超阈值和保存备份失败均生成明确告警" computerName="DESKTOP-4J13TH0" duration="00:00:00.0112967" startTime="2026-08-11T00:02:55.6224808+08:00" endTime="2026-08-11T00:02:55.6334983+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="dfa764c3-5ec3-4bd0-8b66-bb3bffa148cf" />
+    <UnitTestResult executionId="7f44ea4b-e6cf-452e-a014-b568ce2760b5" testId="6c974134-fe8a-6eb5-3cd3-87faa8a9ec4d" testName="Base05.Tests.SqliteBackupAdminTests.管理员可一键触发备份且操作员只能查询持久状态" computerName="DESKTOP-4J13TH0" duration="00:00:01.1473450" startTime="2026-08-11T00:02:57.8298044+08:00" endTime="2026-08-11T00:02:58.9768491+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="7f44ea4b-e6cf-452e-a014-b568ce2760b5" />
+    <UnitTestResult executionId="46c55fae-f77f-4aee-acbb-8862f0ad91ab" testId="ca2687ce-cc71-b438-44bd-ddcc04cbb175" testName="Base05.Tests.MicroProtocolRegressionTests.现有文件Range图库头单图与声音路由保持客户端协议响应" computerName="DESKTOP-4J13TH0" duration="00:00:01.0396439" startTime="2026-08-11T00:02:56.7887700+08:00" endTime="2026-08-11T00:02:57.8288803+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="46c55fae-f77f-4aee-acbb-8862f0ad91ab" />
+    <UnitTestResult executionId="748276cf-98fa-42ff-ba6a-75e128f85919" testId="9d0e9c54-cceb-1b40-6689-7c92f9059a6e" testName="Base05.Tests.KillSwitchServiceTests.运行日志失败不伪报变更失败且原子状态保留完整审计" computerName="DESKTOP-4J13TH0" duration="00:00:00.0119559" startTime="2026-08-11T00:02:56.7766862+08:00" endTime="2026-08-11T00:02:56.7885552+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="748276cf-98fa-42ff-ba6a-75e128f85919" />
+  </Results>
+  <TestDefinitions>
+    <UnitTest name="Base05.Tests.KillSwitchServiceTests.操作员可查询管理员可修改且微端资源下载立即关闭" storage="d:\chuanqi\kmyq\lyocrystal-main\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="59a5a23a-fd98-e85f-5ac6-5b92d09e2e44">
+      <Execution id="ce9c44af-0c0b-4e46-b94c-5bb0401ada8b" />
+      <TestMethod codeBase="D:\ChuanQi\Kmyq\LyoCrystal-main\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.KillSwitchServiceTests" name="操作员可查询管理员可修改且微端资源下载立即关闭" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.BasicOperationsMonitorTests.首次备份长期运行或从未开始都会触发时效告警" storage="d:\chuanqi\kmyq\lyocrystal-main\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="9de24466-f36c-7301-8615-8bf02ba1c8b0">
+      <Execution id="c1fa90ff-cc8e-4ec0-988f-02efa3cd40cd" />
+      <TestMethod codeBase="D:\ChuanQi\Kmyq\LyoCrystal-main\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.BasicOperationsMonitorTests" name="首次备份长期运行或从未开始都会触发时效告警" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.KillSwitchServiceTests.当前开关与连续审计重放结果不一致时失败关闭" storage="d:\chuanqi\kmyq\lyocrystal-main\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="3508a7fe-dfc3-5158-a63b-580abb920764">
+      <Execution id="4a4dde33-b22d-48be-a8d0-df65b5ace438" />
+      <TestMethod codeBase="D:\ChuanQi\Kmyq\LyoCrystal-main\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.KillSwitchServiceTests" name="当前开关与连续审计重放结果不一致时失败关闭" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.BasicOperationsMonitorTests.告警只在触发和恢复状态转换时写入一次" storage="d:\chuanqi\kmyq\lyocrystal-main\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="99b87452-f9f4-4fff-a38b-468466615e35">
+      <Execution id="f5654075-3f74-481f-a226-6c59a4a43d9c" />
+      <TestMethod codeBase="D:\ChuanQi\Kmyq\LyoCrystal-main\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.BasicOperationsMonitorTests" name="告警只在触发和恢复状态转换时写入一次" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.KillSwitchServiceTests.损坏缺字段或未知版本状态均失败关闭(payload: &quot;{\&quot;FormatVersion\&quot;:2}&quot;)" storage="d:\chuanqi\kmyq\lyocrystal-main\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="d4e553ec-8d43-f6bf-6311-1ef737cfc78a">
+      <Execution id="eee1db8d-450f-42e0-a46a-2d5d9d9ae6ef" />
+      <TestMethod codeBase="D:\ChuanQi\Kmyq\LyoCrystal-main\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.KillSwitchServiceTests" name="损坏缺字段或未知版本状态均失败关闭" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.BasicOperationsMonitorTests.告警日志失败后保留未发布状态并在下轮重试" storage="d:\chuanqi\kmyq\lyocrystal-main\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="99cc3d4f-af52-eb6e-f624-a8bbd9b2dc69">
+      <Execution id="998ec89f-d58b-49d3-a870-071851b8df83" />
+      <TestMethod codeBase="D:\ChuanQi\Kmyq\LyoCrystal-main\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.BasicOperationsMonitorTests" name="告警日志失败后保留未发布状态并在下轮重试" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.AdminSecurityTests.真实管理端点拒绝缺失错误及越权凭据" storage="d:\chuanqi\kmyq\lyocrystal-main\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="22678f19-f1cc-fd11-52a6-f5dc3a6052d7">
+      <Execution id="eb37a202-b3a8-4794-aed6-cd06cde35122" />
+      <TestMethod codeBase="D:\ChuanQi\Kmyq\LyoCrystal-main\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.AdminSecurityTests" name="真实管理端点拒绝缺失错误及越权凭据" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.KillSwitchServiceTests.损坏缺字段或未知版本状态均失败关闭(payload: &quot;{}&quot;)" storage="d:\chuanqi\kmyq\lyocrystal-main\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="cc8ce5ec-f4e3-ac75-c8e2-e26e6892faf9">
+      <Execution id="12603542-308a-44ce-b6e5-dfaea136a0e4" />
+      <TestMethod codeBase="D:\ChuanQi\Kmyq\LyoCrystal-main\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.KillSwitchServiceTests" name="损坏缺字段或未知版本状态均失败关闭" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.BasicOperationsMonitorTests.状态快照组合既有核心指标和备份状态" storage="d:\chuanqi\kmyq\lyocrystal-main\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="7b481267-bdb7-3998-62c7-d829ab99f97a">
+      <Execution id="fa40f7e7-dcea-4084-a5d8-54559507abfa" />
+      <TestMethod codeBase="D:\ChuanQi\Kmyq\LyoCrystal-main\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.BasicOperationsMonitorTests" name="状态快照组合既有核心指标和备份状态" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.AdminSecurityTests.独立令牌映射角色且操作员不能执行高权限操作" storage="d:\chuanqi\kmyq\lyocrystal-main\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="c63acc6b-85ad-cfb9-6342-0fb769fa6dc7">
+      <Execution id="b7eae9ac-101e-49b1-962d-37162d088fd4" />
+      <TestMethod codeBase="D:\ChuanQi\Kmyq\LyoCrystal-main\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.AdminSecurityTests" name="独立令牌映射角色且操作员不能执行高权限操作" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.MicroProtocolRegressionTests.现有文件Range图库头单图与声音路由保持客户端协议响应" storage="d:\chuanqi\kmyq\lyocrystal-main\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="ca2687ce-cc71-b438-44bd-ddcc04cbb175">
+      <Execution id="46c55fae-f77f-4aee-acbb-8862f0ad91ab" />
+      <TestMethod codeBase="D:\ChuanQi\Kmyq\LyoCrystal-main\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.MicroProtocolRegressionTests" name="现有文件Range图库头单图与声音路由保持客户端协议响应" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.AdminSecurityTests.管理监听仅允许回环明文或内网HTTPS" storage="d:\chuanqi\kmyq\lyocrystal-main\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="d6fe1e6b-883b-2d05-22ca-16451d531a9e">
+      <Execution id="6af5784b-752f-4e84-ae35-f01121f626fe" />
+      <TestMethod codeBase="D:\ChuanQi\Kmyq\LyoCrystal-main\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.AdminSecurityTests" name="管理监听仅允许回环明文或内网HTTPS" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.KillSwitchServiceTests.状态先原子持久化再发布且重启保持关闭" storage="d:\chuanqi\kmyq\lyocrystal-main\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="c94ff527-3e2b-cccd-8741-fb0c87a911ce">
+      <Execution id="6b294dcd-ee24-470d-abda-96b2b334152e" />
+      <TestMethod codeBase="D:\ChuanQi\Kmyq\LyoCrystal-main\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.KillSwitchServiceTests" name="状态先原子持久化再发布且重启保持关闭" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.BasicOperationsMonitorTests.超阈值和保存备份失败均生成明确告警" storage="d:\chuanqi\kmyq\lyocrystal-main\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="8e8d3fd2-94d4-50c6-3d5d-ad876cf35bd5">
+      <Execution id="dfa764c3-5ec3-4bd0-8b66-bb3bffa148cf" />
+      <TestMethod codeBase="D:\ChuanQi\Kmyq\LyoCrystal-main\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.BasicOperationsMonitorTests" name="超阈值和保存备份失败均生成明确告警" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.BasicOperationsMonitorTests.非Sqlite部署不会把无备份服务误报为故障" storage="d:\chuanqi\kmyq\lyocrystal-main\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="dae45c35-433a-0ecf-d13a-5ca87482d567">
+      <Execution id="e4de86f8-6053-4236-9a5a-844e8578acde" />
+      <TestMethod codeBase="D:\ChuanQi\Kmyq\LyoCrystal-main\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.BasicOperationsMonitorTests" name="非Sqlite部署不会把无备份服务误报为故障" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.AdminSecurityTests.管理审计只记录动作角色来源与结果" storage="d:\chuanqi\kmyq\lyocrystal-main\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="5908d694-6774-0663-776e-45b113d73c7c">
+      <Execution id="d080a261-b20c-433b-9ffc-482d5d2d354b" />
+      <TestMethod codeBase="D:\ChuanQi\Kmyq\LyoCrystal-main\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.AdminSecurityTests" name="管理审计只记录动作角色来源与结果" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.KillSwitchServiceTests.损坏缺字段或未知版本状态均失败关闭(payload: &quot;not-json&quot;)" storage="d:\chuanqi\kmyq\lyocrystal-main\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="806e53fe-645c-13ee-55e8-1aa0a79b0d27">
+      <Execution id="612dbd99-8699-4c8c-b291-db92b0ee544b" />
+      <TestMethod codeBase="D:\ChuanQi\Kmyq\LyoCrystal-main\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.KillSwitchServiceTests" name="损坏缺字段或未知版本状态均失败关闭" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.SqliteBackupAdminTests.管理员可一键触发备份且操作员只能查询持久状态" storage="d:\chuanqi\kmyq\lyocrystal-main\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="6c974134-fe8a-6eb5-3cd3-87faa8a9ec4d">
+      <Execution id="7f44ea4b-e6cf-452e-a014-b568ce2760b5" />
+      <TestMethod codeBase="D:\ChuanQi\Kmyq\LyoCrystal-main\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.SqliteBackupAdminTests" name="管理员可一键触发备份且操作员只能查询持久状态" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.KillSwitchServiceTests.运行日志失败不伪报变更失败且原子状态保留完整审计" storage="d:\chuanqi\kmyq\lyocrystal-main\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="9d0e9c54-cceb-1b40-6689-7c92f9059a6e">
+      <Execution id="748276cf-98fa-42ff-ba6a-75e128f85919" />
+      <TestMethod codeBase="D:\ChuanQi\Kmyq\LyoCrystal-main\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.KillSwitchServiceTests" name="运行日志失败不伪报变更失败且原子状态保留完整审计" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.KillSwitchServiceTests.商城活动与高风险入口读取同一服务端开关" storage="d:\chuanqi\kmyq\lyocrystal-main\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="ab78f59c-38cc-2aa8-1013-84292e5636db">
+      <Execution id="66dd7865-1419-47a2-a4b3-315514aa6f5d" />
+      <TestMethod codeBase="D:\ChuanQi\Kmyq\LyoCrystal-main\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.KillSwitchServiceTests" name="商城活动与高风险入口读取同一服务端开关" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.BasicOperationsMonitorTests.操作员凭据可读取真实Http监控Json" storage="d:\chuanqi\kmyq\lyocrystal-main\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="fb0abd80-970e-c609-0a1a-d3bb2afa32d6">
+      <Execution id="212b8d7c-4d9a-41b6-ac2b-bdb0f47dbb73" />
+      <TestMethod codeBase="D:\ChuanQi\Kmyq\LyoCrystal-main\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.BasicOperationsMonitorTests" name="操作员凭据可读取真实Http监控Json" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestEntries>
+    <TestEntry testId="9de24466-f36c-7301-8615-8bf02ba1c8b0" executionId="c1fa90ff-cc8e-4ec0-988f-02efa3cd40cd" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="806e53fe-645c-13ee-55e8-1aa0a79b0d27" executionId="612dbd99-8699-4c8c-b291-db92b0ee544b" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="c94ff527-3e2b-cccd-8741-fb0c87a911ce" executionId="6b294dcd-ee24-470d-abda-96b2b334152e" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="c63acc6b-85ad-cfb9-6342-0fb769fa6dc7" executionId="b7eae9ac-101e-49b1-962d-37162d088fd4" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="3508a7fe-dfc3-5158-a63b-580abb920764" executionId="4a4dde33-b22d-48be-a8d0-df65b5ace438" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="dae45c35-433a-0ecf-d13a-5ca87482d567" executionId="e4de86f8-6053-4236-9a5a-844e8578acde" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="5908d694-6774-0663-776e-45b113d73c7c" executionId="d080a261-b20c-433b-9ffc-482d5d2d354b" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="d6fe1e6b-883b-2d05-22ca-16451d531a9e" executionId="6af5784b-752f-4e84-ae35-f01121f626fe" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="59a5a23a-fd98-e85f-5ac6-5b92d09e2e44" executionId="ce9c44af-0c0b-4e46-b94c-5bb0401ada8b" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="cc8ce5ec-f4e3-ac75-c8e2-e26e6892faf9" executionId="12603542-308a-44ce-b6e5-dfaea136a0e4" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="d4e553ec-8d43-f6bf-6311-1ef737cfc78a" executionId="eee1db8d-450f-42e0-a46a-2d5d9d9ae6ef" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="99cc3d4f-af52-eb6e-f624-a8bbd9b2dc69" executionId="998ec89f-d58b-49d3-a870-071851b8df83" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="ab78f59c-38cc-2aa8-1013-84292e5636db" executionId="66dd7865-1419-47a2-a4b3-315514aa6f5d" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="22678f19-f1cc-fd11-52a6-f5dc3a6052d7" executionId="eb37a202-b3a8-4794-aed6-cd06cde35122" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="fb0abd80-970e-c609-0a1a-d3bb2afa32d6" executionId="212b8d7c-4d9a-41b6-ac2b-bdb0f47dbb73" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="99b87452-f9f4-4fff-a38b-468466615e35" executionId="f5654075-3f74-481f-a226-6c59a4a43d9c" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="7b481267-bdb7-3998-62c7-d829ab99f97a" executionId="fa40f7e7-dcea-4084-a5d8-54559507abfa" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="8e8d3fd2-94d4-50c6-3d5d-ad876cf35bd5" executionId="dfa764c3-5ec3-4bd0-8b66-bb3bffa148cf" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="6c974134-fe8a-6eb5-3cd3-87faa8a9ec4d" executionId="7f44ea4b-e6cf-452e-a014-b568ce2760b5" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="ca2687ce-cc71-b438-44bd-ddcc04cbb175" executionId="46c55fae-f77f-4aee-acbb-8862f0ad91ab" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="9d0e9c54-cceb-1b40-6689-7c92f9059a6e" executionId="748276cf-98fa-42ff-ba6a-75e128f85919" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+  </TestEntries>
+  <TestLists>
+    <TestList name="列表中未列出的结果" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="所有已加载的结果" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Completed">
+    <Counters total="21" executed="21" passed="21" failed="0" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <Output>
+      <StdOut>[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.0.2+dd36e86129 (64-bit .NET 10.0.4)&#xD;
+[xUnit.net 00:00:00.12]   Discovering: Base05.Tests&#xD;
+[xUnit.net 00:00:00.25]   Discovered:  Base05.Tests&#xD;
+[xUnit.net 00:00:00.30]   Starting:    Base05.Tests&#xD;
+[xUnit.net 00:00:06.07]   Finished:    Base05.Tests&#xD;
+</StdOut>
+    </Output>
+  </ResultSummary>
+</TestRun>
