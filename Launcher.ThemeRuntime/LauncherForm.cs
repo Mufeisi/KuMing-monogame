@@ -76,15 +76,25 @@ internal sealed class LauncherForm : Form
             if (IsDisposed || Disposing || !Visible || _announcementCancellation.IsCancellationRequested) return;
             if (presentation.Mode == AnnouncementDisplayMode.ExternalPage)
             {
+                FlowLayoutPanel? browser = null;
                 try
                 {
-                    var browser = new FlowLayoutPanel { Dock = DockStyle.Fill, AutoScroll = true, FlowDirection = FlowDirection.TopDown, WrapContents = false, BackColor = Color.White, Padding = new Padding(10) };
-                    foreach (ExternalAnnouncementElement element in SafeExternalAnnouncementDocument.Parse(presentation.Html))
+                    if (!Uri.TryCreate(_loaded.Snapshot.ExternalAnnouncementUrl, UriKind.Absolute, out Uri? documentUri)) return;
+                    IReadOnlyList<ExternalAnnouncementElement> elements = SafeExternalAnnouncementDocument.Parse(presentation.Html, documentUri);
+                    if (elements.Count == 0) return;
+                    browser = new FlowLayoutPanel { Dock = DockStyle.Fill, AutoScroll = true, FlowDirection = FlowDirection.TopDown, WrapContents = false, BackColor = Color.White, Padding = new Padding(10) };
+                    using var imageHandler = new HttpClientHandler { AllowAutoRedirect = false };
+                    using var imageClient = new HttpClient(imageHandler) { Timeout = TimeSpan.FromSeconds(5) };
+                    long remainingImageBytes = 8L * 1024 * 1024;
+                    foreach (ExternalAnnouncementElement element in elements)
                     {
                         if (element.Kind == ExternalAnnouncementElementKind.Image)
                         {
                             var picture = new PictureBox { Width = Math.Max(240, _announcements.Width - 45), Height = 170, SizeMode = PictureBoxSizeMode.Zoom, BackColor = Color.FromArgb(238, 238, 238) };
-                            browser.Controls.Add(picture); _ = LoadExternalAnnouncementImageAsync(element.Url, picture, _announcementCancellation.Token); continue;
+                            (Image? image, long bytes) = await LoadExternalAnnouncementImageAsync(imageClient, element.Url, Math.Min(2L * 1024 * 1024, remainingImageBytes), _announcementCancellation.Token);
+                            if (image is null) throw new InvalidDataException("外部公告图片加载失败");
+                            remainingImageBytes -= bytes;
+                            picture.Image = image; picture.Disposed += (_, _) => image.Dispose(); browser.Controls.Add(picture); continue;
                         }
                         Control line;
                         if (element.Kind == ExternalAnnouncementElementKind.Link)
@@ -100,8 +110,13 @@ internal sealed class LauncherForm : Form
                     }
                     foreach (Control control in _announcements.Controls.Cast<Control>().ToArray()) control.Dispose();
                     _announcements.Controls.Clear(); _announcements.Controls.Add(browser);
+                    browser = null;
                 }
-                catch { ShowNativeAnnouncements(); }
+                catch
+                {
+                    browser?.Dispose();
+                    if (!IsDisposed && !Disposing && !_announcementCancellation.IsCancellationRequested) ShowNativeAnnouncements();
+                }
             }
         }
     }
@@ -200,20 +215,20 @@ internal sealed class LauncherForm : Form
         }
     }
 
-    private static async Task LoadExternalAnnouncementImageAsync(string url, PictureBox target, CancellationToken cancellationToken)
+    private static async Task<(Image? Image, long Bytes)> LoadExternalAnnouncementImageAsync(HttpClient client, string url, long maximumBytes, CancellationToken cancellationToken)
     {
         try
         {
-            using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(5) };
+            if (maximumBytes <= 0) return (null, 0);
             using HttpResponseMessage response = await client.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
-            if (!response.IsSuccessStatusCode || response.Content.Headers.ContentLength > 2 * 1024 * 1024) return;
+            if (!response.IsSuccessStatusCode || response.Content.Headers.ContentLength > maximumBytes) return (null, 0);
             await using Stream input = await response.Content.ReadAsStreamAsync(cancellationToken); using var bytes = new MemoryStream(); byte[] buffer = new byte[16 * 1024]; int read;
-            while ((read = await input.ReadAsync(buffer, cancellationToken)) > 0) { if (bytes.Length + read > 2 * 1024 * 1024) return; bytes.Write(buffer, 0, read); }
-            bytes.Position = 0; using Image decoded = Image.FromStream(bytes); var image = new Bitmap(decoded);
-            if (target.IsDisposed) { image.Dispose(); return; }
-            target.Image = image; target.Disposed += (_, _) => image.Dispose();
+            while ((read = await input.ReadAsync(buffer, cancellationToken)) > 0) { if (bytes.Length + read > maximumBytes) return (null, 0); bytes.Write(buffer, 0, read); }
+            bytes.Position = 0; using Image decoded = Image.FromStream(bytes, useEmbeddedColorManagement: false, validateImageData: true);
+            if (decoded.Width > 4096 || decoded.Height > 4096 || (long)decoded.Width * decoded.Height > 16_000_000) return (null, 0);
+            return (new Bitmap(decoded), bytes.Length);
         }
-        catch (Exception ex) when (ex is HttpRequestException or IOException or OperationCanceledException or ArgumentException) { }
+        catch (Exception ex) when (ex is HttpRequestException or IOException or OperationCanceledException or ArgumentException or OutOfMemoryException) { return (null, 0); }
     }
 
     private Button CreateTopButton(string text, int rightOffset) => new() { Text = text, FlatStyle = FlatStyle.Flat, Size = new Size(110, 34), Location = new Point(Width - rightOffset, 20), Anchor = AnchorStyles.Top | AnchorStyles.Right };

@@ -11,7 +11,7 @@ public static class SafeExternalAnnouncementDocument
 {
     private static readonly Regex ColorPattern = new("#[0-9A-Fa-f]{6}", RegexOptions.CultureInvariant, TimeSpan.FromMilliseconds(50));
 
-    public static IReadOnlyList<ExternalAnnouncementElement> Parse(string html)
+    public static IReadOnlyList<ExternalAnnouncementElement> Parse(string html, Uri? documentUri = null)
     {
         var result = new List<ExternalAnnouncementElement>();
         var text = new StringBuilder();
@@ -49,8 +49,9 @@ public static class SafeExternalAnnouncementDocument
             }
             else if (!closing && name == "img")
             {
-                Flush(); string url = SafeUrl(ExtractAttribute(body, "src"));
-                if (!string.IsNullOrEmpty(url)) result.Add(new ExternalAnnouncementElement(ExternalAnnouncementElementKind.Image, WebUtility.HtmlDecode(ExtractAttribute(body, "alt")), url));
+                Flush(); string url = SafeImageUrl(ExtractAttribute(body, "src"), documentUri);
+                if (!string.IsNullOrEmpty(url) && result.Count(item => item.Kind == ExternalAnnouncementElementKind.Image) < 6)
+                    result.Add(new ExternalAnnouncementElement(ExternalAnnouncementElementKind.Image, WebUtility.HtmlDecode(ExtractAttribute(body, "alt")), url));
             }
             index = close + 1;
         }
@@ -64,6 +65,12 @@ public static class SafeExternalAnnouncementDocument
     }
 
     private static string SafeUrl(string value) => LauncherActionDispatcher.TryGetHttpUri(WebUtility.HtmlDecode(value), out Uri? uri) ? uri!.AbsoluteUri : string.Empty;
+    private static string SafeImageUrl(string value, Uri? documentUri)
+    {
+        string safe = SafeUrl(value);
+        if (string.IsNullOrEmpty(safe) || documentUri is null || !Uri.TryCreate(safe, UriKind.Absolute, out Uri? imageUri)) return string.Empty;
+        return imageUri.Scheme == documentUri.Scheme && imageUri.Host == documentUri.Host && imageUri.Port == documentUri.Port ? imageUri.AbsoluteUri : string.Empty;
+    }
     private static string ExtractColor(string tag) { Match match = ColorPattern.Match(tag); return match.Success ? match.Value : string.Empty; }
 
     private static string ExtractAttribute(string tag, string name)
