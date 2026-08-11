@@ -14,6 +14,7 @@ public sealed class EditorProject
     public GatewayDeploymentSettings Gateway { get; set; } = new();
     public ProjectReleaseMetadata Release { get; set; } = new();
     public string ImportedClientDirectory { get; set; } = string.Empty;
+    public bool RegenerateMicroUserOnFirstLoad { get; set; }
     public DateTimeOffset UpdatedAtUtc { get; set; } = DateTimeOffset.UtcNow;
 
     public void SynchronizeMicroIdentity()

@@ -30,6 +30,10 @@ public sealed class LauncherEditorTests
         Assert.Equal("传奇启动器示例", project.Snapshot.ProjectName);
         Assert.Equal(ServerListMode.Sidebar, project.Snapshot.Theme.ServerListMode);
         Assert.Equal(2, project.Snapshot.Servers.Count);
+        Assert.StartsWith("u_", project.Snapshot.DefaultMicro.User, StringComparison.Ordinal);
+        Assert.NotEqual("u_sample_pending_initialization", project.Snapshot.DefaultMicro.User);
+        Assert.Equal(project.Snapshot.DefaultMicro.User, project.Gateway.User);
+        Assert.False(project.RegenerateMicroUserOnFirstLoad);
         Assert.True(ProjectReleaseKeyStore.HasPrivateKeys(project, projectRoot));
     }
 

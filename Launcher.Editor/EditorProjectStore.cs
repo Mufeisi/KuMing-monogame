@@ -54,9 +54,15 @@ public sealed class EditorProjectStore
         if (!File.Exists(file) || new FileInfo(file).Length > 2 * 1024 * 1024) throw new InvalidDataException("项目文件不存在或超过大小限制");
         EditorProject project = JsonSerializer.Deserialize(File.ReadAllBytes(file), EditorProjectJsonContext.Default.EditorProject) ?? throw new InvalidDataException("项目文件为空");
         bool needsKeyMigration = string.IsNullOrWhiteSpace(project.Release.CurrentKeyId);
+        bool needsIdentityInitialization = project.RegenerateMicroUserOnFirstLoad;
+        if (needsIdentityInitialization)
+        {
+            project.Snapshot.DefaultMicro.User = "u_" + Convert.ToHexString(RandomNumberGenerator.GetBytes(8)).ToLowerInvariant();
+            project.RegenerateMicroUserOnFirstLoad = false;
+        }
         ProjectReleaseKeyStore.EnsureProvisioned(project, directory);
         Validate(project);
-        if (needsKeyMigration) Save(project);
+        if (needsKeyMigration || needsIdentityInitialization) Save(project);
         return project;
     }
 
