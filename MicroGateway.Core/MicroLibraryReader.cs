@@ -1,5 +1,3 @@
-using System.Collections.Concurrent;
-
 namespace LyoCrystal.MicroGateway;
 
 internal static class MicroLibraryReader
@@ -12,12 +10,9 @@ internal static class MicroLibraryReader
         byte[] HeaderBytes,
         int[] IndexList);
 
-    private static readonly ConcurrentDictionary<string, CachedLibrary> Cache =
-        new(StringComparer.OrdinalIgnoreCase);
-
-    public static byte[]? TryCreateHeaderPayload(string filePath)
+    public static byte[]? TryCreateHeaderPayload(string filePath, int maximumPayloadBytes)
     {
-        CachedLibrary? library = TryGetOrLoad(filePath);
+        CachedLibrary? library = TryGetOrLoad(filePath, maximumPayloadBytes - 12);
         if (library is null) return null;
         using var stream = new MemoryStream();
         using var writer = new BinaryWriter(stream);
@@ -27,9 +22,9 @@ internal static class MicroLibraryReader
         return stream.ToArray();
     }
 
-    public static byte[]? TryCreateImagePayload(string filePath, int index)
+    public static byte[]? TryCreateImagePayload(string filePath, int index, int maximumPayloadBytes)
     {
-        CachedLibrary? library = TryGetOrLoad(filePath);
+        CachedLibrary? library = TryGetOrLoad(filePath, maximumPayloadBytes);
         if (library is null || index < 0 || index >= library.Count) return null;
         int position = library.IndexList[index];
         if (position <= 0) return null;
@@ -53,7 +48,7 @@ internal static class MicroLibraryReader
                 if (maskLength < 0) return null;
                 blockLength += 12L + maskLength;
             }
-            if (blockLength <= 0 || blockLength > int.MaxValue || position + blockLength > stream.Length) return null;
+            if (blockLength <= 0 || blockLength > maximumPayloadBytes - 8L || position + blockLength > stream.Length) return null;
             stream.Position = position;
             byte[] image = new byte[(int)blockLength];
             stream.ReadExactly(image);
@@ -67,14 +62,12 @@ internal static class MicroLibraryReader
         catch { return null; }
     }
 
-    private static CachedLibrary? TryGetOrLoad(string filePath)
+    private static CachedLibrary? TryGetOrLoad(string filePath, int maximumHeaderBytes)
     {
         try
         {
             var info = new FileInfo(filePath);
             if (!info.Exists) return null;
-            if (Cache.TryGetValue(filePath, out CachedLibrary? cached) &&
-                cached.FileLength == info.Length && cached.LastWriteTimeUtc == info.LastWriteTimeUtc) return cached;
             using var stream = File.OpenRead(filePath);
             using var reader = new BinaryReader(stream);
             int version = reader.ReadInt32();
@@ -84,7 +77,7 @@ internal static class MicroLibraryReader
             int frameSeek = 0;
             int headerLength = 8 + count * 4;
             if (version >= 3) { frameSeek = reader.ReadInt32(); headerLength += 4; }
-            if (headerLength <= 0 || headerLength > stream.Length) return null;
+            if (headerLength <= 0 || headerLength > maximumHeaderBytes || headerLength > stream.Length) return null;
             int[] indexes = new int[count];
             for (int i = 0; i < count; i++) indexes[i] = reader.ReadInt32();
             using var header = new MemoryStream(headerLength);
@@ -94,9 +87,7 @@ internal static class MicroLibraryReader
                 if (version >= 3) writer.Write(frameSeek);
                 foreach (int value in indexes) writer.Write(value);
             }
-            var loaded = new CachedLibrary(info.LastWriteTimeUtc, info.Length, count, headerLength, header.ToArray(), indexes);
-            Cache[filePath] = loaded;
-            return loaded;
+            return new CachedLibrary(info.LastWriteTimeUtc, info.Length, count, headerLength, header.ToArray(), indexes);
         }
         catch { return null; }
     }

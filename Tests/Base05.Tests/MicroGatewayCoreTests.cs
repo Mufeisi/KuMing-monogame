@@ -12,6 +12,216 @@ namespace Base05.Tests;
 public sealed class MicroGatewayCoreTests
 {
     [Fact]
+    public async Task 资源索引只原子发布稳定文件且失败保留旧快照()
+    {
+        string root = Path.Combine(Path.GetTempPath(), "LyoCrystalIndexTests", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(Path.Combine(root, "Data"));
+        string stable = Path.Combine(root, "Data", "stable.bin");
+        await File.WriteAllBytesAsync(stable, new byte[] { 1, 2, 3 });
+        await using var index = new MicroResourceIndex(TimeSpan.FromMilliseconds(80), TimeSpan.FromHours(1), TimeSpan.Zero, TimeSpan.Zero);
+        try
+        {
+            await index.StartAsync(root);
+            Assert.True(index.TryGetFile(stable, out _));
+            MicroResourceIndexSnapshot before = index.GetSnapshot();
+
+            string uploading = Path.Combine(root, "Data", "uploading.bin");
+            Task writer = Task.Run(async () =>
+            {
+                await using var output = new FileStream(uploading, FileMode.Create, FileAccess.Write, FileShare.ReadWrite);
+                await output.WriteAsync(new byte[32]);
+                await output.FlushAsync();
+                await Task.Delay(40);
+                await output.WriteAsync(new byte[32]);
+            });
+            await index.ReconcileAsync();
+            await writer;
+            Assert.False(index.TryGetFile(uploading, out _));
+            Assert.True(index.TryGetFile(stable, out _));
+
+            Directory.Delete(root, true);
+            Assert.False(await index.ReconcileAsync());
+            Assert.Equal(before.FileCount, index.GetSnapshot().FileCount);
+        }
+        finally { if (Directory.Exists(root)) Directory.Delete(root, true); }
+    }
+
+    [Fact]
+    public async Task 新文件经过隔离稳定期后才进入索引()
+    {
+        string root = Path.Combine(Path.GetTempPath(), "LyoCrystalIndexQuarantine", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        string path = Path.Combine(root, "new.bin");
+        await using var index = new MicroResourceIndex(TimeSpan.FromMilliseconds(20), TimeSpan.FromHours(1), TimeSpan.Zero, TimeSpan.FromMilliseconds(150));
+        try
+        {
+            await index.StartAsync(root);
+            await File.WriteAllBytesAsync(path, new byte[] { 1 });
+            await index.ReconcileAsync();
+            Assert.False(index.TryGetFile(path, out _));
+            DateTime deadline = DateTime.UtcNow + TimeSpan.FromSeconds(2);
+            while (!index.TryGetFile(path, out _) && DateTime.UtcNow < deadline)
+            {
+                await Task.Delay(80);
+                await index.ReconcileAsync();
+            }
+            Assert.True(index.TryGetFile(path, out _));
+            Assert.True(await index.ReconcileAsync());
+            Assert.True(index.TryGetFile(path, out _));
+        }
+        finally { if (Directory.Exists(root)) Directory.Delete(root, true); }
+    }
+
+    [Fact]
+    public void 两级缓存受限且损坏后重建而不修改资源库()
+    {
+        string root = Path.Combine(Path.GetTempPath(), "LyoCrystalCacheResources", Guid.NewGuid().ToString("N"));
+        string cacheRoot = Path.Combine(Path.GetTempPath(), "LyoCrystalCacheData", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        byte[] resource = new byte[] { 9, 8, 7 };
+        string resourcePath = Path.Combine(root, "source.bin");
+        File.WriteAllBytes(resourcePath, resource);
+        try
+        {
+            var cache = new MicroPayloadCache(root, cacheRoot, 1, 1);
+            int builds = 0;
+            byte[] first = cache.GetOrCreate("first", _ => { builds++; return Enumerable.Repeat((byte)1, 600_000).ToArray(); })!;
+            cache.GetOrCreate("second", _ => Enumerable.Repeat((byte)2, 600_000).ToArray());
+            Assert.True(Directory.EnumerateFiles(cacheRoot, "*.bin").Sum(path => new FileInfo(path).Length) <= 1024L * 1024L);
+
+            string stored = Directory.EnumerateFiles(cacheRoot, "*.bin").Single();
+            File.WriteAllBytes(stored, new byte[] { 1, 2, 3 });
+            var restarted = new MicroPayloadCache(root, cacheRoot, 0, 1);
+            int beforeRebuild = builds;
+            restarted.GetOrCreate(Path.GetFileNameWithoutExtension(stored).Equals(Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes("second"))), StringComparison.Ordinal) ? "second" : "first",
+                _ => { builds++; return first; });
+            Assert.Equal(resource, File.ReadAllBytes(resourcePath));
+            Assert.True(builds > beforeRebuild);
+        }
+        finally
+        {
+            if (Directory.Exists(root)) Directory.Delete(root, true);
+            if (Directory.Exists(cacheRoot)) Directory.Delete(cacheRoot, true);
+        }
+    }
+
+    [Fact]
+    public async Task 一百个并发流式请求内容一致且全部收敛()
+    {
+        string repository = FindRepositoryRoot(AppContext.BaseDirectory);
+        string resources = Path.Combine(repository, "Client_MonoGame.Shared", "BootstrapAssets");
+        int port = GetFreePort();
+        await using var host = new MicroHttpListenerHost();
+        await host.StartAsync($"http://127.0.0.1:{port}/", new MicroGatewayOptions(resources, "reader", "code", NewFileQuarantineSeconds: 0));
+        using HttpClient client = Client(port);
+        long baseline = System.Diagnostics.Process.GetCurrentProcess().WorkingSet64;
+        long peak = baseline;
+        using var sampling = new CancellationTokenSource();
+        Task sampler = Task.Run(async () =>
+        {
+            try
+            {
+                while (!sampling.IsCancellationRequested)
+                {
+                    long current = System.Diagnostics.Process.GetCurrentProcess().WorkingSet64;
+                    long observed; while (current > (observed = Volatile.Read(ref peak))) Interlocked.CompareExchange(ref peak, current, observed);
+                    await Task.Delay(5, sampling.Token);
+                }
+            }
+            catch (OperationCanceledException) { }
+        });
+        Task<byte[]>[] requests = Enumerable.Range(0, 100).Select(async _ =>
+        {
+            using HttpRequestMessage request = Authorized("/api/file/Data/ChrSel.Lib");
+            request.Headers.TryAddWithoutValidation("Range", "bytes=0-1023");
+            using HttpResponseMessage response = await client.SendAsync(request);
+            Assert.Equal(HttpStatusCode.PartialContent, response.StatusCode);
+            return await response.Content.ReadAsByteArrayAsync();
+        }).ToArray();
+        byte[][] payloads = await Task.WhenAll(requests);
+        sampling.Cancel();
+        await sampler;
+        Assert.All(payloads, payload => Assert.Equal(payloads[0], payload));
+        Assert.True(peak - baseline < 256L * 1024 * 1024, $"100 并发期间工作集增长 {peak - baseline} 字节，超过 256 MiB 门限");
+        Assert.Equal(0, host.GetSnapshot().ActiveRequestCount);
+        await host.StopAsync();
+    }
+
+    [Fact]
+    public void 同一缓存键并发只生成一次()
+    {
+        string resources = Path.Combine(Path.GetTempPath(), "LyoCrystalSingleFlightResources", Guid.NewGuid().ToString("N"));
+        string cacheRoot = Path.Combine(Path.GetTempPath(), "LyoCrystalSingleFlightCache", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(resources);
+        try
+        {
+            var cache = new MicroPayloadCache(resources, cacheRoot, 16, 128);
+            int builds = 0;
+            Parallel.For(0, 100, _ => Assert.Equal(new byte[] { 4, 2 }, cache.GetOrCreate("same", _ =>
+            {
+                Interlocked.Increment(ref builds);
+                Thread.Sleep(30);
+                return new byte[] { 4, 2 };
+            })));
+            Assert.Equal(1, builds);
+        }
+        finally
+        {
+            if (Directory.Exists(resources)) Directory.Delete(resources, true);
+            if (Directory.Exists(cacheRoot)) Directory.Delete(cacheRoot, true);
+        }
+    }
+
+    [Fact]
+    public void 不同缓存键的生成并发和单项大小受硬限制()
+    {
+        string resources = Path.Combine(Path.GetTempPath(), "LyoCrystalBoundedFactoryResources", Guid.NewGuid().ToString("N"));
+        string cacheRoot = Path.Combine(Path.GetTempPath(), "LyoCrystalBoundedFactoryCache", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(resources);
+        try
+        {
+            var cache = new MicroPayloadCache(resources, cacheRoot, 1, 128);
+            int active = 0, peak = 0;
+            Parallel.For(0, 20, index => cache.GetOrCreate("key-" + index, limit =>
+            {
+                int current = Interlocked.Increment(ref active);
+                int observed; while (current > (observed = Volatile.Read(ref peak))) Interlocked.CompareExchange(ref peak, current, observed);
+                Thread.Sleep(10);
+                Interlocked.Decrement(ref active);
+                return new byte[Math.Min(128, limit)];
+            }));
+            Assert.Equal(1, peak);
+            Assert.Null(cache.GetOrCreate("oversized", limit => new byte[limit + 1]));
+            Assert.True(cache.GetSnapshot().MemoryBytes <= 1024L * 1024L);
+        }
+        finally
+        {
+            if (Directory.Exists(resources)) Directory.Delete(resources, true);
+            if (Directory.Exists(cacheRoot)) Directory.Delete(cacheRoot, true);
+        }
+    }
+
+    [Fact]
+    public async Task 索引文件重新进入写入状态时拒绝流式响应()
+    {
+        string root = Path.Combine(Path.GetTempPath(), "LyoCrystalStreamLease", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(Path.Combine(root, "Data"));
+        string path = Path.Combine(root, "Data", "sample.bin");
+        await File.WriteAllBytesAsync(path, new byte[128]);
+        File.SetLastWriteTimeUtc(path, DateTime.UtcNow - TimeSpan.FromMinutes(2));
+        var core = new MicroGatewayCore();
+        try
+        {
+            await core.StartAsync(new MicroGatewayOptions(root, "reader", "code", NewFileQuarantineSeconds: 0));
+            await using var writer = new FileStream(path, FileMode.Open, FileAccess.Write, FileShare.ReadWrite);
+            var headers = new Dictionary<string, string?> { ["User"] = "reader", ["Code"] = "code" };
+            await using MicroGatewayResponse response = await core.HandleAsync(new MicroGatewayRequest("GET", "/api/file/Data/sample.bin", headers));
+            await using var output = new MemoryStream();
+            await Assert.ThrowsAsync<IOException>(() => response.WriteBodyAsync!(output, CancellationToken.None));
+        }
+        finally { await core.StopAsync(); if (Directory.Exists(root)) Directory.Delete(root, true); }
+    }
+    [Fact]
     public async Task 独立网关与内置服务端四类协议响应一致且公开目录只读安全()
     {
         string repository = FindRepositoryRoot(AppContext.BaseDirectory);
@@ -36,7 +246,7 @@ public sealed class MicroGatewayCoreTests
             Settings.MicroResourcePath = resources;
             embedded = new HttpServer();
             embedded.Start();
-            await standalone.StartAsync($"http://127.0.0.1:{standalonePort}/", new MicroGatewayOptions(resources, "reader", "code", launcherRoot));
+            await standalone.StartAsync($"http://127.0.0.1:{standalonePort}/", new MicroGatewayOptions(resources, "reader", "code", launcherRoot, NewFileQuarantineSeconds: 0));
             using var first = Client(embeddedPort);
             using var second = Client(standalonePort);
             await WaitReady(first); await WaitReady(second);
@@ -113,7 +323,7 @@ public sealed class MicroGatewayCoreTests
             await process.WaitForExitAsync();
             Assert.Equal(0, process.ExitCode);
             var core = new MicroGatewayCore();
-            await core.StartAsync(new MicroGatewayOptions(root, "reader", "code", root));
+            await core.StartAsync(new MicroGatewayOptions(root, "reader", "code", root, NewFileQuarantineSeconds: 0));
             var headers = new Dictionary<string, string?> { ["User"] = "reader", ["Code"] = "code" };
             MicroGatewayResponse api = await core.HandleAsync(new MicroGatewayRequest("GET", "/api/file/escape/secret.bin", headers));
             MicroGatewayResponse launcher = await core.HandleAsync(new MicroGatewayRequest("GET", "/launcher/escape/secret.bin", new Dictionary<string, string?>()));
@@ -143,7 +353,7 @@ public sealed class MicroGatewayCoreTests
         string repository = FindRepositoryRoot(AppContext.BaseDirectory);
         string resources = Path.Combine(repository, "Client_MonoGame.Shared", "BootstrapAssets");
         var core = new MicroGatewayCore();
-        await core.StartAsync(new MicroGatewayOptions(resources, "reader", "code"));
+        await core.StartAsync(new MicroGatewayOptions(resources, "reader", "code", NewFileQuarantineSeconds: 0));
         var headers = new Dictionary<string, string?> { ["user"] = "reader", ["code"] = "code", ["range"] = "bytes=0-31" };
         MicroGatewayResponse response = await core.HandleAsync(new MicroGatewayRequest("GET", "/api/file/Data/ChrSel.Lib", headers));
         Assert.Equal(1, core.GetSnapshot().ActiveRequestCount);
@@ -155,7 +365,7 @@ public sealed class MicroGatewayCoreTests
         Assert.Equal(0, core.GetSnapshot().ActiveRequestCount);
         Assert.Equal(32, output.Length);
 
-        await core.StartAsync(new MicroGatewayOptions(resources, "reader", "code"));
+        await core.StartAsync(new MicroGatewayOptions(resources, "reader", "code", NewFileQuarantineSeconds: 0));
         MicroGatewayResponse abandoned = await core.HandleAsync(new MicroGatewayRequest("GET", "/api/file/Data/ChrSel.Lib", headers));
         Task secondStop = core.StopAsync();
         Assert.False(secondStop.IsCompleted);

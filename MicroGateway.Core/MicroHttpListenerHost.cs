@@ -13,6 +13,7 @@ public sealed class MicroHttpListenerHost : IAsyncDisposable
     private long _requestId;
 
     public MicroGatewaySnapshot GetSnapshot() => _core.GetSnapshot();
+    public Task<bool> ReconcileResourcesAsync(CancellationToken cancellationToken = default) => _core.ReconcileResourcesAsync(cancellationToken);
 
     public async Task StartAsync(string prefix, MicroGatewayOptions options)
     {

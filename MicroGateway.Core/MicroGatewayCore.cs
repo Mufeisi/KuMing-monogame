@@ -16,50 +16,115 @@ public sealed class MicroGatewayCore
     private readonly object _lifecycleLock = new();
     private TaskCompletionSource _idle = CompletedIdle();
     private bool _stopping;
+    private readonly SemaphoreSlim _startLock = new(1, 1);
 
     private sealed record SoundListCache(DateTime LastWriteTimeUtc, long Length, Dictionary<int, string> Entries);
     private sealed record SoundPayload(byte[] Bytes, int Max, int Current);
 
-    public Task StartAsync(MicroGatewayOptions options)
+    public async Task StartAsync(MicroGatewayOptions options)
     {
         ArgumentNullException.ThrowIfNull(options);
         string root = Path.GetFullPath(options.ResourceRoot);
         string? launcherRoot = string.IsNullOrWhiteSpace(options.LauncherRoot) ? null : Path.GetFullPath(options.LauncherRoot);
-        lock (_lifecycleLock)
+        await _startLock.WaitAsync().ConfigureAwait(false);
+        MicroResourceIndex? created = null;
+        MicroResourceIndex? retired = null;
+        try
         {
-            if (_stopping) throw new InvalidOperationException("微端网关正在停止，不能重新启动。");
-            _options = options with { ResourceRoot = root, LauncherRoot = launcherRoot };
-            _lastError = null;
+            lock (_lifecycleLock)
+            {
+                if (_stopping) throw new InvalidOperationException("微端网关正在停止，不能重新启动。");
+                if (_options?.ResourceIndex is not null && string.Equals(_options.ResourceRoot, root, StringComparison.OrdinalIgnoreCase))
+                {
+                    _options = options with
+                    {
+                        ResourceRoot = root,
+                        LauncherRoot = launcherRoot,
+                        ResourceIndex = _options.ResourceIndex,
+                        CacheRoot = _options.CacheRoot,
+                        PayloadCache = _options.PayloadCache,
+                    };
+                    _lastError = null;
+                    return;
+                }
+            }
+            created = new MicroResourceIndex(minimumObservationAge: TimeSpan.FromSeconds(Math.Clamp(options.NewFileQuarantineSeconds, 0, 3600)));
+            await created.StartAsync(root).ConfigureAwait(false);
+            string cacheRoot = string.IsNullOrWhiteSpace(options.CacheRoot)
+                ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "LyoCrystal", "MicroGateway", "Cache")
+                : Path.GetFullPath(options.CacheRoot);
+            var payloadCache = new MicroPayloadCache(root, cacheRoot, options.MemoryCacheMb, options.DiskCacheMb);
+            lock (_lifecycleLock)
+            {
+                if (_stopping) throw new InvalidOperationException("微端网关正在停止，不能重新启动。");
+                retired = _options?.ResourceIndex;
+                _options = options with { ResourceRoot = root, LauncherRoot = launcherRoot, ResourceIndex = created, CacheRoot = cacheRoot, PayloadCache = payloadCache };
+                _lastError = null;
+                created = null;
+            }
         }
-        return Task.CompletedTask;
+        finally
+        {
+            _startLock.Release();
+            if (created is not null) await created.DisposeAsync().ConfigureAwait(false);
+            if (retired is not null) await retired.DisposeAsync().ConfigureAwait(false);
+        }
     }
 
     public async Task StopAsync()
     {
+        await _startLock.WaitAsync().ConfigureAwait(false);
         Task idle;
-        lock (_lifecycleLock)
+        MicroResourceIndex? index;
+        try
         {
-            if (_options is null && !_stopping) return;
-            if (!_stopping)
+            lock (_lifecycleLock)
             {
-                _stopping = true;
-                _options = null;
+                if (_options is null && !_stopping) return;
+                index = _options?.ResourceIndex;
+                if (!_stopping)
+                {
+                    _stopping = true;
+                    _options = null;
+                }
+                idle = _idle.Task;
             }
-            idle = _idle.Task;
+            await idle.ConfigureAwait(false);
+            if (index is not null) await index.DisposeAsync().ConfigureAwait(false);
+            lock (_lifecycleLock) _stopping = false;
         }
-        await idle.ConfigureAwait(false);
-        lock (_lifecycleLock) _stopping = false;
+        finally { _startLock.Release(); }
     }
 
     public MicroGatewaySnapshot GetSnapshot()
     {
         lock (_lifecycleLock)
+        {
+            MicroResourceIndexSnapshot? index = _options?.ResourceIndex?.GetSnapshot();
+            MicroPayloadCacheSnapshot? cache = _options?.PayloadCache?.GetSnapshot();
             return new MicroGatewaySnapshot(
                 _options is not null,
                 _options?.ResourceRoot ?? string.Empty,
                 Interlocked.Read(ref _requestCount),
                 _activeRequests,
-                _lastError);
+                _lastError ?? index?.LastError,
+                index?.Version ?? 0,
+                index?.FileCount ?? 0,
+                index?.TotalBytes ?? 0,
+                cache?.Hits ?? 0,
+                cache?.Misses ?? 0,
+                cache?.MemoryBytes ?? 0,
+                cache?.DiskBytes ?? 0);
+        }
+    }
+
+    public Task<bool> ReconcileResourcesAsync(CancellationToken cancellationToken = default)
+    {
+        lock (_lifecycleLock)
+        {
+            if (_stopping || _options?.ResourceIndex is null) return Task.FromResult(false);
+            return _options.ResourceIndex.ReconcileAsync(cancellationToken);
+        }
     }
 
     public Task<MicroGatewayResponse> HandleAsync(MicroGatewayRequest request, CancellationToken cancellationToken = default)
@@ -181,7 +246,7 @@ public sealed class MicroGatewayCore
 
     private static MicroGatewayResponse HandleFile(MicroGatewayOptions options, MicroGatewayRequest request, string[] segments)
     {
-        if (segments.Length != 4 || !TryResolve(options.ResourceRoot, segments[2], segments[3], true, out string? path) || !File.Exists(path))
+        if (segments.Length != 4 || !TryResolveIndexed(options, segments[2], segments[3], true, out string? path))
             return MicroGatewayResponse.Text(404, "not found");
         string? range = GetHeader(request.Headers, "Range");
         return StreamFile(path!, range);
@@ -189,7 +254,9 @@ public sealed class MicroGatewayCore
 
     private static MicroGatewayResponse StreamFile(string path, string? range)
     {
-        long total = new FileInfo(path).Length;
+        var indexed = new FileInfo(path);
+        long total = indexed.Length;
+        DateTime indexedWriteUtc = indexed.LastWriteTimeUtc;
         long start = 0, end = total - 1;
         int status = 200;
         var headers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { ["Accept-Ranges"] = "bytes" };
@@ -209,7 +276,9 @@ public sealed class MicroGatewayCore
             Headers = headers,
             WriteBodyAsync = async (output, token) =>
             {
-                await using var input = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, CopyBufferBytes, FileOptions.Asynchronous | FileOptions.SequentialScan);
+                await using var input = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, CopyBufferBytes, FileOptions.Asynchronous | FileOptions.SequentialScan);
+                if (input.Length != total || File.GetLastWriteTimeUtc(path) != indexedWriteUtc)
+                    throw new IOException("资源文件在建立响应后发生变化，已拒绝本次传输。");
                 input.Position = start;
                 byte[] buffer = new byte[CopyBufferBytes];
                 long remaining = length;
@@ -226,18 +295,20 @@ public sealed class MicroGatewayCore
 
     private static MicroGatewayResponse HandleLibraryHeader(MicroGatewayOptions options, string[] segments)
     {
-        if (segments.Length != 4 || !TryResolve(options.ResourceRoot, segments[2], segments[3], true, out string? path) || !File.Exists(path))
+        if (segments.Length != 4 || !TryResolveIndexed(options, segments[2], segments[3], true, out string? path))
             return MicroGatewayResponse.Text(404, "not found");
-        byte[]? payload = MicroLibraryReader.TryCreateHeaderPayload(path!);
+        byte[]? payload = options.PayloadCache?.GetOrCreate(CacheKey(path!, "header"), limit => MicroLibraryReader.TryCreateHeaderPayload(path!, limit))
+            ?? MicroLibraryReader.TryCreateHeaderPayload(path!, 16 * 1024 * 1024);
         return payload is null ? MicroGatewayResponse.Text(404, "not found") : MicroGatewayResponse.Bytes(200, payload, "application/octet-stream");
     }
 
     private static MicroGatewayResponse HandleLibraryImage(MicroGatewayOptions options, string[] segments)
     {
         if (segments.Length != 5 || !int.TryParse(segments[4], out int index) ||
-            !TryResolve(options.ResourceRoot, segments[2], segments[3], true, out string? path) || !File.Exists(path))
+            !TryResolveIndexed(options, segments[2], segments[3], true, out string? path))
             return MicroGatewayResponse.Text(404, "not found");
-        byte[]? payload = MicroLibraryReader.TryCreateImagePayload(path!, index);
+        byte[]? payload = options.PayloadCache?.GetOrCreate(CacheKey(path!, "image:" + index), limit => MicroLibraryReader.TryCreateImagePayload(path!, index, limit))
+            ?? MicroLibraryReader.TryCreateImagePayload(path!, index, 16 * 1024 * 1024);
         return payload is null ? MicroGatewayResponse.Text(404, "not found") : MicroGatewayResponse.Bytes(200, payload, "application/octet-stream");
     }
 
@@ -255,11 +326,18 @@ public sealed class MicroGatewayCore
             int max = checked((int)((total + SoundChunkBytes - 1) / SoundChunkBytes));
             if (chunk > max) return MicroGatewayResponse.Text(404, "not found");
             int length = (int)Math.Min(SoundChunkBytes, total - (long)(chunk - 1) * SoundChunkBytes);
-            byte[] bytes = new byte[length];
-            using var input = File.OpenRead(path!);
-            input.Position = (long)(chunk - 1) * SoundChunkBytes;
-            input.ReadExactly(bytes);
-            byte[] json = JsonSerializer.SerializeToUtf8Bytes(new SoundPayload(bytes, max, chunk));
+            byte[]? CreateSoundPayload(int maximumBytes)
+            {
+                byte[] bytes = new byte[length];
+                using var input = new FileStream(path!, FileMode.Open, FileAccess.Read, FileShare.Read);
+                input.Position = (long)(chunk - 1) * SoundChunkBytes;
+                input.ReadExactly(bytes);
+                byte[] payload = JsonSerializer.SerializeToUtf8Bytes(new SoundPayload(bytes, max, chunk));
+                return payload.Length <= maximumBytes ? payload : null;
+            }
+            byte[]? json = options.PayloadCache?.GetOrCreate(CacheKey(path!, "sound:" + chunk), CreateSoundPayload)
+                ?? CreateSoundPayload(16 * 1024 * 1024);
+            if (json is null) return MicroGatewayResponse.Text(404, "not found");
             return MicroGatewayResponse.Bytes(200, json, "application/json; charset=UTF-8");
         }
         catch { return MicroGatewayResponse.Text(404, "not found"); }
@@ -280,13 +358,13 @@ public sealed class MicroGatewayCore
             if (dashed > 0) candidates.Add(dashed + ".wav");
         }
         foreach (string candidate in candidates)
-            if (TryResolve(options.ResourceRoot, "Sound", candidate, true, out string? resolved) && File.Exists(resolved)) { path = resolved; return true; }
+            if (TryResolveIndexed(options, "Sound", candidate, true, out string? resolved)) { path = resolved; return true; }
         return false;
     }
 
     private void AddSoundAlias(MicroGatewayOptions options, HashSet<string> candidates, int index)
     {
-        if (index <= 0 || !TryResolve(options.ResourceRoot, "Sound", "SoundList.lst", true, out string? listPath)) return;
+        if (index <= 0 || !TryResolveIndexed(options, "Sound", "SoundList.lst", true, out string? listPath)) return;
         try
         {
             var info = new FileInfo(listPath!);
@@ -326,6 +404,19 @@ public sealed class MicroGatewayCore
             return true;
         }
         catch { return false; }
+    }
+
+    private static bool TryResolveIndexed(MicroGatewayOptions options, string encodedPath, string encodedName, bool underscoreAsSeparator, out string? fullPath)
+    {
+        fullPath = null;
+        return TryResolve(options.ResourceRoot, encodedPath, encodedName, underscoreAsSeparator, out string? candidate) &&
+               options.ResourceIndex is not null && options.ResourceIndex.TryGetFile(candidate!, out fullPath);
+    }
+
+    private static string CacheKey(string path, string operation)
+    {
+        var info = new FileInfo(path);
+        return $"{path}|{info.Length}|{info.LastWriteTimeUtc.Ticks}|{operation}";
     }
 
     private static bool ContainsReparsePoint(string normalizedRoot, string fullPath)

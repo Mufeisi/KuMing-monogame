@@ -5,7 +5,13 @@ public sealed record MicroGatewayOptions(
     string User,
     string Code,
     string? LauncherRoot = null,
-    Func<bool>? ResourceUpdateEnabled = null);
+    Func<bool>? ResourceUpdateEnabled = null,
+    MicroResourceIndex? ResourceIndex = null,
+    int MemoryCacheMb = 128,
+    int DiskCacheMb = 2048,
+    string? CacheRoot = null,
+    MicroPayloadCache? PayloadCache = null,
+    int NewFileQuarantineSeconds = 10);
 
 public sealed record MicroGatewayRequest(
     string Method,
@@ -17,7 +23,14 @@ public sealed record MicroGatewaySnapshot(
     string ResourceRoot,
     long RequestCount,
     long ActiveRequestCount,
-    string? LastError);
+    string? LastError,
+    long IndexVersion = 0,
+    int IndexedFileCount = 0,
+    long IndexedBytes = 0,
+    long CacheHits = 0,
+    long CacheMisses = 0,
+    long MemoryCacheBytes = 0,
+    long DiskCacheBytes = 0);
 
 public sealed class MicroGatewayResponse : IDisposable, IAsyncDisposable
 {

@@ -5,6 +5,25 @@ internal static class Program
     [STAThread]
     private static int Main(string[] args)
     {
+        if (args.Length == 1 && string.Equals(args[0], "--service", StringComparison.OrdinalIgnoreCase))
+            return WindowsServiceHost.Run();
+        if ((args.Length == 1 || (args.Length == 3 && args[1] == "--caller-sid")) && args[0] is "--configure-network" or "--rollback-network" or "--install-service" or "--uninstall-service")
+        {
+            try
+            {
+                GatewayProjectConfiguration operationProject = GatewayProjectConfiguration.TryLoad(AppContext.BaseDirectory) ?? throw new InvalidDataException("gateway-project.json 无效");
+                if (args[0] == "--configure-network")
+                {
+                    string callerSid = args.Length == 3 ? args[2] : (System.Security.Principal.WindowsIdentity.GetCurrent().User?.Value ?? throw new InvalidOperationException("无法读取当前用户 SID。"));
+                    WindowsGatewayOperations.ConfigureNetwork(operationProject, callerSid);
+                }
+                else if (args[0] == "--rollback-network") WindowsGatewayOperations.RollbackNetwork(operationProject);
+                else if (args[0] == "--install-service") WindowsGatewayOperations.InstallService(Environment.ProcessPath!, operationProject.ReadSecret(AppContext.BaseDirectory, false));
+                else WindowsGatewayOperations.UninstallService();
+                return 0;
+            }
+            catch (Exception error) { MessageBox.Show(error.Message, "管理员操作失败", MessageBoxButtons.OK, MessageBoxIcon.Error); return 1; }
+        }
         if (args.Length == 2 && string.Equals(args[0], "--gateway-smoke", StringComparison.OrdinalIgnoreCase))
         {
             GatewayProjectConfiguration? smokeProject = GatewayProjectConfiguration.TryLoad(AppContext.BaseDirectory);

@@ -13,18 +13,33 @@ internal sealed class GatewayProjectConfiguration
     public string User { get; set; } = "MicroUser";
     public string ResourceDirectory { get; set; } = string.Empty;
     public string LauncherDirectory { get; set; } = string.Empty;
+    public int MemoryCacheMb { get; set; } = 128;
+    public int DiskCacheMb { get; set; } = 2048;
+    public string CacheDirectory { get; set; } = string.Empty;
 
     public static GatewayProjectConfiguration? TryLoad(string baseDirectory)
     {
         string path = Path.Combine(baseDirectory, "gateway-project.json");
         try
         {
-            if (!File.Exists(path) || new FileInfo(path).Length > 64 * 1024) return null;
-            GatewayProjectConfiguration? value = JsonSerializer.Deserialize(File.ReadAllBytes(path), GatewayProjectJsonContext.Default.GatewayProjectConfiguration);
+            if (!File.Exists(path)) return null;
+            GatewayProjectConfiguration? value = JsonSerializer.Deserialize(ReadLimitedFile(path, 64 * 1024), GatewayProjectJsonContext.Default.GatewayProjectConfiguration);
             if (value?.Format != "lyocrystal-micro-gateway-project-v1" || value.Port is < 1 or > 65535 || string.IsNullOrWhiteSpace(value.User)) return null;
             return value;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException) { return null; }
+    }
+
+    public void Save(string baseDirectory)
+    {
+        string target = Path.Combine(baseDirectory, "gateway-project.json");
+        string temporary = target + ".tmp-" + Guid.NewGuid().ToString("N");
+        try
+        {
+            File.WriteAllBytes(temporary, JsonSerializer.SerializeToUtf8Bytes(this, GatewayProjectJsonContext.Default.GatewayProjectConfiguration));
+            File.Move(temporary, target, true);
+        }
+        finally { if (File.Exists(temporary)) File.Delete(temporary); }
     }
 
     public string ResolveOptionalDirectory(string baseDirectory, string configured)
@@ -37,14 +52,55 @@ internal sealed class GatewayProjectConfiguration
     {
         string path = Path.Combine(baseDirectory, "gateway-secret.import");
         if (!File.Exists(path)) return;
-        byte[] envelope = File.ReadAllBytes(path);
-        if (envelope.Length > 1024) throw new InvalidDataException("微端凭据导入材料超过大小限制");
+        byte[] envelope = ReadLimitedFile(path, 1024);
         string code = MicroCredentialEnvelope.Open(ProjectId, envelope);
         ProtectedClientSecretStore.WriteMicroCode(ProjectId, code);
         try { File.Delete(path); } catch (IOException) { } catch (UnauthorizedAccessException) { }
     }
+
+    public string ReadSecret(string baseDirectory, bool serviceMode)
+    {
+        if (!serviceMode) return ProtectedClientSecretStore.ReadMicroCode(ProjectId);
+        string path = Path.Combine(baseDirectory, "gateway-secret.service");
+        if (!File.Exists(path)) return string.Empty;
+        try
+        {
+            byte[] protectedBytes = ReadLimitedFile(path, 4096);
+            return System.Text.Encoding.UTF8.GetString(System.Security.Cryptography.ProtectedData.Unprotect(
+                protectedBytes, System.Text.Encoding.UTF8.GetBytes(ProjectId), System.Security.Cryptography.DataProtectionScope.LocalMachine));
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException or System.Security.Cryptography.CryptographicException) { return string.Empty; }
+    }
+
+    public void WriteServiceSecret(string baseDirectory, string code)
+    {
+        if (string.IsNullOrWhiteSpace(ProjectId)) throw new InvalidDataException("项目标识无效");
+        string target = Path.Combine(baseDirectory, "gateway-secret.service");
+        string temporary = target + ".tmp-" + Guid.NewGuid().ToString("N");
+        byte[] protectedBytes = System.Security.Cryptography.ProtectedData.Protect(
+            System.Text.Encoding.UTF8.GetBytes(code ?? string.Empty), System.Text.Encoding.UTF8.GetBytes(ProjectId),
+            System.Security.Cryptography.DataProtectionScope.LocalMachine);
+        try
+        {
+            File.WriteAllBytes(temporary, protectedBytes);
+            File.SetAttributes(temporary, FileAttributes.Hidden);
+            WindowsGatewayOperations.ProtectServiceSecret(temporary);
+            File.Move(temporary, target, true);
+        }
+        finally { if (File.Exists(temporary)) File.Delete(temporary); }
+    }
+
+    private static byte[] ReadLimitedFile(string path, int maximumBytes)
+    {
+        if ((File.GetAttributes(path) & FileAttributes.ReparsePoint) != 0) throw new InvalidDataException("配置文件不能是重解析点。");
+        using var input = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+        if (input.Length < 0 || input.Length > maximumBytes) throw new InvalidDataException("配置文件超过大小限制。");
+        byte[] bytes = new byte[checked((int)input.Length)];
+        input.ReadExactly(bytes);
+        return bytes;
+    }
 }
 
-[JsonSourceGenerationOptions(PropertyNameCaseInsensitive = true, UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow)]
+[JsonSourceGenerationOptions(PropertyNameCaseInsensitive = true, PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase, WriteIndented = true, UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow)]
 [JsonSerializable(typeof(GatewayProjectConfiguration))]
 internal sealed partial class GatewayProjectJsonContext : JsonSerializerContext;
