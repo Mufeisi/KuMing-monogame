@@ -9,7 +9,7 @@ public static class DeploymentPackageBuilder
 {
     private const string GatewayResourceName = "LyoCrystal.LauncherEditor.MicroGateway.zip";
 
-    public static void CreateGatewayPackage(EditorProject project, string outputZip, string? microCode = null)
+    public static void CreateGatewayPackage(EditorProject project, string outputZip, string? microCode = null, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(project);
         project.SynchronizeMicroIdentity();
@@ -23,11 +23,12 @@ public static class DeploymentPackageBuilder
         if (!target.EndsWith(".zip", StringComparison.OrdinalIgnoreCase)) throw new InvalidDataException("微端部署包必须使用 .zip 扩展名");
         using Stream source = typeof(DeploymentPackageBuilder).Assembly.GetManifestResourceStream(GatewayResourceName)
             ?? throw new InvalidOperationException("当前编辑器未内置微端网关模板，请使用正式发布版编辑器");
-        CreateGatewayPackage(project, source, outputZip, microCode);
+        CreateGatewayPackage(project, source, outputZip, microCode, cancellationToken);
     }
 
-    public static void CreateGatewayPackage(EditorProject project, Stream gatewayTemplateZip, string outputZip, string? microCode = null)
+    public static void CreateGatewayPackage(EditorProject project, Stream gatewayTemplateZip, string outputZip, string? microCode = null, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         ArgumentNullException.ThrowIfNull(project);
         project.SynchronizeMicroIdentity();
         project.Snapshot.TrustedReleaseKeys = project.Release.RetiredPublicKeys.TakeLast(2).Concat(new[]
@@ -46,7 +47,7 @@ public static class DeploymentPackageBuilder
             Directory.CreateDirectory(Path.GetDirectoryName(target)!);
             using (var output = new FileStream(temporary, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.None))
             {
-                gatewayTemplateZip.CopyTo(output); output.Position = 0;
+                CopyWithCancellation(gatewayTemplateZip, output, cancellationToken); output.Position = 0;
                 using var archive = new ZipArchive(output, ZipArchiveMode.Update, leaveOpen: true);
                 archive.GetEntry("gateway-project.json")?.Delete();
                 ZipArchiveEntry entry = archive.CreateEntry("gateway-project.json", CompressionLevel.Optimal);
@@ -73,14 +74,14 @@ public static class DeploymentPackageBuilder
                     ZipArchiveEntry secret = archive.CreateEntry("gateway-secret.import", CompressionLevel.NoCompression);
                     using Stream secretOutput = secret.Open(); secretOutput.Write(MicroCredentialEnvelope.Create(project.Snapshot.ProjectId, microCode));
                 }
-                AddLauncherPublish(archive, project, project.Release.LastPublishRoot);
+                AddLauncherPublish(archive, project, project.Release.LastPublishRoot, cancellationToken);
             }
             File.Move(temporary, target, overwrite: true);
         }
         finally { if (File.Exists(temporary)) File.Delete(temporary); }
     }
 
-    private static void AddLauncherPublish(ZipArchive archive, EditorProject project, string publishRoot)
+    private static void AddLauncherPublish(ZipArchive archive, EditorProject project, string publishRoot, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(publishRoot)) return;
         string root = Path.GetFullPath(publishRoot), pointer = Path.Combine(root, "current.txt");
@@ -88,6 +89,17 @@ public static class DeploymentPackageBuilder
         string version = File.ReadAllText(pointer).Trim();
         ZipArchiveEntry pointerEntry = archive.CreateEntry("LauncherPublish/current.txt", CompressionLevel.NoCompression);
         using (StreamWriter writer = new(pointerEntry.Open(), new System.Text.UTF8Encoding(false))) writer.Write(version + "\n");
-        foreach (string file in Directory.EnumerateFiles(source)) archive.CreateEntryFromFile(file, "LauncherPublish/versions/" + version + "/" + Path.GetFileName(file), CompressionLevel.Optimal);
+        foreach (string file in Directory.EnumerateFiles(source))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            ZipArchiveEntry entry = archive.CreateEntry("LauncherPublish/versions/" + version + "/" + Path.GetFileName(file), CompressionLevel.Optimal);
+            using Stream input = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.Read); using Stream output = entry.Open(); CopyWithCancellation(input, output, cancellationToken);
+        }
+    }
+
+    private static void CopyWithCancellation(Stream input, Stream output, CancellationToken cancellationToken)
+    {
+        byte[] buffer = new byte[1024 * 1024]; int read;
+        while ((read = input.Read(buffer, 0, buffer.Length)) > 0) { cancellationToken.ThrowIfCancellationRequested(); output.Write(buffer, 0, read); }
     }
 }

@@ -4,6 +4,7 @@ namespace LyoCrystal.LauncherEditor;
 
 internal sealed class NewProjectWizard : Form
 {
+    private readonly List<Font> _ownedFonts = new();
     private readonly string _projectId = "project-" + DateTime.Now.ToString("yyyyMMddHHmmss") + "-" + Guid.NewGuid().ToString("N")[..4];
     private readonly TextBox _name = new() { Text = "新传奇启动器" };
     private readonly TextBox _client = new() { ReadOnly = true };
@@ -40,7 +41,7 @@ internal sealed class NewProjectWizard : Form
         AddChoices(_serverList, EditorChineseText.Choices(Enum.GetValues<ServerListMode>(), EditorChineseText.ServerList));
         AddChoices(_delivery, EditorChineseText.Choices(Enum.GetValues<ClientDeliveryMode>(), EditorChineseText.Delivery));
 
-        var title = new Label { Text = "只填服务器地址，也能直接生成", Font = new Font(Font.FontFamily, 17, FontStyle.Bold), AutoSize = true, ForeColor = Color.FromArgb(34, 70, 125), Margin = new Padding(0, 0, 0, 8) };
+        var title = new Label { Text = "只填服务器地址，也能直接生成", Font = OwnFont(new Font(Font.FontFamily, 17, FontStyle.Bold)), AutoSize = true, ForeColor = Color.FromArgb(34, 70, 125), Margin = new Padding(0, 0, 0, 8) };
         var explanation = new Label { Text = "选择完整客户端后，配置器会自动读取已有设置。其余高级选项以后再改也可以。", AutoSize = true, ForeColor = Color.DimGray, Margin = new Padding(0, 0, 0, 18) };
         var choose = new Button { Text = "选择完整客户端目录", AutoSize = true };
         choose.Click += (_, _) => { using var folder = new FolderBrowserDialog { Description = "选择包含 Client.exe 的完整客户端目录", ShowNewFolderButton = false, UseDescriptionForTitle = true }; if (folder.ShowDialog(this) == DialogResult.OK) _client.Text = folder.SelectedPath; };
@@ -85,4 +86,6 @@ internal sealed class NewProjectWizard : Form
         layout.Controls.Add(editor, 1, row);
         if (extra is not null) { extra.Anchor = AnchorStyles.Left; layout.Controls.Add(extra, 2, row); }
     }
+    private Font OwnFont(Font font) { _ownedFonts.Add(font); return font; }
+    protected override void Dispose(bool disposing) { if (disposing) foreach (Font font in _ownedFonts) font.Dispose(); base.Dispose(disposing); }
 }

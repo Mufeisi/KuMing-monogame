@@ -14,6 +14,7 @@ internal sealed class MainForm : Form
     private readonly TabControl _tabs = new() { Dock = DockStyle.Fill };
     private readonly PictureBox _preview = new() { Dock = DockStyle.Fill, SizeMode = PictureBoxSizeMode.Zoom, BackColor = Color.FromArgb(28, 28, 32) };
     private readonly ToolStripStatusLabel _status = new() { Text = "就绪" };
+    private readonly ToolStrip _tools = new() { GripStyle = ToolStripGripStyle.Hidden };
     private EditorProject? _project;
     private BindingList<LauncherServer>? _servers;
     private BindingList<LauncherAnnouncement>? _announcements;
@@ -25,6 +26,7 @@ internal sealed class MainForm : Form
     private string _lastQuickOutput = string.Empty;
     private CancellationTokenSource? _quickGenerationCancellation;
     private bool _closeAfterQuickGeneration;
+    private bool _quickGenerationRunning;
 
     public MainForm(EditorProjectStore store)
     {
@@ -39,7 +41,7 @@ internal sealed class MainForm : Form
 
     private void BuildUi()
     {
-        var tools = new ToolStrip { GripStyle = ToolStripGripStyle.Hidden };
+        ToolStrip tools = _tools;
         AddTool(tools, "新建启动器", NewProject);
         AddTool(tools, "选择客户端资源", SelectQuickResource);
         AddTool(tools, "一键生成全部成品", GenerateAllQuick);
@@ -332,12 +334,15 @@ internal sealed class MainForm : Form
 
     private async void GenerateAllQuick()
     {
+        if (_quickGenerationRunning) { SetStatus("成品正在生成，请勿重复操作"); return; }
         if (_project is null) { MessageBox.Show(this, "请先新建启动器。", Text); return; }
         if (string.IsNullOrWhiteSpace(_project.ImportedClientDirectory) || !Directory.Exists(_project.ImportedClientDirectory))
         {
             MessageBox.Show(this, "请先完成第一步：选择完整客户端资源目录。", "还差一步", MessageBoxButtons.OK, MessageBoxIcon.Information); return;
         }
         string? staging = null;
+        string? stagingRoot = null;
+        CancellationTokenSource? generation = null;
         try
         {
             SyncLists();
@@ -349,26 +354,27 @@ internal sealed class MainForm : Form
             EditorPreflightValidator.ThrowIfInvalid(_project, projectRoot);
             _store.Save(_project);
             string safeName = SafeFileName(_project.Snapshot.ProjectName);
-            string outputRoot = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "传奇启动器成品");
+            string outputRoot = stagingRoot = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "传奇启动器成品");
             string output = Path.Combine(outputRoot, safeName + "-" + DateTime.Now.ToString("yyyyMMdd-HHmmss"));
             staging = Path.Combine(outputRoot, "." + safeName + "-生成中-" + Guid.NewGuid().ToString("N"));
             string projectId = _project.Snapshot.ProjectId;
             string? code = PlayerArtifactBuilder.RequiresMicroCredential(_project) ? GetOrCreateMicroCode() : null;
             string gatewayCode = GetOrCreateMicroCode();
             EditorProject buildProject = _store.Load(projectId);
-            _quickGenerationCancellation = new CancellationTokenSource();
-            CancellationToken cancellation = _quickGenerationCancellation.Token;
-            _quickPanel?.SetBusy(true); UseWaitCursor = true; SetStatus("正在后台生成全部成品，请稍候……");
+            generation = new CancellationTokenSource();
+            _quickGenerationCancellation = generation; _quickGenerationRunning = true;
+            CancellationToken cancellation = generation.Token;
+            _quickPanel?.SetBusy(true); _projects.Enabled = false; _tools.Enabled = false; UseWaitCursor = true; SetStatus("正在后台生成全部成品，请稍候……");
             await Task.Run(() =>
             {
                 cancellation.ThrowIfCancellationRequested();
                 Directory.CreateDirectory(staging);
                 string player = Path.Combine(staging, buildProject.Brand.OutputFileName);
-                PlayerArtifactBuilder.Create(buildProject, projectRoot, player, code);
+                PlayerArtifactBuilder.Create(buildProject, projectRoot, player, code, cancellation);
                 cancellation.ThrowIfCancellationRequested();
-                DeploymentPackageBuilder.CreateGatewayPackage(buildProject, Path.Combine(staging, "独立微端部署包.zip"), gatewayCode);
+                DeploymentPackageBuilder.CreateGatewayPackage(buildProject, Path.Combine(staging, "独立微端部署包.zip"), gatewayCode, cancellation);
                 cancellation.ThrowIfCancellationRequested();
-                if (buildProject.DeliveryMode == ClientDeliveryMode.FullClient) FullClientDistributionBuilder.Create(buildProject, player, Path.Combine(staging, "完整客户端包.zip"));
+                if (buildProject.DeliveryMode == ClientDeliveryMode.FullClient) FullClientDistributionBuilder.Create(buildProject, player, Path.Combine(staging, "完整客户端包.zip"), cancellation);
                 cancellation.ThrowIfCancellationRequested();
                 Directory.CreateDirectory(outputRoot);
                 Directory.Move(staging, output);
@@ -379,13 +385,16 @@ internal sealed class MainForm : Form
             try { Process.Start(new ProcessStartInfo("explorer.exe", $"\"{output}\"") { UseShellExecute = true }); }
             catch { /* 成品已经生成，无法自动打开目录不应把成功结果误报为失败。 */ }
         }
-        catch (OperationCanceledException) { SetStatus("已安全取消生成，没有留下半套成品"); }
+        catch (OperationCanceledException) { SetStatus("已取消生成，正在检查临时文件"); }
         catch (Exception ex) { ShowError(ex); }
         finally
         {
-            if (!string.IsNullOrWhiteSpace(staging)) try { if (Directory.Exists(staging)) Directory.Delete(staging, true); } catch { }
-            _quickGenerationCancellation?.Dispose(); _quickGenerationCancellation = null;
-            _quickPanel?.SetBusy(false); UseWaitCursor = false;
+            bool cleaned = string.IsNullOrWhiteSpace(staging) || !string.IsNullOrWhiteSpace(stagingRoot) && CleanupStaging(stagingRoot, staging);
+            if (generation is not null) generation.Dispose();
+            if (ReferenceEquals(_quickGenerationCancellation, generation)) _quickGenerationCancellation = null;
+            _quickGenerationRunning = false;
+            _quickPanel?.SetBusy(false); _projects.Enabled = true; _tools.Enabled = true; UseWaitCursor = false;
+            if (!cleaned) SetStatus("生成已停止，但临时目录未能自动清理：" + staging);
             if (_closeAfterQuickGeneration && !IsDisposed) { _closeAfterQuickGeneration = false; BeginInvoke(Close); }
         }
     }
@@ -592,6 +601,43 @@ internal sealed class MainForm : Form
     {
         string safe = string.Concat(value.Select(character => Path.GetInvalidFileNameChars().Contains(character) ? '_' : character)).Trim().TrimEnd('.', ' ');
         return string.IsNullOrWhiteSpace(safe) ? "传奇启动器" : safe;
+    }
+
+    private static bool CleanupStaging(string root, string staging)
+    {
+        try
+        {
+            string parent = Path.GetFullPath(root).TrimEnd(Path.DirectorySeparatorChar);
+            string full = Path.GetFullPath(staging).TrimEnd(Path.DirectorySeparatorChar);
+            if (!string.Equals(Path.GetDirectoryName(full), parent, StringComparison.OrdinalIgnoreCase) || !Path.GetFileName(full).StartsWith(".", StringComparison.Ordinal) || !Directory.Exists(full)) return !Directory.Exists(full);
+            RejectReparseChain(parent);
+            if ((File.GetAttributes(full) & FileAttributes.ReparsePoint) != 0) { Directory.Delete(full, false); return !Directory.Exists(full); }
+            var pending = new Stack<string>(); pending.Push(full);
+            while (pending.Count > 0)
+            {
+                string directory = pending.Pop();
+                foreach (string path in Directory.EnumerateFileSystemEntries(directory))
+                {
+                    FileAttributes attributes = File.GetAttributes(path);
+                    if ((attributes & FileAttributes.ReparsePoint) != 0) return false;
+                    if ((attributes & FileAttributes.Directory) != 0) pending.Push(path);
+                }
+            }
+            Directory.Delete(full, true);
+            return !Directory.Exists(full);
+        }
+        catch { return false; }
+    }
+
+    private static void RejectReparseChain(string path)
+    {
+        string full = Path.GetFullPath(path), current = Path.GetPathRoot(full) ?? string.Empty;
+        foreach (string part in full[current.Length..].Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar))
+        {
+            if (part.Length == 0) continue;
+            current = Path.Combine(current, part);
+            if ((File.Exists(current) || Directory.Exists(current)) && (File.GetAttributes(current) & FileAttributes.ReparsePoint) != 0) throw new InvalidDataException("成品目录不得经过重解析点");
+        }
     }
 
     protected override void Dispose(bool disposing)

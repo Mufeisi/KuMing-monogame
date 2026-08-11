@@ -8,6 +8,7 @@ internal sealed class QuickProductionPanel : UserControl
     private readonly Label _resource = new() { AutoEllipsis = true, Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleLeft };
     private readonly Label _result = new() { AutoEllipsis = true, Dock = DockStyle.Fill, ForeColor = Color.FromArgb(20, 105, 45), TextAlign = ContentAlignment.MiddleLeft };
     private Button? _generate;
+    private readonly List<Font> _ownedFonts = new();
 
     public QuickProductionPanel(EditorProject project, Action chooseResource, Action chooseBackground, Action chooseButton, Action generateAll, Action showAdvanced)
     {
@@ -16,7 +17,7 @@ internal sealed class QuickProductionPanel : UserControl
         BackColor = Color.White;
         AutoScroll = true;
 
-        var title = new Label { Text = "两步制作启动器", Font = new Font(Font.FontFamily, 20, FontStyle.Bold), AutoSize = true, ForeColor = Color.FromArgb(34, 70, 125) };
+        var title = new Label { Text = "两步制作启动器", Font = OwnFont(new Font(Font.FontFamily, 20, FontStyle.Bold)), AutoSize = true, ForeColor = Color.FromArgb(34, 70, 125) };
         var subtitle = new Label { Text = "第一步选择完整客户端资源，第二步一键生成。通常只需确认服务器地址和端口。", AutoSize = true, ForeColor = Color.DimGray, Margin = new Padding(0, 6, 0, 18) };
         var flow = new FlowLayoutPanel { Dock = DockStyle.Fill, AutoScroll = true, FlowDirection = FlowDirection.TopDown, WrapContents = false, Padding = new Padding(28) };
         flow.Controls.Add(title); flow.Controls.Add(subtitle);
@@ -77,7 +78,7 @@ internal sealed class QuickProductionPanel : UserControl
     private Control CreateGenerateStep(Action generateAll, Action showAdvanced)
     {
         var generate = _generate = BigButton("② 一键生成全部成品", generateAll, Color.FromArgb(30, 145, 70));
-        generate.Width = 260; generate.Height = 54; generate.Font = new Font(generate.Font, FontStyle.Bold);
+        generate.Width = 260; generate.Height = 54; generate.Font = OwnFont(new Font(generate.Font, FontStyle.Bold));
         var advanced = BigButton("显示高级设置", showAdvanced, Color.FromArgb(110, 110, 110));
         var actions = new FlowLayoutPanel { AutoSize = true, FlowDirection = FlowDirection.LeftToRight };
         actions.Controls.AddRange(new Control[] { generate, advanced });
@@ -123,4 +124,6 @@ internal sealed class QuickProductionPanel : UserControl
         int width = Math.Max(700, flow.ClientSize.Width - flow.Padding.Horizontal - SystemInformation.VerticalScrollBarWidth - 8);
         foreach (Control control in flow.Controls) if (control is GroupBox) control.Width = width;
     }
+    private Font OwnFont(Font font) { _ownedFonts.Add(font); return font; }
+    protected override void Dispose(bool disposing) { if (disposing) foreach (Font font in _ownedFonts) font.Dispose(); base.Dispose(disposing); }
 }
