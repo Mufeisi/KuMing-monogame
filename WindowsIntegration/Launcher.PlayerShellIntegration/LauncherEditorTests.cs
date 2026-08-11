@@ -15,6 +15,25 @@ namespace Launcher.PlayerShellIntegration;
 public sealed class LauncherEditorTests
 {
     [Fact]
+    public void RepositorySampleProjectCanBeCopiedAndOpened()
+    {
+        using var scope = new EditorTempScope();
+        string repository = FindRepositoryRoot(AppContext.BaseDirectory);
+        string source = Path.Combine(repository, "Docs", "Examples", "launcher-editor-sample", "project.json");
+        string projectRoot = Path.Combine(scope.Dir("sample-workspace"), "launcher-editor-sample");
+        Directory.CreateDirectory(projectRoot);
+        File.Copy(source, Path.Combine(projectRoot, "project.json"));
+
+        var store = new EditorProjectStore(Path.GetDirectoryName(projectRoot)!);
+        EditorProject project = store.Load("launcher-editor-sample");
+
+        Assert.Equal("传奇启动器示例", project.Snapshot.ProjectName);
+        Assert.Equal(ServerListMode.Sidebar, project.Snapshot.Theme.ServerListMode);
+        Assert.Equal(2, project.Snapshot.Servers.Count);
+        Assert.True(ProjectReleaseKeyStore.HasPrivateKeys(project, projectRoot));
+    }
+
+    [Fact]
     public void OfflineProjectCanBeCreatedSavedLoadedAndRendered()
     {
         using var scope = new EditorTempScope();
@@ -332,6 +351,17 @@ public sealed class LauncherEditorTests
     }
 
     private static string Hash(string path) => Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(path)));
+
+    private static string FindRepositoryRoot(string start)
+    {
+        DirectoryInfo? directory = new(start);
+        while (directory is not null)
+        {
+            if (File.Exists(Path.Combine(directory.FullName, "Legend of Mir.sln"))) return directory.FullName;
+            directory = directory.Parent;
+        }
+        throw new DirectoryNotFoundException("未找到仓库根目录");
+    }
 
     private static void CreateJunction(string link, string target)
     {
