@@ -4,6 +4,10 @@ using System.Drawing;
 using System.Diagnostics;
 using Launcher.ThemeRuntime;
 using LyoCrystal.LauncherEditor;
+using Shared.Security;
+using LyoCrystal.MicroGateway;
+using System.Net;
+using System.Net.Sockets;
 using Xunit;
 
 namespace Launcher.PlayerShellIntegration;
@@ -191,6 +195,142 @@ public sealed class LauncherEditorTests
         Assert.True(rendered.Width > 700);
     }
 
+    [Fact]
+    public void ProjectKeysAreUniqueRecoverableAndNeverStoredInProjectJson()
+    {
+        using var scope = new EditorTempScope();
+        var store = new EditorProjectStore(scope.Dir("key-workspace"));
+        EditorProject first = store.Create("key-first", "密钥项目一", LauncherTemplateKind.Classic);
+        EditorProject second = store.Create("key-second", "密钥项目二", LauncherTemplateKind.Classic);
+        Assert.NotEqual(first.Release.CurrentKeyId, second.Release.CurrentKeyId);
+        Assert.NotEqual(first.Release.CurrentPublicKey, first.Release.NextPublicKey);
+        string firstRoot = store.GetProjectDirectory(first.Snapshot.ProjectId);
+        string projectJson = File.ReadAllText(Path.Combine(firstRoot, "project.json"));
+        Assert.DoesNotContain("PrivateKey", projectJson, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("dpapi", projectJson, StringComparison.OrdinalIgnoreCase);
+        string recovery = Path.Combine(scope.Root, "key-first.recovery");
+        ProjectReleaseKeyStore.ExportRecovery(first, firstRoot, "Strong-Recovery-Password-2026", recovery);
+        string secrets = Path.Combine(firstRoot, ".secrets"), held = Path.Combine(scope.Root, "held-secrets");
+        Directory.Move(secrets, held);
+        Assert.False(ProjectReleaseKeyStore.HasPrivateKeys(first, firstRoot));
+        Assert.Throws<InvalidDataException>(() => ProjectReleaseKeyStore.ImportRecovery(first, firstRoot, "Wrong-Password-2026", recovery));
+        ProjectReleaseKeyStore.ImportRecovery(first, firstRoot, "Strong-Recovery-Password-2026", recovery);
+        Assert.True(ProjectReleaseKeyStore.HasPrivateKeys(first, firstRoot));
+        byte[] privateKey = ProjectReleaseKeyStore.LoadCurrentPrivateKey(first, firstRoot);
+        try
+        {
+            using ECDsa signer = ECDsa.Create(); signer.ImportPkcs8PrivateKey(privateKey, out int read);
+            Assert.Equal(privateKey.Length, read);
+            Assert.Equal(first.Release.CurrentPublicKey, Convert.ToBase64String(signer.ExportSubjectPublicKeyInfo()));
+        }
+        finally { CryptographicOperations.ZeroMemory(privateKey); }
+    }
+
+    [Fact]
+    public void ImmutablePublishRecoversSequenceAndRollbackCreatesHigherSignedVersion()
+    {
+        using var scope = new EditorTempScope();
+        var store = new EditorProjectStore(scope.Dir("release-workspace"));
+        EditorProject project = store.Create("release-project", "发布项目", LauncherTemplateKind.Compact);
+        string projectRoot = store.GetProjectDirectory(project.Snapshot.ProjectId);
+        string publishRoot = scope.Dir("publish-root");
+        ProjectReleaseResult first = ProjectReleasePublisher.Publish(project, projectRoot, publishRoot, "首发");
+        Assert.Equal(1, first.Sequence);
+        project.Release.NextSequence = 1; // 模拟指针已切换、项目文件尚未保存时强停。
+        project.Snapshot.ProjectName = "第二版";
+        ProjectReleaseResult second = ProjectReleasePublisher.Publish(project, projectRoot, publishRoot, "第二版");
+        Assert.Equal(2, second.Sequence);
+        string historicalSnapshot = Path.Combine(first.VersionDirectory, "launcher-snapshot.json");
+        byte[] originalSnapshot = File.ReadAllBytes(historicalSnapshot);
+        File.AppendAllText(historicalSnapshot, "tampered");
+        Assert.ThrowsAny<Exception>(() => ProjectReleasePublisher.Rollback(project, projectRoot, publishRoot, first.VersionName, "拒绝被篡改历史"));
+        File.WriteAllBytes(historicalSnapshot, originalSnapshot);
+        ProjectReleaseResult rollback = ProjectReleasePublisher.Rollback(project, projectRoot, publishRoot, first.VersionName, "回滚到首发内容");
+        Assert.Equal(3, rollback.Sequence);
+        Assert.Equal(first.Sequence, project.Release.History[^1].RolledBackFromSequence);
+        Assert.Equal(rollback.VersionName, File.ReadAllText(Path.Combine(publishRoot, "current.txt")).Trim());
+        string manifestJson = File.ReadAllText(Path.Combine(rollback.VersionDirectory, "bootstrap-manifest.json"));
+        var keys = new Dictionary<string, BootstrapManifestTrustedKey>(StringComparer.Ordinal)
+        {
+            [project.Release.CurrentKeyId] = new() { KeyId = project.Release.CurrentKeyId, SubjectPublicKeyInfo = project.Release.CurrentPublicKey, NotBeforeSequence = 1 },
+            [project.Release.NextKeyId] = new() { KeyId = project.Release.NextKeyId, SubjectPublicKeyInfo = project.Release.NextPublicKey, NotBeforeSequence = 1 },
+        };
+        BootstrapManifestVerificationResult verified = BootstrapManifestSignaturePolicy.Verify(manifestJson, keys, new Version(1, 0, 0));
+        Assert.True(verified.IsValid, verified.Error);
+        string offline = Path.Combine(scope.Root, "offline.zip");
+        ProjectReleasePublisher.CreateOfflineDeploymentPackage(publishRoot, offline);
+        using ZipArchive archive = ZipFile.OpenRead(offline);
+        Assert.NotNull(archive.GetEntry("current.txt"));
+        Assert.Contains(archive.Entries, entry => entry.FullName.EndsWith("/bootstrap-manifest.json", StringComparison.Ordinal));
+        string importedRoot = Path.Combine(scope.Root, "offline-imported");
+        ProjectReleaseResult imported = ProjectReleasePublisher.ImportOfflineDeploymentPackage(project, offline, importedRoot);
+        Assert.Equal(rollback.Sequence, imported.Sequence);
+        Assert.True(File.Exists(Path.Combine(imported.VersionDirectory, "launcher-snapshot.json")));
+    }
+
+    [Fact]
+    public void TamperedKeyIdCannotEscapeProjectSecretsDirectory()
+    {
+        using var scope = new EditorTempScope();
+        var store = new EditorProjectStore(scope.Dir("key-path-workspace"));
+        EditorProject project = store.Create("key-path", "密钥路径", LauncherTemplateKind.Classic);
+        project.Release.CurrentKeyId = "..\\outside-key";
+        Assert.Throws<InvalidDataException>(() => ProjectReleaseKeyStore.LoadCurrentPrivateKey(project, store.GetProjectDirectory(project.Snapshot.ProjectId)));
+        Assert.False(File.Exists(Path.Combine(scope.Root, "outside-key.dpapi")));
+    }
+
+    [Fact]
+    public void SignedSnapshotChainCarriesTrustAcrossTwoKeyRotations()
+    {
+        using var scope = new EditorTempScope();
+        var store = new EditorProjectStore(scope.Dir("rotation-workspace"));
+        EditorProject project = store.Create("rotation-project", "轮换项目", LauncherTemplateKind.Classic);
+        string projectRoot = store.GetProjectDirectory(project.Snapshot.ProjectId), publishRoot = scope.Dir("rotation-publish"), chainRoot = scope.Dir("rotation-chain");
+        var anchors = new Dictionary<string, BootstrapManifestTrustedKey>(StringComparer.Ordinal)
+        {
+            [project.Release.CurrentKeyId] = new() { KeyId = project.Release.CurrentKeyId, SubjectPublicKeyInfo = project.Release.CurrentPublicKey, NotBeforeSequence = 1 },
+            [project.Release.NextKeyId] = new() { KeyId = project.Release.NextKeyId, SubjectPublicKeyInfo = project.Release.NextPublicKey, NotBeforeSequence = 1 },
+        };
+        string originalCurrentKey = project.Release.CurrentKeyId;
+        ProjectReleaseResult first = ProjectReleasePublisher.Publish(project, projectRoot, publishRoot, "轮换前");
+        BootstrapTrustChainStore.Record(first.VersionDirectory, chainRoot, anchors, new Version(1, 0, 0));
+        ProjectReleaseKeyStore.Rotate(project, projectRoot);
+        ProjectReleaseResult second = ProjectReleasePublisher.Publish(project, projectRoot, publishRoot, "第一次轮换");
+        BootstrapTrustChainStore.Record(second.VersionDirectory, chainRoot, anchors, new Version(1, 0, 0));
+        IReadOnlyDictionary<string, BootstrapManifestTrustedKey> afterFirst = BootstrapTrustChainStore.Resolve(chainRoot, anchors, new Version(1, 0, 0));
+        Assert.Contains(project.Release.NextKeyId, afterFirst.Keys);
+        Assert.Equal(1, afterFirst[originalCurrentKey].NotAfterSequence);
+        ProjectReleaseKeyStore.Rotate(project, projectRoot);
+        ProjectReleaseResult third = ProjectReleasePublisher.Publish(project, projectRoot, publishRoot, "第二次轮换");
+        string manifest = File.ReadAllText(Path.Combine(third.VersionDirectory, "bootstrap-manifest.json"));
+        Assert.True(BootstrapManifestSignaturePolicy.Verify(manifest, afterFirst, new Version(1, 0, 0)).IsValid);
+    }
+
+    [Fact]
+    public async Task SignedReleaseLoadsFromRealStaticHttpAndMicroLauncherEndpoint()
+    {
+        using var scope = new EditorTempScope();
+        var store = new EditorProjectStore(scope.Dir("http-source-workspace"));
+        EditorProject project = store.Create("http-source-project", "HTTP 发布源", LauncherTemplateKind.Compact);
+        string projectRoot = store.GetProjectDirectory(project.Snapshot.ProjectId), publishRoot = scope.Dir("http-publish");
+        _ = ProjectReleasePublisher.Publish(project, projectRoot, publishRoot, "真实 HTTP 源");
+        var keys = new Dictionary<string, BootstrapManifestTrustedKey>(StringComparer.Ordinal)
+        {
+            [project.Release.CurrentKeyId] = new() { KeyId = project.Release.CurrentKeyId, SubjectPublicKeyInfo = project.Release.CurrentPublicKey, NotBeforeSequence = project.Release.CurrentKeyNotBeforeSequence },
+            [project.Release.NextKeyId] = new() { KeyId = project.Release.NextKeyId, SubjectPublicKeyInfo = project.Release.NextPublicKey, NotBeforeSequence = project.Release.NextKeyNotBeforeSequence },
+        };
+        int staticPort = FreePort();
+        await using (var staticHost = new StaticFileHost(publishRoot, staticPort))
+        {
+            await staticHost.StartAsync();
+            Assert.True(await LauncherReleaseUpdater.TryRefreshAsync($"http://127.0.0.1:{staticPort}/", scope.Dir("static-accepted"), scope.Dir("static-lkg"), Path.Combine(scope.Dir("static-state"), "state.json"), CancellationToken.None, trustedKeys: keys));
+        }
+        int microPort = FreePort();
+        await using var micro = new MicroHttpListenerHost();
+        await micro.StartAsync($"http://127.0.0.1:{microPort}/", new MicroGatewayOptions(scope.Dir("micro-resources"), "reader", "code", publishRoot));
+        Assert.True(await LauncherReleaseUpdater.TryRefreshAsync($"http://127.0.0.1:{microPort}/launcher/", scope.Dir("micro-accepted"), scope.Dir("micro-lkg"), Path.Combine(scope.Dir("micro-state"), "state.json"), CancellationToken.None, trustedKeys: keys));
+    }
+
     private static string Hash(string path) => Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(path)));
 
     private static void CreateJunction(string link, string target)
@@ -203,6 +343,31 @@ public sealed class LauncherEditorTests
         }) ?? throw new InvalidOperationException("无法启动 junction 夹具");
         process.WaitForExit();
         if (process.ExitCode != 0) throw new InvalidOperationException("无法创建 junction 夹具");
+    }
+
+    private static int FreePort() { var listener = new TcpListener(IPAddress.Loopback, 0); listener.Start(); int port = ((IPEndPoint)listener.LocalEndpoint).Port; listener.Stop(); return port; }
+
+    private sealed class StaticFileHost : IAsyncDisposable
+    {
+        private readonly string _root; private readonly HttpListener _listener = new(); private Task? _loop;
+        public StaticFileHost(string root, int port) { _root = Path.GetFullPath(root); _listener.Prefixes.Add($"http://127.0.0.1:{port}/"); }
+        public Task StartAsync() { _listener.Start(); _loop = Task.Run(LoopAsync); return Task.CompletedTask; }
+        private async Task LoopAsync()
+        {
+            while (_listener.IsListening)
+            {
+                HttpListenerContext context; try { context = await _listener.GetContextAsync(); } catch { break; }
+                try
+                {
+                    string relative = Uri.UnescapeDataString(context.Request.Url!.AbsolutePath.TrimStart('/')).Replace('/', Path.DirectorySeparatorChar);
+                    string path = Path.GetFullPath(Path.Combine(_root, relative));
+                    if (!path.StartsWith(_root + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase) || !File.Exists(path)) { context.Response.StatusCode = 404; }
+                    else { byte[] bytes = await File.ReadAllBytesAsync(path); context.Response.ContentLength64 = bytes.Length; await context.Response.OutputStream.WriteAsync(bytes); }
+                }
+                finally { context.Response.Close(); }
+            }
+        }
+        public async ValueTask DisposeAsync() { _listener.Close(); if (_loop is not null) await _loop; }
     }
 
     private sealed class EditorTempScope : IDisposable

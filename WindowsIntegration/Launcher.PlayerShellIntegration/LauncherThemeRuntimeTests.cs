@@ -6,6 +6,7 @@ using System.Net;
 using System.Net.Http;
 using System.Security.Cryptography;
 using Launcher.ThemeRuntime;
+using Launcher.PlayerShell;
 using Shared.Security;
 using Xunit;
 
@@ -391,6 +392,78 @@ public sealed class LauncherThemeRuntimeTests
         Assert.False(await LauncherReleaseUpdater.TryRefreshAsync("http://launcher.test/", accepted, lkg, state, CancellationToken.None, brokenClient, keys, new Version(1, 0, 0)));
         Assert.Equal(acceptedRoot, LauncherReleaseUpdater.ResolveCurrentRoot(accepted, state, keys, new Version(1, 0, 0)));
         Assert.Equal(lkgRoot, LauncherReleaseUpdater.ResolveCurrentRoot(lkg, state, keys, new Version(1, 0, 0)));
+    }
+
+    [Fact]
+    public async Task SignedPlayerEntryUpdateStagesSameDirectoryAndBindsReplacementJournal()
+    {
+        using var scope = new TempScope();
+        using ECDsa signer = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+        const string keyId = "player-update-key";
+        var keys = new Dictionary<string, BootstrapManifestTrustedKey>
+        {
+            [keyId] = new() { KeyId = keyId, SubjectPublicKeyInfo = Convert.ToBase64String(signer.ExportSubjectPublicKeyInfo()), NotBeforeSequence = 1 },
+        };
+        string target = Path.Combine(scope.Dir("player-target"), "玩家入口.exe");
+        File.Copy(Environment.ProcessPath!, target);
+        byte[] entryBytes = "MZ-signed-player-entry-v999"u8.ToArray();
+        var descriptor = new PlayerUpdateDescriptor { Version = "999.0.0.0", Required = true, PackageName = "player-entry.exe" };
+        byte[] descriptorBytes = JsonSerializer.SerializeToUtf8Bytes(descriptor, LauncherSnapshotJsonContext.Default.PlayerUpdateDescriptor);
+        var manifest = new BootstrapSignedManifest
+        {
+            Format = BootstrapManifestSignaturePolicy.Format,
+            Algorithm = BootstrapManifestSignaturePolicy.Algorithm,
+            KeyId = keyId,
+            Sequence = 9,
+            GeneratedAtUtc = DateTime.UtcNow.ToString("yyyy-MM-dd'T'HH:mm:ss'Z'"),
+            ResourceVersion = "player-r9",
+            MinimumClientVersion = "1.0.0",
+            Packages = new List<BootstrapSignedPackage> { Package("player-update.json", descriptorBytes), Package("player-entry.exe", entryBytes) },
+        };
+        manifest.Signature = Convert.ToBase64String(signer.SignData(BootstrapManifestSignaturePolicy.BuildCanonicalPayload(manifest), HashAlgorithmName.SHA256, DSASignatureFormat.IeeeP1363FixedFieldConcatenation));
+        byte[] manifestBytes = JsonSerializer.SerializeToUtf8Bytes(manifest);
+        var files = new Dictionary<string, byte[]>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["current.txt"] = "r9-test\n"u8.ToArray(),
+            ["bootstrap-manifest.json"] = manifestBytes,
+            ["player-update.json"] = descriptorBytes,
+            ["player-entry.exe"] = entryBytes,
+        };
+        using var client = new HttpClient(new DictionaryHttpHandler(files));
+        string state = Path.Combine(scope.Dir("player-state"), "accepted.json");
+        PlayerEntryUpdatePlan plan = Assert.IsType<PlayerEntryUpdatePlan>(await PlayerEntryUpdateService.InspectAsync("http://player.test/", target, state, keys, CancellationToken.None, client));
+        Assert.True(plan.Descriptor.Required);
+        string barrier = Path.Combine(scope.Dir("player-barrier"), "required.json");
+        PlayerEntryUpdateService.PersistRequiredBarrier(plan, barrier);
+        Assert.True(PlayerEntryUpdateService.IsRequiredBarrierActive(barrier, target, keys, out string barrierMessage, out Version? barrierVersion), barrierMessage);
+        Assert.Equal(new Version(999, 0, 0, 0), barrierVersion);
+        await PlayerEntryUpdateService.StageAsync(plan, target, state, keys, CancellationToken.None, client);
+        Assert.Equal(entryBytes, File.ReadAllBytes(target + ".new"));
+        string journal = Path.Combine(Path.GetDirectoryName(target)!, "player-replacement.json");
+        Assert.True(PlayerReplacementCoordinator.ValidatePending(journal, target, keys, BootstrapManifestTrustConfiguration.CurrentClientCompatibilityVersion, state));
+
+        files["player-update.json"] = "tampered"u8.ToArray();
+        await Assert.ThrowsAsync<InvalidDataException>(() => PlayerEntryUpdateService.InspectAsync("http://player.test/", target, state, keys, CancellationToken.None, client));
+        files["player-update.json"] = descriptorBytes;
+        manifest.Sequence = 8;
+        manifest.ResourceVersion = "player-r8";
+        manifest.Signature = Convert.ToBase64String(signer.SignData(BootstrapManifestSignaturePolicy.BuildCanonicalPayload(manifest), HashAlgorithmName.SHA256, DSASignatureFormat.IeeeP1363FixedFieldConcatenation));
+        files["bootstrap-manifest.json"] = JsonSerializer.SerializeToUtf8Bytes(manifest);
+        await Assert.ThrowsAsync<InvalidDataException>(() => PlayerEntryUpdateService.InspectAsync("http://player.test/", target, state, keys, CancellationToken.None, client));
+    }
+
+    [Fact]
+    public void RunningGameSessionMarkerDefersPlayerEntryReplacement()
+    {
+        using var scope = new TempScope();
+        string player = Path.Combine(scope.Dir("running-game"), "玩家入口.exe");
+        File.WriteAllText(player, "placeholder");
+        using Process current = Process.GetCurrentProcess();
+        PlayerGameSessionMarker.Record(player, current);
+        using Process second = Process.Start(new ProcessStartInfo("cmd.exe", "/d /c ping 127.0.0.1 -n 30 >nul") { UseShellExecute = false, CreateNoWindow = true })!;
+        PlayerGameSessionMarker.Record(player, second);
+        second.Kill(entireProcessTree: true); second.WaitForExit();
+        Assert.True(PlayerGameSessionMarker.IsGameRunning(player));
     }
 
     private static BootstrapSignedPackage Package(string name, byte[] bytes) => new() { Name = name, Size = bytes.LongLength, Sha256 = Sha256(bytes) };

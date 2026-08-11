@@ -17,22 +17,36 @@ internal static class Program
 
     private static int RunSmoke(string outputDirectory)
     {
+        string output = Path.GetFullPath(outputDirectory);
         try
         {
-            string output = Path.GetFullPath(outputDirectory);
             Directory.CreateDirectory(output);
             var store = new EditorProjectStore(Path.Combine(output, "workspace"));
             EditorProject project = store.ListProjectIds().Contains("smoke-project", StringComparer.OrdinalIgnoreCase)
                 ? store.Load("smoke-project")
                 : store.Create("smoke-project", "GM 离线编辑器验收", LauncherTemplateKind.Widescreen);
             project.Snapshot.Theme.ServerListMode = ServerListMode.Sidebar;
+            project.Snapshot.RemoteReleaseBaseUrl = "http://127.0.0.1:8080/launcher/";
             project.Snapshot.Servers[0].Name = "编辑器验收一区";
             project.Snapshot.Announcements = new List<LauncherAnnouncement> { new() { Title = "离线公告", Summary = "断网状态也可以保存、预览和生成部署包。", Date = DateTime.Today.ToString("yyyy-MM-dd") } };
             store.Save(project);
             using Bitmap preview = LauncherRuntimeHost.RenderTemplateForEvidence(project.Snapshot, store.GetProjectDirectory(project.Snapshot.ProjectId), 1f);
             preview.Save(Path.Combine(output, "editor-preview.png"), ImageFormat.Png);
+            string player = Path.Combine(output, "smoke-project-玩家入口.exe");
+            PlayerArtifactBuilder.Create(project, store.GetProjectDirectory(project.Snapshot.ProjectId), player, "smoke-code");
+            project.Release.PlayerUpdateMode = PlayerUpdateMode.Normal;
+            project.Release.PlayerUpdateFile = player;
+            project.Release.PlayerUpdateVersion = project.Brand.FileVersion;
+            string publish = Path.Combine(output, "signed-publish");
+            ProjectReleaseResult first = ProjectReleasePublisher.Publish(project, store.GetProjectDirectory(project.Snapshot.ProjectId), publish, "离线冒烟首发");
+            project.Snapshot.Announcements[0].Summary = "第二个不可变版本，用于验证更高序列回滚。";
+            ProjectReleasePublisher.Publish(project, store.GetProjectDirectory(project.Snapshot.ProjectId), publish, "离线冒烟第二版");
+            ProjectReleasePublisher.Rollback(project, store.GetProjectDirectory(project.Snapshot.ProjectId), publish, first.VersionName, "离线冒烟回滚");
+            project.Release.LastPublishRoot = publish;
+            store.Save(project);
+            ProjectReleasePublisher.CreateOfflineDeploymentPackage(publish, Path.Combine(output, "smoke-project-离线发布.zip"));
+            ProjectReleaseKeyStore.ExportRecovery(project, store.GetProjectDirectory(project.Snapshot.ProjectId), "Smoke-Recovery-Password-2026", Path.Combine(output, "smoke-project-密钥恢复包.lyorecovery"));
             DeploymentPackageBuilder.CreateGatewayPackage(project, Path.Combine(output, "smoke-project-微端网关.zip"), "smoke-code");
-            PlayerArtifactBuilder.Create(project, store.GetProjectDirectory(project.Snapshot.ProjectId), Path.Combine(output, "smoke-project-玩家入口.exe"), "smoke-code");
             using (var form = new MainForm(store) { WindowState = FormWindowState.Normal, Size = new Size(1400, 850), StartPosition = FormStartPosition.Manual, Location = new Point(-32000, -32000) })
             {
                 form.Show(); Application.DoEvents();
@@ -41,8 +55,12 @@ internal static class Program
                 screenshot.Save(Path.Combine(output, "editor-ui.png"), ImageFormat.Png);
                 form.Hide();
             }
-            return File.Exists(Path.Combine(output, "editor-preview.png")) && File.Exists(Path.Combine(output, "editor-ui.png")) && File.Exists(Path.Combine(output, "smoke-project-微端网关.zip")) && File.Exists(Path.Combine(output, "smoke-project-玩家入口.exe")) ? 0 : 2;
+            return File.Exists(Path.Combine(output, "editor-preview.png")) && File.Exists(Path.Combine(output, "editor-ui.png")) && File.Exists(Path.Combine(output, "smoke-project-微端网关.zip")) && File.Exists(player) && File.Exists(Path.Combine(output, "smoke-project-离线发布.zip")) && File.Exists(Path.Combine(output, "smoke-project-密钥恢复包.lyorecovery")) ? 0 : 2;
         }
-        catch { return 1; }
+        catch (Exception ex)
+        {
+            try { Directory.CreateDirectory(output); File.WriteAllText(Path.Combine(output, "smoke-error.txt"), ex.ToString()); } catch { }
+            return 1;
+        }
     }
 }

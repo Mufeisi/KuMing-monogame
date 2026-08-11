@@ -57,9 +57,21 @@ public static class DeploymentPackageBuilder
                     ZipArchiveEntry secret = archive.CreateEntry("gateway-secret.import", CompressionLevel.NoCompression);
                     using Stream secretOutput = secret.Open(); secretOutput.Write(MicroCredentialEnvelope.Create(project.Snapshot.ProjectId, microCode));
                 }
+                AddLauncherPublish(archive, project, project.Release.LastPublishRoot);
             }
             File.Move(temporary, target, overwrite: true);
         }
         finally { if (File.Exists(temporary)) File.Delete(temporary); }
+    }
+
+    private static void AddLauncherPublish(ZipArchive archive, EditorProject project, string publishRoot)
+    {
+        if (string.IsNullOrWhiteSpace(publishRoot)) return;
+        string root = Path.GetFullPath(publishRoot), pointer = Path.Combine(root, "current.txt");
+        string source = ProjectReleasePublisher.ValidateCurrentPublishedVersion(project, root);
+        string version = File.ReadAllText(pointer).Trim();
+        ZipArchiveEntry pointerEntry = archive.CreateEntry("LauncherPublish/current.txt", CompressionLevel.NoCompression);
+        using (StreamWriter writer = new(pointerEntry.Open(), new System.Text.UTF8Encoding(false))) writer.Write(version + "\n");
+        foreach (string file in Directory.EnumerateFiles(source)) archive.CreateEntryFromFile(file, "LauncherPublish/versions/" + version + "/" + Path.GetFileName(file), CompressionLevel.Optimal);
     }
 }

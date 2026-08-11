@@ -40,6 +40,7 @@ public sealed class EditorProjectStore
         project.Brand.ProductName = project.Snapshot.ProjectName;
         project.Brand.WindowTitle = project.Snapshot.ProjectName;
         project.Brand.TaskbarName = project.Snapshot.ProjectName;
+        ProjectReleaseKeyStore.EnsureProvisioned(project, directory);
         Save(project);
         return project;
     }
@@ -52,7 +53,10 @@ public sealed class EditorProjectStore
         if (File.Exists(file) && (File.GetAttributes(file) & FileAttributes.ReparsePoint) != 0) throw new InvalidDataException("项目文件不得为重解析点");
         if (!File.Exists(file) || new FileInfo(file).Length > 2 * 1024 * 1024) throw new InvalidDataException("项目文件不存在或超过大小限制");
         EditorProject project = JsonSerializer.Deserialize(File.ReadAllBytes(file), EditorProjectJsonContext.Default.EditorProject) ?? throw new InvalidDataException("项目文件为空");
+        bool needsKeyMigration = string.IsNullOrWhiteSpace(project.Release.CurrentKeyId);
+        ProjectReleaseKeyStore.EnsureProvisioned(project, directory);
         Validate(project);
+        if (needsKeyMigration) Save(project);
         return project;
     }
 

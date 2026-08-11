@@ -1,5 +1,7 @@
 using System.Net;
+using System.Security.Cryptography;
 using System.Text.RegularExpressions;
+using Shared.Security;
 
 namespace Launcher.ThemeRuntime;
 
@@ -49,6 +51,14 @@ public static class LauncherSnapshotValidator
             if (item is null || string.IsNullOrWhiteSpace(item.Title) || item.Title.Length > 120 || item.Summary.Length > 1000) throw new InvalidDataException("公告内容无效");
             ValidateAssetPath(item.Image);
             if (!string.IsNullOrEmpty(item.ExternalUrl) && (!Uri.TryCreate(item.ExternalUrl, UriKind.Absolute, out Uri? uri) || uri.Scheme is not ("http" or "https"))) throw new InvalidDataException("公告链接无效");
+        }
+        if (snapshot.TrustedReleaseKeys is null || snapshot.TrustedReleaseKeys.Count > 4) throw new InvalidDataException("启动器发布可信密钥数量无效");
+        var releaseKeyIds = new HashSet<string>(StringComparer.Ordinal);
+        foreach (BootstrapManifestTrustedKey key in snapshot.TrustedReleaseKeys)
+        {
+            if (key is null || string.IsNullOrWhiteSpace(key.KeyId) || !releaseKeyIds.Add(key.KeyId) || key.NotBeforeSequence < 1 || key.NotAfterSequence > 0 && key.NotAfterSequence < key.NotBeforeSequence) throw new InvalidDataException("启动器发布可信密钥无效");
+            try { using ECDsa ecdsa = ECDsa.Create(); byte[] spki = Convert.FromBase64String(key.SubjectPublicKeyInfo); ecdsa.ImportSubjectPublicKeyInfo(spki, out int read); if (read != spki.Length || ecdsa.KeySize != 256) throw new InvalidDataException("启动器发布公钥不是 P-256"); }
+            catch (Exception ex) when (ex is FormatException or CryptographicException) { throw new InvalidDataException("启动器发布公钥无效", ex); }
         }
         if (snapshot.Defaults.Resolution is not (1024 or 1280 or 1366 or 1920) || snapshot.Defaults.MaxFps is < 30 or > 240 ||
             snapshot.Defaults.Volume is < 0 or > 100 || snapshot.Defaults.MusicVolume is < 0 or > 100 || snapshot.Defaults.MicroCacheLimitMb is < 256 or > 16384)

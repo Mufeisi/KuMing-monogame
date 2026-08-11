@@ -19,6 +19,7 @@
     <ProjectReference Include="..\..\Launcher.Editor\Launcher.Editor.csproj" />
     <ProjectReference Include="..\..\Launcher.PlayerShell.Core\Launcher.PlayerShell.Core.csproj" />
     <ProjectReference Include="..\..\Launcher.ThemeRuntime\Launcher.ThemeRuntime.csproj" />
+    <ProjectReference Include="..\..\MicroGateway.Core\MicroGateway.Core.csproj" />
     <ProjectReference Include="..\..\Shared\Shared.csproj" />
   </ItemGroup>
   <ItemGroup>

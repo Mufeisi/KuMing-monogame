@@ -152,7 +152,13 @@ namespace Client
                 string selectedClient = Path.Combine(selectedDirectory, "Client.exe");
                 var start = new ProcessStartInfo(selectedClient) { WorkingDirectory = selectedDirectory, UseShellExecute = false };
                 foreach (string argument in GameProcessLaunchArguments.Create(server, micro, ClientCapabilityProbe.Detect(selectedDirectory))) start.ArgumentList.Add(argument);
-                Process.Start(start)?.Dispose();
+                using Process? game = Process.Start(start);
+                string sourcePlayer = Environment.GetEnvironmentVariable("LYOCRYSTAL_PLAYER_SOURCE_EXECUTABLE") ?? string.Empty;
+                if (game is not null && !string.IsNullOrWhiteSpace(sourcePlayer))
+                {
+                    try { Launcher.PlayerShell.PlayerGameSessionMarker.Record(sourcePlayer, game); }
+                    catch { try { game.Kill(entireProcessTree: true); } catch { } throw; }
+                }
             });
         }
 

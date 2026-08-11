@@ -22,6 +22,11 @@ public static class PlayerArtifactBuilder
         project.SynchronizeMicroIdentity();
         project.Snapshot.WindowTitle = project.Brand.WindowTitle;
         project.Snapshot.TaskbarName = project.Brand.TaskbarName;
+        project.Snapshot.TrustedReleaseKeys = project.Release.RetiredPublicKeys.TakeLast(2).Concat(new[]
+        {
+            new BootstrapManifestTrustedKey { KeyId = project.Release.CurrentKeyId, SubjectPublicKeyInfo = project.Release.CurrentPublicKey, NotBeforeSequence = project.Release.CurrentKeyNotBeforeSequence },
+            new BootstrapManifestTrustedKey { KeyId = project.Release.NextKeyId, SubjectPublicKeyInfo = project.Release.NextPublicKey, NotBeforeSequence = project.Release.NextKeyNotBeforeSequence },
+        }).ToList();
         LauncherSnapshotValidator.Validate(project.Snapshot);
         string output = Path.GetFullPath(outputExe);
         if (File.Exists(output)) throw new IOException("玩家 EXE 已存在，拒绝覆盖");

@@ -6,28 +6,96 @@ public static class LauncherRuntimeHost
 {
     public static int Run(string clientDirectory, Action<string, LauncherServer, MicroEndpoint, LauncherPlayerSettings> launchGame)
     {
-        string localRoot = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "LyoCrystal", "Launcher");
         string builtIn = Path.Combine(clientDirectory, "Launcher", "BuiltIn");
+        LoadedLauncherSnapshot builtInSnapshot = LauncherSnapshotLoader.Load(null, null, builtIn);
+        string localRoot = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "LyoCrystal", "Launcher", builtInSnapshot.Snapshot.ProjectId);
         string cacheStore = Path.Combine(localRoot, "LastKnownGood");
         string remoteStore = Path.Combine(localRoot, "AcceptedRemote");
         string signatureState = Path.Combine(localRoot, "BootstrapManifestSecurityState.json");
-        LoadedLauncherSnapshot builtInSnapshot = LauncherSnapshotLoader.Load(null, null, builtIn);
-        string? remote = LauncherReleaseUpdater.ResolveCurrentRoot(remoteStore, signatureState);
-        string? cache = LauncherReleaseUpdater.ResolveCurrentRoot(cacheStore, signatureState);
+        string requiredUpdateBarrier = Path.Combine(localRoot, "RequiredPlayerUpdate.json");
+        string trustChain = Path.Combine(localRoot, "ReleaseTrustChain");
+        IReadOnlyDictionary<string, Shared.Security.BootstrapManifestTrustedKey> anchorKeys = builtInSnapshot.Snapshot.TrustedReleaseKeys.ToDictionary(key => key.KeyId, StringComparer.Ordinal);
+        IReadOnlyDictionary<string, Shared.Security.BootstrapManifestTrustedKey> trustedKeys = Shared.Security.BootstrapTrustChainStore.Resolve(trustChain, anchorKeys, Shared.Security.BootstrapManifestTrustConfiguration.CurrentClientCompatibilityVersion);
+        string? remote = LauncherReleaseUpdater.ResolveCurrentRoot(remoteStore, signatureState, trustedKeys);
+        string? cache = LauncherReleaseUpdater.ResolveCurrentRoot(cacheStore, signatureState, trustedKeys);
         LoadedLauncherSnapshot loaded;
-        try { loaded = LauncherSnapshotLoader.Load(remote, cache, builtIn, (_, root) => LauncherReleaseAuthorization.IsAuthorized(root, signatureState)); }
+        try { loaded = LauncherSnapshotLoader.Load(remote, cache, builtIn, (_, root) => LauncherReleaseAuthorization.IsAuthorized(root, signatureState, trustedKeys)); }
         catch (InvalidDataException) { loaded = new LoadedLauncherSnapshot(LauncherTemplateCatalog.Create(LauncherTemplateKind.Classic), builtIn, SnapshotSource.BuiltIn); }
+        if (loaded.Source is SnapshotSource.Remote or SnapshotSource.Cache)
+        {
+            try { Shared.Security.BootstrapTrustChainStore.Record(loaded.Root, trustChain, trustedKeys, Shared.Security.BootstrapManifestTrustConfiguration.CurrentClientCompatibilityVersion); } catch { }
+        }
         ProvisionMicroCredential(loaded);
         Application.SetHighDpiMode(HighDpiMode.PerMonitorV2);
         Application.EnableVisualStyles();
         Application.SetCompatibleTextRenderingDefault(false);
         using var form = new LauncherForm(loaded, clientDirectory, launchGame);
-        StartBoundedBackgroundRefresh(builtInSnapshot.Snapshot.RemoteReleaseBaseUrl, remoteStore, cacheStore, signatureState);
+        string sourceExecutable = Environment.GetEnvironmentVariable("LYOCRYSTAL_PLAYER_SOURCE_EXECUTABLE") ?? string.Empty;
+        string requiredBarrierMessage = string.Empty;
+        Version? requiredBarrierVersion = null;
+        bool requiredBarrierActive = !string.IsNullOrWhiteSpace(sourceExecutable) && PlayerEntryUpdateService.IsRequiredBarrierActive(requiredUpdateBarrier, sourceExecutable, trustedKeys, out requiredBarrierMessage, out requiredBarrierVersion);
+        if (!string.IsNullOrWhiteSpace(sourceExecutable) && (!string.IsNullOrWhiteSpace(builtInSnapshot.Snapshot.RemoteReleaseBaseUrl) || requiredBarrierActive)) form.SetEntryUpdateChecking();
+        StartBoundedBackgroundRefresh(builtInSnapshot.Snapshot.RemoteReleaseBaseUrl, remoteStore, cacheStore, signatureState, trustedKeys);
+        StartPlayerEntryUpdate(form, builtInSnapshot.Snapshot.RemoteReleaseBaseUrl, sourceExecutable, signatureState, requiredUpdateBarrier, requiredBarrierActive, requiredBarrierVersion, requiredBarrierMessage, trustedKeys);
         Application.Run(form);
         return 0;
     }
 
-    private static void StartBoundedBackgroundRefresh(string remoteBaseUrl, string remoteStore, string cacheStore, string signatureState)
+    private static void StartPlayerEntryUpdate(LauncherForm form, string remoteBaseUrl, string sourceExecutable, string signatureState, string barrierPath, bool barrierActive, Version? barrierVersion, string barrierMessage, IReadOnlyDictionary<string, Shared.Security.BootstrapManifestTrustedKey> trustedKeys)
+    {
+        if (string.IsNullOrWhiteSpace(sourceExecutable)) return;
+        form.Shown += async (_, _) =>
+        {
+            if (string.IsNullOrWhiteSpace(remoteBaseUrl)) { if (barrierActive) form.BlockForRequiredEntryUpdate(barrierMessage); return; }
+            using var inspectTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(12));
+            PlayerEntryUpdatePlan? plan;
+            try
+            {
+                plan = await PlayerEntryUpdateService.InspectAsync(remoteBaseUrl, sourceExecutable, signatureState, trustedKeys, inspectTimeout.Token);
+            }
+            catch (Exception ex)
+            {
+                if (barrierActive) form.BlockForRequiredEntryUpdate(barrierMessage + " 更新检查失败：" + ex.Message);
+                else form.ReleaseEntryUpdateGate("入口更新检查失败，继续使用当前版本：" + ex.Message);
+                return;
+            }
+            if (plan is null)
+            {
+                if (barrierActive) form.BlockForRequiredEntryUpdate(barrierMessage);
+                else form.ReleaseEntryUpdateGate("启动核心已就绪，可进入游戏");
+                return;
+            }
+            Version offeredVersion = Version.Parse(plan.Descriptor.Version);
+            if (barrierActive && (barrierVersion is null || offeredVersion < barrierVersion)) { form.BlockForRequiredEntryUpdate(barrierMessage); return; }
+            bool blockingDownload = plan.Descriptor.Required || barrierActive;
+            if (!blockingDownload)
+            {
+                form.ReleaseEntryUpdateGate("发现普通入口更新；后台下载失败也不影响进入游戏");
+                _ = Task.Run(async () =>
+                {
+                    using var timeout = new CancellationTokenSource(TimeSpan.FromMinutes(5));
+                    try { await PlayerEntryUpdateService.StageAsync(plan, sourceExecutable, signatureState, trustedKeys, timeout.Token).ConfigureAwait(false); }
+                    catch { }
+                });
+                return;
+            }
+            try { if (plan.Descriptor.Required) PlayerEntryUpdateService.PersistRequiredBarrier(plan, barrierPath); }
+            catch (Exception ex) { form.BlockForRequiredEntryUpdate("无法持久化必须更新门槛，拒绝进入游戏：" + ex.Message); return; }
+            form.BlockForRequiredEntryUpdate("正在下载必须安装的玩家入口更新…");
+            using var stageTimeout = new CancellationTokenSource(TimeSpan.FromMinutes(5));
+            try
+            {
+                await PlayerEntryUpdateService.StageAsync(plan, sourceExecutable, signatureState, trustedKeys, stageTimeout.Token);
+                form.BlockForRequiredEntryUpdate("必须更新已准备完成，请关闭并重新打开启动器。");
+            }
+            catch (Exception ex)
+            {
+                form.BlockForRequiredEntryUpdate("必须更新失败，暂不能进入游戏：" + ex.Message);
+            }
+        };
+    }
+
+    private static void StartBoundedBackgroundRefresh(string remoteBaseUrl, string remoteStore, string cacheStore, string signatureState, IReadOnlyDictionary<string, Shared.Security.BootstrapManifestTrustedKey> trustedKeys)
     {
         if (string.IsNullOrWhiteSpace(remoteBaseUrl)) return;
         _ = Task.Run(async () =>
@@ -36,7 +104,7 @@ public static class LauncherRuntimeHost
             try
             {
                 // 当前窗口立即使用已验签的远程/LKG/内置快照；新版本原子落盘后在下次启动启用。
-                await LauncherReleaseUpdater.TryRefreshAsync(remoteBaseUrl, remoteStore, cacheStore, signatureState, timeout.Token).ConfigureAwait(false);
+                await LauncherReleaseUpdater.TryRefreshAsync(remoteBaseUrl, remoteStore, cacheStore, signatureState, timeout.Token, trustedKeys: trustedKeys).ConfigureAwait(false);
             }
             catch (OperationCanceledException) { }
             catch (Exception) { }

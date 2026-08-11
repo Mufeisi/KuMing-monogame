@@ -40,6 +40,13 @@ internal sealed class MainForm : Form
         AddTool(tools, "发布前检查", ValidateBeforeGeneration);
         AddTool(tools, "生成玩家 EXE", GeneratePlayerExecutable);
         AddTool(tools, "生成微端部署包", GenerateGatewayPackage);
+        AddTool(tools, "发布版本", PublishRelease);
+        AddTool(tools, "回滚版本", RollbackRelease);
+        AddTool(tools, "离线发布包", ExportOfflineRelease);
+        AddTool(tools, "导入离线发布", ImportOfflineRelease);
+        AddTool(tools, "恢复包", ExportRecoveryPackage);
+        AddTool(tools, "导入恢复", ImportRecoveryPackage);
+        AddTool(tools, "轮换密钥", RotateReleaseKey);
         var split = new SplitContainer { Dock = DockStyle.Fill, SplitterDistance = 220, FixedPanel = FixedPanel.Panel1 };
         split.Panel1.Controls.Add(_projects); split.Panel2.Controls.Add(_tabs);
         _projects.SelectedIndexChanged += (_, _) => LoadSelectedProject();
@@ -99,6 +106,7 @@ internal sealed class MainForm : Form
         _tabs.TabPages.Add(new TabPage("玩家设置") { Controls = { new SettingsEditorPanel(_project.Snapshot.Defaults) } });
         AddPropertyTab("项目默认微端", new DefaultMicroPropertyView(_project.Snapshot.DefaultMicro));
         AddPropertyTab("微端部署", new GatewayPropertyView(_project.Gateway));
+        AddPropertyTab("签名与发布", new ReleasePropertyView(_project.Release));
         _tabs.TabPages.Add(CreatePreviewTab());
     }
 
@@ -284,6 +292,88 @@ internal sealed class MainForm : Form
         value = Convert.ToHexString(RandomNumberGenerator.GetBytes(16));
         ProtectedClientSecretStore.WriteMicroCode(_project.Snapshot.ProjectId, value);
         return value;
+    }
+
+    private void PublishRelease()
+    {
+        if (_project is null) return;
+        string projectRoot = _store.GetProjectDirectory(_project.Snapshot.ProjectId);
+        using var folder = new FolderBrowserDialog { Description = "选择不可变发布源目录", SelectedPath = string.IsNullOrWhiteSpace(_project.Release.LastPublishRoot) ? Path.Combine(projectRoot, "Publish") : _project.Release.LastPublishRoot };
+        if (folder.ShowDialog(this) != DialogResult.OK) return;
+        using var note = new TextValueDialog("发布备注", "输入本次发布备注（可留空）：");
+        if (note.ShowDialog(this) != DialogResult.OK) return;
+        try
+        {
+            SyncLists(); EditorPreflightValidator.ThrowIfInvalid(_project, projectRoot); _store.Save(_project);
+            ProjectReleaseResult result = ProjectReleasePublisher.Publish(_project, projectRoot, folder.SelectedPath, note.Value);
+            _project.Release.LastPublishRoot = Path.GetFullPath(folder.SelectedPath); _store.Save(_project);
+            SetStatus($"已发布不可变版本：序列 {result.Sequence}，{result.VersionName}"); RebuildTabs();
+        }
+        catch (Exception ex) { ShowError(ex); }
+    }
+
+    private void RollbackRelease()
+    {
+        if (_project is null || _project.Release.History.Count == 0) { MessageBox.Show(this, "当前项目没有可回滚历史。", "回滚版本"); return; }
+        using var dialog = new RollbackReleaseDialog(_project.Release.History);
+        if (dialog.ShowDialog(this) != DialogResult.OK || dialog.Selected is null) return;
+        try
+        {
+            string projectRoot = _store.GetProjectDirectory(_project.Snapshot.ProjectId);
+            ProjectReleaseResult result = ProjectReleasePublisher.Rollback(_project, projectRoot, _project.Release.LastPublishRoot, dialog.Selected.VersionName, "回滚到序列 " + dialog.Selected.Sequence);
+            _store.Save(_project); SetStatus($"回滚已生成更高序列 {result.Sequence}：{result.VersionName}"); RebuildTabs();
+        }
+        catch (Exception ex) { ShowError(ex); }
+    }
+
+    private void ExportOfflineRelease()
+    {
+        if (_project is null) return;
+        using var dialog = new SaveFileDialog { Filter = "离线发布包 (*.zip)|*.zip", FileName = _project.Snapshot.ProjectId + "-离线发布.zip" };
+        if (dialog.ShowDialog(this) != DialogResult.OK) return;
+        try { ProjectReleasePublisher.CreateOfflineDeploymentPackage(_project.Release.LastPublishRoot, dialog.FileName); SetStatus("离线发布包已生成：" + dialog.FileName); }
+        catch (Exception ex) { ShowError(ex); }
+    }
+
+    private void ExportRecoveryPackage()
+    {
+        if (_project is null) return;
+        using var password = new TextValueDialog("项目恢复密码", "输入至少 12 个字符的独立恢复密码：", secret: true);
+        if (password.ShowDialog(this) != DialogResult.OK) return;
+        using var dialog = new SaveFileDialog { Filter = "项目恢复包 (*.launcher-recovery.json)|*.launcher-recovery.json", FileName = _project.Snapshot.ProjectId + ".launcher-recovery.json" };
+        if (dialog.ShowDialog(this) != DialogResult.OK) return;
+        try { ProjectReleaseKeyStore.ExportRecovery(_project, _store.GetProjectDirectory(_project.Snapshot.ProjectId), password.Value, dialog.FileName); SetStatus("项目恢复包已导出，请将密码与文件分开保存。"); }
+        catch (Exception ex) { ShowError(ex); }
+    }
+
+    private void ImportOfflineRelease()
+    {
+        if (_project is null) return;
+        using var file = new OpenFileDialog { Filter = "离线发布包 (*.zip)|*.zip" };
+        if (file.ShowDialog(this) != DialogResult.OK) return;
+        using var folder = new FolderBrowserDialog { Description = "选择离线版本安装目录", SelectedPath = string.IsNullOrWhiteSpace(_project.Release.LastPublishRoot) ? _store.GetProjectDirectory(_project.Snapshot.ProjectId) : _project.Release.LastPublishRoot };
+        if (folder.ShowDialog(this) != DialogResult.OK) return;
+        try { ProjectReleaseResult result = ProjectReleasePublisher.ImportOfflineDeploymentPackage(_project, file.FileName, folder.SelectedPath); _store.Save(_project); SetStatus($"已导入签名离线版本：序列 {result.Sequence}"); RebuildTabs(); }
+        catch (Exception ex) { ShowError(ex); }
+    }
+
+    private void RotateReleaseKey()
+    {
+        if (_project is null) return;
+        if (MessageBox.Show(this, "下一把密钥将提升为当前密钥，并生成新的下一把密钥。继续？", "轮换签名密钥", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes) return;
+        try { ProjectReleaseKeyStore.Rotate(_project, _store.GetProjectDirectory(_project.Snapshot.ProjectId)); _store.Save(_project); SetStatus("签名密钥已轮换；请立即生成新玩家入口并发布新版本。"); RebuildTabs(); }
+        catch (Exception ex) { ShowError(ex); }
+    }
+
+    private void ImportRecoveryPackage()
+    {
+        if (_project is null) return;
+        using var file = new OpenFileDialog { Filter = "项目恢复包 (*.launcher-recovery.json)|*.launcher-recovery.json" };
+        if (file.ShowDialog(this) != DialogResult.OK) return;
+        using var password = new TextValueDialog("项目恢复密码", "输入该恢复包的独立密码：", secret: true);
+        if (password.ShowDialog(this) != DialogResult.OK) return;
+        try { ProjectReleaseKeyStore.ImportRecovery(_project, _store.GetProjectDirectory(_project.Snapshot.ProjectId), password.Value, file.FileName); SetStatus("项目签名私钥已恢复到当前 Windows 用户。 "); }
+        catch (Exception ex) { ShowError(ex); }
     }
 
     private void SetStatus(string value) => _status.Text = value;

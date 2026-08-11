@@ -3,6 +3,8 @@ using Launcher.ThemeRuntime;
 
 namespace LyoCrystal.LauncherEditor;
 
+public enum PlayerUpdateMode { None, Normal, Required }
+
 public sealed class EditorProject
 {
     public const string CurrentFormat = "lyocrystal-launcher-editor-project-v1";
@@ -10,6 +12,7 @@ public sealed class EditorProject
     public LauncherSnapshot Snapshot { get; set; } = LauncherTemplateCatalog.Create(LauncherTemplateKind.Classic);
     public BrandMetadata Brand { get; set; } = new();
     public GatewayDeploymentSettings Gateway { get; set; } = new();
+    public ProjectReleaseMetadata Release { get; set; } = new();
     public string ImportedClientDirectory { get; set; } = string.Empty;
     public DateTimeOffset UpdatedAtUtc { get; set; } = DateTimeOffset.UtcNow;
 
@@ -19,6 +22,33 @@ public sealed class EditorProject
         foreach (LauncherServer server in Snapshot.Servers)
             if (server.MicroOverride is not null) server.MicroOverride.User = Snapshot.DefaultMicro.User;
     }
+}
+
+public sealed class ProjectReleaseMetadata
+{
+    public long NextSequence { get; set; } = 1;
+    public string LastPublishRoot { get; set; } = string.Empty;
+    public PlayerUpdateMode PlayerUpdateMode { get; set; }
+    public string PlayerUpdateFile { get; set; } = string.Empty;
+    public string PlayerUpdateVersion { get; set; } = "1.0.0.0";
+    public string CurrentKeyId { get; set; } = string.Empty;
+    public string CurrentPublicKey { get; set; } = string.Empty;
+    public long CurrentKeyNotBeforeSequence { get; set; } = 1;
+    public string NextKeyId { get; set; } = string.Empty;
+    public string NextPublicKey { get; set; } = string.Empty;
+    public long NextKeyNotBeforeSequence { get; set; } = 1;
+    public List<Shared.Security.BootstrapManifestTrustedKey> RetiredPublicKeys { get; set; } = new();
+    public List<ProjectReleaseHistoryItem> History { get; set; } = new();
+}
+
+public sealed class ProjectReleaseHistoryItem
+{
+    public long Sequence { get; set; }
+    public string VersionName { get; set; } = string.Empty;
+    public string CreatedAtUtc { get; set; } = string.Empty;
+    public string Note { get; set; } = string.Empty;
+    public string ContentSha256 { get; set; } = string.Empty;
+    public long? RolledBackFromSequence { get; set; }
 }
 
 public sealed class BrandMetadata

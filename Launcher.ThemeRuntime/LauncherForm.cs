@@ -28,6 +28,7 @@ internal sealed class LauncherForm : Form
     private readonly System.Windows.Forms.Timer _progressTimer = new() { Interval = 300 };
     private bool _autoStartTriggered;
     private bool _buttonImagesLoaded;
+    private bool _entryUpdateBlocked;
 
     public LauncherForm(LoadedLauncherSnapshot loaded, string clientDirectory, Action<string, LauncherServer, MicroEndpoint, LauncherPlayerSettings> launch)
     {
@@ -62,11 +63,37 @@ internal sealed class LauncherForm : Form
     protected override void OnShown(EventArgs e)
     {
         base.OnShown(e);
-        if (_settings.AutoStart && !_autoStartTriggered)
+        if (_settings.AutoStart && !_autoStartTriggered && !_entryUpdateBlocked)
         {
             _autoStartTriggered = true;
             BeginInvoke(async () => await LaunchSelectedAsync());
         }
+    }
+
+    internal void SetEntryUpdateChecking()
+    {
+        _entryUpdateBlocked = true;
+        _launchButton.Enabled = false;
+        UpdateProgress(new LauncherProgressState("正在检查玩家入口更新…", string.Empty, 0, 0, 0, 0, 0));
+    }
+
+    internal void ReleaseEntryUpdateGate(string message)
+    {
+        _entryUpdateBlocked = false;
+        _launchButton.Enabled = true;
+        UpdateProgress(new LauncherProgressState(message, string.Empty, 0, 0, 0, 0, 0));
+        if (_settings.AutoStart && !_autoStartTriggered && Visible)
+        {
+            _autoStartTriggered = true;
+            BeginInvoke(async () => await LaunchSelectedAsync());
+        }
+    }
+
+    internal void BlockForRequiredEntryUpdate(string message)
+    {
+        _entryUpdateBlocked = true;
+        _launchButton.Enabled = false;
+        UpdateProgress(new LauncherProgressState(message, string.Empty, 0, 0, 0, 0, 0));
     }
 
     private void BuildUi()

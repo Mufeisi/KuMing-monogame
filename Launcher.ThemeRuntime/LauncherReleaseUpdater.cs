@@ -25,8 +25,8 @@ public static class LauncherReleaseUpdater
     {
         try
         {
-            Uri root = RequireBaseUri(baseUrl);
             HttpClient client = httpClient ?? Http;
+            Uri root = await ResolvePublishedRootAsync(client, RequireBaseUri(baseUrl), cancellationToken).ConfigureAwait(false);
             string manifestJson = Encoding.UTF8.GetString(await DownloadBytesAsync(client, new Uri(root, ManifestName), BootstrapManifestSignaturePolicy.MaximumJsonBytes, cancellationToken).ConfigureAwait(false));
             IReadOnlyDictionary<string, BootstrapManifestTrustedKey> keys = trustedKeys ?? BootstrapManifestTrustConfiguration.TrustedKeys;
             Version version = clientVersion ?? BootstrapManifestTrustConfiguration.CurrentClientCompatibilityVersion;
@@ -105,13 +105,29 @@ public static class LauncherReleaseUpdater
 
     private static bool IsVersionName(string name) => name.Length is >= 3 and <= 96 && name.All(character => char.IsAsciiLetterOrDigit(character) || character is '-' or '_');
 
-    private static Uri RequireBaseUri(string value)
+    internal static Uri RequireBaseUri(string value)
     {
         if (!Uri.TryCreate(value, UriKind.Absolute, out Uri? uri) || uri.Scheme is not ("http" or "https")) throw new ArgumentException("远程发布地址无效", nameof(value));
         return new Uri(uri.AbsoluteUri.EndsWith('/') ? uri.AbsoluteUri : uri.AbsoluteUri + "/");
     }
 
-    private static async Task<byte[]> DownloadBytesAsync(HttpClient client, Uri uri, long maximumBytes, CancellationToken cancellationToken)
+    internal static async Task<Uri> ResolvePublishedRootAsync(HttpClient client, Uri baseRoot, CancellationToken cancellationToken)
+    {
+        try
+        {
+            byte[] bytes = await DownloadBytesAsync(client, new Uri(baseRoot, "current.txt"), 256, cancellationToken).ConfigureAwait(false);
+            string version = Encoding.UTF8.GetString(bytes).Trim();
+            if (!IsVersionName(version)) throw new InvalidDataException("远程启动器当前版本指针无效");
+            return new Uri(baseRoot, "versions/" + Uri.EscapeDataString(version) + "/");
+        }
+        catch (HttpRequestException)
+        {
+            // 兼容旧式直接目录静态源。
+            return baseRoot;
+        }
+    }
+
+    internal static async Task<byte[]> DownloadBytesAsync(HttpClient client, Uri uri, long maximumBytes, CancellationToken cancellationToken)
     {
         using HttpResponseMessage response = await client.GetAsync(uri, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
         response.EnsureSuccessStatusCode();

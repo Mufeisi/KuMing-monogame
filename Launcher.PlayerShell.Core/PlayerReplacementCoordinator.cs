@@ -31,9 +31,10 @@ public static class PlayerReplacementCoordinator
         string journalPath,
         string targetPath,
         IReadOnlyDictionary<string, BootstrapManifestTrustedKey> trustedKeys,
-        Version currentClientVersion)
+        Version currentClientVersion,
+        string? acceptedStatePath = null)
     {
-        ReplacementAuthorization authorization = LoadAuthorization(journalPath, targetPath, trustedKeys, currentClientVersion);
+        ReplacementAuthorization authorization = LoadAuthorization(journalPath, targetPath, trustedKeys, currentClientVersion, acceptedStatePath);
         if (authorization.Journal.Status == PlayerReplacementJournalStatus.Committed)
         {
             VerifyPackage(authorization.TargetPath, authorization.Package);
@@ -57,8 +58,28 @@ public static class PlayerReplacementCoordinator
         string journalPath,
         string targetPath,
         IReadOnlyDictionary<string, BootstrapManifestTrustedKey> trustedKeys,
-        Version currentClientVersion) =>
-        ApplyPendingCore(journalPath, targetPath, trustedKeys, currentClientVersion, interruptionPoint: null);
+        Version currentClientVersion,
+        string? acceptedStatePath = null) =>
+        ApplyPendingCore(journalPath, targetPath, trustedKeys, currentClientVersion, acceptedStatePath, interruptionPoint: null);
+
+    public static void PreparePending(
+        string journalPath,
+        string targetPath,
+        string signedManifestJson,
+        string packageName,
+        IReadOnlyDictionary<string, BootstrapManifestTrustedKey> trustedKeys,
+        Version currentClientVersion,
+        string acceptedStatePath)
+    {
+        journalPath = Path.GetFullPath(journalPath); targetPath = Path.GetFullPath(targetPath);
+        if (!string.Equals(Path.GetDirectoryName(journalPath), Path.GetDirectoryName(targetPath), StringComparison.OrdinalIgnoreCase)) throw new InvalidDataException("玩家入口替换日志必须与目标位于同一目录");
+        BootstrapSignedManifest manifest = BootstrapManifestAcceptanceStore.VerifyAndAccept(signedManifestJson, acceptedStatePath, trustedKeys, currentClientVersion);
+        BootstrapSignedPackage package = manifest.Packages.SingleOrDefault(item => string.Equals(item.Name, packageName, StringComparison.Ordinal)) ?? throw new InvalidDataException("签名清单未授权玩家入口更新包");
+        string staged = targetPath + ".new"; VerifyPackage(staged, package);
+        if (!BootstrapManifestAcceptanceStore.IsAuthorizedUpdateQueue(acceptedStatePath, manifest.ResourceVersion, new[] { new BootstrapManifestAuthorizedPackage { Name = package.Name, Sha256 = package.Sha256 } }, trustedKeys, currentClientVersion)) throw new InvalidDataException("玩家入口更新未绑定当前已接受签名状态");
+        string previous = targetPath + ".previous"; if (File.Exists(previous)) File.Delete(previous);
+        WriteJournalAtomic(journalPath, new PlayerReplacementJournal { Format = JournalFormat, PackageName = packageName, SignedManifestJson = signedManifestJson, Status = PlayerReplacementJournalStatus.Prepared });
+    }
 
     internal static PlayerReplacementResult ApplyPendingForInterruptionTest(
         string journalPath,
@@ -66,16 +87,17 @@ public static class PlayerReplacementCoordinator
         IReadOnlyDictionary<string, BootstrapManifestTrustedKey> trustedKeys,
         Version currentClientVersion,
         Action<PlayerReplacementInterruptionPoint> interruptionPoint) =>
-        ApplyPendingCore(journalPath, targetPath, trustedKeys, currentClientVersion, interruptionPoint);
+        ApplyPendingCore(journalPath, targetPath, trustedKeys, currentClientVersion, acceptedStatePath: null, interruptionPoint);
 
     private static PlayerReplacementResult ApplyPendingCore(
         string journalPath,
         string targetPath,
         IReadOnlyDictionary<string, BootstrapManifestTrustedKey> trustedKeys,
         Version currentClientVersion,
+        string? acceptedStatePath,
         Action<PlayerReplacementInterruptionPoint>? interruptionPoint)
     {
-        ReplacementAuthorization authorization = LoadAuthorization(journalPath, targetPath, trustedKeys, currentClientVersion);
+        ReplacementAuthorization authorization = LoadAuthorization(journalPath, targetPath, trustedKeys, currentClientVersion, acceptedStatePath);
         PlayerReplacementJournal journal = authorization.Journal;
         BootstrapSignedPackage package = authorization.Package;
         targetPath = authorization.TargetPath;
@@ -147,7 +169,8 @@ public static class PlayerReplacementCoordinator
         string journalPath,
         string targetPath,
         IReadOnlyDictionary<string, BootstrapManifestTrustedKey> trustedKeys,
-        Version currentClientVersion)
+        Version currentClientVersion,
+        string? acceptedStatePath = null)
     {
         ArgumentNullException.ThrowIfNull(trustedKeys);
         ArgumentNullException.ThrowIfNull(currentClientVersion);
@@ -179,6 +202,7 @@ public static class PlayerReplacementCoordinator
         BootstrapSignedPackage package = verification.Manifest.Packages.SingleOrDefault(
             item => string.Equals(item.Name, journal.PackageName, StringComparison.Ordinal))
             ?? throw new InvalidDataException("签名清单未授权玩家入口替换包");
+        if (!string.IsNullOrWhiteSpace(acceptedStatePath) && !BootstrapManifestAcceptanceStore.IsAuthorizedUpdateQueue(acceptedStatePath, verification.Manifest.ResourceVersion, new[] { new BootstrapManifestAuthorizedPackage { Name = package.Name, Sha256 = package.Sha256 } }, trustedKeys, currentClientVersion)) throw new InvalidDataException("玩家入口替换日志不是当前已接受签名版本");
         return new ReplacementAuthorization(journalPath, targetPath, targetPath + ".new", targetPath + ".previous", journal, package);
     }
 

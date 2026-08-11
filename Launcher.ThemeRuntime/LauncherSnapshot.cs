@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using Shared.Security;
 
 namespace Launcher.ThemeRuntime;
 
@@ -20,6 +21,7 @@ public sealed class LauncherSnapshot
     public LauncherTheme Theme { get; set; } = new();
     public List<LauncherServer> Servers { get; set; } = new();
     public List<LauncherAnnouncement> Announcements { get; set; } = new();
+    public List<BootstrapManifestTrustedKey> TrustedReleaseKeys { get; set; } = new();
     public LauncherPlayerSettings Defaults { get; set; } = new();
     public MicroEndpoint DefaultMicro { get; set; } = new();
 }
@@ -108,6 +110,8 @@ public sealed class LauncherPlayerSettings
 [JsonSerializable(typeof(LauncherReleaseDescriptor))]
 [JsonSerializable(typeof(LauncherProgressSnapshot))]
 [JsonSerializable(typeof(LauncherPlayerSettings))]
+[JsonSerializable(typeof(PlayerUpdateDescriptor))]
+[JsonSerializable(typeof(PlayerRequiredUpdateBarrier))]
 public sealed partial class LauncherSnapshotJsonContext : JsonSerializerContext;
 
 public sealed class LauncherReleaseDescriptor
@@ -120,4 +124,21 @@ public sealed class LauncherReleaseFile
 {
     public string Name { get; set; } = string.Empty;
     public string Sha256 { get; set; } = string.Empty;
+}
+
+public sealed class PlayerUpdateDescriptor
+{
+    public const string CurrentFormat = "lyocrystal-player-update-v1";
+    public string Format { get; set; } = CurrentFormat;
+    public string Version { get; set; } = string.Empty;
+    public string PackageName { get; set; } = "player-entry.exe";
+    public bool Required { get; set; }
+}
+
+public sealed class PlayerRequiredUpdateBarrier
+{
+    public const string CurrentFormat = "lyocrystal-required-player-update-v1";
+    public string Format { get; set; } = CurrentFormat;
+    public string SignedManifestJson { get; set; } = string.Empty;
+    public string DescriptorBase64 { get; set; } = string.Empty;
 }

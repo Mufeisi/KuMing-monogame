@@ -59,3 +59,16 @@ internal sealed class DefaultMicroPropertyView
     [DisplayName("备用端口")] public int BackupPort { get => _value.BackupPort; set => _value.BackupPort = value; }
     [DisplayName("访问用户")] public string User { get => _value.User; set => _value.User = value; }
 }
+
+internal sealed class ReleasePropertyView
+{
+    private readonly ProjectReleaseMetadata _value;
+    public ReleasePropertyView(ProjectReleaseMetadata value) => _value = value;
+    [DisplayName("下一发布序列"), ReadOnly(true)] public long NextSequence => _value.NextSequence;
+    [DisplayName("当前密钥"), ReadOnly(true)] public string CurrentKeyId => _value.CurrentKeyId;
+    [DisplayName("下一密钥"), ReadOnly(true)] public string NextKeyId => _value.NextKeyId;
+    [DisplayName("入口更新模式")] public PlayerUpdateMode PlayerUpdateMode { get => _value.PlayerUpdateMode; set => _value.PlayerUpdateMode = value; }
+    [DisplayName("新版玩家入口 EXE")] public string PlayerUpdateFile { get => _value.PlayerUpdateFile; set => _value.PlayerUpdateFile = value; }
+    [DisplayName("新版入口版本")] public string PlayerUpdateVersion { get => _value.PlayerUpdateVersion; set => _value.PlayerUpdateVersion = value; }
+    [DisplayName("最近发布目录"), ReadOnly(true)] public string LastPublishRoot => _value.LastPublishRoot;
+}
