@@ -25,17 +25,17 @@
 
 ## 当前源码最终工件
 
-- `artifacts/gate-final-simulated-20260811/smoke-final/smoke-project-玩家入口.exe`
-  - 59,759,945 字节（56.99 MiB），低于 80 MiB。
-  - SHA-256：`F86D9799EC1E60CE676BB08913C3F3DA9167698364305DCAC8003C5DB077E76D`。
+- `artifacts/gate-final-reviewed-20260811/editor-smoke/smoke-project-玩家入口.exe`
+  - 59,768,945 字节（57.00 MiB），低于 80 MiB。
+  - SHA-256：`B7F4199CE18027CD15B36443B81DC92CF81E1064C8EEF6EB5916CFFD5BBB7EAE`。
   - 任意重命名后 `--shell-smoke` 退出码 0。
-- `artifacts/gate-final-simulated-20260811/editor-complete/LyoCrystal.LauncherEditor.exe`
-  - 221,448,826 字节（211.19 MiB），单文件自包含编辑器。
-  - SHA-256：`16D96C2A3667151D60119898462904E371832AFAE2927B2AB42142E35563AFCB`。
+- `artifacts/gate-final-reviewed-20260811/editor/LyoCrystal.LauncherEditor.exe`
+  - 221,487,226 字节（211.23 MiB），单文件自包含编辑器。
+  - SHA-256：`CBEB4180D260CC5A3F19233490FD4C91B88278B7FAD8002D52E6075B98F16146`。
   - `--editor-smoke` 退出码 0，实际生成玩家入口、签名三版本/回滚、离线包、恢复包、预览、界面截图和网关包。
-- `artifacts/gate-final-simulated-20260811/smoke-final/smoke-project-微端网关.zip`
-  - 103,235,354 字节（98.45 MiB），包含自包含网关与签名启动器发布内容。
-  - SHA-256：`7747014386345B1CEA6140B6799747A85AA1C8395F728A72ED559A52C510A7D1`。
+- `artifacts/gate-final-reviewed-20260811/editor-smoke/smoke-project-微端网关.zip`
+  - 103,247,194 字节（98.46 MiB），包含自包含网关与签名启动器发布内容。
+  - SHA-256：`2121ADFC55A9F272CF4EFB71DD5F924CED8BD7C67FF43067F5EA4A0912D9896A`。
   - 解压后 `--gateway-smoke` 完成健康、鉴权和 Range，退出码 0。
 
 ## 自动化结果
