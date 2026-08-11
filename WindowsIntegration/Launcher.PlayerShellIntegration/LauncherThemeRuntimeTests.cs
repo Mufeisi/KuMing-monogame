@@ -34,6 +34,9 @@ public sealed class LauncherThemeRuntimeTests
         snapshot.ExternalAnnouncementUrl = "https://notice.example.test/";
         using var client = new HttpClient(new StubHttpHandler(HttpStatusCode.OK));
         Assert.Equal(AnnouncementDisplayMode.ExternalPage, await AnnouncementPresentationResolver.ResolveAsync(snapshot, client, CancellationToken.None));
+        string safeText = AnnouncementPresentationResolver.RenderSafeText("<script>not-executed()</script><b>公告</b>");
+        Assert.DoesNotContain("<script>", safeText, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("公告", safeText);
         snapshot.ExternalAnnouncementUrl = "file:///C:/Windows/System32/cmd.exe";
         Assert.Throws<InvalidDataException>(() => LauncherSnapshotValidator.Validate(snapshot));
     }

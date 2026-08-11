@@ -37,4 +37,18 @@ public static class AnnouncementPresentationResolver
             if (ownsClient) client.Dispose();
         }
     }
+
+    public static string RenderSafeText(string html)
+    {
+        if (string.IsNullOrEmpty(html)) return string.Empty;
+        var output = new System.Text.StringBuilder(Math.Min(html.Length, 2 * 1024 * 1024));
+        bool insideTag = false;
+        foreach (char character in html)
+        {
+            if (character == '<') { insideTag = true; output.Append(' '); continue; }
+            if (character == '>') { insideTag = false; output.Append(' '); continue; }
+            if (!insideTag) output.Append(character);
+        }
+        return System.Net.WebUtility.HtmlDecode(output.ToString()).Trim();
+    }
 }

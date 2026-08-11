@@ -33,7 +33,7 @@ public static class BootstrapOfflinePackageInstaller
                 using Stream input = entry.Open(); using var output = new FileStream(Path.Combine(staging, name), FileMode.CreateNew, FileAccess.Write, FileShare.None); input.CopyTo(output);
             }
             string manifestPath = Path.Combine(staging, "bootstrap-manifest.json");
-            string json = File.ReadAllText(manifestPath);
+            string json = ReadBoundedText(manifestPath, BootstrapManifestSignaturePolicy.MaximumJsonBytes);
             string acceptanceState = Path.Combine(Path.GetDirectoryName(root)!, "." + Path.GetFileName(root) + ".offline-bootstrap-state.json");
             RejectReparse(acceptanceState);
             EnsureCurrentAccepted(root, acceptanceState, trustedKeys, clientVersion);
@@ -51,7 +51,7 @@ public static class BootstrapOfflinePackageInstaller
             if (Directory.Exists(destination))
             {
                 RejectReparse(destination);
-                string existingJson = File.ReadAllText(Path.Combine(destination, "bootstrap-manifest.json"));
+                string existingJson = ReadBoundedText(Path.Combine(destination, "bootstrap-manifest.json"), BootstrapManifestSignaturePolicy.MaximumJsonBytes);
                 BootstrapSignedManifest existing = BootstrapManifestAcceptanceStore.VerifyForAcceptance(existingJson, acceptanceState, trustedKeys, clientVersion);
                 if (existing.Sequence != accepted.Sequence || !string.Equals(existing.ResourceVersion, accepted.ResourceVersion, StringComparison.Ordinal) || !string.Equals(existingJson, json, StringComparison.Ordinal)) throw new IOException("同名离线版本目录与待导入内容不同");
                 var existingNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "bootstrap-manifest.json" };
@@ -71,7 +71,7 @@ public static class BootstrapOfflinePackageInstaller
         }
         finally
         {
-            if (Directory.Exists(staging)) Directory.Delete(staging, true);
+            if (Directory.Exists(staging)) { RejectReparse(staging); Directory.Delete(staging, true); }
             try { mutex.ReleaseMutex(); } catch (ApplicationException) { }
         }
     }
@@ -81,17 +81,21 @@ public static class BootstrapOfflinePackageInstaller
         string pointer = Path.Combine(root, "current.txt"); if (!File.Exists(pointer) || File.Exists(statePath)) return;
         if ((File.GetAttributes(pointer) & FileAttributes.ReparsePoint) != 0) throw new InvalidDataException("目标发布指针不得为重解析点");
         if (new FileInfo(pointer).Length is < 1 or > 256) throw new InvalidDataException("目标发布指针长度无效");
-        string version = File.ReadAllText(pointer).Trim(); ValidateVersion(version);
+        string version = ReadBoundedText(pointer, 256).Trim(); ValidateVersion(version);
         string versionRoot = Path.GetFullPath(Path.Combine(root, "versions", version)); RejectReparse(versionRoot);
-        string json = File.ReadAllText(Path.Combine(versionRoot, "bootstrap-manifest.json"));
+        string json = ReadBoundedText(Path.Combine(versionRoot, "bootstrap-manifest.json"), BootstrapManifestSignaturePolicy.MaximumJsonBytes);
         BootstrapManifestVerificationResult result = BootstrapManifestSignaturePolicy.Verify(json, keys, clientVersion);
         if (!result.IsValid) throw new InvalidDataException("目标当前发布签名无效：" + result.Error);
+        var expected = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "bootstrap-manifest.json" };
         foreach (BootstrapSignedPackage package in result.Manifest.Packages)
         {
+            if (Path.GetFileName(package.Name) != package.Name || !expected.Add(package.Name)) throw new InvalidDataException("目标当前发布签名文件名无效");
             string file = Path.Combine(versionRoot, package.Name);
+            RejectReparse(file);
             if (!File.Exists(file) || new FileInfo(file).Length != package.Size) throw new InvalidDataException("目标当前发布文件不完整：" + package.Name);
             BootstrapSignedPackageHashPolicy.VerifyFile(file, package.Sha256);
         }
+        if (Directory.EnumerateFiles(versionRoot).Select(Path.GetFileName).Any(name => name is not null && !expected.Contains(name))) throw new InvalidDataException("目标当前发布包含未签名文件");
         BootstrapManifestAcceptanceStore.VerifyAndAccept(json, statePath, keys, clientVersion);
     }
 
@@ -105,6 +109,15 @@ public static class BootstrapOfflinePackageInstaller
     private static void ValidateVersion(string value)
     {
         if (value.Length is < 3 or > 96 || value.Any(character => !char.IsAsciiLetterOrDigit(character) && character is not '-' and not '_')) throw new InvalidDataException("离线版本名无效");
+    }
+
+    private static string ReadBoundedText(string path, int maximumBytes)
+    {
+        RejectReparse(path);
+        using var input = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+        if (input.Length is < 1 || input.Length > maximumBytes) throw new InvalidDataException("签名发布文本超过大小限制");
+        using var reader = new StreamReader(input, System.Text.Encoding.UTF8, true, 4096, false);
+        return reader.ReadToEnd();
     }
 
     private static void RejectReparse(string path)

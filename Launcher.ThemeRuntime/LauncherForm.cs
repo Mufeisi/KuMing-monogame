@@ -9,7 +9,6 @@ internal sealed class LauncherForm : Form
     private readonly TreeView _serverSidebar = new() { BorderStyle = BorderStyle.None, HideSelection = false };
     private readonly Panel _announcements = new() { AutoScroll = true };
     private readonly FlowLayoutPanel _actionLinks = new() { AutoSize = true, BackColor = Color.Transparent };
-    private WebBrowser? _announcementBrowser;
     private readonly CancellationTokenSource _announcementCancellation = new();
     private readonly ProgressBar _overall = new();
     private readonly ProgressBar _current = new();
@@ -79,21 +78,10 @@ internal sealed class LauncherForm : Form
             {
                 try
                 {
-                    var browser = new WebBrowser { Dock = DockStyle.Fill, ScriptErrorsSuppressed = true, IsWebBrowserContextMenuEnabled = false, WebBrowserShortcutsEnabled = false, AllowWebBrowserDrop = false };
-                    _announcementBrowser = browser;
-                    browser.NewWindow += (_, args) => args.Cancel = true;
-                    browser.Navigating += (_, args) =>
-                    {
-                        Uri? targetUrl = args.Url;
-                        if (targetUrl is null) { args.Cancel = true; return; }
-                        if (targetUrl.Scheme == "about") return;
-                        args.Cancel = true;
-                        if (LauncherActionDispatcher.TryGetHttpUri(targetUrl.AbsoluteUri, out Uri? safe)) new LauncherActionDispatcher().Execute(LauncherAction.OpenAnnouncementLink, safe!.AbsoluteUri);
-                    };
+                    var browser = new RichTextBox { Dock = DockStyle.Fill, ReadOnly = true, DetectUrls = true, BorderStyle = BorderStyle.None, BackColor = Color.White, ForeColor = Color.FromArgb(32, 32, 32), Text = AnnouncementPresentationResolver.RenderSafeText(presentation.Html) };
+                    browser.LinkClicked += (_, args) => { if (LauncherActionDispatcher.TryGetHttpUri(args.LinkText, out Uri? safe)) new LauncherActionDispatcher().Execute(LauncherAction.OpenAnnouncementLink, safe!.AbsoluteUri); };
                     foreach (Control control in _announcements.Controls.Cast<Control>().ToArray()) control.Dispose();
                     _announcements.Controls.Clear(); _announcements.Controls.Add(browser);
-                    const string policy = "<meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'none'; img-src http: https: data:; style-src 'unsafe-inline' http: https:; font-src http: https:; script-src 'none'; object-src 'none'; frame-src 'none'; connect-src 'none'; form-action 'none'\">";
-                    browser.DocumentText = policy + presentation.Html;
                 }
                 catch { ShowNativeAnnouncements(); }
             }
@@ -186,7 +174,7 @@ internal sealed class LauncherForm : Form
     private void ShowNativeAnnouncements()
     {
         foreach (Control control in _announcements.Controls.Cast<Control>().ToArray()) control.Dispose();
-        _announcements.Controls.Clear(); _announcementBrowser = null;
+        _announcements.Controls.Clear();
         foreach (LauncherAnnouncement item in _loaded.Snapshot.Announcements.OrderByDescending(item => item.Pinned).ThenByDescending(item => item.Date, StringComparer.Ordinal).Take(12))
         {
             var card = new AnnouncementCard(item, _loaded.Root) { Dock = DockStyle.Top, Height = 78 };
@@ -447,7 +435,7 @@ internal sealed class LauncherForm : Form
         return new Bitmap(source);
     }
     private T Own<T>(T image) where T : Image { _ownedImages.Add(image); return image; }
-    protected override void Dispose(bool disposing) { if (disposing) { _progressTimer.Dispose(); foreach (Image image in _derivedBackgrounds.Values) image.Dispose(); _derivedBackgrounds.Clear(); foreach (Image image in _ownedImages) image.Dispose(); _ownedImages.Clear(); foreach (Font font in _ownedFonts) font.Dispose(); _ownedFonts.Clear(); } base.Dispose(disposing); }
+    protected override void Dispose(bool disposing) { if (disposing) { _announcementCancellation.Dispose(); _progressTimer.Dispose(); foreach (Image image in _derivedBackgrounds.Values) image.Dispose(); _derivedBackgrounds.Clear(); foreach (Image image in _ownedImages) image.Dispose(); _ownedImages.Clear(); foreach (Font font in _ownedFonts) font.Dispose(); _ownedFonts.Clear(); } base.Dispose(disposing); }
     private static LauncherPlayerSettings CloneSettings(LauncherPlayerSettings value) => new() { Resolution = value.Resolution, FullScreen = value.FullScreen, Borderless = value.Borderless, FpsCap = value.FpsCap, MaxFps = value.MaxFps, Volume = value.Volume, MusicVolume = value.MusicVolume, TopMost = value.TopMost, AutoStart = value.AutoStart, AdvancedLogs = value.AdvancedLogs, MicroCacheLimitMb = value.MicroCacheLimitMb };
     private static string StatusText(ServerOperatingStatus value) => value switch
     {
