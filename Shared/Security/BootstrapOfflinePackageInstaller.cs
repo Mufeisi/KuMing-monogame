@@ -13,7 +13,10 @@ public static class BootstrapOfflinePackageInstaller
         RejectReparse(zip);
         RejectReparse(root); Directory.CreateDirectory(root); RejectReparse(root);
         using var mutex = new Mutex(false, "Local\\LyoCrystal.OfflineInstall." + Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(root.ToUpperInvariant())))[..32]);
-        if (!mutex.WaitOne(TimeSpan.FromSeconds(30))) throw new TimeoutException("等待离线导入锁超时");
+        bool acquired;
+        try { acquired = mutex.WaitOne(TimeSpan.FromSeconds(30)); }
+        catch (AbandonedMutexException) { acquired = true; }
+        if (!acquired) throw new TimeoutException("等待离线导入锁超时");
         string staging = Path.Combine(root, ".offline-" + Guid.NewGuid().ToString("N"));
         try
         {
@@ -61,7 +64,7 @@ public static class BootstrapOfflinePackageInstaller
                     if (!File.Exists(file) || new FileInfo(file).Length != package.Size) throw new InvalidDataException("已存在离线版本不完整：" + package.Name);
                     BootstrapSignedPackageHashPolicy.VerifyFile(file, package.Sha256);
                 }
-                if (Directory.EnumerateFiles(destination).Select(Path.GetFileName).Any(name => name is not null && !existingNames.Contains(name))) throw new InvalidDataException("已存在离线版本包含未签名文件");
+                EnsureExactTopLevelFiles(destination, existingNames, "已存在离线版本");
                 Directory.Delete(staging, true);
             }
             else Directory.Move(staging, destination);
@@ -95,7 +98,7 @@ public static class BootstrapOfflinePackageInstaller
             if (!File.Exists(file) || new FileInfo(file).Length != package.Size) throw new InvalidDataException("目标当前发布文件不完整：" + package.Name);
             BootstrapSignedPackageHashPolicy.VerifyFile(file, package.Sha256);
         }
-        if (Directory.EnumerateFiles(versionRoot).Select(Path.GetFileName).Any(name => name is not null && !expected.Contains(name))) throw new InvalidDataException("目标当前发布包含未签名文件");
+        EnsureExactTopLevelFiles(versionRoot, expected, "目标当前发布");
         BootstrapManifestAcceptanceStore.VerifyAndAccept(json, statePath, keys, clientVersion);
     }
 
@@ -118,6 +121,18 @@ public static class BootstrapOfflinePackageInstaller
         if (input.Length is < 1 || input.Length > maximumBytes) throw new InvalidDataException("签名发布文本超过大小限制");
         using var reader = new StreamReader(input, System.Text.Encoding.UTF8, true, 4096, false);
         return reader.ReadToEnd();
+    }
+
+    private static void EnsureExactTopLevelFiles(string directory, HashSet<string> expected, string description)
+    {
+        RejectReparse(directory);
+        if (Directory.EnumerateDirectories(directory).Any()) throw new InvalidDataException(description + "包含未签名子目录");
+        foreach (string file in Directory.EnumerateFiles(directory))
+        {
+            RejectReparse(file);
+            string name = Path.GetFileName(file);
+            if (!expected.Contains(name)) throw new InvalidDataException(description + "包含未签名文件：" + name);
+        }
     }
 
     private static void RejectReparse(string path)

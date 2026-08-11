@@ -37,6 +37,11 @@ public sealed class LauncherThemeRuntimeTests
         string safeText = AnnouncementPresentationResolver.RenderSafeText("<script>not-executed()</script><b>公告</b>");
         Assert.DoesNotContain("<script>", safeText, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("公告", safeText);
+        IReadOnlyList<ExternalAnnouncementElement> document = SafeExternalAnnouncementDocument.Parse("<h1 style='color:#112233'>标题</h1><a href='https://game.example.test/news'>详情</a><img src='https://game.example.test/a.png' alt='配图'><script>evil()</script>");
+        Assert.Contains(document, item => item.Kind == ExternalAnnouncementElementKind.Heading && item.Bold && item.Color == "#112233");
+        Assert.Contains(document, item => item.Kind == ExternalAnnouncementElementKind.Link && item.Url == "https://game.example.test/news");
+        Assert.Contains(document, item => item.Kind == ExternalAnnouncementElementKind.Image && item.Url.EndsWith("/a.png", StringComparison.Ordinal));
+        Assert.DoesNotContain(document, item => item.Text.Contains("evil", StringComparison.OrdinalIgnoreCase));
         snapshot.ExternalAnnouncementUrl = "file:///C:/Windows/System32/cmd.exe";
         Assert.Throws<InvalidDataException>(() => LauncherSnapshotValidator.Validate(snapshot));
     }
