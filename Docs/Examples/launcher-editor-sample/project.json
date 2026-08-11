@@ -1,0 +1,114 @@
+{
+  "Format": "lyocrystal-launcher-editor-project-v1",
+  "Snapshot": {
+    "Format": "lyocrystal-launcher-snapshot-v1",
+    "ProjectId": "launcher-editor-sample",
+    "ProjectName": "传奇启动器示例",
+    "WindowTitle": "传奇启动器示例",
+    "TaskbarName": "传奇启动器示例",
+    "RemoteReleaseBaseUrl": "",
+    "Theme": {
+      "Template": 2,
+      "ServerListMode": 1,
+      "CanvasWidth": 1180,
+      "CanvasHeight": 680,
+      "AccentColor": "#B570E8",
+      "BackgroundImage": "",
+      "LaunchButtonImage": "",
+      "LaunchButtonHoverImage": "",
+      "LaunchButtonPressedImage": "",
+      "LaunchButtonDisabledImage": "",
+      "Controls": []
+    },
+    "Servers": [
+      {
+        "Id": "sample-1",
+        "Group": "经典专区",
+        "Name": "示例一区",
+        "SortOrder": 10,
+        "Address": "192.0.2.10",
+        "Port": 7000,
+        "Status": 2,
+        "MicroOverride": null
+      },
+      {
+        "Id": "sample-2",
+        "Group": "经典专区",
+        "Name": "示例二区",
+        "SortOrder": 20,
+        "Address": "192.0.2.10",
+        "Port": 7001,
+        "Status": 0,
+        "MicroOverride": null
+      }
+    ],
+    "Announcements": [
+      {
+        "Pinned": true,
+        "Title": "欢迎使用启动器示例项目",
+        "Summary": "请先替换游戏服、微端和发布源示例地址，再生成正式玩家入口。",
+        "Date": "2026-08-11",
+        "Image": "",
+        "ExternalUrl": ""
+      }
+    ],
+    "TrustedReleaseKeys": [],
+    "Defaults": {
+      "Resolution": 1280,
+      "FullScreen": false,
+      "Borderless": true,
+      "FpsCap": true,
+      "MaxFps": 100,
+      "Volume": 100,
+      "MusicVolume": 80,
+      "TopMost": true,
+      "AutoStart": false,
+      "AdvancedLogs": false,
+      "MicroCacheLimitMb": 2048
+    },
+    "DefaultMicro": {
+      "Enabled": true,
+      "Address": "198.51.100.20",
+      "Port": 8080,
+      "BackupAddress": "203.0.113.30",
+      "BackupPort": 8080,
+      "User": "u_sample_pending_initialization"
+    }
+  },
+  "Brand": {
+    "OutputFileName": "传奇启动器示例.exe",
+    "ProductName": "传奇启动器示例",
+    "FileDescription": "LyoCrystal 玩家入口示例",
+    "CompanyName": "",
+    "Copyright": "",
+    "FileVersion": "1.0.0.0",
+    "ProductVersion": "1.0.0.0",
+    "WindowTitle": "传奇启动器示例",
+    "TaskbarName": "传奇启动器示例",
+    "IconPath": ""
+  },
+  "Gateway": {
+    "ListenAddress": "0.0.0.0",
+    "Port": 8080,
+    "User": "u_sample_pending_initialization",
+    "ResourceDirectory": ""
+  },
+  "Release": {
+    "NextSequence": 1,
+    "LastPublishRoot": "",
+    "PlayerUpdateMode": 0,
+    "PlayerUpdateFile": "",
+    "PlayerUpdateVersion": "1.0.0.0",
+    "CurrentKeyId": "",
+    "CurrentPublicKey": "",
+    "CurrentKeyNotBeforeSequence": 1,
+    "NextKeyId": "",
+    "NextPublicKey": "",
+    "NextKeyNotBeforeSequence": 1,
+    "RetiredPublicKeys": [],
+    "History": []
+  },
+  "ImportedClientDirectory": "",
+  "RegenerateMicroUserOnFirstLoad": true,
+  "UpdatedAtUtc": "2026-08-11T00:00:00+08:00"
+}

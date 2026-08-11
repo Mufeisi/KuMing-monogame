@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
+using Launcher.ThemeRuntime;
 
 namespace Client.MirGraphics
 {
@@ -27,6 +28,12 @@ namespace Client.MirGraphics
 
         private static DateTime _nextProbeUtc = DateTime.MinValue;
         private static int _probeFailures;
+        private static long _reservedTransferBytes;
+        private static LauncherDownloadProgressPublisher _progressPublisher;
+        private static BoundedMicroResponseCache _responseCache;
+        private static string _responseCacheIdentity = string.Empty;
+        private static readonly object ResponseCacheSync = new();
+        private static readonly ConsecutiveFailureFailover Failover = new(3);
 
         static MicroLibraryHelper()
         {
@@ -76,8 +83,11 @@ namespace Client.MirGraphics
             if (!CanQueueDownload(key) || !PendingHeaderDownloads.TryAdd(key, 0))
                 return;
 
+            GetProgressPublisher().Queue(key, Path.GetFileName(key));
+
             _ = Task.Run(async () =>
             {
+                bool succeeded = false;
                 try
                 {
                     await DownloadSemaphore.WaitAsync().ConfigureAwait(false);
@@ -91,9 +101,10 @@ namespace Client.MirGraphics
                         }
 
                         string api = BuildLibraryApiPath("libheader", key);
-                        byte[] payload = await DownloadBinaryAsync(api).ConfigureAwait(false);
+                        byte[] payload = await DownloadBinaryAsync(api, key, Path.GetFileName(key)).ConfigureAwait(false);
                         if (payload == null || payload.Length < 12)
                         {
+                            InvalidateResponseCache(api);
                             MarkDownloadFailed(key, $"HEADER empty: {key}");
                             QueueDownloadFailureNotification(key, "资源头");
                             return;
@@ -101,6 +112,7 @@ namespace Client.MirGraphics
 
                         if (!TryParseLibraryHeaderPayload(payload, out long totalLength, out byte[] headerBytes))
                         {
+                            InvalidateResponseCache(api);
                             MarkDownloadFailed(key, $"HEADER invalid: {key}");
                             QueueDownloadFailureNotification(key, "资源头");
                             return;
@@ -119,6 +131,7 @@ namespace Client.MirGraphics
                         MicroServerActive = true;
                         LastError = string.Empty;
                         Log($"HEADER OK {key} -> {fullPath}");
+                        succeeded = true;
                     }
                     finally
                     {
@@ -133,6 +146,7 @@ namespace Client.MirGraphics
                 finally
                 {
                     PendingHeaderDownloads.TryRemove(key, out _);
+                    GetProgressPublisher().Complete(key, succeeded);
                 }
             });
         }
@@ -151,8 +165,11 @@ namespace Client.MirGraphics
             if (!CanQueueDownload(key) || !PendingImageDownloads.TryAdd(key, 0))
                 return;
 
+            GetProgressPublisher().Queue(key, Path.GetFileName(normalized) + "#" + index);
+
             _ = Task.Run(async () =>
             {
+                bool succeeded = false;
                 try
                 {
                     await DownloadSemaphore.WaitAsync().ConfigureAwait(false);
@@ -166,9 +183,10 @@ namespace Client.MirGraphics
                         }
 
                         string api = BuildLibraryApiPath("libimage", normalized, index);
-                        byte[] payload = await DownloadBinaryAsync(api).ConfigureAwait(false);
+                        byte[] payload = await DownloadBinaryAsync(api, key, Path.GetFileName(normalized) + "#" + index).ConfigureAwait(false);
                         if (payload == null || payload.Length < 8)
                         {
+                            InvalidateResponseCache(api);
                             MarkDownloadFailed(key, $"IMAGE empty: {key}");
                             QueueDownloadFailureNotification(key, "图块");
                             return;
@@ -176,6 +194,7 @@ namespace Client.MirGraphics
 
                         if (!TryParseLibraryImagePayload(payload, out int position, out byte[] bytes))
                         {
+                            InvalidateResponseCache(api);
                             MarkDownloadFailed(key, $"IMAGE invalid: {key}");
                             QueueDownloadFailureNotification(key, "图块");
                             return;
@@ -206,6 +225,7 @@ namespace Client.MirGraphics
                         MicroServerActive = true;
                         LastError = string.Empty;
                         Log($"IMAGE OK {key} -> {fullPath} @ {position}");
+                        succeeded = true;
                     }
                     finally
                     {
@@ -220,6 +240,7 @@ namespace Client.MirGraphics
                 finally
                 {
                     PendingImageDownloads.TryRemove(key, out _);
+                    GetProgressPublisher().Complete(key, succeeded);
                 }
             });
         }
@@ -255,11 +276,13 @@ namespace Client.MirGraphics
                 {
                     MicroServerActive = true;
                     _probeFailures = 0;
+                    Failover.RegisterSuccess();
                     LastError = string.Empty;
                     return true;
                 }
 
                 _probeFailures++;
+                RegisterEndpointFailure();
                 MicroServerActive = false;
                 SetError($"health: {(int)response.StatusCode}");
                 QueueProbeUnavailableNotification();
@@ -268,6 +291,7 @@ namespace Client.MirGraphics
             catch (Exception ex)
             {
                 _probeFailures++;
+                RegisterEndpointFailure();
                 MicroServerActive = false;
                 SetError($"health: {ex.Message}");
                 QueueProbeUnavailableNotification();
@@ -275,16 +299,21 @@ namespace Client.MirGraphics
             }
         }
 
-        private static async Task<byte[]> DownloadBinaryAsync(string apiRelativePath)
+        private static async Task<byte[]> DownloadBinaryAsync(string apiRelativePath, string transferKey, string displayName)
         {
-            if (!TryGetBaseUri(out Uri baseUri))
-                return null;
-
             int retries = 3;
             for (int attempt = 0; attempt <= retries; attempt++)
             {
                 try
                 {
+                    if (!TryGetBaseUri(out Uri baseUri)) return null;
+                    BoundedMicroResponseCache cache = GetResponseCache();
+                    string cacheKey = BuildResponseCacheKey(baseUri, apiRelativePath);
+                    if (cache.TryRead(cacheKey, TimeSpan.FromMinutes(5), out byte[] cached))
+                    {
+                        GetProgressPublisher().Report(transferKey, displayName, cached.LongLength, cached.LongLength);
+                        return cached;
+                    }
                     using var request = new HttpRequestMessage(HttpMethod.Get, new Uri(baseUri, apiRelativePath));
                     ApplyAuthHeaders(request);
                     using var response = await HttpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead).ConfigureAwait(false);
@@ -293,21 +322,88 @@ namespace Client.MirGraphics
                         SetError($"HTTP {(int)response.StatusCode} {apiRelativePath}");
                         MicroServerActive = false;
                         QueueHttpFailureNotification(apiRelativePath, response.StatusCode);
+                        RegisterEndpointFailure();
                         continue;
                     }
 
                     MicroServerActive = true;
-                    return await response.Content.ReadAsByteArrayAsync().ConfigureAwait(false);
+                    Failover.RegisterSuccess();
+                    long total = response.Content.Headers.ContentLength ?? 0;
+                    if (total > 64L * 1024 * 1024) throw new InvalidDataException("单个微端响应超过 64 MiB 上限");
+                    long reservation = total > 0 ? total : 64L * 1024 * 1024;
+                    long limit = Math.Clamp(Settings.MicroCacheLimitMb, 256, 16384) * 1024L * 1024L;
+                    if (!TryReserveTransferBytes(reservation, limit)) throw new IOException("微端传输缓存已达到设置的容量上限");
+                    try
+                    {
+                        using Stream input = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
+                        using var output = total is > 0 and <= int.MaxValue ? new MemoryStream((int)total) : new MemoryStream();
+                        byte[] buffer = new byte[128 * 1024];
+                        long received = 0;
+                        int read;
+                        while ((read = await input.ReadAsync(buffer, 0, buffer.Length).ConfigureAwait(false)) > 0)
+                        {
+                            received += read;
+                            if (received > 64L * 1024 * 1024) throw new InvalidDataException("单个微端响应超过 64 MiB 上限");
+                            await output.WriteAsync(buffer, 0, read).ConfigureAwait(false);
+                            GetProgressPublisher().Report(transferKey, displayName, received, total);
+                        }
+                        GetProgressPublisher().Report(transferKey, displayName, received, total > 0 ? total : received);
+                        byte[] result = output.ToArray();
+                        cache.Write(cacheKey, result);
+                        return result;
+                    }
+                    finally { Interlocked.Add(ref _reservedTransferBytes, -reservation); }
                 }
                 catch (Exception ex)
                 {
                     SetError($"{apiRelativePath}: {ex.Message}");
                     MicroServerActive = false;
+                    RegisterEndpointFailure();
                     await Task.Delay(200).ConfigureAwait(false);
                 }
             }
 
             return null;
+        }
+
+        private static bool TryReserveTransferBytes(long bytes, long limit)
+        {
+            while (true)
+            {
+                long current = Interlocked.Read(ref _reservedTransferBytes);
+                if (bytes > limit || current > limit - bytes) return false;
+                if (Interlocked.CompareExchange(ref _reservedTransferBytes, current + bytes, current) == current) return true;
+            }
+        }
+
+        private static LauncherDownloadProgressPublisher GetProgressPublisher()
+        {
+            return _progressPublisher ??= new LauncherDownloadProgressPublisher(
+                string.IsNullOrWhiteSpace(Settings.MicroCredentialKey) ? "legacy" : Settings.MicroCredentialKey);
+        }
+
+        private static BoundedMicroResponseCache GetResponseCache()
+        {
+            string identity = Settings.MicroCredentialKey + "|" + Settings.MicroUser + "|" + Settings.MicroCacheLimitMb;
+            lock (ResponseCacheSync)
+            {
+                if (_responseCache is null || !string.Equals(_responseCacheIdentity, identity, StringComparison.Ordinal))
+                {
+                    _responseCache = new BoundedMicroResponseCache(AppDomain.CurrentDomain.BaseDirectory, Settings.MicroCacheLimitMb);
+                    _responseCacheIdentity = identity;
+                }
+                return _responseCache;
+            }
+        }
+
+        private static string BuildResponseCacheKey(Uri baseUri, string apiRelativePath)
+        {
+            return Settings.MicroCredentialKey + "|" + Settings.MicroUser + "|" + baseUri.AbsoluteUri + apiRelativePath;
+        }
+
+        private static void InvalidateResponseCache(string apiRelativePath)
+        {
+            if (TryGetBaseUri(out Uri baseUri)) GetResponseCache().Invalidate(BuildResponseCacheKey(baseUri, apiRelativePath));
         }
 
         private static void ApplyAuthHeaders(HttpRequestMessage request)
@@ -399,7 +495,7 @@ namespace Client.MirGraphics
         {
             baseUri = null;
 
-            string baseUrl = (Settings.MicroBaseUrl ?? string.Empty).Trim();
+            string baseUrl = (Failover.UsingBackup ? Settings.MicroBackupBaseUrl : Settings.MicroBaseUrl ?? string.Empty).Trim();
             if (string.IsNullOrWhiteSpace(baseUrl))
                 return false;
 
@@ -407,6 +503,15 @@ namespace Client.MirGraphics
                 baseUrl += "/";
 
             return Uri.TryCreate(baseUrl, UriKind.Absolute, out baseUri);
+        }
+
+        private static void RegisterEndpointFailure()
+        {
+            bool backupAvailable = Uri.TryCreate((Settings.MicroBackupBaseUrl ?? string.Empty).Trim(), UriKind.Absolute, out _);
+            if (!Failover.RegisterFailure(backupAvailable)) return;
+            _nextProbeUtc = DateTime.MinValue;
+            QueueUserNotification("micro:backup", "主微端连续失败，本次游戏会话已切换备用入口。", TimeSpan.FromHours(1));
+            Log("FAILOVER primary -> backup");
         }
 
         private static void MarkDownloadFailed(string key, string message)

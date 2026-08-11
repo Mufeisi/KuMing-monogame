@@ -12,14 +12,18 @@ namespace Launcher.Remote
         public bool MicroEnabled { get; }
         public string MicroAddress { get; }
         public int MicroPort { get; }
+        public string MicroBackupAddress { get; }
+        public int MicroBackupPort { get; }
 
-        public GameLaunchOptions(string serverAddress, int serverPort, bool microEnabled, string microAddress, int microPort)
+        public GameLaunchOptions(string serverAddress, int serverPort, bool microEnabled, string microAddress, int microPort, string microBackupAddress = "", int microBackupPort = 0)
         {
             ServerAddress = serverAddress;
             ServerPort = serverPort;
             MicroEnabled = microEnabled;
             MicroAddress = microAddress;
             MicroPort = microPort;
+            MicroBackupAddress = microBackupAddress;
+            MicroBackupPort = microBackupPort;
         }
     }
 
@@ -48,7 +52,7 @@ namespace Launcher.Remote
             string[] launchArguments = arguments
                 .Where(argument => !string.Equals(argument, "-tc", StringComparison.OrdinalIgnoreCase))
                 .ToArray();
-            if (launchArguments.Length != 11 ||
+            if (launchArguments.Length is not (11 or 15) ||
                 !string.Equals(launchArguments[0], ChildMode, StringComparison.OrdinalIgnoreCase)) return false;
 
             var values = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -65,13 +69,24 @@ namespace Launcher.Remote
                 !values.TryGetValue("--micro-port", out string microPortText) || !int.TryParse(microPortText, out int microPort) || microPort is < 0 or > 65535)
                 return false;
 
-            address = address.Trim();
-            microAddress = microAddress.Trim();
-            if (!IsValidHost(address) || (microEnabled && !IsValidHost(microAddress))) return false;
-            if ((microEnabled && (microAddress.Length == 0 || microPort == 0)) || (!microEnabled && (microAddress.Length != 0 || microPort != 0)))
+            string microBackupAddress = string.Empty;
+            int microBackupPort = 0;
+            if (launchArguments.Length == 15 &&
+                (!values.TryGetValue("--micro-backup-address", out microBackupAddress) ||
+                 !values.TryGetValue("--micro-backup-port", out string backupPortText) ||
+                 !int.TryParse(backupPortText, out microBackupPort) || microBackupPort is < 0 or > 65535))
                 return false;
 
-            options = new GameLaunchOptions(address, port, microEnabled, microAddress, microPort);
+            address = address.Trim();
+            microAddress = microAddress.Trim();
+            microBackupAddress = microBackupAddress.Trim();
+            if (!IsValidHost(address) || (microEnabled && !IsValidHost(microAddress)) ||
+                (microBackupAddress.Length > 0 && !IsValidHost(microBackupAddress))) return false;
+            if ((microEnabled && (microAddress.Length == 0 || microPort == 0)) || (!microEnabled && (microAddress.Length != 0 || microPort != 0)))
+                return false;
+            if ((microBackupAddress.Length == 0) != (microBackupPort == 0) || (!microEnabled && microBackupAddress.Length > 0)) return false;
+
+            options = new GameLaunchOptions(address, port, microEnabled, microAddress, microPort, microBackupAddress, microBackupPort);
             return true;
         }
 

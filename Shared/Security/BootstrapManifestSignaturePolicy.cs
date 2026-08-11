@@ -22,12 +22,6 @@ public static class BootstrapManifestSignaturePolicy
     private static readonly Regex ResourceVersionPattern = new("^[A-Za-z0-9._-]{1,128}$", RegexOptions.CultureInvariant);
     private static readonly Regex PackageNamePattern = new("^[A-Za-z0-9._-]{1,128}$", RegexOptions.CultureInvariant);
     private static readonly Regex Sha256Pattern = new("^[0-9a-f]{64}$", RegexOptions.CultureInvariant);
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        PropertyNameCaseInsensitive = false,
-        UnmappedMemberHandling = System.Text.Json.Serialization.JsonUnmappedMemberHandling.Disallow,
-    };
-
     public static BootstrapManifestVerificationResult Verify(
         string json,
         IReadOnlyDictionary<string, BootstrapManifestTrustedKey> trustedKeys,
@@ -49,7 +43,7 @@ public static class BootstrapManifestSignaturePolicy
             using JsonDocument document = JsonDocument.Parse(json.TrimStart('\uFEFF'));
             if (ContainsDuplicateProperty(document.RootElement))
                 return BootstrapManifestVerificationResult.Reject("签名资源索引 JSON 包含重复字段");
-            manifest = document.RootElement.Deserialize<BootstrapSignedManifest>(JsonOptions);
+            manifest = document.RootElement.Deserialize(BootstrapManifestJsonContext.Default.BootstrapSignedManifest);
         }
         catch (Exception ex) when (ex is JsonException or NotSupportedException)
         {
@@ -281,16 +275,34 @@ public static class BootstrapManifestTrustConfiguration
         };
 }
 
-public static class BootstrapManifestAcceptanceStore
+public static partial class BootstrapManifestAcceptanceStore
 {
     private static readonly object Gate = new();
     private static readonly UTF8Encoding Utf8NoBom = new(false);
-    private static readonly JsonSerializerOptions StateJsonOptions = new()
+
+    public static BootstrapSignedManifest VerifyForAcceptance(
+        string json,
+        string statePath,
+        IReadOnlyDictionary<string, BootstrapManifestTrustedKey> trustedKeys = null,
+        Version currentClientVersion = null)
     {
-        PropertyNameCaseInsensitive = false,
-        WriteIndented = true,
-        UnmappedMemberHandling = System.Text.Json.Serialization.JsonUnmappedMemberHandling.Disallow,
-    };
+        if (string.IsNullOrWhiteSpace(statePath)) throw new ArgumentException("防降级状态路径不能为空", nameof(statePath));
+        lock (Gate)
+        {
+            IReadOnlyDictionary<string, BootstrapManifestTrustedKey> resolvedKeys = trustedKeys ?? BootstrapManifestTrustConfiguration.TrustedKeys;
+            Version resolvedVersion = currentClientVersion ?? BootstrapManifestTrustConfiguration.CurrentClientCompatibilityVersion;
+            BootstrapManifestSecurityState state = LoadState(statePath, resolvedKeys, resolvedVersion);
+            BootstrapManifestAcceptedState acceptedState = state.Sequence > 0 ? new BootstrapManifestAcceptedState
+            {
+                Sequence = state.Sequence,
+                ResourceVersion = state.ResourceVersion,
+                CanonicalPayloadSha256 = state.CanonicalPayloadSha256,
+            } : null;
+            BootstrapManifestVerificationResult result = BootstrapManifestSignaturePolicy.Verify(json, resolvedKeys, resolvedVersion, acceptedState);
+            if (!result.IsValid) throw new InvalidDataException(result.Error);
+            return result.Manifest;
+        }
+    }
 
     public static BootstrapSignedManifest VerifyAndAccept(
         string json,
@@ -361,6 +373,46 @@ public static class BootstrapManifestAcceptanceStore
         }
     }
 
+    public static bool IsAcceptedManifest(
+        string statePath,
+        string manifestJson,
+        IReadOnlyDictionary<string, BootstrapManifestTrustedKey> trustedKeys = null,
+        Version currentClientVersion = null)
+    {
+        if (string.IsNullOrWhiteSpace(statePath) || string.IsNullOrWhiteSpace(manifestJson)) return false;
+        lock (Gate)
+        {
+            try
+            {
+                IReadOnlyDictionary<string, BootstrapManifestTrustedKey> resolvedKeys =
+                    trustedKeys ?? BootstrapManifestTrustConfiguration.TrustedKeys;
+                Version resolvedVersion = currentClientVersion ?? BootstrapManifestTrustConfiguration.CurrentClientCompatibilityVersion;
+                BootstrapManifestSecurityState state = LoadState(statePath, resolvedKeys, resolvedVersion);
+                if (state.Sequence <= 0) return false;
+
+                var acceptedState = new BootstrapManifestAcceptedState
+                {
+                    Sequence = state.Sequence,
+                    ResourceVersion = state.ResourceVersion,
+                    CanonicalPayloadSha256 = state.CanonicalPayloadSha256,
+                };
+                BootstrapManifestVerificationResult result = BootstrapManifestSignaturePolicy.Verify(
+                    manifestJson,
+                    resolvedKeys,
+                    resolvedVersion,
+                    acceptedState);
+                return result.IsValid &&
+                       result.Manifest.Sequence == state.Sequence &&
+                       string.Equals(result.Manifest.ResourceVersion, state.ResourceVersion, StringComparison.Ordinal) &&
+                       string.Equals(HashPayload(result.CanonicalPayload), state.CanonicalPayloadSha256, StringComparison.OrdinalIgnoreCase);
+            }
+            catch (InvalidDataException)
+            {
+                return false;
+            }
+        }
+    }
+
     public static bool IsAuthorizedUpdateQueue(
         string statePath,
         string resourceVersion,
@@ -417,7 +469,7 @@ public static class BootstrapManifestAcceptanceStore
             using JsonDocument document = JsonDocument.Parse(File.ReadAllText(statePath));
             if (BootstrapManifestSignaturePolicy.ContainsDuplicateProperty(document.RootElement))
                 throw new InvalidDataException("资源签名防降级状态包含重复字段");
-            BootstrapManifestSecurityState state = document.RootElement.Deserialize<BootstrapManifestSecurityState>(StateJsonOptions)
+            BootstrapManifestSecurityState state = document.RootElement.Deserialize(AcceptanceStateJsonContext.Default.BootstrapManifestSecurityState)
                 ?? throw new InvalidDataException("资源签名防降级状态为空");
             if (state.Sequence <= 0 ||
                 !Regex.IsMatch(state.ResourceVersion ?? string.Empty, "^[A-Za-z0-9._-]{1,128}$", RegexOptions.CultureInvariant) ||
@@ -459,7 +511,7 @@ public static class BootstrapManifestAcceptanceStore
             using JsonDocument document = JsonDocument.Parse(File.ReadAllText(markerPath));
             if (BootstrapManifestSignaturePolicy.ContainsDuplicateProperty(document.RootElement))
                 throw new InvalidDataException("资源签名防降级安装标记包含重复字段");
-            BootstrapManifestInstallMarker marker = document.RootElement.Deserialize<BootstrapManifestInstallMarker>(StateJsonOptions)
+            BootstrapManifestInstallMarker marker = document.RootElement.Deserialize(AcceptanceStateJsonContext.Default.BootstrapManifestInstallMarker)
                 ?? throw new InvalidDataException("资源签名防降级安装标记为空");
             if (marker.Sequence <= 0 ||
                 !Regex.IsMatch(marker.CanonicalPayloadSha256 ?? string.Empty, "^[0-9a-f]{64}$", RegexOptions.CultureInvariant))
@@ -486,7 +538,7 @@ public static class BootstrapManifestAcceptanceStore
             {
                 Sequence = state.Sequence,
                 CanonicalPayloadSha256 = state.CanonicalPayloadSha256,
-            }, StateJsonOptions), Utf8NoBom);
+            }, AcceptanceStateJsonContext.Default.BootstrapManifestInstallMarker), Utf8NoBom);
             File.Move(temporaryPath, markerPath, overwrite: true);
         }
         finally
@@ -502,7 +554,7 @@ public static class BootstrapManifestAcceptanceStore
         string temporaryPath = statePath + ".tmp";
         try
         {
-            File.WriteAllText(temporaryPath, JsonSerializer.Serialize(state, StateJsonOptions), Utf8NoBom);
+            File.WriteAllText(temporaryPath, JsonSerializer.Serialize(state, AcceptanceStateJsonContext.Default.BootstrapManifestSecurityState), Utf8NoBom);
             File.Move(temporaryPath, statePath, overwrite: true);
         }
         finally
@@ -528,6 +580,14 @@ public static class BootstrapManifestAcceptanceStore
         public long Sequence { get; set; }
         public string CanonicalPayloadSha256 { get; set; }
     }
+
+    [System.Text.Json.Serialization.JsonSourceGenerationOptions(
+        PropertyNameCaseInsensitive = false,
+        WriteIndented = true,
+        UnmappedMemberHandling = System.Text.Json.Serialization.JsonUnmappedMemberHandling.Disallow)]
+    [System.Text.Json.Serialization.JsonSerializable(typeof(BootstrapManifestSecurityState))]
+    [System.Text.Json.Serialization.JsonSerializable(typeof(BootstrapManifestInstallMarker))]
+    private sealed partial class AcceptanceStateJsonContext : System.Text.Json.Serialization.JsonSerializerContext;
 }
 
 public sealed class BootstrapManifestAuthorizedPackage
