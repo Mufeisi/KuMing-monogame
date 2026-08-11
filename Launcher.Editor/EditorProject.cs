@@ -11,6 +11,7 @@ public sealed class EditorProjectCreationOptions
     public string ProjectId { get; set; } = string.Empty;
     public string ProjectName { get; set; } = string.Empty;
     public LauncherTemplateKind Template { get; set; }
+    public ServerListMode ServerListMode { get; set; }
     public ClientDeliveryMode DeliveryMode { get; set; }
     public string CompanyName { get; set; } = string.Empty;
     public string RemoteReleaseBaseUrl { get; set; } = string.Empty;
@@ -91,7 +92,7 @@ public sealed class BrandMetadata
 {
     public string OutputFileName { get; set; } = "传奇登录器.exe";
     public string ProductName { get; set; } = "传奇登录器";
-    public string FileDescription { get; set; } = "LyoCrystal 玩家入口";
+    public string FileDescription { get; set; } = "传奇玩家启动器";
     public string CompanyName { get; set; } = string.Empty;
     public string Copyright { get; set; } = string.Empty;
     public string FileVersion { get; set; } = "1.0.0.0";
@@ -105,7 +106,7 @@ public sealed class GatewayDeploymentSettings
 {
     public string ListenAddress { get; set; } = "0.0.0.0";
     public int Port { get; set; } = 8080;
-    public string User { get; set; } = "player";
+    public string User { get; set; } = "玩家";
     public string ResourceDirectory { get; set; } = string.Empty;
     public string CacheDirectory { get; set; } = "Cache";
     public int MemoryCacheMb { get; set; } = 128;

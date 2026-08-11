@@ -3,6 +3,7 @@ using Launcher.PlayerShell;
 using Launcher.ThemeRuntime;
 using Shared.Security;
 using System.Security.Cryptography;
+using System.Diagnostics;
 
 namespace LyoCrystal.LauncherEditor;
 
@@ -19,11 +20,14 @@ internal sealed class MainForm : Form
     private BindingList<LauncherControlOverride>? _controlOverrides;
     private BindingList<LauncherActionLink>? _actionLinks;
     private float _previewScale = 1f;
+    private bool _advancedVisible;
+    private QuickProductionPanel? _quickPanel;
+    private string _lastQuickOutput = string.Empty;
 
     public MainForm(EditorProjectStore store)
     {
         _store = store;
-        Text = "LyoCrystal 启动器编辑器";
+        Text = "传奇启动器配置器";
         WindowState = FormWindowState.Maximized;
         MinimumSize = new Size(1100, 700);
         BuildUi();
@@ -33,24 +37,30 @@ internal sealed class MainForm : Form
     private void BuildUi()
     {
         var tools = new ToolStrip { GripStyle = ToolStripGripStyle.Hidden };
-        AddTool(tools, "新建项目", NewProject);
-        AddTool(tools, "导入客户端", ImportClient);
-        AddTool(tools, "保存", SaveProject);
-        AddTool(tools, "导入主题图片", ImportThemeImage);
-        AddTool(tools, "导入主题包", ImportThemePackage);
-        AddTool(tools, "导出主题包", ExportThemePackage);
-        AddTool(tools, "刷新预览", RefreshPreview);
-        AddTool(tools, "发布前检查", ValidateBeforeGeneration);
-        AddTool(tools, "生成玩家 EXE", GeneratePlayerExecutable);
-        AddTool(tools, "生成完整客户端包", GenerateFullClientPackage);
-        AddTool(tools, "生成微端部署包", GenerateGatewayPackage);
-        AddTool(tools, "发布版本", PublishRelease);
-        AddTool(tools, "回滚版本", RollbackRelease);
-        AddTool(tools, "离线发布包", ExportOfflineRelease);
-        AddTool(tools, "导入离线发布", ImportOfflineRelease);
-        AddTool(tools, "恢复包", ExportRecoveryPackage);
-        AddTool(tools, "导入恢复", ImportRecoveryPackage);
-        AddTool(tools, "轮换密钥", RotateReleaseKey);
+        AddTool(tools, "新建启动器", NewProject);
+        AddTool(tools, "选择客户端资源", SelectQuickResource);
+        AddTool(tools, "一键生成全部成品", GenerateAllQuick);
+        AddTool(tools, "快速制作首页", () => { if (_tabs.TabPages.Count > 0) _tabs.SelectedIndex = 0; });
+        var advanced = new ToolStripDropDownButton("高级工具");
+        AddAdvanced(advanced, "显示高级设置", ShowAdvanced);
+        AddAdvanced(advanced, "保存项目", SaveProject);
+        AddAdvanced(advanced, "导入旧客户端配置", ImportClient);
+        AddAdvanced(advanced, "导入主题图片", ImportThemeImage);
+        AddAdvanced(advanced, "导入主题包", ImportThemePackage);
+        AddAdvanced(advanced, "导出主题包", ExportThemePackage);
+        AddAdvanced(advanced, "刷新界面预览", RefreshPreview);
+        AddAdvanced(advanced, "发布前检查", ValidateBeforeGeneration);
+        AddAdvanced(advanced, "单独生成玩家启动器", GeneratePlayerExecutable);
+        AddAdvanced(advanced, "生成完整客户端包", GenerateFullClientPackage);
+        AddAdvanced(advanced, "单独生成微端部署包", GenerateGatewayPackage);
+        AddAdvanced(advanced, "发布新版本", PublishRelease);
+        AddAdvanced(advanced, "回滚历史版本", RollbackRelease);
+        AddAdvanced(advanced, "导出离线发布包", ExportOfflineRelease);
+        AddAdvanced(advanced, "导入离线发布包", ImportOfflineRelease);
+        AddAdvanced(advanced, "导出密钥恢复包", ExportRecoveryPackage);
+        AddAdvanced(advanced, "导入密钥恢复包", ImportRecoveryPackage);
+        AddAdvanced(advanced, "轮换签名密钥", RotateReleaseKey);
+        tools.Items.Add(advanced);
         var split = new SplitContainer { Dock = DockStyle.Fill, SplitterDistance = 220, FixedPanel = FixedPanel.Panel1 };
         split.Panel1.Controls.Add(_projects); split.Panel2.Controls.Add(_tabs);
         _projects.SelectedIndexChanged += (_, _) => LoadSelectedProject();
@@ -63,11 +73,20 @@ internal sealed class MainForm : Form
         var button = new ToolStripButton(text); button.Click += (_, _) => action(); strip.Items.Add(button);
     }
 
+    private static void AddAdvanced(ToolStripDropDownButton parent, string text, Action action)
+    {
+        var item = new ToolStripMenuItem(text); item.Click += (_, _) => action(); parent.DropDownItems.Add(item);
+    }
+
     private void ReloadProjects(string? select = null)
     {
         _projects.Items.Clear();
-        foreach (string id in _store.ListProjectIds()) _projects.Items.Add(id);
-        if (select is not null) _projects.SelectedItem = select;
+        foreach (string id in _store.ListProjectIds())
+        {
+            EditorProject project = _store.Load(id);
+            _projects.Items.Add(new ProjectListItem(id, project.Snapshot.ProjectName));
+        }
+        if (select is not null) _projects.SelectedItem = _projects.Items.Cast<ProjectListItem>().FirstOrDefault(item => item.Id == select);
         else if (_projects.Items.Count > 0) _projects.SelectedIndex = 0;
     }
 
@@ -78,16 +97,28 @@ internal sealed class MainForm : Form
         try
         {
             EditorProject project = _store.Create(wizard.Options);
+            if (!string.IsNullOrWhiteSpace(wizard.Options.ImportedClientDirectory))
+            {
+                _store.ImportClientReadOnly(project, wizard.Options.ImportedClientDirectory);
+                project.Gateway.ResourceDirectory = wizard.Options.ImportedClientDirectory;
+                project.Snapshot.Servers[0].Address = wizard.Options.ServerAddress;
+                project.Snapshot.Servers[0].Port = wizard.Options.ServerPort;
+                project.Snapshot.DefaultMicro.Address = wizard.Options.MicroAddress;
+                project.Snapshot.DefaultMicro.Port = wizard.Options.MicroPort;
+                project.Gateway.Port = wizard.Options.MicroPort;
+                _store.Save(project);
+            }
             ReloadProjects(project.Snapshot.ProjectId);
-            SetStatus("项目已创建，可在断网状态继续编辑和生成预览");
+            SetStatus("启动器已创建；确认服务器地址后即可一键生成");
         }
         catch (Exception ex) { ShowError(ex); }
     }
 
     private void LoadSelectedProject()
     {
-        if (_projects.SelectedItem is not string id) return;
-        try { _project = _store.Load(id); RebuildTabs(); RefreshPreview(); SetStatus("已加载项目：" + id); }
+        if (_projects.SelectedItem is not ProjectListItem selected) return;
+        string id = selected.Id;
+        try { _project = _store.Load(id); RebuildTabs(); RefreshPreview(); SetStatus("已加载启动器：" + _project.Snapshot.ProjectName); }
         catch (Exception ex) { ShowError(ex); }
     }
 
@@ -103,6 +134,10 @@ internal sealed class MainForm : Form
         _controlOverrides = new BindingList<LauncherControlOverride>(_project.Snapshot.Theme.Controls);
         _actionLinks = new BindingList<LauncherActionLink>(_project.Snapshot.ActionLinks);
 
+        _quickPanel = new QuickProductionPanel(_project, SelectQuickResource, () => ImportQuickImage(ThemeImageUsage.Background), () => ImportQuickImage(ThemeImageUsage.ButtonBase), GenerateAllQuick, ShowAdvanced);
+        _quickPanel.SetResult(_lastQuickOutput);
+        _tabs.TabPages.Add(new TabPage("快速制作") { Controls = { _quickPanel } });
+        if (!_advancedVisible) return;
         AddPropertyTab("项目与品牌", new ProjectBrandPropertyView(_project));
         AddPropertyTab("主题", new ThemePropertyView(_project));
         _tabs.TabPages.Add(CreateControlLayoutTab());
@@ -126,13 +161,12 @@ internal sealed class MainForm : Form
     private TabPage CreateServerTab()
     {
         var grid = new DataGridView { Dock = DockStyle.Fill, AutoGenerateColumns = false, DataSource = _servers, AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill, AllowUserToAddRows = false };
-        grid.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = "标识", DataPropertyName = nameof(LauncherServer.Id) });
         grid.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = "分组", DataPropertyName = nameof(LauncherServer.Group) });
         grid.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = "区服名称", DataPropertyName = nameof(LauncherServer.Name) });
         grid.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = "排序", DataPropertyName = nameof(LauncherServer.SortOrder), FillWeight = 55 });
         grid.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = "游戏地址", DataPropertyName = nameof(LauncherServer.Address) });
         grid.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = "游戏端口", DataPropertyName = nameof(LauncherServer.Port) });
-        grid.Columns.Add(new DataGridViewComboBoxColumn { HeaderText = "运营状态", DataPropertyName = nameof(LauncherServer.Status), DataSource = Enum.GetValues<ServerOperatingStatus>() });
+        grid.Columns.Add(new DataGridViewComboBoxColumn { HeaderText = "运营状态", DataPropertyName = nameof(LauncherServer.Status), DataSource = EditorChineseText.Choices(Enum.GetValues<ServerOperatingStatus>(), EditorChineseText.ServerStatus), DisplayMember = nameof(ChineseChoice<ServerOperatingStatus>.Text), ValueMember = nameof(ChineseChoice<ServerOperatingStatus>.Value) });
         grid.CellValueChanged += (_, _) => RefreshPreview();
         var bar = new FlowLayoutPanel { Dock = DockStyle.Top, Height = 42 };
         var add = new Button { Text = "新增区服", AutoSize = true }; add.Click += (_, _) => { _servers!.Add(new LauncherServer { Id = "server-" + (_servers.Count + 1), Name = "新区服" }); RefreshPreview(); };
@@ -162,9 +196,9 @@ internal sealed class MainForm : Form
     private TabPage CreateActionLinksTab()
     {
         var grid = new DataGridView { Dock = DockStyle.Fill, AutoGenerateColumns = false, DataSource = _actionLinks, AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill, AllowUserToAddRows = false };
-        grid.Columns.Add(new DataGridViewComboBoxColumn { HeaderText = "安全动作", DataPropertyName = nameof(LauncherActionLink.Action), DataSource = Enum.GetValues<LauncherAction>().Where(LauncherActionDispatcher.IsWebAction).ToArray() });
+        grid.Columns.Add(new DataGridViewComboBoxColumn { HeaderText = "安全动作", DataPropertyName = nameof(LauncherActionLink.Action), DataSource = EditorChineseText.Choices(Enum.GetValues<LauncherAction>().Where(LauncherActionDispatcher.IsWebAction), EditorChineseText.Action), DisplayMember = nameof(ChineseChoice<LauncherAction>.Text), ValueMember = nameof(ChineseChoice<LauncherAction>.Value) });
         grid.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = "显示文字", DataPropertyName = nameof(LauncherActionLink.Text) });
-        grid.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = "HTTP/HTTPS 地址", DataPropertyName = nameof(LauncherActionLink.Url), FillWeight = 180 });
+        grid.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = "网页地址", DataPropertyName = nameof(LauncherActionLink.Url), FillWeight = 180 });
         var bar = new FlowLayoutPanel { Dock = DockStyle.Top, Height = 42 };
         var add = new Button { Text = "新增安全链接", AutoSize = true };
         add.Click += (_, _) => _actionLinks!.Add(new LauncherActionLink { Action = LauncherAction.OfficialWebsite, Text = "官方网站", Url = "https://example.com/" });
@@ -176,7 +210,20 @@ internal sealed class MainForm : Form
 
     private TabPage CreateControlLayoutTab()
     {
-        var grid = new DataGridView { Dock = DockStyle.Fill, AutoGenerateColumns = true, DataSource = _controlOverrides, AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill, AllowUserToAddRows = false };
+        var grid = new DataGridView { Dock = DockStyle.Fill, AutoGenerateColumns = false, DataSource = _controlOverrides, AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill, AllowUserToAddRows = false };
+        grid.Columns.Add(new DataGridViewComboBoxColumn { HeaderText = "控件", DataPropertyName = nameof(LauncherControlOverride.Id), DataSource = EditorChineseText.Choices(Enum.GetValues<LauncherControlId>(), EditorChineseText.Control), DisplayMember = nameof(ChineseChoice<LauncherControlId>.Text), ValueMember = nameof(ChineseChoice<LauncherControlId>.Value) });
+        grid.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = "横向位置", DataPropertyName = nameof(LauncherControlOverride.X) });
+        grid.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = "纵向位置", DataPropertyName = nameof(LauncherControlOverride.Y) });
+        grid.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = "宽度", DataPropertyName = nameof(LauncherControlOverride.Width) });
+        grid.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = "高度", DataPropertyName = nameof(LauncherControlOverride.Height) });
+        grid.Columns.Add(new DataGridViewCheckBoxColumn { HeaderText = "显示", DataPropertyName = nameof(LauncherControlOverride.Visible) });
+        grid.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = "文字颜色", DataPropertyName = nameof(LauncherControlOverride.ForeColor) });
+        grid.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = "背景颜色", DataPropertyName = nameof(LauncherControlOverride.BackColor) });
+        grid.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = "字体", DataPropertyName = nameof(LauncherControlOverride.FontName) });
+        grid.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = "字号", DataPropertyName = nameof(LauncherControlOverride.FontSize) });
+        grid.Columns.Add(new DataGridViewCheckBoxColumn { HeaderText = "粗体", DataPropertyName = nameof(LauncherControlOverride.Bold) });
+        grid.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = "不透明度（百分比）", DataPropertyName = nameof(LauncherControlOverride.OpacityPercent) });
+        grid.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = "背景图片", DataPropertyName = nameof(LauncherControlOverride.BackgroundImage) });
         grid.CellValueChanged += (_, _) => RefreshPreview();
         var bar = new FlowLayoutPanel { Dock = DockStyle.Top, Height = 42 };
         var add = new Button { Text = "添加控件覆盖", AutoSize = true };
@@ -197,7 +244,7 @@ internal sealed class MainForm : Form
         scale.Items.AddRange(new object[] { "100%", "125%", "150%", "200%" }); scale.SelectedIndex = _previewScale switch { 1.25f => 1, 1.5f => 2, 2f => 3, _ => 0 };
         scale.SelectedIndexChanged += (_, _) => { _previewScale = scale.SelectedIndex switch { 1 => 1.25f, 2 => 1.5f, 3 => 2f, _ => 1f }; RefreshPreview(); };
         var bar = new FlowLayoutPanel { Dock = DockStyle.Top, Height = 42 };
-        bar.Controls.AddRange(new Control[] { new Label { Text = "预览 DPI", AutoSize = true, Padding = new Padding(0, 8, 0, 0) }, scale, new Label { Text = "预览与玩家入口共用同一 WinForms 渲染模块", AutoSize = true, Padding = new Padding(10, 8, 0, 0) } });
+        bar.Controls.AddRange(new Control[] { new Label { Text = "界面缩放预览", AutoSize = true, Padding = new Padding(0, 8, 0, 0) }, scale, new Label { Text = "这里看到的效果与玩家启动器一致", AutoSize = true, Padding = new Padding(10, 8, 0, 0) } });
         var page = new TabPage("实时预览"); page.Controls.Add(_preview); page.Controls.Add(bar); return page;
     }
 
@@ -226,8 +273,79 @@ internal sealed class MainForm : Form
         {
             ImportPreview result = _store.ImportClientReadOnly(_project, dialog.SelectedPath);
             RebuildTabs(); RefreshPreview();
-            string unknown = result.UnknownFields.Count == 0 ? "无" : string.Join("、", result.UnknownFields.Take(20));
-            MessageBox.Show(this, $"已映射 {result.MappedFields.Count} 项；未知字段：{unknown}\r\n敏感值已忽略：{(result.SensitiveValuesOmitted ? "是" : "未发现")}\r\n原客户端未被修改。", "导入预览", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            MessageBox.Show(this, $"已读取 {result.MappedFields.Count} 项可用配置；未识别 {result.UnknownFields.Count} 项。\r\n敏感值已忽略：{(result.SensitiveValuesOmitted ? "是" : "未发现")}\r\n原客户端未被修改。", "导入完成", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+        catch (Exception ex) { ShowError(ex); }
+    }
+
+    private void ShowAdvanced()
+    {
+        if (_project is null) { MessageBox.Show(this, "请先新建或选择启动器项目。", Text); return; }
+        if (!_advancedVisible) { _advancedVisible = true; RebuildTabs(); }
+        if (_tabs.TabPages.Count > 1) _tabs.SelectedIndex = 1;
+    }
+
+    private void SelectQuickResource()
+    {
+        if (_project is null) { MessageBox.Show(this, "请先新建启动器。", Text); return; }
+        using var dialog = new FolderBrowserDialog { Description = "选择包含 Client.exe 的完整客户端目录", ShowNewFolderButton = false, UseDescriptionForTitle = true };
+        if (dialog.ShowDialog(this) != DialogResult.OK) return;
+        try
+        {
+            ImportPreview result = _store.ImportClientReadOnly(_project, dialog.SelectedPath);
+            _project.Gateway.ResourceDirectory = dialog.SelectedPath;
+            _store.Save(_project);
+            RebuildTabs(); RefreshPreview();
+            SetStatus($"客户端资源已选择，自动读取 {result.MappedFields.Count} 项配置，原目录未被修改");
+        }
+        catch (Exception ex) { ShowError(ex); }
+    }
+
+    private void ImportQuickImage(ThemeImageUsage usage)
+    {
+        if (_project is null) return;
+        using var dialog = new OpenFileDialog { Title = usage == ThemeImageUsage.Background ? "选择启动器背景图" : "选择进入游戏按钮图", Filter = "图片文件 (*.png;*.bmp;*.jpg;*.jpeg)|*.png;*.bmp;*.jpg;*.jpeg" };
+        if (dialog.ShowDialog(this) != DialogResult.OK) return;
+        try
+        {
+            string relative = ThemeAssetImporter.Import(_store.GetProjectDirectory(_project.Snapshot.ProjectId), dialog.FileName, _project.OptimizeImportedImages);
+            if (usage == ThemeImageUsage.Background) _project.Snapshot.Theme.BackgroundImage = relative;
+            else _project.Snapshot.Theme.LaunchButtonImage = relative;
+            _store.Save(_project); RebuildTabs(); RefreshPreview(); SetStatus("图片已导入并自动应用");
+        }
+        catch (Exception ex) { ShowError(ex); }
+    }
+
+    private void GenerateAllQuick()
+    {
+        if (_project is null) { MessageBox.Show(this, "请先新建启动器。", Text); return; }
+        if (string.IsNullOrWhiteSpace(_project.ImportedClientDirectory) || !Directory.Exists(_project.ImportedClientDirectory))
+        {
+            MessageBox.Show(this, "请先完成第一步：选择完整客户端资源目录。", "还差一步", MessageBoxButtons.OK, MessageBoxIcon.Information); return;
+        }
+        try
+        {
+            SyncLists();
+            LauncherServer server = _project.Snapshot.Servers[0];
+            _project.Gateway.Port = _project.Snapshot.DefaultMicro.Port;
+            _project.Gateway.ResourceDirectory = _project.ImportedClientDirectory;
+            if (string.IsNullOrWhiteSpace(server.Address) || string.IsNullOrWhiteSpace(_project.Snapshot.DefaultMicro.Address)) throw new InvalidDataException("请填写游戏服务器地址和微端服务器地址");
+            string projectRoot = _store.GetProjectDirectory(_project.Snapshot.ProjectId);
+            EditorPreflightValidator.ThrowIfInvalid(_project, projectRoot);
+            _store.Save(_project);
+            string safeName = string.Concat(_project.Snapshot.ProjectName.Select(character => Path.GetInvalidFileNameChars().Contains(character) ? '_' : character)).Trim();
+            if (string.IsNullOrWhiteSpace(safeName)) safeName = "传奇启动器";
+            string output = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "传奇启动器成品", safeName + "-" + DateTime.Now.ToString("yyyyMMdd-HHmmss"));
+            Directory.CreateDirectory(output);
+            string player = Path.Combine(output, _project.Brand.OutputFileName);
+            string? code = PlayerArtifactBuilder.RequiresMicroCredential(_project) ? GetOrCreateMicroCode() : null;
+            PlayerArtifactBuilder.Create(_project, projectRoot, player, code);
+            DeploymentPackageBuilder.CreateGatewayPackage(_project, Path.Combine(output, "独立微端部署包.zip"), GetOrCreateMicroCode());
+            if (_project.DeliveryMode == ClientDeliveryMode.FullClient) FullClientDistributionBuilder.Create(_project, player, Path.Combine(output, "完整客户端包.zip"));
+            _lastQuickOutput = output; _quickPanel?.SetResult(output);
+            SetStatus("全部成品已生成：" + output);
+            try { Process.Start(new ProcessStartInfo("explorer.exe", $"\"{output}\"") { UseShellExecute = true }); }
+            catch { /* 成品已经生成，无法自动打开目录不应把成功结果误报为失败。 */ }
         }
         catch (Exception ex) { ShowError(ex); }
     }
@@ -254,7 +372,7 @@ internal sealed class MainForm : Form
             SyncLists();
             string root = _store.GetProjectDirectory(_project.Snapshot.ProjectId);
             IReadOnlyList<string> issues = EditorPreflightValidator.Validate(_project, root);
-            MessageBox.Show(this, issues.Count == 0 ? "发布前检查通过：四档 DPI、控件边界、点击区域、素材和链接均有效。" : string.Join("\r\n", issues), "发布前检查", MessageBoxButtons.OK, issues.Count == 0 ? MessageBoxIcon.Information : MessageBoxIcon.Warning);
+            MessageBox.Show(this, issues.Count == 0 ? "发布前检查通过：四档界面缩放、控件边界、点击区域、素材和链接均有效。" : string.Join("\r\n", issues), "发布前检查", MessageBoxButtons.OK, issues.Count == 0 ? MessageBoxIcon.Information : MessageBoxIcon.Warning);
         }
         catch (Exception ex) { ShowError(ex); }
     }
@@ -285,7 +403,7 @@ internal sealed class MainForm : Form
     private void ImportThemePackage()
     {
         if (_project is null) return;
-        using var dialog = new OpenFileDialog { Filter = "LyoCrystal 主题模板 (*.lyotheme)|*.lyotheme" };
+        using var dialog = new OpenFileDialog { Filter = "传奇启动器主题模板 (*.lyotheme)|*.lyotheme" };
         if (dialog.ShowDialog(this) != DialogResult.OK) return;
         try { ThemeTemplatePackage.Import(_project, _store.GetProjectDirectory(_project.Snapshot.ProjectId), dialog.FileName); RebuildTabs(); RefreshPreview(); SetStatus("主题模板已导入"); }
         catch (Exception ex) { ShowError(ex); }
@@ -294,7 +412,7 @@ internal sealed class MainForm : Form
     private void ExportThemePackage()
     {
         if (_project is null) return;
-        using var dialog = new SaveFileDialog { Filter = "LyoCrystal 主题模板 (*.lyotheme)|*.lyotheme", FileName = _project.Snapshot.ProjectId + ".lyotheme" };
+        using var dialog = new SaveFileDialog { Filter = "传奇启动器主题模板 (*.lyotheme)|*.lyotheme", FileName = SafeFileName(_project.Snapshot.ProjectName) + "-主题模板.lyotheme" };
         if (dialog.ShowDialog(this) != DialogResult.OK) return;
         try { SyncLists(); ThemeTemplatePackage.Export(_project, _store.GetProjectDirectory(_project.Snapshot.ProjectId), dialog.FileName); SetStatus("不含项目秘密的主题模板已导出"); }
         catch (Exception ex) { ShowError(ex); }
@@ -303,9 +421,9 @@ internal sealed class MainForm : Form
     private void GenerateGatewayPackage()
     {
         if (_project is null) return;
-        using var dialog = new SaveFileDialog { Filter = "微端部署包 (*.zip)|*.zip", FileName = _project.Snapshot.ProjectId + "-微端网关.zip" };
+        using var dialog = new SaveFileDialog { Filter = "微端部署包 (*.zip)|*.zip", FileName = SafeFileName(_project.Snapshot.ProjectName) + "-独立微端.zip" };
         if (dialog.ShowDialog(this) != DialogResult.OK) return;
-        try { SyncLists(); EditorPreflightValidator.ThrowIfInvalid(_project, _store.GetProjectDirectory(_project.Snapshot.ProjectId)); DeploymentPackageBuilder.CreateGatewayPackage(_project, dialog.FileName, GetOrCreateMicroCode()); SetStatus("微端部署包已生成，访问 Code 已加密同步：" + dialog.FileName); }
+        try { SyncLists(); EditorPreflightValidator.ThrowIfInvalid(_project, _store.GetProjectDirectory(_project.Snapshot.ProjectId)); DeploymentPackageBuilder.CreateGatewayPackage(_project, dialog.FileName, GetOrCreateMicroCode()); SetStatus("微端部署包已生成，访问密码已加密同步：" + dialog.FileName); }
         catch (Exception ex) { ShowError(ex); }
     }
 
@@ -313,13 +431,13 @@ internal sealed class MainForm : Form
     {
         if (_project is null) return;
         string? microCode = PlayerArtifactBuilder.RequiresMicroCredential(_project) ? GetOrCreateMicroCode() : null;
-        using var dialog = new SaveFileDialog { Filter = "玩家入口 (*.exe)|*.exe", FileName = _project.Brand.OutputFileName };
+        using var dialog = new SaveFileDialog { Filter = "玩家启动器 (*.exe)|*.exe", FileName = _project.Brand.OutputFileName };
         if (dialog.ShowDialog(this) != DialogResult.OK) return;
         try
         {
             SyncLists(); EditorPreflightValidator.ThrowIfInvalid(_project, _store.GetProjectDirectory(_project.Snapshot.ProjectId)); _store.Save(_project);
             PlayerPayloadInfo info = PlayerArtifactBuilder.Create(_project, _store.GetProjectDirectory(_project.Snapshot.ProjectId), dialog.FileName, microCode);
-            SetStatus($"玩家 EXE 已生成并验证：{info.FileCount} 个载荷文件，{new FileInfo(dialog.FileName).Length / 1024d / 1024d:F2} MiB");
+            SetStatus($"玩家启动器已生成并验证：{info.FileCount} 个载荷文件，{new FileInfo(dialog.FileName).Length / 1024d / 1024d:F2} 兆字节");
         }
         catch (Exception ex) { ShowError(ex); }
     }
@@ -327,12 +445,12 @@ internal sealed class MainForm : Form
     private void GenerateFullClientPackage()
     {
         if (_project is null) return;
-        if (_project.DeliveryMode != ClientDeliveryMode.FullClient) { MessageBox.Show(this, "请先把项目的客户端交付模式改为 FullClient。", "完整客户端交付"); return; }
-        using var entry = new OpenFileDialog { Filter = "已生成的玩家入口 (*.exe)|*.exe", Title = "选择与本项目匹配的玩家入口" };
+        if (_project.DeliveryMode != ClientDeliveryMode.FullClient) { MessageBox.Show(this, "请先把玩家下载方式改为“完整客户端下载”。", "完整客户端交付"); return; }
+        using var entry = new OpenFileDialog { Filter = "已生成的玩家启动器 (*.exe)|*.exe", Title = "选择与本项目匹配的玩家启动器" };
         if (entry.ShowDialog(this) != DialogResult.OK) return;
         using var output = new SaveFileDialog { Filter = "完整客户端包 (*.zip)|*.zip", FileName = _project.Snapshot.ProjectId + "-完整客户端.zip" };
         if (output.ShowDialog(this) != DialogResult.OK) return;
-        try { SyncLists(); EditorPreflightValidator.ThrowIfInvalid(_project, _store.GetProjectDirectory(_project.Snapshot.ProjectId)); _store.Save(_project); FullClientDistributionBuilder.Create(_project, entry.FileName, output.FileName); SetStatus("完整客户端交付包已生成；微端项目仍只生成单 EXE 按需模式"); }
+        try { SyncLists(); EditorPreflightValidator.ThrowIfInvalid(_project, _store.GetProjectDirectory(_project.Snapshot.ProjectId)); _store.Save(_project); FullClientDistributionBuilder.Create(_project, entry.FileName, output.FileName); SetStatus("完整客户端交付包已生成；微端项目仍采用单文件按需下载模式"); }
         catch (Exception ex) { ShowError(ex); }
     }
 
@@ -381,7 +499,7 @@ internal sealed class MainForm : Form
     private void ExportOfflineRelease()
     {
         if (_project is null) return;
-        using var dialog = new SaveFileDialog { Filter = "离线发布包 (*.zip)|*.zip", FileName = _project.Snapshot.ProjectId + "-离线发布.zip" };
+        using var dialog = new SaveFileDialog { Filter = "离线发布包 (*.zip)|*.zip", FileName = SafeFileName(_project.Snapshot.ProjectName) + "-离线发布.zip" };
         if (dialog.ShowDialog(this) != DialogResult.OK) return;
         try { ProjectReleasePublisher.CreateOfflineDeploymentPackage(_project.Release.LastPublishRoot, dialog.FileName); SetStatus("离线发布包已生成：" + dialog.FileName); }
         catch (Exception ex) { ShowError(ex); }
@@ -392,7 +510,7 @@ internal sealed class MainForm : Form
         if (_project is null) return;
         using var password = new TextValueDialog("项目恢复密码", "输入至少 12 个字符的独立恢复密码：", secret: true);
         if (password.ShowDialog(this) != DialogResult.OK) return;
-        using var dialog = new SaveFileDialog { Filter = "项目恢复包 (*.launcher-recovery.json)|*.launcher-recovery.json", FileName = _project.Snapshot.ProjectId + ".launcher-recovery.json" };
+        using var dialog = new SaveFileDialog { Filter = "项目恢复包 (*.launcher-recovery.json)|*.launcher-recovery.json", FileName = SafeFileName(_project.Snapshot.ProjectName) + "-项目恢复.launcher-recovery.json" };
         if (dialog.ShowDialog(this) != DialogResult.OK) return;
         try { ProjectReleaseKeyStore.ExportRecovery(_project, _store.GetProjectDirectory(_project.Snapshot.ProjectId), password.Value, dialog.FileName); SetStatus("项目恢复包已导出，请将密码与文件分开保存。"); }
         catch (Exception ex) { ShowError(ex); }
@@ -424,16 +542,26 @@ internal sealed class MainForm : Form
         if (file.ShowDialog(this) != DialogResult.OK) return;
         using var password = new TextValueDialog("项目恢复密码", "输入该恢复包的独立密码：", secret: true);
         if (password.ShowDialog(this) != DialogResult.OK) return;
-        try { ProjectReleaseKeyStore.ImportRecovery(_project, _store.GetProjectDirectory(_project.Snapshot.ProjectId), password.Value, file.FileName); SetStatus("项目签名私钥已恢复到当前 Windows 用户。 "); }
+        try { ProjectReleaseKeyStore.ImportRecovery(_project, _store.GetProjectDirectory(_project.Snapshot.ProjectId), password.Value, file.FileName); SetStatus("项目签名私钥已恢复到当前系统用户。 "); }
         catch (Exception ex) { ShowError(ex); }
     }
 
     private void SetStatus(string value) => _status.Text = value;
     private void ShowError(Exception error) => MessageBox.Show(this, error.Message, "操作失败", MessageBoxButtons.OK, MessageBoxIcon.Error);
+    private static string SafeFileName(string value)
+    {
+        string safe = string.Concat(value.Select(character => Path.GetInvalidFileNameChars().Contains(character) ? '_' : character)).Trim().TrimEnd('.', ' ');
+        return string.IsNullOrWhiteSpace(safe) ? "传奇启动器" : safe;
+    }
 
     protected override void Dispose(bool disposing)
     {
         if (disposing) _preview.Image?.Dispose();
         base.Dispose(disposing);
+    }
+
+    private sealed record ProjectListItem(string Id, string Name)
+    {
+        public override string ToString() => Name;
     }
 }

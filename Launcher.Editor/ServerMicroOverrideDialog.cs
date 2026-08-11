@@ -22,7 +22,7 @@ internal sealed class ServerMicroOverrideDialog : Form
         layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 150)); layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
         layout.Controls.Add(_enabled, 0, 0); layout.SetColumnSpan(_enabled, 2);
         Add(layout, 1, "主入口地址", _address); Add(layout, 2, "主入口端口", _port); Add(layout, 3, "备用地址", _backupAddress); Add(layout, 4, "备用端口", _backupPort);
-        var inheritedUser = new Label { Text = "访问用户继承项目默认值：" + defaultUser, AutoSize = true };
+        var inheritedUser = new Label { Text = "访问用户和密码由配置器自动生成并同步，无需填写。", AutoSize = true };
         layout.Controls.Add(inheritedUser, 0, 5); layout.SetColumnSpan(inheritedUser, 2);
         var buttons = new FlowLayoutPanel { Dock = DockStyle.Fill, FlowDirection = FlowDirection.RightToLeft };
         buttons.Controls.Add(new Button { Text = "确定", DialogResult = DialogResult.OK }); buttons.Controls.Add(new Button { Text = "取消", DialogResult = DialogResult.Cancel });

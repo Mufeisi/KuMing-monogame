@@ -43,6 +43,7 @@ public sealed class EditorProjectStore
         EditorProject project = new() { Snapshot = LauncherTemplateCatalog.Create(template) };
         project.Snapshot.ProjectId = projectId;
         project.Snapshot.ProjectName = string.IsNullOrWhiteSpace(projectName) ? "未命名启动器" : projectName.Trim();
+        project.Snapshot.Theme.ServerListMode = options.ServerListMode;
         project.Snapshot.RemoteReleaseBaseUrl = options.RemoteReleaseBaseUrl.Trim();
         project.Snapshot.Servers[0].Address = options.ServerAddress.Trim();
         project.Snapshot.Servers[0].Port = options.ServerPort;

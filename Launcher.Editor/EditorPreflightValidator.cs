@@ -20,7 +20,7 @@ public static class EditorPreflightValidator
         foreach (int dpi in new[] { 96, 120, 144, 192 })
         {
             LauncherDpiLayoutResult result = LauncherRuntimeHost.ValidatePerMonitorDpiForEvidence(project.Snapshot, projectRoot, dpi);
-            if (!result.AllControlsInsideCanvas || !result.ClickTargetsMatch || !result.TextFits) issues.Add($"{dpi * 100 / 96}%：{result.Details}");
+            if (!result.AllControlsInsideCanvas || !result.ClickTargetsMatch || !result.TextFits) issues.Add($"界面缩放 {dpi * 100 / 96}%：{result.Details}");
         }
         LauncherControlOverride[] controls = project.Snapshot.Theme.Controls.Where(item => item.Visible).ToArray();
         for (int i = 0; i < controls.Length; i++) for (int j = i + 1; j < controls.Length; j++)
@@ -28,7 +28,7 @@ public static class EditorPreflightValidator
             Rectangle a = new(controls[i].X, controls[i].Y, controls[i].Width, controls[i].Height);
             Rectangle b = new(controls[j].X, controls[j].Y, controls[j].Width, controls[j].Height);
             Rectangle intersection = Rectangle.Intersect(a, b);
-            if (intersection.Width > 0 && intersection.Height > 0) issues.Add($"控件点击区域重叠：{controls[i].Id} 与 {controls[j].Id}");
+            if (intersection.Width > 0 && intersection.Height > 0) issues.Add($"控件点击区域重叠：{EditorChineseText.Control(controls[i].Id)} 与 {EditorChineseText.Control(controls[j].Id)}");
         }
         return issues;
     }

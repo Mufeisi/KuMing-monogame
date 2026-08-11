@@ -8,7 +8,7 @@ internal sealed class MainForm : Form
     private readonly TextBox _launcherRoot = new() { Dock = DockStyle.Fill };
     private readonly TextBox _address = new() { Dock = DockStyle.Fill, Text = "127.0.0.1" };
     private readonly NumericUpDown _port = new() { Dock = DockStyle.Fill, Minimum = 1, Maximum = 65535, Value = 7000 };
-    private readonly TextBox _user = new() { Dock = DockStyle.Fill, Text = "MicroUser" };
+    private readonly TextBox _user = new() { Dock = DockStyle.Fill, Text = "微端用户" };
     private readonly TextBox _code = new() { Dock = DockStyle.Fill, UseSystemPasswordChar = true };
     private readonly TextBox _cacheRoot = new() { Dock = DockStyle.Fill };
     private readonly NumericUpDown _memoryCache = new() { Dock = DockStyle.Fill, Minimum = 16, Maximum = 1024, Value = 128 };
@@ -27,14 +27,14 @@ internal sealed class MainForm : Form
     private readonly MicroHttpListenerHost _host = new();
     private readonly GatewayProjectConfiguration? _project;
     private GatewayRuntime? _runtime;
-    private readonly NotifyIcon _tray = new() { Icon = SystemIcons.Application, Text = "LyoCrystal 独立微端网关" };
+    private readonly NotifyIcon _tray = new() { Icon = SystemIcons.Application, Text = "独立微端网关" };
     private readonly List<Button> _pathButtons = new();
     private bool _serviceManaged;
 
     public MainForm(GatewayProjectConfiguration? project = null)
     {
         _project = project;
-        Text = "LyoCrystal 独立微端网关";
+        Text = "独立微端网关";
         MinimumSize = new Size(680, 360);
         StartPosition = FormStartPosition.CenterScreen;
         var layout = new TableLayoutPanel { Dock = DockStyle.Fill, Padding = new Padding(16), ColumnCount = 3, RowCount = 12 };
@@ -45,11 +45,11 @@ internal sealed class MainForm : Form
         AddPathRow(layout, 1, "启动器发布目录", _launcherRoot);
         AddRow(layout, 2, "监听 IP", _address);
         AddRow(layout, 3, "端口", _port);
-        AddRow(layout, 4, "User", _user);
-        AddRow(layout, 5, "Code", _code);
+        AddRow(layout, 4, "访问用户", _user);
+        AddRow(layout, 5, "访问密码", _code);
         AddPathRow(layout, 6, "缓存目录", _cacheRoot);
-        AddRow(layout, 7, "内存缓存 MiB", _memoryCache);
-        AddRow(layout, 8, "磁盘缓存 MiB", _diskCache);
+        AddRow(layout, 7, "内存缓存（兆字节）", _memoryCache);
+        AddRow(layout, 8, "磁盘缓存（兆字节）", _diskCache);
         var buttons = new FlowLayoutPanel { Dock = DockStyle.Fill, AutoSize = true };
         buttons.Controls.AddRange([_start, _stop]);
         layout.Controls.Add(buttons, 1, 9);
@@ -122,11 +122,11 @@ internal sealed class MainForm : Form
         try
         {
             if (_project is not null && WindowsGatewayOperations.IsServiceInstalled(_project.ProjectId))
-                throw new InvalidOperationException("Windows Service 已安装；请先卸载服务，再修改或启动 GUI 网关。");
+                throw new InvalidOperationException("系统服务已安装；请先卸载服务，再修改或启动图形界面网关。");
             if (!Directory.Exists(_resourceRoot.Text.Trim()))
                 throw new DirectoryNotFoundException("请选择已上传完整客户端的资源目录。");
             if (string.IsNullOrWhiteSpace(_user.Text))
-                throw new InvalidOperationException("User 不能为空。");
+                throw new InvalidOperationException("访问用户不能为空。");
             if (_project is not null)
             {
                 _project.ListenAddress = _address.Text.Trim();
@@ -151,7 +151,7 @@ internal sealed class MainForm : Form
         }
         catch (Exception error)
         {
-            MessageBox.Show(this, error.Message + Environment.NewLine + "若提示拒绝访问，请以管理员身份运行，或为该地址配置 URLACL。", "启动失败", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            MessageBox.Show(this, error.Message + Environment.NewLine + "若提示拒绝访问，请以管理员身份运行，或先点击“配置网络”。", "启动失败", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
     }
 
@@ -188,13 +188,13 @@ internal sealed class MainForm : Form
             if (WindowsGatewayOperations.IsServiceInstalled(_project.ProjectId))
             {
                 SetServiceManaged(true);
-                _status.Text = "Windows Service 已安装但当前未运行；可点击“安装并启动服务”恢复运行，或先卸载再编辑。";
+                _status.Text = "系统服务已安装但当前未运行；可点击“安装并启动服务”恢复运行，或先卸载再编辑。";
                 return;
             }
             if (_serviceManaged) SetServiceManaged(false);
         }
         _status.Text = snapshot.IsRunning
-            ? $"运行中｜请求 {snapshot.RequestCount}｜处理中 {snapshot.ActiveRequestCount}｜索引 {snapshot.IndexedFileCount} 个文件 / {snapshot.IndexedBytes / 1024 / 1024} MiB｜缓存命中 {snapshot.CacheHits}/{snapshot.CacheHits + snapshot.CacheMisses}"
+            ? $"运行中｜请求 {snapshot.RequestCount}｜处理中 {snapshot.ActiveRequestCount}｜索引 {snapshot.IndexedFileCount} 个文件 / {snapshot.IndexedBytes / 1024 / 1024} 兆字节｜缓存命中 {snapshot.CacheHits}/{snapshot.CacheHits + snapshot.CacheMisses}"
             : "未启动";
         if (!string.IsNullOrWhiteSpace(snapshot.LastError)) _status.Text += $"｜最近错误：{snapshot.LastError}";
     }
@@ -235,7 +235,7 @@ internal sealed class MainForm : Form
             using var client = new HttpClient(new HttpClientHandler { UseProxy = false });
             string address = _address.Text.Trim() is "0.0.0.0" or "*" or "+" ? "127.0.0.1" : _address.Text.Trim();
             using HttpResponseMessage response = await client.GetAsync($"http://{address}:{_port.Value}/api/health", cancellation.Token);
-            MessageBox.Show(this, response.IsSuccessStatusCode ? "网关本机连通正常。" : $"网关返回 HTTP {(int)response.StatusCode}。", "连通检测", MessageBoxButtons.OK,
+            MessageBox.Show(this, response.IsSuccessStatusCode ? "网关本机连通正常。" : $"网关返回状态码 {(int)response.StatusCode}。", "连通检测", MessageBoxButtons.OK,
                 response.IsSuccessStatusCode ? MessageBoxIcon.Information : MessageBoxIcon.Warning);
         }
         catch (Exception error) when (error is HttpRequestException or OperationCanceledException)
@@ -251,7 +251,7 @@ internal sealed class MainForm : Form
         if (!updated && _project is not null && GatewayRuntime.TryReadServiceStatus(AppContext.BaseDirectory, _project.ProjectId) is not null)
         {
             GatewayRuntime.RequestServiceRescan(AppContext.BaseDirectory, _project.ProjectId);
-            MessageBox.Show(this, "已向 Windows Service 提交重扫请求。", "资源重扫", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            MessageBox.Show(this, "已向系统服务提交重扫请求。", "资源重扫", MessageBoxButtons.OK, MessageBoxIcon.Information);
             return;
         }
         MessageBox.Show(this, updated ? "资源索引已原子更新。" : "网关当前未运行。", "资源重扫", MessageBoxButtons.OK,

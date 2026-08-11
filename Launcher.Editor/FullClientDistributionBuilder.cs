@@ -33,13 +33,13 @@ public static class FullClientDistributionBuilder
             {
                 if (++count > 200_000) throw new InvalidDataException("完整客户端文件数量超过限制");
                 long length = new FileInfo(file).Length;
-                if ((total = checked(total + length)) > 32L * 1024 * 1024 * 1024) throw new InvalidDataException("完整客户端总量超过 32 GiB 限制");
+                if ((total = checked(total + length)) > 32L * 1024 * 1024 * 1024) throw new InvalidDataException("完整客户端总量超过 32 吉字节限制");
                 archive.CreateEntryFromFile(file, "Client/" + Path.GetRelativePath(root, file).Replace('\\', '/'), CompressionLevel.Optimal);
             }
             archive.CreateEntryFromFile(entry, Path.GetFileName(entry), CompressionLevel.Optimal);
             ZipArchiveEntry note = archive.CreateEntry("使用说明.txt", CompressionLevel.Optimal);
             using var writer = new StreamWriter(note.Open(), new System.Text.UTF8Encoding(false));
-            writer.WriteLine("解压全部文件后，双击根目录中的玩家入口 EXE。玩家不能在启动器中切换交付模式。");
+            writer.WriteLine("解压全部文件后，双击根目录中的玩家启动器。玩家不能自行切换下载方式。");
         }
         catch { if (File.Exists(temporary)) File.Delete(temporary); throw; }
         finally { if (Directory.Exists(entryProbe)) { RejectReparseChain(entryProbe); Directory.Delete(entryProbe, true); } }

@@ -79,7 +79,7 @@ public static class ProjectReleasePublisher
     public static ProjectReleaseResult ImportOfflineDeploymentPackage(EditorProject project, string inputZip, string publishRoot)
     {
         string zipPath = Path.GetFullPath(inputZip);
-        if (!File.Exists(zipPath) || new FileInfo(zipPath).Length > 256L * 1024 * 1024) throw new InvalidDataException("离线发布包不存在或超过 256 MiB");
+        if (!File.Exists(zipPath) || new FileInfo(zipPath).Length > 256L * 1024 * 1024) throw new InvalidDataException("离线发布包不存在或超过 256 兆字节");
         string root = Path.GetFullPath(publishRoot);
         RejectReparsePath(root); if (!Directory.Exists(root)) Directory.CreateDirectory(root); RejectReparsePath(root);
         using IDisposable publishLock = AcquirePublishLock(root);
@@ -245,7 +245,7 @@ public static class ProjectReleasePublisher
     {
         if (project.Release.PlayerUpdateMode == PlayerUpdateMode.None) return;
         string source = Path.GetFullPath(project.Release.PlayerUpdateFile);
-        if (!File.Exists(source) || !source.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) || new FileInfo(source).Length > Launcher.PlayerShell.PlayerPayloadPackage.MaximumPlayerExecutableBytes) throw new InvalidDataException("新版玩家入口不存在、格式无效或超过 80 MiB");
+        if (!File.Exists(source) || !source.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) || new FileInfo(source).Length > Launcher.PlayerShell.PlayerPayloadPackage.MaximumPlayerExecutableBytes) throw new InvalidDataException("新版玩家入口不存在、格式无效或超过 80 兆字节");
         if (!Version.TryParse(project.Release.PlayerUpdateVersion, out Version? configuredVersion)) throw new InvalidDataException("新版玩家入口版本无效");
         string? actualValue = FileVersionInfo.GetVersionInfo(source).FileVersion;
         if (!Version.TryParse(actualValue, out Version? actualVersion) || actualVersion != configuredVersion) throw new InvalidDataException("新版玩家入口文件版本与发布设置不一致");

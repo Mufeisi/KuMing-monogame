@@ -47,7 +47,7 @@ public static class PlayerArtifactBuilder
             bool microRequired = RequiresMicroCredential(project);
             if (microRequired)
             {
-                if (string.IsNullOrWhiteSpace(microCode)) throw new InvalidOperationException("启用微端时必须输入访问 Code；Code 只用于本次生成，不写入项目文件");
+                if (string.IsNullOrWhiteSpace(microCode)) throw new InvalidOperationException("启用微端时必须输入访问密码；密码只用于本次生成，不写入项目文件");
                 File.WriteAllBytes(credential, MicroCredentialEnvelope.Create(project.Snapshot.ProjectId, microCode));
             }
             else if (File.Exists(credential)) File.Delete(credential);
@@ -59,7 +59,7 @@ public static class PlayerArtifactBuilder
                 LegalCopyright = project.Brand.Copyright, FileVersion = project.Brand.FileVersion, ProductVersion = project.Brand.ProductVersion, IconPath = icon,
             });
             PlayerPayloadInfo info = PlayerPayloadPackage.Create(branded, payload, output, "Client.exe");
-            if (new FileInfo(output).Length > PlayerPayloadPackage.MaximumPlayerExecutableBytes) throw new InvalidDataException("玩家入口超过 80 MiB 上限");
+            if (new FileInfo(output).Length > PlayerPayloadPackage.MaximumPlayerExecutableBytes) throw new InvalidDataException("玩家入口超过 80 兆字节上限");
             using Process process = Process.Start(new ProcessStartInfo(output) { UseShellExecute = false, WorkingDirectory = Path.GetDirectoryName(output)!, ArgumentList = { "--shell-smoke" } }) ?? throw new InvalidOperationException("无法启动生成后的玩家入口");
             if (!process.WaitForExit(15_000)) { process.Kill(entireProcessTree: true); throw new TimeoutException("玩家入口生成后验证超时"); }
             if (process.ExitCode != 0) throw new InvalidDataException("玩家入口生成后验证失败，退出码 " + process.ExitCode);

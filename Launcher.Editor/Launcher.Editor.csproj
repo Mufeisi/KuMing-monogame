@@ -13,6 +13,11 @@
     <ProjectReference Include="..\Launcher.PlayerShell.Core\Launcher.PlayerShell.Core.csproj" />
     <ProjectReference Include="..\Launcher.ThemeRuntime\Launcher.ThemeRuntime.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+      <_Parameter1>Launcher.PlayerShellIntegration.Windows</_Parameter1>
+    </AssemblyAttribute>
+  </ItemGroup>
   <ItemGroup Condition="'$(GatewayTemplateZip)' != '' and Exists('$(GatewayTemplateZip)')">
     <EmbeddedResource Include="$(GatewayTemplateZip)" LogicalName="LyoCrystal.LauncherEditor.MicroGateway.zip" />
   </ItemGroup>

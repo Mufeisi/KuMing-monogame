@@ -10,12 +10,31 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text.Json;
 using Launcher.PlayerShell;
+using System.ComponentModel;
 using Xunit;
 
 namespace Launcher.PlayerShellIntegration;
 
 public sealed class LauncherEditorTests
 {
+    [Fact]
+    public void EditorChineseCatalogCoversEveryVisibleChoice()
+    {
+        string[] texts = Enum.GetValues<LauncherTemplateKind>().Select(EditorChineseText.Template)
+            .Concat(Enum.GetValues<ServerListMode>().Select(EditorChineseText.ServerList))
+            .Concat(Enum.GetValues<AnnouncementDisplayMode>().Select(EditorChineseText.Announcement))
+            .Concat(Enum.GetValues<ClientDeliveryMode>().Select(EditorChineseText.Delivery))
+            .Concat(Enum.GetValues<PlayerUpdateMode>().Select(EditorChineseText.Update))
+            .Concat(Enum.GetValues<ServerOperatingStatus>().Select(EditorChineseText.ServerStatus))
+            .Concat(Enum.GetValues<LauncherAction>().Select(EditorChineseText.Action))
+            .Concat(Enum.GetValues<LauncherControlId>().Select(EditorChineseText.Control)).ToArray();
+        Assert.All(texts, text => { Assert.NotEmpty(text); Assert.DoesNotMatch("[A-Za-z]", text); });
+        TypeConverter delivery = TypeDescriptor.GetProperties(typeof(ProjectBrandPropertyView))[nameof(ProjectBrandPropertyView.DeliveryMode)]!.Converter;
+        Assert.Equal("微端按需下载（推荐）", delivery.ConvertToString(ClientDeliveryMode.MicroOnDemand));
+        var boolean = new ChineseBooleanConverter();
+        Assert.Equal("是", boolean.ConvertToString(true)); Assert.Equal("否", boolean.ConvertToString(false));
+    }
+
     [Fact]
     public void ProjectCreationOptionsPersistAllWizardDomains()
     {
@@ -29,12 +48,13 @@ public sealed class LauncherEditorTests
             BackupMicroAddress = "10.0.0.10", BackupMicroPort = 8089, Resolution = 1920, FullScreen = true,
             AnnouncementTitle = "开服公告", AnnouncementSummary = "欢迎", PlayerUpdateMode = PlayerUpdateMode.Required,
             GatewayCacheDirectory = "GatewayCache", GatewayMemoryCacheMb = 256, GatewayDiskCacheMb = 4096,
-            DeliveryMode = ClientDeliveryMode.FullClient,
+            DeliveryMode = ClientDeliveryMode.FullClient, ServerListMode = ServerListMode.Sidebar,
         });
         EditorProject loaded = store.Load(project.Snapshot.ProjectId);
         Assert.Equal("测试公司", loaded.Brand.CompanyName);
         Assert.Equal("10.0.0.8", loaded.Snapshot.Servers[0].Address);
         Assert.Equal(ClientDeliveryMode.FullClient, loaded.DeliveryMode);
+        Assert.Equal(ServerListMode.Sidebar, loaded.Snapshot.Theme.ServerListMode);
         Assert.Equal("10.0.0.10", loaded.Snapshot.DefaultMicro.BackupAddress);
         Assert.Equal(1920, loaded.Snapshot.Defaults.Resolution);
         Assert.Equal("开服公告", loaded.Snapshot.Announcements[0].Title);

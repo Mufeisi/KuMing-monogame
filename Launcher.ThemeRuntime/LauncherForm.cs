@@ -31,6 +31,8 @@ internal sealed class LauncherForm : Form
     private bool _autoStartTriggered;
     private bool _buttonImagesLoaded;
     private bool _entryUpdateBlocked;
+    private bool _dpiLayoutPending;
+    private bool _disposeStarted;
 
     public LauncherForm(LoadedLauncherSnapshot loaded, string clientDirectory, Action<string, LauncherServer, MicroEndpoint, LauncherPlayerSettings> launch)
     {
@@ -56,7 +58,7 @@ internal sealed class LauncherForm : Form
         string background = LauncherSnapshotValidator.ResolveAsset(_loaded.Root, _loaded.Snapshot.Theme.BackgroundImage);
         if (!string.IsNullOrEmpty(background)) { BackgroundImage = Own(SafeLoadImage(background)); BackgroundImageLayout = ImageLayout.Stretch; }
         ApplyTemplate();
-        DpiChanged += (_, _) => BeginInvoke(() => ApplyTemplate(initial: false));
+        DpiChanged += (_, _) => QueueDpiLayout();
         UpdateProgress(new LauncherProgressState("启动核心已就绪，可进入游戏", string.Empty, 0, 0, 0, 0, 0));
         _progressTimer.Tick += (_, _) => PollProgress();
         _progressTimer.Start();
@@ -235,6 +237,21 @@ internal sealed class LauncherForm : Form
     }
 
     private Button CreateTopButton(string text, int rightOffset) => new() { Text = text, FlatStyle = FlatStyle.Flat, Size = new Size(110, 34), Location = new Point(Width - rightOffset, 20), Anchor = AnchorStyles.Top | AnchorStyles.Right };
+
+    private void QueueDpiLayout()
+    {
+        if (_dpiLayoutPending || _disposeStarted || IsDisposed || Disposing) return;
+        _dpiLayoutPending = true;
+        try
+        {
+            BeginInvoke(() =>
+            {
+                try { if (!_disposeStarted && !IsDisposed && !Disposing) ApplyTemplate(initial: false); }
+                finally { _dpiLayoutPending = false; }
+            });
+        }
+        catch (InvalidOperationException) { _dpiLayoutPending = false; }
+    }
 
     private void ApplyTemplate(bool initial = true)
     {
@@ -487,7 +504,7 @@ internal sealed class LauncherForm : Form
         return new Bitmap(source);
     }
     private T Own<T>(T image) where T : Image { _ownedImages.Add(image); return image; }
-    protected override void Dispose(bool disposing) { if (disposing) { _announcementCancellation.Dispose(); _progressTimer.Dispose(); foreach (Image image in _derivedBackgrounds.Values) image.Dispose(); _derivedBackgrounds.Clear(); foreach (Image image in _ownedImages) image.Dispose(); _ownedImages.Clear(); foreach (Font font in _ownedFonts) font.Dispose(); _ownedFonts.Clear(); } base.Dispose(disposing); }
+    protected override void Dispose(bool disposing) { if (disposing) { _disposeStarted = true; if (_dpiLayoutPending && IsHandleCreated) Application.DoEvents(); _announcementCancellation.Dispose(); _progressTimer.Dispose(); foreach (Image image in _derivedBackgrounds.Values) image.Dispose(); _derivedBackgrounds.Clear(); foreach (Image image in _ownedImages) image.Dispose(); _ownedImages.Clear(); foreach (Font font in _ownedFonts) font.Dispose(); _ownedFonts.Clear(); } base.Dispose(disposing); }
     private static LauncherPlayerSettings CloneSettings(LauncherPlayerSettings value) => new() { Resolution = value.Resolution, FullScreen = value.FullScreen, Borderless = value.Borderless, FpsCap = value.FpsCap, MaxFps = value.MaxFps, Volume = value.Volume, MusicVolume = value.MusicVolume, TopMost = value.TopMost, AutoStart = value.AutoStart, AdvancedLogs = value.AdvancedLogs, MicroCacheLimitMb = value.MicroCacheLimitMb };
     private static string StatusText(ServerOperatingStatus value) => value switch
     {
