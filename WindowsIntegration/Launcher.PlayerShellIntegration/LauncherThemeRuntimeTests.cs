@@ -548,7 +548,7 @@ public sealed class LauncherThemeRuntimeTests
     private sealed class StubHttpHandler(HttpStatusCode status) : HttpMessageHandler
     {
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) =>
-            Task.FromResult(new HttpResponseMessage(status) { RequestMessage = request });
+            Task.FromResult(new HttpResponseMessage(status) { RequestMessage = request, Content = new StringContent("<html><body>公告</body></html>") });
     }
 
     private static LauncherSnapshot CreateSnapshot(string id) => new()

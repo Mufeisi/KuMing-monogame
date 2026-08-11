@@ -17,10 +17,10 @@ public sealed class PlayerPayloadPackageTests
             string payload = Directory.CreateDirectory(Path.Combine(root, "payload")).FullName; File.WriteAllText(Path.Combine(payload, "Client.exe"), "client");
             string source = Path.Combine(root, "玩家下载入口.exe"); PlayerPayloadInfo info = PlayerPayloadPackage.Create(shell, payload, source, "Client.exe");
             string managedRoot = Directory.CreateDirectory(Path.Combine(root, "managed")).FullName;
-            string managed = PlayerManagedEntry.Ensure(source, "project-1", managedRoot, info);
+            string managed = PlayerManagedEntry.Ensure(source, "a.b", managedRoot, info);
             Assert.NotEqual(source, managed);
             Assert.Equal(info.Sha256, PlayerPayloadPackage.Verify(managed).Sha256);
-            Assert.Equal(managed, PlayerManagedEntry.Ensure(source, "project-1", managedRoot, info));
+            Assert.Equal(managed, PlayerManagedEntry.Ensure(source, "a.b", managedRoot, info));
         }
         finally { Directory.Delete(root, recursive: true); }
     }

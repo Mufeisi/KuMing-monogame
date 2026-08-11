@@ -19,6 +19,16 @@ public sealed class EditorProjectCreationOptions
     public int ServerPort { get; set; } = 7000;
     public string MicroAddress { get; set; } = "127.0.0.1";
     public int MicroPort { get; set; } = 8080;
+    public string BackupMicroAddress { get; set; } = string.Empty;
+    public int BackupMicroPort { get; set; }
+    public int Resolution { get; set; } = 1024;
+    public bool FullScreen { get; set; }
+    public string AnnouncementTitle { get; set; } = "欢迎公告";
+    public string AnnouncementSummary { get; set; } = "欢迎进入游戏。";
+    public PlayerUpdateMode PlayerUpdateMode { get; set; }
+    public string GatewayCacheDirectory { get; set; } = "Cache";
+    public int GatewayMemoryCacheMb { get; set; } = 128;
+    public int GatewayDiskCacheMb { get; set; } = 2048;
 }
 
 public sealed class EditorProject
@@ -97,6 +107,9 @@ public sealed class GatewayDeploymentSettings
     public int Port { get; set; } = 8080;
     public string User { get; set; } = "player";
     public string ResourceDirectory { get; set; } = string.Empty;
+    public string CacheDirectory { get; set; } = "Cache";
+    public int MemoryCacheMb { get; set; } = 128;
+    public int DiskCacheMb { get; set; } = 2048;
 }
 
 public sealed record ImportPreview(IReadOnlyList<string> MappedFields, IReadOnlyList<string> UnknownFields, bool SensitiveValuesOmitted);

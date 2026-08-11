@@ -10,6 +10,7 @@ public static class BootstrapOfflinePackageInstaller
     {
         string zip = Path.GetFullPath(packagePath), root = Path.GetFullPath(publishRoot);
         if (!File.Exists(zip) || new FileInfo(zip).Length > 256L * 1024 * 1024) throw new InvalidDataException("离线发布包不存在或超过 256 MiB");
+        RejectReparse(zip);
         RejectReparse(root); Directory.CreateDirectory(root); RejectReparse(root);
         using var mutex = new Mutex(false, "Local\\LyoCrystal.OfflineInstall." + Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(root.ToUpperInvariant())))[..32]);
         if (!mutex.WaitOne(TimeSpan.FromSeconds(30))) throw new TimeoutException("等待离线导入锁超时");
@@ -20,6 +21,7 @@ public static class BootstrapOfflinePackageInstaller
             using ZipArchive archive = ZipFile.OpenRead(zip);
             if (archive.Entries.Count is < 3 or > 512) throw new InvalidDataException("离线发布包文件数量无效");
             ZipArchiveEntry pointer = archive.GetEntry("current.txt") ?? throw new InvalidDataException("离线发布包缺少版本指针");
+            if (pointer.Length is < 1 or > 256) throw new InvalidDataException("离线发布包版本指针长度无效");
             string version; using (var reader = new StreamReader(pointer.Open(), System.Text.Encoding.UTF8, true, 256, false)) version = reader.ReadToEnd().Trim();
             ValidateVersion(version);
             string prefix = "versions/" + version + "/"; long total = 0; int count = 0;
@@ -32,10 +34,12 @@ public static class BootstrapOfflinePackageInstaller
             }
             string manifestPath = Path.Combine(staging, "bootstrap-manifest.json");
             string json = File.ReadAllText(manifestPath);
-            BootstrapManifestVerificationResult verified = BootstrapManifestSignaturePolicy.Verify(json, trustedKeys, clientVersion);
-            if (!verified.IsValid) throw new InvalidDataException("离线发布签名无效：" + verified.Error);
+            string acceptanceState = Path.Combine(Path.GetDirectoryName(root)!, "." + Path.GetFileName(root) + ".offline-bootstrap-state.json");
+            RejectReparse(acceptanceState);
+            EnsureCurrentAccepted(root, acceptanceState, trustedKeys, clientVersion);
+            BootstrapSignedManifest accepted = BootstrapManifestAcceptanceStore.VerifyForAcceptance(json, acceptanceState, trustedKeys, clientVersion);
             var expected = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "bootstrap-manifest.json" };
-            foreach (BootstrapSignedPackage package in verified.Manifest.Packages)
+            foreach (BootstrapSignedPackage package in accepted.Packages)
             {
                 if (Path.GetFileName(package.Name) != package.Name || !expected.Add(package.Name)) throw new InvalidDataException("离线发布签名文件名无效");
                 string file = Path.Combine(staging, package.Name);
@@ -43,13 +47,27 @@ public static class BootstrapOfflinePackageInstaller
                 BootstrapSignedPackageHashPolicy.VerifyFile(file, package.Sha256);
             }
             if (Directory.EnumerateFiles(staging).Select(Path.GetFileName).Any(name => name is not null && !expected.Contains(name))) throw new InvalidDataException("离线发布包包含未签名文件");
-            long floor = ReadCurrentSequence(root, trustedKeys, clientVersion);
-            if (verified.Manifest.Sequence <= floor) throw new InvalidDataException("离线发布序列必须严格高于目标当前序列");
             string destination = Path.Combine(root, "versions", version); Directory.CreateDirectory(Path.GetDirectoryName(destination)!); RejectReparse(Path.GetDirectoryName(destination)!);
-            if (Directory.Exists(destination)) throw new IOException("离线版本目录已存在");
-            Directory.Move(staging, destination);
+            if (Directory.Exists(destination))
+            {
+                RejectReparse(destination);
+                string existingJson = File.ReadAllText(Path.Combine(destination, "bootstrap-manifest.json"));
+                BootstrapSignedManifest existing = BootstrapManifestAcceptanceStore.VerifyForAcceptance(existingJson, acceptanceState, trustedKeys, clientVersion);
+                if (existing.Sequence != accepted.Sequence || !string.Equals(existing.ResourceVersion, accepted.ResourceVersion, StringComparison.Ordinal) || !string.Equals(existingJson, json, StringComparison.Ordinal)) throw new IOException("同名离线版本目录与待导入内容不同");
+                var existingNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "bootstrap-manifest.json" };
+                foreach (BootstrapSignedPackage package in existing.Packages)
+                {
+                    existingNames.Add(package.Name); string file = Path.Combine(destination, package.Name);
+                    if (!File.Exists(file) || new FileInfo(file).Length != package.Size) throw new InvalidDataException("已存在离线版本不完整：" + package.Name);
+                    BootstrapSignedPackageHashPolicy.VerifyFile(file, package.Sha256);
+                }
+                if (Directory.EnumerateFiles(destination).Select(Path.GetFileName).Any(name => name is not null && !existingNames.Contains(name))) throw new InvalidDataException("已存在离线版本包含未签名文件");
+                Directory.Delete(staging, true);
+            }
+            else Directory.Move(staging, destination);
             WritePointer(root, version);
-            return new BootstrapOfflineInstallResult(verified.Manifest.Sequence, version, destination);
+            BootstrapManifestAcceptanceStore.VerifyAndAccept(json, acceptanceState, trustedKeys, clientVersion);
+            return new BootstrapOfflineInstallResult(accepted.Sequence, version, destination);
         }
         finally
         {
@@ -58,14 +76,23 @@ public static class BootstrapOfflinePackageInstaller
         }
     }
 
-    private static long ReadCurrentSequence(string root, IReadOnlyDictionary<string, BootstrapManifestTrustedKey> keys, Version clientVersion)
+    private static void EnsureCurrentAccepted(string root, string statePath, IReadOnlyDictionary<string, BootstrapManifestTrustedKey> keys, Version clientVersion)
     {
-        string pointer = Path.Combine(root, "current.txt"); if (!File.Exists(pointer)) return 0;
+        string pointer = Path.Combine(root, "current.txt"); if (!File.Exists(pointer) || File.Exists(statePath)) return;
+        if ((File.GetAttributes(pointer) & FileAttributes.ReparsePoint) != 0) throw new InvalidDataException("目标发布指针不得为重解析点");
+        if (new FileInfo(pointer).Length is < 1 or > 256) throw new InvalidDataException("目标发布指针长度无效");
         string version = File.ReadAllText(pointer).Trim(); ValidateVersion(version);
         string versionRoot = Path.GetFullPath(Path.Combine(root, "versions", version)); RejectReparse(versionRoot);
-        BootstrapManifestVerificationResult result = BootstrapManifestSignaturePolicy.Verify(File.ReadAllText(Path.Combine(versionRoot, "bootstrap-manifest.json")), keys, clientVersion);
+        string json = File.ReadAllText(Path.Combine(versionRoot, "bootstrap-manifest.json"));
+        BootstrapManifestVerificationResult result = BootstrapManifestSignaturePolicy.Verify(json, keys, clientVersion);
         if (!result.IsValid) throw new InvalidDataException("目标当前发布签名无效：" + result.Error);
-        return result.Manifest.Sequence;
+        foreach (BootstrapSignedPackage package in result.Manifest.Packages)
+        {
+            string file = Path.Combine(versionRoot, package.Name);
+            if (!File.Exists(file) || new FileInfo(file).Length != package.Size) throw new InvalidDataException("目标当前发布文件不完整：" + package.Name);
+            BootstrapSignedPackageHashPolicy.VerifyFile(file, package.Sha256);
+        }
+        BootstrapManifestAcceptanceStore.VerifyAndAccept(json, statePath, keys, clientVersion);
     }
 
     private static void WritePointer(string root, string version)

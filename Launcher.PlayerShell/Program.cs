@@ -186,7 +186,7 @@ internal static class Program
         if (!File.Exists(snapshotPath) || new FileInfo(snapshotPath).Length > BootstrapManifestSignaturePolicy.MaximumJsonBytes) throw new InvalidDataException("玩家入口内置项目快照不存在或过大");
         using JsonDocument document = JsonDocument.Parse(File.ReadAllBytes(snapshotPath));
         string projectId = document.RootElement.GetProperty("ProjectId").GetString() ?? string.Empty;
-        if (projectId.Length is < 3 or > 64 || projectId.Any(character => !char.IsAsciiLetterOrDigit(character) && character is not '-' and not '_' and not '.')) throw new InvalidDataException("玩家入口项目标识无效");
+        if (projectId.Length is < 1 or > 64 || projectId.Any(character => !char.IsAsciiLetterOrDigit(character) && character is not '-' and not '_' and not '.')) throw new InvalidDataException("玩家入口项目标识无效");
         return projectId;
     }
 
@@ -198,7 +198,7 @@ internal static class Program
         using JsonDocument document = JsonDocument.Parse(File.ReadAllBytes(fullPath));
         JsonElement root = document.RootElement;
         string projectId = root.GetProperty("ProjectId").GetString() ?? string.Empty;
-        if (projectId.Length is < 3 or > 64 || projectId.Any(character => !char.IsAsciiLetterOrDigit(character) && character is not '-' and not '_'))
+        if (projectId.Length is < 1 or > 64 || projectId.Any(character => !char.IsAsciiLetterOrDigit(character) && character is not '-' and not '_' and not '.'))
             throw new InvalidDataException("玩家入口项目标识无效");
         var keys = new Dictionary<string, BootstrapManifestTrustedKey>(StringComparer.Ordinal);
         foreach (JsonElement element in root.GetProperty("TrustedReleaseKeys").EnumerateArray())

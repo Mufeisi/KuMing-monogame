@@ -48,6 +48,11 @@ public sealed class EditorProjectStore
         project.Snapshot.Servers[0].Port = options.ServerPort;
         project.Snapshot.DefaultMicro.Address = options.MicroAddress.Trim();
         project.Snapshot.DefaultMicro.Port = options.MicroPort;
+        project.Snapshot.DefaultMicro.BackupAddress = options.BackupMicroAddress.Trim();
+        project.Snapshot.DefaultMicro.BackupPort = options.BackupMicroPort;
+        project.Snapshot.Defaults.Resolution = options.Resolution;
+        project.Snapshot.Defaults.FullScreen = options.FullScreen;
+        project.Snapshot.Announcements = new List<LauncherAnnouncement> { new() { Title = options.AnnouncementTitle.Trim(), Summary = options.AnnouncementSummary.Trim(), Date = DateTime.Today.ToString("yyyy-MM-dd") } };
         project.DeliveryMode = options.DeliveryMode;
         project.ImportedClientDirectory = options.ImportedClientDirectory.Trim();
         project.Snapshot.DefaultMicro.User = "u_" + Convert.ToHexString(RandomNumberGenerator.GetBytes(8)).ToLowerInvariant();
@@ -55,6 +60,10 @@ public sealed class EditorProjectStore
         project.Brand.WindowTitle = project.Snapshot.ProjectName;
         project.Brand.TaskbarName = project.Snapshot.ProjectName;
         project.Brand.CompanyName = options.CompanyName.Trim();
+        project.Release.PlayerUpdateMode = options.PlayerUpdateMode;
+        project.Gateway.CacheDirectory = options.GatewayCacheDirectory.Trim();
+        project.Gateway.MemoryCacheMb = options.GatewayMemoryCacheMb;
+        project.Gateway.DiskCacheMb = options.GatewayDiskCacheMb;
         ProjectReleaseKeyStore.EnsureProvisioned(project, directory);
         Save(project);
         return project;

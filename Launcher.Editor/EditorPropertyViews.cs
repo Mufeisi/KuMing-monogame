@@ -53,6 +53,9 @@ internal sealed class GatewayPropertyView
     [DisplayName("监听 IP")] public string ListenAddress { get => _value.ListenAddress; set => _value.ListenAddress = value; }
     [DisplayName("端口")] public int Port { get => _value.Port; set => _value.Port = value; }
     [DisplayName("完整客户端目录提示")] public string ResourceDirectory { get => _value.ResourceDirectory; set => _value.ResourceDirectory = value; }
+    [DisplayName("缓存目录")] public string CacheDirectory { get => _value.CacheDirectory; set => _value.CacheDirectory = value; }
+    [DisplayName("内存缓存 MiB")] public int MemoryCacheMb { get => _value.MemoryCacheMb; set => _value.MemoryCacheMb = value; }
+    [DisplayName("磁盘缓存 MiB")] public int DiskCacheMb { get => _value.DiskCacheMb; set => _value.DiskCacheMb = value; }
 }
 
 internal sealed class DefaultMicroPropertyView

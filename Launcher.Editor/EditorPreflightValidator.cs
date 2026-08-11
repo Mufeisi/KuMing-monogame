@@ -10,6 +10,7 @@ public static class EditorPreflightValidator
         LauncherSnapshotValidator.Validate(project.Snapshot);
         var issues = new List<string>();
         project.SynchronizeMicroIdentity();
+        if (project.Gateway.MemoryCacheMb is < 16 or > 1024 || project.Gateway.DiskCacheMb is < 128 or > 32768) issues.Add("微端网关缓存容量超出允许范围");
         if (project.Snapshot.DefaultMicro.Enabled && (string.IsNullOrWhiteSpace(project.Snapshot.DefaultMicro.ResourceVersion) || string.IsNullOrWhiteSpace(project.Snapshot.DefaultMicro.SigningIdentity)))
             issues.Add("项目默认微端缺少资源版本或签名身份");
         foreach (LauncherServer server in project.Snapshot.Servers.Where(item => item.MicroOverride?.Enabled == true))

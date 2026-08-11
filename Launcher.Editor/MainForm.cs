@@ -332,7 +332,7 @@ internal sealed class MainForm : Form
         if (entry.ShowDialog(this) != DialogResult.OK) return;
         using var output = new SaveFileDialog { Filter = "完整客户端包 (*.zip)|*.zip", FileName = _project.Snapshot.ProjectId + "-完整客户端.zip" };
         if (output.ShowDialog(this) != DialogResult.OK) return;
-        try { SyncLists(); _store.Save(_project); FullClientDistributionBuilder.Create(_project, entry.FileName, output.FileName); SetStatus("完整客户端交付包已生成；微端项目仍只生成单 EXE 按需模式"); }
+        try { SyncLists(); EditorPreflightValidator.ThrowIfInvalid(_project, _store.GetProjectDirectory(_project.Snapshot.ProjectId)); _store.Save(_project); FullClientDistributionBuilder.Create(_project, entry.FileName, output.FileName); SetStatus("完整客户端交付包已生成；微端项目仍只生成单 EXE 按需模式"); }
         catch (Exception ex) { ShowError(ex); }
     }
 

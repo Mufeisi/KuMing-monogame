@@ -8,6 +8,8 @@ using Shared.Security;
 using LyoCrystal.MicroGateway;
 using System.Net;
 using System.Net.Sockets;
+using System.Text.Json;
+using Launcher.PlayerShell;
 using Xunit;
 
 namespace Launcher.PlayerShellIntegration;
@@ -24,12 +26,20 @@ public sealed class LauncherEditorTests
             ProjectId = "wizard-project", ProjectName = "向导项目", Template = LauncherTemplateKind.Widescreen,
             CompanyName = "测试公司", RemoteReleaseBaseUrl = "http://release.example.test/launcher/",
             ServerAddress = "10.0.0.8", ServerPort = 7010, MicroAddress = "10.0.0.9", MicroPort = 8088,
+            BackupMicroAddress = "10.0.0.10", BackupMicroPort = 8089, Resolution = 1920, FullScreen = true,
+            AnnouncementTitle = "开服公告", AnnouncementSummary = "欢迎", PlayerUpdateMode = PlayerUpdateMode.Required,
+            GatewayCacheDirectory = "GatewayCache", GatewayMemoryCacheMb = 256, GatewayDiskCacheMb = 4096,
             DeliveryMode = ClientDeliveryMode.FullClient,
         });
         EditorProject loaded = store.Load(project.Snapshot.ProjectId);
         Assert.Equal("测试公司", loaded.Brand.CompanyName);
         Assert.Equal("10.0.0.8", loaded.Snapshot.Servers[0].Address);
         Assert.Equal(ClientDeliveryMode.FullClient, loaded.DeliveryMode);
+        Assert.Equal("10.0.0.10", loaded.Snapshot.DefaultMicro.BackupAddress);
+        Assert.Equal(1920, loaded.Snapshot.Defaults.Resolution);
+        Assert.Equal("开服公告", loaded.Snapshot.Announcements[0].Title);
+        Assert.Equal(PlayerUpdateMode.Required, loaded.Release.PlayerUpdateMode);
+        Assert.Equal(4096, loaded.Gateway.DiskCacheMb);
     }
 
     [Fact]
@@ -38,10 +48,22 @@ public sealed class LauncherEditorTests
         using var scope = new EditorTempScope();
         string client = scope.Dir("client");
         File.WriteAllText(Path.Combine(client, "Client.exe"), "client");
+        File.WriteAllText(Path.Combine(client, "launcher-capabilities.json"), "{\"product\":\"LyoCrystal\",\"launchArgumentsVersion\":1}");
         Directory.CreateDirectory(Path.Combine(client, "Data"));
         File.WriteAllText(Path.Combine(client, "Data", "Map.dat"), "resource");
-        string entry = Path.Combine(scope.Root, "玩家入口.exe"); File.WriteAllText(entry, "player");
-        var project = new EditorProject { DeliveryMode = ClientDeliveryMode.FullClient, ImportedClientDirectory = client };
+        var store = new EditorProjectStore(scope.Dir("full-client-workspace"));
+        EditorProject project = store.Create("full-client", "完整客户端", LauncherTemplateKind.Classic);
+        project.DeliveryMode = ClientDeliveryMode.FullClient; project.ImportedClientDirectory = client;
+        project.Snapshot.TrustedReleaseKeys = new List<BootstrapManifestTrustedKey>
+        {
+            new() { KeyId = project.Release.CurrentKeyId, SubjectPublicKeyInfo = project.Release.CurrentPublicKey, NotBeforeSequence = project.Release.CurrentKeyNotBeforeSequence },
+            new() { KeyId = project.Release.NextKeyId, SubjectPublicKeyInfo = project.Release.NextPublicKey, NotBeforeSequence = project.Release.NextKeyNotBeforeSequence },
+        };
+        string shell = Path.Combine(scope.Root, "shell.exe"); File.WriteAllBytes(shell, "MZ-test-shell"u8.ToArray());
+        string payload = scope.Dir("full-player-payload"); File.WriteAllText(Path.Combine(payload, "Client.exe"), "client");
+        string builtIn = Directory.CreateDirectory(Path.Combine(payload, "Launcher", "BuiltIn")).FullName;
+        File.WriteAllBytes(Path.Combine(builtIn, "launcher-snapshot.json"), JsonSerializer.SerializeToUtf8Bytes(project.Snapshot, LauncherSnapshotJsonContext.Default.LauncherSnapshot));
+        string entry = Path.Combine(scope.Root, "玩家入口.exe"); PlayerPayloadPackage.Create(shell, payload, entry, "Client.exe");
         string output = Path.Combine(scope.Root, "full.zip");
         FullClientDistributionBuilder.Create(project, entry, output);
         using var archive = System.IO.Compression.ZipFile.OpenRead(output);
@@ -351,6 +373,8 @@ public sealed class LauncherEditorTests
         project.Snapshot.ProjectName = "第二版";
         ProjectReleaseResult second = ProjectReleasePublisher.Publish(project, projectRoot, publishRoot, "第二版");
         Assert.Equal(2, second.Sequence);
+        string offlineSecond = Path.Combine(scope.Root, "offline-second.zip");
+        ProjectReleasePublisher.CreateOfflineDeploymentPackage(publishRoot, offlineSecond);
         ProjectReleaseDiff diff = ProjectReleasePublisher.CompareVersions(project, publishRoot, first.VersionName, second.VersionName);
         Assert.Contains("launcher-snapshot.json", diff.Changed);
         string historicalSnapshot = Path.Combine(first.VersionDirectory, "launcher-snapshot.json");
@@ -383,6 +407,10 @@ public sealed class LauncherEditorTests
         }).ToDictionary(item => item.KeyId, StringComparer.Ordinal);
         BootstrapOfflineInstallResult direct = BootstrapOfflinePackageInstaller.Install(offline, directTarget, directKeys, new Version(1, 0, 0, 0));
         Assert.Equal(rollback.Sequence, direct.Sequence);
+        File.Delete(Path.Combine(directTarget, "current.txt"));
+        BootstrapOfflineInstallResult resumed = BootstrapOfflinePackageInstaller.Install(offline, directTarget, directKeys, new Version(1, 0, 0, 0));
+        Assert.Equal(direct.Sequence, resumed.Sequence);
+        Assert.Throws<InvalidDataException>(() => BootstrapOfflinePackageInstaller.Install(offlineSecond, directTarget, directKeys, new Version(1, 0, 0, 0)));
         string importedRoot = Path.Combine(scope.Root, "offline-imported");
         ProjectReleaseResult imported = ProjectReleasePublisher.ImportOfflineDeploymentPackage(project, offline, importedRoot);
         Assert.Equal(rollback.Sequence, imported.Sequence);

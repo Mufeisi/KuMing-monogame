@@ -4,7 +4,7 @@ public static class PlayerManagedEntry
 {
     public static string Ensure(string sourceExecutable, string projectId, string managedRoot, PlayerPayloadInfo expected)
     {
-        if (projectId.Length is < 3 or > 64 || projectId.Any(character => !char.IsAsciiLetterOrDigit(character) && character is not '-' and not '_')) throw new InvalidDataException("玩家入口项目标识无效");
+        if (projectId.Length is < 1 or > 64 || projectId.Any(character => !char.IsAsciiLetterOrDigit(character) && character is not '-' and not '_' and not '.')) throw new InvalidDataException("玩家入口项目标识无效");
         string source = Path.GetFullPath(sourceExecutable), root = Path.GetFullPath(managedRoot);
         if (!File.Exists(source)) throw new FileNotFoundException("玩家入口不存在", source);
         RejectReparse(root); Directory.CreateDirectory(root); RejectReparse(root);

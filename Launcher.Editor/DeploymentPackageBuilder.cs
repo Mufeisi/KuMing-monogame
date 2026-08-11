@@ -62,6 +62,9 @@ public static class DeploymentPackageBuilder
                     signingIdentity = project.Snapshot.DefaultMicro.SigningIdentity,
                     resourceDirectory = project.Gateway.ResourceDirectory,
                     launcherDirectory = "LauncherPublish",
+                    cacheDirectory = project.Gateway.CacheDirectory,
+                    memoryCacheMb = project.Gateway.MemoryCacheMb,
+                    diskCacheMb = project.Gateway.DiskCacheMb,
                     trustedReleaseKeys = project.Snapshot.TrustedReleaseKeys,
                 }, new JsonSerializerOptions { WriteIndented = true });
                 if (!string.IsNullOrWhiteSpace(microCode))

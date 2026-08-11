@@ -10,6 +10,7 @@ internal sealed class LauncherForm : Form
     private readonly Panel _announcements = new() { AutoScroll = true };
     private readonly FlowLayoutPanel _actionLinks = new() { AutoSize = true, BackColor = Color.Transparent };
     private WebBrowser? _announcementBrowser;
+    private readonly CancellationTokenSource _announcementCancellation = new();
     private readonly ProgressBar _overall = new();
     private readonly ProgressBar _current = new();
     private readonly Label _progressText = new() { AutoEllipsis = true };
@@ -65,22 +66,44 @@ internal sealed class LauncherForm : Form
     protected override async void OnShown(EventArgs e)
     {
         base.OnShown(e);
-        if (_loaded.Snapshot.AnnouncementMode == AnnouncementDisplayMode.ExternalPage)
-        {
-            AnnouncementDisplayMode mode = await AnnouncementPresentationResolver.ResolveAsync(_loaded.Snapshot);
-            if (!IsDisposed && mode == AnnouncementDisplayMode.ExternalPage)
-            {
-                _announcementBrowser = new WebBrowser { Dock = DockStyle.Fill, ScriptErrorsSuppressed = true, IsWebBrowserContextMenuEnabled = false, WebBrowserShortcutsEnabled = false, AllowWebBrowserDrop = false };
-                _announcements.Controls.Clear();
-                _announcements.Controls.Add(_announcementBrowser);
-                _announcementBrowser.Navigate(_loaded.Snapshot.ExternalAnnouncementUrl);
-            }
-        }
         if (_settings.AutoStart && !_autoStartTriggered && !_entryUpdateBlocked)
         {
             _autoStartTriggered = true;
             BeginInvoke(async () => await LaunchSelectedAsync());
         }
+        if (_loaded.Snapshot.AnnouncementMode == AnnouncementDisplayMode.ExternalPage)
+        {
+            AnnouncementPresentationResolver.Presentation presentation = await AnnouncementPresentationResolver.LoadAsync(_loaded.Snapshot, cancellationToken: _announcementCancellation.Token);
+            if (IsDisposed || Disposing || !Visible || _announcementCancellation.IsCancellationRequested) return;
+            if (presentation.Mode == AnnouncementDisplayMode.ExternalPage)
+            {
+                try
+                {
+                    var browser = new WebBrowser { Dock = DockStyle.Fill, ScriptErrorsSuppressed = true, IsWebBrowserContextMenuEnabled = false, WebBrowserShortcutsEnabled = false, AllowWebBrowserDrop = false };
+                    _announcementBrowser = browser;
+                    browser.NewWindow += (_, args) => args.Cancel = true;
+                    browser.Navigating += (_, args) =>
+                    {
+                        Uri? targetUrl = args.Url;
+                        if (targetUrl is null) { args.Cancel = true; return; }
+                        if (targetUrl.Scheme == "about") return;
+                        args.Cancel = true;
+                        if (LauncherActionDispatcher.TryGetHttpUri(targetUrl.AbsoluteUri, out Uri? safe)) new LauncherActionDispatcher().Execute(LauncherAction.OpenAnnouncementLink, safe!.AbsoluteUri);
+                    };
+                    foreach (Control control in _announcements.Controls.Cast<Control>().ToArray()) control.Dispose();
+                    _announcements.Controls.Clear(); _announcements.Controls.Add(browser);
+                    const string policy = "<meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'none'; img-src http: https: data:; style-src 'unsafe-inline' http: https:; font-src http: https:; script-src 'none'; object-src 'none'; frame-src 'none'; connect-src 'none'; form-action 'none'\">";
+                    browser.DocumentText = policy + presentation.Html;
+                }
+                catch { ShowNativeAnnouncements(); }
+            }
+        }
+    }
+
+    protected override void OnFormClosing(FormClosingEventArgs e)
+    {
+        _announcementCancellation.Cancel();
+        base.OnFormClosing(e);
     }
 
     internal void SetEntryUpdateChecking()
@@ -131,12 +154,7 @@ internal sealed class LauncherForm : Form
             node.Expand();
         }
         if (_serverSidebar.Nodes.Count > 0 && _serverSidebar.Nodes[0].Nodes.Count > 0) _serverSidebar.SelectedNode = _serverSidebar.Nodes[0].Nodes[0];
-        foreach (LauncherAnnouncement item in _loaded.Snapshot.Announcements.OrderByDescending(item => item.Pinned).ThenByDescending(item => item.Date, StringComparer.Ordinal).Take(12))
-        {
-            var card = new AnnouncementCard(item, _loaded.Root) { Dock = DockStyle.Top, Height = 78 };
-            _announcements.Controls.Add(card);
-            card.BringToFront();
-        }
+        ShowNativeAnnouncements();
         var settings = CreateTopButton("游戏设置", 145);
         settings.Click += (_, _) => { using var dialog = new PlayerSettingsForm(_settings, _selectedClientDirectory); if (dialog.ShowDialog(this) == DialogResult.OK) { _settings = dialog.Value; _settingsDirty = true; } };
         var diagnose = CreateTopButton("连通诊断", 265);
@@ -163,6 +181,17 @@ internal sealed class LauncherForm : Form
         _clickTargets.AddRange(new Control[] { _launchButton, settings, diagnose, chooseClient, _serverDropdown, _serverSidebar });
         _launchButton.Click += async (_, _) => await LaunchSelectedAsync();
         _sourceText.Text = "配置来源：" + (_loaded.Source switch { SnapshotSource.Remote => "有效远程版本", SnapshotSource.Cache => "上次有效快照", _ => "内置快照" });
+    }
+
+    private void ShowNativeAnnouncements()
+    {
+        foreach (Control control in _announcements.Controls.Cast<Control>().ToArray()) control.Dispose();
+        _announcements.Controls.Clear(); _announcementBrowser = null;
+        foreach (LauncherAnnouncement item in _loaded.Snapshot.Announcements.OrderByDescending(item => item.Pinned).ThenByDescending(item => item.Date, StringComparer.Ordinal).Take(12))
+        {
+            var card = new AnnouncementCard(item, _loaded.Root) { Dock = DockStyle.Top, Height = 78 };
+            _announcements.Controls.Add(card); card.BringToFront();
+        }
     }
 
     private Button CreateTopButton(string text, int rightOffset) => new() { Text = text, FlatStyle = FlatStyle.Flat, Size = new Size(110, 34), Location = new Point(Width - rightOffset, 20), Anchor = AnchorStyles.Top | AnchorStyles.Right };

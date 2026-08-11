@@ -1,4 +1,7 @@
 using System.IO.Compression;
+using System.Text.Json;
+using Launcher.PlayerShell;
+using Launcher.ThemeRuntime;
 
 namespace LyoCrystal.LauncherEditor;
 
@@ -9,19 +12,26 @@ public static class FullClientDistributionBuilder
         if (project.DeliveryMode != ClientDeliveryMode.FullClient) throw new InvalidOperationException("当前项目不是完整客户端交付模式");
         string root = Path.GetFullPath(project.ImportedClientDirectory);
         string entry = Path.GetFullPath(playerEntryExe);
-        if (!Directory.Exists(root) || !File.Exists(Path.Combine(root, "Client.exe"))) throw new InvalidDataException("完整客户端目录无效");
+        if (!Directory.Exists(root) || ClientCapabilityProbe.Detect(root) != ClientLaunchCapability.Current15Arguments) throw new InvalidDataException("完整客户端目录缺少当前启动协议能力标记");
         if (!File.Exists(entry) || !entry.EndsWith(".exe", StringComparison.OrdinalIgnoreCase)) throw new InvalidDataException("玩家入口无效");
-        RejectReparse(root);
+        RejectReparseChain(root); RejectReparseChain(entry);
         string target = Path.GetFullPath(outputZip);
+        RejectReparseChain(Path.GetDirectoryName(target)!);
         string temporary = target + ".tmp-" + Guid.NewGuid().ToString("N");
+        string entryProbe = target + ".entry-probe-" + Guid.NewGuid().ToString("N");
         try
         {
+            PlayerPayloadPackage.Verify(entry);
+            PlayerPayloadPackage.ExtractVerified(entry, entryProbe);
+            string snapshotPath = Path.Combine(entryProbe, "Launcher", "BuiltIn", "launcher-snapshot.json");
+            LauncherSnapshot snapshot = JsonSerializer.Deserialize(File.ReadAllBytes(snapshotPath), LauncherSnapshotJsonContext.Default.LauncherSnapshot) ?? throw new InvalidDataException("玩家入口内置快照为空");
+            if (!string.Equals(snapshot.ProjectId, project.Snapshot.ProjectId, StringComparison.Ordinal)) throw new InvalidDataException("玩家入口不属于当前项目");
+            if (string.IsNullOrWhiteSpace(project.Release.CurrentKeyId) || !snapshot.TrustedReleaseKeys.Any(key => string.Equals(key.KeyId, project.Release.CurrentKeyId, StringComparison.Ordinal) && string.Equals(key.SubjectPublicKeyInfo, project.Release.CurrentPublicKey, StringComparison.Ordinal))) throw new InvalidDataException("玩家入口签名身份与当前项目不一致");
             using var archive = ZipFile.Open(temporary, ZipArchiveMode.Create);
             int count = 0; long total = 0;
-            foreach (string file in Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories))
+            foreach (string file in EnumerateFilesSafe(root))
             {
                 if (++count > 200_000) throw new InvalidDataException("完整客户端文件数量超过限制");
-                RejectPathChain(root, file);
                 long length = new FileInfo(file).Length;
                 if ((total = checked(total + length)) > 32L * 1024 * 1024 * 1024) throw new InvalidDataException("完整客户端总量超过 32 GiB 限制");
                 archive.CreateEntryFromFile(file, "Client/" + Path.GetRelativePath(root, file).Replace('\\', '/'), CompressionLevel.Optimal);
@@ -32,21 +42,28 @@ public static class FullClientDistributionBuilder
             writer.WriteLine("解压全部文件后，双击根目录中的玩家入口 EXE。玩家不能在启动器中切换交付模式。");
         }
         catch { if (File.Exists(temporary)) File.Delete(temporary); throw; }
+        finally { if (Directory.Exists(entryProbe)) { RejectReparseChain(entryProbe); Directory.Delete(entryProbe, true); } }
         File.Move(temporary, target, overwrite: true);
     }
 
-    private static void RejectReparse(string path)
+    private static IEnumerable<string> EnumerateFilesSafe(string root)
     {
-        if ((File.GetAttributes(path) & FileAttributes.ReparsePoint) != 0) throw new InvalidDataException("完整客户端目录不得为重解析点");
+        var pending = new Stack<string>(); pending.Push(root);
+        while (pending.Count > 0)
+        {
+            string directory = pending.Pop(); RejectReparseChain(directory);
+            foreach (string file in Directory.EnumerateFiles(directory)) { RejectReparseChain(file); yield return file; }
+            foreach (string child in Directory.EnumerateDirectories(directory)) { RejectReparseChain(child); pending.Push(child); }
+        }
     }
 
-    private static void RejectPathChain(string root, string file)
+    private static void RejectReparseChain(string path)
     {
-        string current = root;
-        foreach (string part in Path.GetRelativePath(root, file).Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar))
+        string full = Path.GetFullPath(path), current = Path.GetPathRoot(full) ?? string.Empty;
+        foreach (string part in full[current.Length..].Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar))
         {
-            current = Path.Combine(current, part);
-            if ((File.GetAttributes(current) & FileAttributes.ReparsePoint) != 0) throw new InvalidDataException("完整客户端不得包含重解析点");
+            if (part.Length == 0) continue; current = Path.Combine(current, part);
+            if ((File.Exists(current) || Directory.Exists(current)) && (File.GetAttributes(current) & FileAttributes.ReparsePoint) != 0) throw new InvalidDataException("完整客户端路径不得经过重解析点");
         }
     }
 }

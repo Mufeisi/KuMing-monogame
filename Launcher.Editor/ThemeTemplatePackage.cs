@@ -13,7 +13,9 @@ public static class ThemeTemplatePackage
     public static void Export(EditorProject project, string projectRoot, string outputPath)
     {
         ArgumentNullException.ThrowIfNull(project);
+        RejectReparseChain(projectRoot);
         string output = Path.GetFullPath(outputPath);
+        RejectReparseChain(Path.GetDirectoryName(output)!);
         if (File.Exists(output)) throw new IOException("主题模板包已存在，拒绝覆盖");
         LauncherTheme theme = Clone(project.Snapshot.Theme);
         var assets = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -51,7 +53,9 @@ public static class ThemeTemplatePackage
         ArgumentNullException.ThrowIfNull(project);
         string input = Path.GetFullPath(inputPath);
         if (!File.Exists(input) || new FileInfo(input).Length > MaximumBytes) throw new InvalidDataException("主题模板包不存在或超过限制");
+        RejectReparseChain(input);
         string root = Path.GetFullPath(projectRoot);
+        RejectReparseChain(root);
         string staging = Path.Combine(root, ".theme-import-" + Guid.NewGuid().ToString("N"));
         string folderName = "Theme-" + Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(input)))[..12].ToLowerInvariant();
         string final = Path.Combine(root, "Assets", folderName);
@@ -63,7 +67,7 @@ public static class ThemeTemplatePackage
             if (descriptor.Length > 1024 * 1024) throw new InvalidDataException("主题描述超过限制");
             LauncherTheme theme;
             using (Stream stream = descriptor.Open()) theme = JsonSerializer.Deserialize(stream, EditorProjectJsonContext.Default.LauncherTheme) ?? throw new InvalidDataException("主题描述为空");
-            Directory.CreateDirectory(staging);
+            RejectReparseChain(staging); Directory.CreateDirectory(staging); RejectReparseChain(staging);
             long total = 0;
             foreach (ZipArchiveEntry entry in archive.Entries.Where(item => item.FullName.StartsWith("assets/", StringComparison.Ordinal) && !string.IsNullOrEmpty(item.Name)))
             {
@@ -85,11 +89,12 @@ public static class ThemeTemplatePackage
                 return $"Assets/{folderName}/{name}";
             });
             if (Directory.Exists(final)) throw new IOException("同一主题模板已经导入");
-            Directory.CreateDirectory(Path.GetDirectoryName(final)!);
+            string assetsRoot = Path.GetDirectoryName(final)!;
+            RejectReparseChain(assetsRoot); Directory.CreateDirectory(assetsRoot); RejectReparseChain(assetsRoot);
             Directory.Move(staging, final);
             project.Snapshot.Theme = theme;
         }
-        finally { if (Directory.Exists(staging)) Directory.Delete(staging, true); }
+        finally { if (Directory.Exists(staging)) { RejectReparseChain(staging); Directory.Delete(staging, true); } }
     }
 
     private static LauncherTheme Clone(LauncherTheme theme) =>
@@ -104,5 +109,15 @@ public static class ThemeTemplatePackage
         theme.LaunchButtonPressedImage = rewrite(theme.LaunchButtonPressedImage);
         theme.LaunchButtonDisabledImage = rewrite(theme.LaunchButtonDisabledImage);
         foreach (LauncherControlOverride control in theme.Controls) control.BackgroundImage = rewrite(control.BackgroundImage);
+    }
+
+    private static void RejectReparseChain(string path)
+    {
+        string full = Path.GetFullPath(path), current = Path.GetPathRoot(full) ?? string.Empty;
+        foreach (string part in full[current.Length..].Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar))
+        {
+            if (part.Length == 0) continue; current = Path.Combine(current, part);
+            if ((File.Exists(current) || Directory.Exists(current)) && (File.GetAttributes(current) & FileAttributes.ReparsePoint) != 0) throw new InvalidDataException("主题模板路径不得经过重解析点");
+        }
     }
 }
