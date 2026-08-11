@@ -35,7 +35,7 @@ public static class LauncherSnapshotLoader
 
     private static void ValidateReferencedAssets(LauncherSnapshot snapshot, string root)
     {
-        foreach (string relative in new[] { snapshot.Theme.BackgroundImage, snapshot.Theme.LaunchButtonImage }.Concat(snapshot.Announcements.Select(x => x.Image)))
+        foreach (string relative in new[] { snapshot.Theme.BackgroundImage, snapshot.Theme.LaunchButtonImage, snapshot.Theme.LaunchButtonHoverImage, snapshot.Theme.LaunchButtonPressedImage, snapshot.Theme.LaunchButtonDisabledImage }.Concat(snapshot.Theme.Controls.Select(x => x.BackgroundImage)).Concat(snapshot.Announcements.Select(x => x.Image)))
         {
             string path = LauncherSnapshotValidator.ResolveAsset(root, relative);
             if (!string.IsNullOrEmpty(path) && (!File.Exists(path) || new FileInfo(path).Length > 16 * 1024 * 1024)) throw new InvalidDataException("主题图片缺失或超过 16 MiB");

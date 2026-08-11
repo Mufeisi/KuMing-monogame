@@ -10,8 +10,8 @@ public sealed class LauncherSettingDescriptor
     public int Minimum { get; init; }
     public int Maximum { get; init; }
     public Func<IReadOnlyList<object>> Options { get; init; } = () => Array.Empty<object>();
-    internal Func<LauncherPlayerSettings, object> Read { get; init; } = null!;
-    internal Action<LauncherPlayerSettings, object> Write { get; init; } = null!;
+    public Func<LauncherPlayerSettings, object> Read { get; init; } = null!;
+    public Action<LauncherPlayerSettings, object> Write { get; init; } = null!;
 }
 
 /// <summary>玩家入口和后续 GM 编辑器共用的实际设置能力注册表。</summary>

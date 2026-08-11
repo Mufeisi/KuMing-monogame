@@ -5,7 +5,8 @@ namespace Launcher.ThemeRuntime;
 public enum LauncherTemplateKind { Classic, Compact, Widescreen }
 public enum ServerListMode { Dropdown, Sidebar }
 public enum LauncherAction { LaunchGame, OpenSettings, OpenAnnouncementLink, DiagnoseServer, Minimize, Close }
-public enum ServerOperatingStatus { Normal, Busy, Maintenance }
+public enum ServerOperatingStatus { Normal, Busy, Recommended, NewServer, Maintenance, ComingSoon, Hidden }
+public enum LauncherControlId { ServerList, Announcements, LaunchButton, OverallProgress, CurrentProgress, ProgressText, SettingsButton, DiagnoseButton, ChooseClientButton }
 
 public sealed class LauncherSnapshot
 {
@@ -13,6 +14,8 @@ public sealed class LauncherSnapshot
     public string Format { get; set; } = CurrentFormat;
     public string ProjectId { get; set; } = "default";
     public string ProjectName { get; set; } = "LyoCrystal";
+    public string WindowTitle { get; set; } = string.Empty;
+    public string TaskbarName { get; set; } = string.Empty;
     public string RemoteReleaseBaseUrl { get; set; } = string.Empty;
     public LauncherTheme Theme { get; set; } = new();
     public List<LauncherServer> Servers { get; set; } = new();
@@ -30,6 +33,27 @@ public sealed class LauncherTheme
     public string AccentColor { get; set; } = "#D8A73A";
     public string BackgroundImage { get; set; } = string.Empty;
     public string LaunchButtonImage { get; set; } = string.Empty;
+    public string LaunchButtonHoverImage { get; set; } = string.Empty;
+    public string LaunchButtonPressedImage { get; set; } = string.Empty;
+    public string LaunchButtonDisabledImage { get; set; } = string.Empty;
+    public List<LauncherControlOverride> Controls { get; set; } = new();
+}
+
+public sealed class LauncherControlOverride
+{
+    public LauncherControlId Id { get; set; }
+    public int X { get; set; }
+    public int Y { get; set; }
+    public int Width { get; set; } = 100;
+    public int Height { get; set; } = 32;
+    public bool Visible { get; set; } = true;
+    public string ForeColor { get; set; } = string.Empty;
+    public string BackColor { get; set; } = string.Empty;
+    public string FontName { get; set; } = string.Empty;
+    public float FontSize { get; set; }
+    public bool Bold { get; set; }
+    public int OpacityPercent { get; set; } = 100;
+    public string BackgroundImage { get; set; } = string.Empty;
 }
 
 public sealed class LauncherServer
@@ -37,6 +61,7 @@ public sealed class LauncherServer
     public string Id { get; set; } = string.Empty;
     public string Group { get; set; } = "默认分组";
     public string Name { get; set; } = string.Empty;
+    public int SortOrder { get; set; }
     public string Address { get; set; } = "127.0.0.1";
     public int Port { get; set; } = 7000;
     public ServerOperatingStatus Status { get; set; } = ServerOperatingStatus.Normal;
@@ -55,6 +80,7 @@ public sealed class MicroEndpoint
 
 public sealed class LauncherAnnouncement
 {
+    public bool Pinned { get; set; }
     public string Title { get; set; } = string.Empty;
     public string Summary { get; set; } = string.Empty;
     public string Date { get; set; } = string.Empty;

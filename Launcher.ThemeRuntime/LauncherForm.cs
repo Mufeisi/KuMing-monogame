@@ -12,15 +12,22 @@ internal sealed class LauncherForm : Form
     private readonly ProgressBar _current = new();
     private readonly Label _progressText = new() { AutoEllipsis = true };
     private readonly Label _sourceText = new() { AutoSize = true };
+    private readonly Label _windowTitleText = new() { AutoSize = true, BackColor = Color.Transparent };
     private readonly ImageStateButton _launchButton = new() { Text = "进入游戏" };
+    private readonly Dictionary<LauncherControlId, Control> _themeControls = new();
+    private readonly Dictionary<Control, Color> _originalBackColors = new();
+    private readonly Dictionary<Control, (string Family, float Size, FontStyle Style)> _originalFontSpecs = new();
+    private readonly Dictionary<Control, Image> _derivedBackgrounds = new();
     private LauncherPlayerSettings _settings;
     private string _selectedClientDirectory;
     private bool _settingsDirty;
     private bool _launching;
     private readonly List<Image> _ownedImages = new();
+    private readonly List<Font> _ownedFonts = new();
     private readonly List<Control> _clickTargets = new();
     private readonly System.Windows.Forms.Timer _progressTimer = new() { Interval = 300 };
     private bool _autoStartTriggered;
+    private bool _buttonImagesLoaded;
 
     public LauncherForm(LoadedLauncherSnapshot loaded, string clientDirectory, Action<string, LauncherServer, MicroEndpoint, LauncherPlayerSettings> launch)
     {
@@ -29,7 +36,10 @@ internal sealed class LauncherForm : Form
         _launch = launch;
         _selectedClientDirectory = ClientSelection.GetPreferred(loaded.Snapshot.ProjectId, clientDirectory);
         _settings = ClientSettingsWriter.Read(_selectedClientDirectory, CloneSettings(loaded.Snapshot.Defaults));
-        Text = loaded.Snapshot.ProjectName;
+        string windowTitle = string.IsNullOrWhiteSpace(loaded.Snapshot.WindowTitle) ? loaded.Snapshot.ProjectName : loaded.Snapshot.WindowTitle;
+        Text = string.IsNullOrWhiteSpace(loaded.Snapshot.TaskbarName) ? windowTitle : loaded.Snapshot.TaskbarName;
+        _windowTitleText.Text = windowTitle;
+        ApplyTaskbarIdentity(loaded.Snapshot.ProjectId, loaded.Snapshot.TaskbarName);
         StartPosition = FormStartPosition.CenterScreen;
         FormBorderStyle = FormBorderStyle.FixedSingle;
         MaximizeBox = false;
@@ -61,11 +71,11 @@ internal sealed class LauncherForm : Form
 
     private void BuildUi()
     {
-        Controls.AddRange(new Control[] { _announcements, _serverDropdown, _serverSidebar, _launchButton, _overall, _current, _progressText, _sourceText });
-        foreach (LauncherServer server in _loaded.Snapshot.Servers) _serverDropdown.Items.Add(server);
+        Controls.AddRange(new Control[] { _announcements, _serverDropdown, _serverSidebar, _launchButton, _overall, _current, _progressText, _sourceText, _windowTitleText });
+        foreach (LauncherServer server in _loaded.Snapshot.Servers.Where(server => server.Status != ServerOperatingStatus.Hidden).OrderBy(server => server.SortOrder)) _serverDropdown.Items.Add(server);
         _serverDropdown.DisplayMember = nameof(LauncherServer.Name);
         if (_serverDropdown.Items.Count > 0) _serverDropdown.SelectedIndex = 0;
-        foreach (IGrouping<string, LauncherServer> group in _loaded.Snapshot.Servers.GroupBy(x => x.Group))
+        foreach (IGrouping<string, LauncherServer> group in _loaded.Snapshot.Servers.Where(server => server.Status != ServerOperatingStatus.Hidden).OrderBy(server => server.SortOrder).GroupBy(x => x.Group))
         {
             var node = new TreeNode(group.Key);
             foreach (LauncherServer server in group) node.Nodes.Add(new TreeNode($"{server.Name}  [{StatusText(server.Status)}]") { Tag = server });
@@ -73,7 +83,7 @@ internal sealed class LauncherForm : Form
             node.Expand();
         }
         if (_serverSidebar.Nodes.Count > 0 && _serverSidebar.Nodes[0].Nodes.Count > 0) _serverSidebar.SelectedNode = _serverSidebar.Nodes[0].Nodes[0];
-        foreach (LauncherAnnouncement item in _loaded.Snapshot.Announcements.Take(12))
+        foreach (LauncherAnnouncement item in _loaded.Snapshot.Announcements.OrderByDescending(item => item.Pinned).ThenByDescending(item => item.Date, StringComparer.Ordinal).Take(12))
         {
             var card = new AnnouncementCard(item, _loaded.Root) { Dock = DockStyle.Top, Height = 78 };
             _announcements.Controls.Add(card);
@@ -93,6 +103,15 @@ internal sealed class LauncherForm : Form
             _settingsDirty = false;
         };
         Controls.AddRange(new Control[] { settings, diagnose, chooseClient });
+        _themeControls[LauncherControlId.ServerList] = _loaded.Snapshot.Theme.ServerListMode == ServerListMode.Sidebar ? _serverSidebar : _serverDropdown;
+        _themeControls[LauncherControlId.Announcements] = _announcements;
+        _themeControls[LauncherControlId.LaunchButton] = _launchButton;
+        _themeControls[LauncherControlId.OverallProgress] = _overall;
+        _themeControls[LauncherControlId.CurrentProgress] = _current;
+        _themeControls[LauncherControlId.ProgressText] = _progressText;
+        _themeControls[LauncherControlId.SettingsButton] = settings;
+        _themeControls[LauncherControlId.DiagnoseButton] = diagnose;
+        _themeControls[LauncherControlId.ChooseClientButton] = chooseClient;
         _clickTargets.AddRange(new Control[] { _launchButton, settings, diagnose, chooseClient, _serverDropdown, _serverSidebar });
         _launchButton.Click += async (_, _) => await LaunchSelectedAsync();
         _sourceText.Text = "配置来源：" + (_loaded.Source switch { SnapshotSource.Remote => "有效远程版本", SnapshotSource.Cache => "上次有效快照", _ => "内置快照" });
@@ -131,10 +150,88 @@ internal sealed class LauncherForm : Form
         _current.SetBounds(S(30), ClientSize.Height - S(48), ClientSize.Width - S(60), S(8));
         _progressText.SetBounds(S(30), ClientSize.Height - S(92), Math.Max(S(120), ClientSize.Width - S(280)), S(22));
         _sourceText.Location = new Point(S(30), ClientSize.Height - S(28));
+        _windowTitleText.Location = new Point(S(24), S(24));
         Button[] topButtons = Controls.OfType<Button>().Where(button => button != _launchButton).ToArray();
         for (int i = 0; i < topButtons.Length; i++) topButtons[i].SetBounds(ClientSize.Width - S(145 + i * 120), S(20), S(110), S(34));
-        string image = LauncherSnapshotValidator.ResolveAsset(_loaded.Root, _loaded.Snapshot.Theme.LaunchButtonImage);
-        if (!string.IsNullOrEmpty(image)) _launchButton.BaseImage = SafeLoadImage(image);
+        if (!_buttonImagesLoaded)
+        {
+            _buttonImagesLoaded = true;
+            string image = LauncherSnapshotValidator.ResolveAsset(_loaded.Root, _loaded.Snapshot.Theme.LaunchButtonImage);
+            if (!string.IsNullOrEmpty(image)) _launchButton.BaseImage = SafeLoadImage(image);
+            string hover = LauncherSnapshotValidator.ResolveAsset(_loaded.Root, _loaded.Snapshot.Theme.LaunchButtonHoverImage);
+            if (!string.IsNullOrEmpty(hover)) _launchButton.HoverImage = SafeLoadImage(hover);
+            string pressed = LauncherSnapshotValidator.ResolveAsset(_loaded.Root, _loaded.Snapshot.Theme.LaunchButtonPressedImage);
+            if (!string.IsNullOrEmpty(pressed)) _launchButton.PressedImage = SafeLoadImage(pressed);
+            string disabled = LauncherSnapshotValidator.ResolveAsset(_loaded.Root, _loaded.Snapshot.Theme.LaunchButtonDisabledImage);
+            if (!string.IsNullOrEmpty(disabled)) _launchButton.DisabledImage = SafeLoadImage(disabled);
+        }
+        ApplyControlOverrides(S);
+    }
+
+    private void ApplyControlOverrides(Func<int, int> scale)
+    {
+        Font[] oldFonts = _ownedFonts.ToArray();
+        _ownedFonts.Clear();
+        foreach (LauncherControlOverride style in _loaded.Snapshot.Theme.Controls)
+        {
+            if (!_themeControls.TryGetValue(style.Id, out Control? control)) continue;
+            if (!_originalBackColors.ContainsKey(control)) _originalBackColors[control] = control.BackColor;
+            if (!_originalFontSpecs.ContainsKey(control)) _originalFontSpecs[control] = (control.Font.FontFamily.Name, control.Font.Size, control.Font.Style);
+            control.SetBounds(scale(style.X), scale(style.Y), scale(style.Width), scale(style.Height));
+            control.Visible = style.Visible;
+            if (!string.IsNullOrWhiteSpace(style.ForeColor)) control.ForeColor = ColorTranslator.FromHtml(style.ForeColor);
+            Color tint = string.IsNullOrWhiteSpace(style.BackColor) ? _originalBackColors[control] : ColorTranslator.FromHtml(style.BackColor);
+            control.BackColor = tint;
+            string background = LauncherSnapshotValidator.ResolveAsset(_loaded.Root, style.BackgroundImage);
+            if (style.OpacityPercent < 100)
+            {
+                if (_derivedBackgrounds.Remove(control, out Image? previous)) { control.BackgroundImage = null; previous.Dispose(); }
+                Image derived = BuildOpacityBackground(control, background, tint, style.OpacityPercent);
+                _derivedBackgrounds[control] = derived;
+                control.BackgroundImage = derived;
+                control.BackgroundImageLayout = ImageLayout.Stretch;
+                try { control.BackColor = Color.Transparent; } catch (ArgumentException) { control.BackColor = BackColor; }
+                if (control is Button button) button.FlatStyle = FlatStyle.Flat;
+            }
+            else if (!string.IsNullOrEmpty(background) && control.BackgroundImage is null) { control.BackgroundImage = Own(SafeLoadImage(background)); control.BackgroundImageLayout = ImageLayout.Stretch; }
+            if (style.FontSize > 0 || !string.IsNullOrWhiteSpace(style.FontName) || style.Bold)
+            {
+                (string originalFamily, float originalSize, FontStyle originalStyle) = _originalFontSpecs[control];
+                string family = string.IsNullOrWhiteSpace(style.FontName) ? originalFamily : style.FontName;
+                float size = style.FontSize > 0 ? style.FontSize : originalSize;
+                var font = new Font(family, size, style.Bold ? FontStyle.Bold : originalStyle);
+                _ownedFonts.Add(font); control.Font = font;
+            }
+        }
+        foreach (Font font in oldFonts) font.Dispose();
+    }
+
+    private Bitmap BuildOpacityBackground(Control control, string explicitBackground, Color tint, int opacityPercent)
+    {
+        var result = new Bitmap(Math.Max(1, control.Width), Math.Max(1, control.Height), System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+        using Graphics graphics = Graphics.FromImage(result);
+        graphics.Clear(BackColor);
+        if (BackgroundImage is not null && ClientSize.Width > 0 && ClientSize.Height > 0)
+        {
+            var source = new Rectangle(
+                control.Left * BackgroundImage.Width / ClientSize.Width,
+                control.Top * BackgroundImage.Height / ClientSize.Height,
+                Math.Max(1, control.Width * BackgroundImage.Width / ClientSize.Width),
+                Math.Max(1, control.Height * BackgroundImage.Height / ClientSize.Height));
+            source.Intersect(new Rectangle(Point.Empty, BackgroundImage.Size));
+            if (source.Width > 0 && source.Height > 0) graphics.DrawImage(BackgroundImage, new Rectangle(Point.Empty, result.Size), source, GraphicsUnit.Pixel);
+        }
+        float alpha = opacityPercent / 100f;
+        if (!string.IsNullOrEmpty(explicitBackground))
+        {
+            using Image image = SafeLoadImage(explicitBackground);
+            using var attributes = new System.Drawing.Imaging.ImageAttributes();
+            var matrix = new System.Drawing.Imaging.ColorMatrix { Matrix33 = alpha };
+            attributes.SetColorMatrix(matrix);
+            graphics.DrawImage(image, new Rectangle(Point.Empty, result.Size), 0, 0, image.Width, image.Height, GraphicsUnit.Pixel, attributes);
+        }
+        else using (var brush = new SolidBrush(Color.FromArgb((int)Math.Round(255 * alpha), tint))) graphics.FillRectangle(brush, new Rectangle(Point.Empty, result.Size));
+        return result;
     }
 
     private async Task LaunchSelectedAsync()
@@ -146,7 +243,12 @@ internal sealed class LauncherForm : Form
         {
         LauncherServer? server = _loaded.Snapshot.Theme.ServerListMode == ServerListMode.Sidebar ? _serverSidebar.SelectedNode?.Tag as LauncherServer : _serverDropdown.SelectedItem as LauncherServer;
         if (server is null) { MessageBox.Show(this, "请先选择区服。", Text, MessageBoxButtons.OK, MessageBoxIcon.Information); return; }
-        if (server.Status == ServerOperatingStatus.Maintenance) { MessageBox.Show(this, "该区服由 GM 标记为维护中。", Text, MessageBoxButtons.OK, MessageBoxIcon.Information); return; }
+        if (server.Status is ServerOperatingStatus.Maintenance or ServerOperatingStatus.ComingSoon or ServerOperatingStatus.Hidden)
+        {
+            string message = server.Status == ServerOperatingStatus.ComingSoon ? "该区服尚未开放。" : "该区服由 GM 标记为维护中。";
+            MessageBox.Show(this, message, Text, MessageBoxButtons.OK, MessageBoxIcon.Information);
+            return;
+        }
         MicroEndpoint micro = server.MicroOverride ?? _loaded.Snapshot.DefaultMicro;
         string? selectedClient = ClientSelection.Resolve(this, _loaded.Snapshot.ProjectId, _clientDirectory);
         if (selectedClient is null) return;
@@ -223,8 +325,32 @@ internal sealed class LauncherForm : Form
             if (hit != control) missed.Add($"{control.Text}/{control.GetType().Name}->{hit?.Text}/{hit?.GetType().Name}");
             return hit == control;
         });
-        string details = string.Join("; ", outside.Select(item => $"越界:{item.Text}/{item.GetType().Name}={item.Bounds},画布={canvas}").Concat(missed));
-        return new LauncherDpiLayoutResult(inside && DeviceDpi == dpi, hits, active.Length, DeviceDpi, details);
+        string[] truncated = Descendants(this).Where(control => control.Visible && !string.IsNullOrWhiteSpace(control.Text) && control is Label or Button)
+            .Where(control => TextRenderer.MeasureText(control.Text, control.Font, Size.Empty, TextFormatFlags.SingleLine | TextFormatFlags.NoPadding).Width > control.ClientSize.Width + 2)
+            .Select(control => $"{control.Text}/{control.GetType().Name}").ToArray();
+        string[] serverTruncation = sidebarMode
+            ? _serverSidebar.Nodes.Cast<TreeNode>().SelectMany(group => group.Nodes.Cast<TreeNode>())
+                .Where(node => TextRenderer.MeasureText(node.Text, _serverSidebar.Font, Size.Empty, TextFormatFlags.SingleLine | TextFormatFlags.NoPadding).Width > _serverSidebar.ClientSize.Width - 44)
+                .Select(node => node.Text + "/TreeView").ToArray()
+            : _serverDropdown.Items.Cast<LauncherServer>()
+                .Where(server => TextRenderer.MeasureText(server.Name, _serverDropdown.Font, Size.Empty, TextFormatFlags.SingleLine | TextFormatFlags.NoPadding).Width > _serverDropdown.ClientSize.Width - SystemInformation.VerticalScrollBarWidth - 4)
+                .Select(server => server.Name + "/ComboBox").ToArray();
+        string[] allTruncation = truncated.Concat(serverTruncation).Distinct(StringComparer.Ordinal).ToArray();
+        string details = string.Join("; ", outside.Select(item => $"越界:{item.Text}/{item.GetType().Name}={item.Bounds},画布={canvas}").Concat(missed).Concat(allTruncation.Select(item => $"文字截断:{item}")));
+        return new LauncherDpiLayoutResult(inside && DeviceDpi == dpi, hits, active.Length, DeviceDpi, details, allTruncation.Length == 0);
+    }
+
+    private static IEnumerable<Control> Descendants(Control root)
+    {
+        foreach (Control child in root.Controls) { yield return child; foreach (Control nested in Descendants(child)) yield return nested; }
+    }
+
+    private static void ApplyTaskbarIdentity(string projectId, string taskbarName)
+    {
+        if (!OperatingSystem.IsWindows() || string.IsNullOrWhiteSpace(taskbarName)) return;
+        byte[] bytes = System.Text.Encoding.UTF8.GetBytes(taskbarName);
+        string digest = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(bytes)).ToLowerInvariant()[..16];
+        SetCurrentProcessExplicitAppUserModelID($"LyoCrystal.{projectId}.{digest}");
     }
 
     [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
@@ -232,6 +358,9 @@ internal sealed class LauncherForm : Form
 
     [System.Runtime.InteropServices.DllImport("user32.dll")]
     private static extern nint SendMessage(nint window, int message, nint wParam, nint lParam);
+
+    [System.Runtime.InteropServices.DllImport("shell32.dll", CharSet = System.Runtime.InteropServices.CharSet.Unicode)]
+    private static extern int SetCurrentProcessExplicitAppUserModelID(string appId);
 
     private static Image SafeLoadImage(string path)
     {
@@ -241,8 +370,17 @@ internal sealed class LauncherForm : Form
         return new Bitmap(source);
     }
     private T Own<T>(T image) where T : Image { _ownedImages.Add(image); return image; }
-    protected override void Dispose(bool disposing) { if (disposing) { _progressTimer.Dispose(); foreach (Image image in _ownedImages) image.Dispose(); _ownedImages.Clear(); } base.Dispose(disposing); }
+    protected override void Dispose(bool disposing) { if (disposing) { _progressTimer.Dispose(); foreach (Image image in _derivedBackgrounds.Values) image.Dispose(); _derivedBackgrounds.Clear(); foreach (Image image in _ownedImages) image.Dispose(); _ownedImages.Clear(); foreach (Font font in _ownedFonts) font.Dispose(); _ownedFonts.Clear(); } base.Dispose(disposing); }
     private static LauncherPlayerSettings CloneSettings(LauncherPlayerSettings value) => new() { Resolution = value.Resolution, FullScreen = value.FullScreen, Borderless = value.Borderless, FpsCap = value.FpsCap, MaxFps = value.MaxFps, Volume = value.Volume, MusicVolume = value.MusicVolume, TopMost = value.TopMost, AutoStart = value.AutoStart, AdvancedLogs = value.AdvancedLogs, MicroCacheLimitMb = value.MicroCacheLimitMb };
-    private static string StatusText(ServerOperatingStatus value) => value switch { ServerOperatingStatus.Busy => "火爆", ServerOperatingStatus.Maintenance => "维护", _ => "正常" };
+    private static string StatusText(ServerOperatingStatus value) => value switch
+    {
+        ServerOperatingStatus.Busy => "火爆",
+        ServerOperatingStatus.Recommended => "推荐",
+        ServerOperatingStatus.NewServer => "新区",
+        ServerOperatingStatus.Maintenance => "维护",
+        ServerOperatingStatus.ComingSoon => "即将开放",
+        ServerOperatingStatus.Hidden => "隐藏",
+        _ => "正常",
+    };
     private static string FormatBytes(long value) => value >= 1024 * 1024 ? $"{value / 1024d / 1024d:F1} MiB" : value >= 1024 ? $"{value / 1024d:F1} KiB" : $"{value} B";
 }

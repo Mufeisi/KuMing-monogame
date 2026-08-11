@@ -14,6 +14,7 @@ public static class LauncherSnapshotValidator
         if (!string.Equals(snapshot.Format, LauncherSnapshot.CurrentFormat, StringComparison.Ordinal)) throw new InvalidDataException("启动器快照格式不受支持");
         if (!IdPattern.IsMatch(snapshot.ProjectId ?? string.Empty)) throw new InvalidDataException("项目标识无效");
         if (string.IsNullOrWhiteSpace(snapshot.ProjectName) || snapshot.ProjectName.Length > 80) throw new InvalidDataException("项目名称无效");
+        if (snapshot.WindowTitle.Length > 120 || snapshot.TaskbarName.Length > 120) throw new InvalidDataException("窗口标题或任务栏名称无效");
         if (!string.IsNullOrWhiteSpace(snapshot.RemoteReleaseBaseUrl) &&
             (!Uri.TryCreate(snapshot.RemoteReleaseBaseUrl, UriKind.Absolute, out Uri? releaseUri) || releaseUri.Scheme is not ("http" or "https")))
             throw new InvalidDataException("远程发布地址无效");
@@ -21,13 +22,25 @@ public static class LauncherSnapshotValidator
         if (!ColorPattern.IsMatch(snapshot.Theme.AccentColor ?? string.Empty)) throw new InvalidDataException("主题强调色无效");
         ValidateAssetPath(snapshot.Theme.BackgroundImage);
         ValidateAssetPath(snapshot.Theme.LaunchButtonImage);
+        ValidateAssetPath(snapshot.Theme.LaunchButtonHoverImage);
+        ValidateAssetPath(snapshot.Theme.LaunchButtonPressedImage);
+        ValidateAssetPath(snapshot.Theme.LaunchButtonDisabledImage);
+        if (snapshot.Theme.Controls is null || snapshot.Theme.Controls.Count > Enum.GetValues<LauncherControlId>().Length) throw new InvalidDataException("主题控件覆盖数量无效");
+        var controlIds = new HashSet<LauncherControlId>();
+        foreach (LauncherControlOverride control in snapshot.Theme.Controls)
+        {
+            if (!Enum.IsDefined(control.Id) || !controlIds.Add(control.Id) || control.X is < 0 or > 1919 || control.Y is < 0 or > 1079 || control.Width is < 1 or > 1920 || control.Height is < 1 or > 1080) throw new InvalidDataException("主题控件位置、尺寸或标识无效");
+            if ((!string.IsNullOrEmpty(control.ForeColor) && !ColorPattern.IsMatch(control.ForeColor)) || (!string.IsNullOrEmpty(control.BackColor) && !ColorPattern.IsMatch(control.BackColor))) throw new InvalidDataException("主题控件颜色无效");
+            if (control.FontName.Length > 64 || control.FontSize is < 0 or > 72 || control.FontSize is > 0 and < 6 || control.OpacityPercent is < 0 or > 100) throw new InvalidDataException("主题控件字体或透明度无效");
+            ValidateAssetPath(control.BackgroundImage);
+        }
         if (snapshot.Servers is null || snapshot.Servers.Count is < 1 or > 200) throw new InvalidDataException("区服数量必须为 1 到 200");
         ValidateMicro(snapshot.DefaultMicro);
         var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (LauncherServer server in snapshot.Servers)
         {
             if (server is null || !IdPattern.IsMatch(server.Id ?? string.Empty) || !ids.Add(server.Id!)) throw new InvalidDataException("区服标识无效或重复");
-            if (string.IsNullOrWhiteSpace(server.Name) || server.Name.Length > 80 || !IsHost(server.Address) || server.Port is < 1 or > 65535) throw new InvalidDataException("区服连接信息无效");
+            if (string.IsNullOrWhiteSpace(server.Name) || server.Name.Length > 80 || server.SortOrder is < -100000 or > 100000 || !IsHost(server.Address) || server.Port is < 1 or > 65535) throw new InvalidDataException("区服连接信息无效");
             ValidateMicro(server.MicroOverride);
         }
         if (snapshot.Announcements is null || snapshot.Announcements.Count > 100) throw new InvalidDataException("公告数量超过上限");

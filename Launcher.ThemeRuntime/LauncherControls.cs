@@ -33,17 +33,30 @@ internal sealed class ImageStateButton : Button
     [System.ComponentModel.Browsable(false)]
     [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
     public Image? BaseImage { get; set; }
+    [System.ComponentModel.Browsable(false)]
+    [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
+    public Image? HoverImage { get; set; }
+    [System.ComponentModel.Browsable(false)]
+    [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
+    public Image? PressedImage { get; set; }
+    [System.ComponentModel.Browsable(false)]
+    [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
+    public Image? DisabledImage { get; set; }
     protected override void OnPaint(PaintEventArgs e)
     {
         if (BaseImage is null) { base.OnPaint(e); return; }
-        ColorMatrix matrix = Enabled
-            ? (MouseButtons == MouseButtons.Left && ClientRectangle.Contains(PointToClient(Cursor.Position)) ? Matrix(.82f) : ClientRectangle.Contains(PointToClient(Cursor.Position)) ? Matrix(1.08f) : new ColorMatrix())
+        bool inside = ClientRectangle.Contains(PointToClient(Cursor.Position));
+        bool pressed = Enabled && MouseButtons == MouseButtons.Left && inside;
+        Image image = !Enabled && DisabledImage is not null ? DisabledImage : pressed && PressedImage is not null ? PressedImage : Enabled && inside && HoverImage is not null ? HoverImage : BaseImage;
+        bool customState = image != BaseImage;
+        ColorMatrix matrix = customState ? new ColorMatrix() : Enabled
+            ? (pressed ? Matrix(.82f) : inside ? Matrix(1.08f) : new ColorMatrix())
             : new ColorMatrix(new[] { new float[] {.3f,.3f,.3f,0,0},new float[] {.3f,.3f,.3f,0,0},new float[] {.3f,.3f,.3f,0,0},new float[] {0,0,0,.55f,0},new float[] {0,0,0,0,1} });
         using var attributes = new ImageAttributes();
         attributes.SetColorMatrix(matrix);
-        e.Graphics.DrawImage(BaseImage, ClientRectangle, 0, 0, BaseImage.Width, BaseImage.Height, GraphicsUnit.Pixel, attributes);
+        e.Graphics.DrawImage(image, ClientRectangle, 0, 0, image.Width, image.Height, GraphicsUnit.Pixel, attributes);
         TextRenderer.DrawText(e.Graphics, Text, Font, ClientRectangle, ForeColor, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
     }
     private static ColorMatrix Matrix(float value) => new(new[] { new float[] {value,0,0,0,0},new float[] {0,value,0,0,0},new float[] {0,0,value,0,0},new float[] {0,0,0,1,0},new float[] {0,0,0,0,1} });
-    protected override void Dispose(bool disposing) { if (disposing) { BaseImage?.Dispose(); BaseImage = null; } base.Dispose(disposing); }
+    protected override void Dispose(bool disposing) { if (disposing) { BaseImage?.Dispose(); HoverImage?.Dispose(); PressedImage?.Dispose(); DisabledImage?.Dispose(); BaseImage = HoverImage = PressedImage = DisabledImage = null; } base.Dispose(disposing); }
 }

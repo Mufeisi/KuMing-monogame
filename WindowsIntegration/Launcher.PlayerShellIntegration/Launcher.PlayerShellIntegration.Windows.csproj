@@ -16,6 +16,7 @@
     </PackageReference>
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\Launcher.Editor\Launcher.Editor.csproj" />
     <ProjectReference Include="..\..\Launcher.PlayerShell.Core\Launcher.PlayerShell.Core.csproj" />
     <ProjectReference Include="..\..\Launcher.ThemeRuntime\Launcher.ThemeRuntime.csproj" />
     <ProjectReference Include="..\..\Shared\Shared.csproj" />

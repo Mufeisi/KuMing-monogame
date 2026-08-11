@@ -65,7 +65,7 @@ public static class LauncherRuntimeHost
         form.Show();
         Application.DoEvents();
         LauncherDpiLayoutResult layout = form.ValidateDpiMessage(dpi);
-        if (!layout.AllControlsInsideCanvas || !layout.ClickTargetsMatch) throw new InvalidDataException("DPI 布局验证失败：" + layout.Details);
+        if (!layout.AllControlsInsideCanvas || !layout.ClickTargetsMatch || !layout.TextFits) throw new InvalidDataException("DPI 布局验证失败：" + layout.Details);
         var bitmap = new Bitmap(form.Width, form.Height, PixelFormat.Format32bppArgb);
         form.DrawToBitmap(bitmap, new Rectangle(Point.Empty, bitmap.Size));
         form.Hide();
@@ -85,4 +85,4 @@ public static class LauncherRuntimeHost
     }
 }
 
-public sealed record LauncherDpiLayoutResult(bool AllControlsInsideCanvas, bool ClickTargetsMatch, int VisibleControlCount, int ActualDpi = 96, string Details = "");
+public sealed record LauncherDpiLayoutResult(bool AllControlsInsideCanvas, bool ClickTargetsMatch, int VisibleControlCount, int ActualDpi = 96, string Details = "", bool TextFits = true);

@@ -36,7 +36,16 @@ internal static class Program
             };
             start.Environment["LYOCRYSTAL_PLAYER_SOURCE_DIRECTORY"] = Path.GetDirectoryName(executablePath)!;
             foreach (string argument in args) start.ArgumentList.Add(argument);
-            Process.Start(start)?.Dispose();
+            using Process? child = Process.Start(start);
+            if (args.Any(argument => string.Equals(argument, "--theme-render-smoke", StringComparison.OrdinalIgnoreCase)))
+            {
+                if (child is null || !child.WaitForExit(30_000))
+                {
+                    try { child?.Kill(entireProcessTree: true); } catch { }
+                    throw new TimeoutException("玩家入口主题验证超时");
+                }
+                return child.ExitCode;
+            }
             return 0;
         }
         catch (Exception ex)

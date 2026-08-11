@@ -13,9 +13,11 @@ internal sealed class MainForm : Form
     private readonly Label _status = new() { AutoSize = true, Text = "未启动" };
     private readonly System.Windows.Forms.Timer _timer = new() { Interval = 1000 };
     private readonly MicroHttpListenerHost _host = new();
+    private readonly GatewayProjectConfiguration? _project;
 
-    public MainForm()
+    public MainForm(GatewayProjectConfiguration? project = null)
     {
+        _project = project;
         Text = "LyoCrystal 独立微端网关";
         MinimumSize = new Size(680, 360);
         StartPosition = FormStartPosition.CenterScreen;
@@ -34,6 +36,15 @@ internal sealed class MainForm : Form
         layout.Controls.Add(buttons, 1, 6);
         layout.Controls.Add(_status, 1, 7);
         Controls.Add(layout);
+        if (project is not null)
+        {
+            _address.Text = project.ListenAddress;
+            _port.Value = project.Port;
+            _user.Text = project.User;
+            _code.Text = Shared.Security.ProtectedClientSecretStore.ReadMicroCode(project.ProjectId);
+            _resourceRoot.Text = project.ResolveOptionalDirectory(AppContext.BaseDirectory, project.ResourceDirectory);
+            _launcherRoot.Text = project.ResolveOptionalDirectory(AppContext.BaseDirectory, project.LauncherDirectory);
+        }
         _start.Click += async (_, _) => await StartGatewayAsync();
         _stop.Click += async (_, _) => await StopGatewayAsync();
         _timer.Tick += (_, _) => RefreshStatus();
@@ -66,6 +77,7 @@ internal sealed class MainForm : Form
                 throw new DirectoryNotFoundException("请选择已上传完整客户端的资源目录。");
             if (string.IsNullOrWhiteSpace(_user.Text))
                 throw new InvalidOperationException("User 不能为空。");
+            if (_project is not null) Shared.Security.ProtectedClientSecretStore.WriteMicroCode(_project.ProjectId, _code.Text);
             string? launcher = string.IsNullOrWhiteSpace(_launcherRoot.Text) ? null : _launcherRoot.Text.Trim();
             await _host.StartAsync($"http://{_address.Text.Trim()}:{_port.Value}/", new MicroGatewayOptions(
                 _resourceRoot.Text.Trim(), _user.Text.Trim(), _code.Text, launcher));
