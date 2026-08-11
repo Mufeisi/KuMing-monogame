@@ -12,8 +12,15 @@ namespace Client
 
         private static InIReader CreateReader(string fileName)
         {
-            Shared.Security.SensitiveIniSanitizer.Sanitize(fileName);
-            return new InIReader(fileName);
+            Shared.Security.SensitiveIniSanitizer.Sanitize(fileName, out string legacyMicroCode);
+            var reader = new InIReader(fileName);
+            if (!string.IsNullOrWhiteSpace(legacyMicroCode))
+            {
+                string credentialKey = reader.ReadString("Micro", "CredentialKey", "legacy")?.Trim() ?? "legacy";
+                try { Shared.Security.ProtectedClientSecretStore.WriteMicroCode(credentialKey, legacyMicroCode); }
+                catch (ArgumentException) { Shared.Security.ProtectedClientSecretStore.WriteMicroCode("legacy", legacyMicroCode); }
+            }
+            return reader;
         }
 
         private static bool _useTestConfig;
@@ -142,27 +149,33 @@ namespace Client
         public static string TlsSpkiSha256Pins = string.Empty;
         public const int TimeOut = 5000;
         public static string MicroBaseUrl = string.Empty;
+        public static string MicroBackupBaseUrl = string.Empty;
         public static string MicroUser = string.Empty;
         public static string MicroCode = string.Empty;
+        public static string MicroCredentialKey = "legacy";
+        public static int MicroCacheLimitMb = 2048;
         private static bool _gameEndpointOverrideActive;
         private static string _configuredIPAddress;
         private static int _configuredPort;
         private static int _configuredTlsPort;
         private static string _configuredMicroBaseUrl;
+        private static string _configuredMicroBackupBaseUrl;
 
-        public static void ApplyGameEndpointOverride(string address, int port, string microBaseUrl)
+        public static void ApplyGameEndpointOverride(string address, int port, string microBaseUrl, string microBackupBaseUrl = "")
         {
             if (_gameEndpointOverrideActive) throw new InvalidOperationException("游戏入口已经被覆盖");
             _configuredIPAddress = IPAddress;
             _configuredPort = Port;
             _configuredTlsPort = TlsPort;
             _configuredMicroBaseUrl = MicroBaseUrl;
+            _configuredMicroBackupBaseUrl = MicroBackupBaseUrl;
             _gameEndpointOverrideActive = true;
 
             IPAddress = address;
             if (UseTlsV2) TlsPort = port;
             else Port = port;
             MicroBaseUrl = microBaseUrl;
+            MicroBackupBaseUrl = microBackupBaseUrl;
         }
 
         public static void ClearGameEndpointOverride()
@@ -172,6 +185,7 @@ namespace Client
             Port = _configuredPort;
             TlsPort = _configuredTlsPort;
             MicroBaseUrl = _configuredMicroBaseUrl;
+            MicroBackupBaseUrl = _configuredMicroBackupBaseUrl;
             _gameEndpointOverrideActive = false;
         }
 
@@ -313,6 +327,7 @@ namespace Client
             MouseClip = Reader.ReadBoolean("Graphics", "MouseClip", MouseClip);
             TopMost = Reader.ReadBoolean("Graphics", "AlwaysOnTop", TopMost);
             FPSCap = Reader.ReadBoolean("Graphics", "FPSCap", FPSCap);
+            MaxFPS = Math.Clamp(Reader.ReadInt32("Graphics", "MaxFPS", MaxFPS), 30, 240);
             Resolution = Reader.ReadInt32("Graphics", "Resolution", Resolution);
             DebugMode = Reader.ReadBoolean("Graphics", "DebugMode", DebugMode);
             ResolutionTraceEnabled = Reader.ReadBoolean("Graphics", "ResolutionTraceEnabled", ResolutionTraceEnabled);
@@ -337,7 +352,10 @@ namespace Client
 
             MicroBaseUrl = Reader.ReadString("Micro", "BaseUrl", MicroBaseUrl)?.Trim() ?? string.Empty;
             MicroUser = Reader.ReadString("Micro", "User", MicroUser)?.Trim() ?? string.Empty;
-            MicroCode = Reader.ReadString("Micro", "Code", MicroCode)?.Trim() ?? string.Empty;
+            MicroCredentialKey = Reader.ReadString("Micro", "CredentialKey", MicroCredentialKey)?.Trim() ?? "legacy";
+            MicroCacheLimitMb = Math.Clamp(Reader.ReadInt32("Micro", "CacheLimitMb", MicroCacheLimitMb), 256, 16384);
+            try { MicroCode = Shared.Security.ProtectedClientSecretStore.ReadMicroCode(MicroCredentialKey); }
+            catch (ArgumentException) { MicroCredentialKey = "legacy"; MicroCode = Shared.Security.ProtectedClientSecretStore.ReadMicroCode(MicroCredentialKey); }
 
             BootstrapPreLoginUpdate = Reader.ReadBoolean("Bootstrap", "PreLoginUpdate", BootstrapPreLoginUpdate);
             BootstrapAutoDownload = Reader.ReadBoolean("Bootstrap", "AutoDownload", BootstrapAutoDownload);
@@ -482,6 +500,7 @@ namespace Client
             Reader.Write("Graphics", "MouseClip", MouseClip);
             Reader.Write("Graphics", "AlwaysOnTop", TopMost);
             Reader.Write("Graphics", "FPSCap", FPSCap);
+            Reader.Write("Graphics", "MaxFPS", Math.Clamp(MaxFPS, 30, 240));
             Reader.Write("Graphics", "Resolution", Resolution);
             Reader.Write("Graphics", "DebugMode", DebugMode);
             Reader.Write("Graphics", "ResolutionTraceEnabled", ResolutionTraceEnabled);
@@ -505,7 +524,10 @@ namespace Client
             //Micro
             Reader.Write("Micro", "BaseUrl", persistedMicroBaseUrl ?? string.Empty);
             Reader.Write("Micro", "User", MicroUser ?? string.Empty);
-            Reader.Write("Micro", "Code", MicroCode ?? string.Empty);
+            Reader.Write("Micro", "CredentialKey", MicroCredentialKey ?? "legacy");
+            Reader.Write("Micro", "CacheLimitMb", MicroCacheLimitMb);
+            Shared.Security.ProtectedClientSecretStore.WriteMicroCode(MicroCredentialKey ?? "legacy", MicroCode);
+            Reader.Write("Micro", "Code", string.Empty);
 
             //Bootstrap
             Reader.Write("Bootstrap", "PreLoginUpdate", BootstrapPreLoginUpdate);

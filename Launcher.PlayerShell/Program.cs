@@ -34,6 +34,7 @@ internal static class Program
                 WorkingDirectory = installDirectory,
                 UseShellExecute = false,
             };
+            start.Environment["LYOCRYSTAL_PLAYER_SOURCE_DIRECTORY"] = Path.GetDirectoryName(executablePath)!;
             foreach (string argument in args) start.ArgumentList.Add(argument);
             Process.Start(start)?.Dispose();
             return 0;

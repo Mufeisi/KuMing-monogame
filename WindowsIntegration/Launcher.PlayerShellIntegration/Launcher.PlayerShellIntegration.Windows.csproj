@@ -17,6 +17,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\Launcher.PlayerShell.Core\Launcher.PlayerShell.Core.csproj" />
+    <ProjectReference Include="..\..\Launcher.ThemeRuntime\Launcher.ThemeRuntime.csproj" />
     <ProjectReference Include="..\..\Shared\Shared.csproj" />
   </ItemGroup>
   <ItemGroup>

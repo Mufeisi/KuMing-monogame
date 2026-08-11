@@ -361,6 +361,10 @@ public sealed class LauncherRemoteListTests
         Assert.True(options.MicroEnabled);
         Assert.Equal("micro.example.com", options.MicroAddress);
         Assert.Equal(8080, options.MicroPort);
+        string[] withBackup = arguments.Concat(new[] { "--micro-backup-address", "backup.example.com", "--micro-backup-port", "8081" }).ToArray();
+        Assert.True(GameLaunchArguments.TryParse(withBackup, out GameLaunchOptions backupOptions));
+        Assert.Equal("backup.example.com", backupOptions.MicroBackupAddress);
+        Assert.Equal(8081, backupOptions.MicroBackupPort);
         Assert.False(GameLaunchArguments.TryParse(arguments[..^2], out _));
         Assert.True(GameLaunchArguments.TryParse(arguments.Append("-tc").ToArray(), out _));
 

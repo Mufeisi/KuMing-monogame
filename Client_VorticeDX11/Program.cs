@@ -3,6 +3,7 @@ using Client.Bootstrap;
 using Client.Diagnostics;
 using Launcher;
 using Launcher.Remote;
+using Launcher.ThemeRuntime;
 using System;
 using System.Diagnostics;
 using System.IO;
@@ -10,6 +11,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading;
+using System.Drawing.Imaging;
 
 namespace Client
 {
@@ -30,6 +32,13 @@ namespace Client
             bool runPreLoginUpdateCli = args.Any(item => string.Equals(item, "--prelogin-update-cli", StringComparison.OrdinalIgnoreCase));
             bool gameInstance = GameLaunchArguments.TryParse(args, out GameLaunchOptions launchOptions);
             bool gameInstanceRequested = args.Any(item => string.Equals(item, "--game-instance", StringComparison.OrdinalIgnoreCase));
+            bool legacyLauncher = args.Any(item => string.Equals(item, "--legacy-launcher", StringComparison.OrdinalIgnoreCase));
+            int renderIndex = Array.FindIndex(args, item => string.Equals(item, "--theme-render-smoke", StringComparison.OrdinalIgnoreCase));
+            if (renderIndex >= 0 && renderIndex + 1 < args.Length)
+            {
+                Environment.Exit(RenderThemeEvidence(args[renderIndex + 1]));
+                return;
+            }
 
             if (args.Length > 0)
             {
@@ -69,9 +78,19 @@ namespace Client
                     string microBaseUrl = launchOptions.MicroEnabled
                         ? new UriBuilder(Uri.UriSchemeHttp, launchOptions.MicroAddress, launchOptions.MicroPort, "api/").Uri.AbsoluteUri
                         : string.Empty;
-                    Settings.ApplyGameEndpointOverride(launchOptions.ServerAddress, launchOptions.ServerPort, microBaseUrl);
+                    string microBackupBaseUrl = launchOptions.MicroEnabled && !string.IsNullOrWhiteSpace(launchOptions.MicroBackupAddress)
+                        ? new UriBuilder(Uri.UriSchemeHttp, launchOptions.MicroBackupAddress, launchOptions.MicroBackupPort, "api/").Uri.AbsoluteUri
+                        : string.Empty;
+                    Settings.ApplyGameEndpointOverride(launchOptions.ServerAddress, launchOptions.ServerPort, microBaseUrl, microBackupBaseUrl);
                 }
                 Client.Utils.ResolutionTrace.LogClientState("Program.Main", "After Settings.Load");
+
+                if (!gameInstance && !legacyLauncher)
+                {
+                    RunThemeLauncher();
+                    Settings.Save();
+                    return;
+                }
 
                 System.Windows.Forms.Application.EnableVisualStyles();
                 System.Windows.Forms.Application.SetCompatibleTextRenderingDefault(false);
@@ -89,7 +108,8 @@ namespace Client
 
                 if (Launch)
                 {
-                    TryRunPcPreLoginUpdate();
+                    // 玩家入口载荷已经包含启动核心；游戏实例不得被普通资源包更新阻断。
+                    if (!gameInstance) TryRunPcPreLoginUpdate();
                     System.Windows.Forms.Application.Run(Form = new CMain());
                 }
 
@@ -109,6 +129,31 @@ namespace Client
                 CMain.SaveError(ex.ToString());
                 PcCrashDiagnostics.Capture(ex);
             }
+        }
+
+        private static int RenderThemeEvidence(string outputDirectory)
+        {
+            string root = Path.GetFullPath(outputDirectory);
+            Directory.CreateDirectory(root);
+            foreach (LauncherTemplateKind kind in Enum.GetValues<LauncherTemplateKind>())
+            foreach (int dpi in new[] { 100, 125, 150, 200 })
+            {
+                using Bitmap bitmap = LauncherRuntimeHost.RenderTemplateForEvidence(LauncherTemplateCatalog.Create(kind), root, dpi / 100f);
+                bitmap.Save(Path.Combine(root, $"{kind.ToString().ToLowerInvariant()}-{dpi}.png"), ImageFormat.Png);
+            }
+            return Directory.EnumerateFiles(root, "*.png").Count() == 12 ? 0 : 2;
+        }
+
+        private static void RunThemeLauncher()
+        {
+            string clientDirectory = AppContext.BaseDirectory;
+            LauncherRuntimeHost.Run(clientDirectory, (selectedDirectory, server, micro, _) =>
+            {
+                string selectedClient = Path.Combine(selectedDirectory, "Client.exe");
+                var start = new ProcessStartInfo(selectedClient) { WorkingDirectory = selectedDirectory, UseShellExecute = false };
+                foreach (string argument in GameProcessLaunchArguments.Create(server, micro, ClientCapabilityProbe.Detect(selectedDirectory))) start.ArgumentList.Add(argument);
+                Process.Start(start)?.Dispose();
+            });
         }
 
         private static int RunPreLoginUpdateCli(string[] args)

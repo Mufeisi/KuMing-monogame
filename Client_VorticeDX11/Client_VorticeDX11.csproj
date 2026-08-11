@@ -57,6 +57,8 @@
 
 	<ItemGroup>
 		<Content Include="MIR2.ICO" />
+		<Content Include="launcher-capabilities.json" CopyToOutputDirectory="PreserveNewest" />
+		<Content Include="Launcher\BuiltIn\**\*" CopyToOutputDirectory="PreserveNewest" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -103,6 +105,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<ProjectReference Include="..\Launcher.ThemeRuntime\Launcher.ThemeRuntime.csproj" />
 		<ProjectReference Include="..\Shared\Shared.csproj" />
 	</ItemGroup>
 
