@@ -53,22 +53,89 @@ public static class LauncherReleaseAuthorization
     {
         try
         {
-            string descriptorPath = Path.Combine(Path.GetFullPath(releaseRoot), "launcher-release.json");
-            if (!File.Exists(descriptorPath) || new FileInfo(descriptorPath).Length > 1024 * 1024) return false;
-            LauncherReleaseDescriptor descriptor = JsonSerializer.Deserialize(File.ReadAllText(descriptorPath), LauncherSnapshotJsonContext.Default.LauncherReleaseDescriptor) ?? throw new InvalidDataException();
-            if (string.IsNullOrWhiteSpace(descriptor.ResourceVersion) || descriptor.Files is null || descriptor.Files.Count is < 1 or > 256) return false;
-            var packages = new List<BootstrapManifestAuthorizedPackage>();
-            var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            foreach (LauncherReleaseFile file in descriptor.Files)
-            {
-                if (file is null || Path.GetFileName(file.Name) != file.Name || !names.Add(file.Name)) return false;
-                BootstrapSignedPackageHashPolicy.VerifyFile(Path.Combine(releaseRoot, file.Name), file.Sha256);
-                packages.Add(new BootstrapManifestAuthorizedPackage { Name = file.Name, Sha256 = file.Sha256 });
-            }
-            if (!names.Contains("launcher-snapshot.json")) return false;
-            return BootstrapManifestAcceptanceStore.IsAuthorizedUpdateQueue(signatureStatePath, descriptor.ResourceVersion, packages, trustedKeys, clientVersion);
+            string root = Path.GetFullPath(releaseRoot);
+            string manifestPath = Path.Combine(root, LauncherReleaseVersionValidator.ManifestName);
+            if (!File.Exists(manifestPath) || new FileInfo(manifestPath).Length > BootstrapManifestSignaturePolicy.MaximumJsonBytes) return false;
+            string manifestJson = File.ReadAllText(manifestPath);
+            BootstrapSignedManifest manifest = BootstrapManifestAcceptanceStore.VerifyForAcceptance(
+                manifestJson,
+                signatureStatePath,
+                trustedKeys,
+                clientVersion);
+            LauncherReleaseVersionValidator.Validate(root, manifest);
+            return BootstrapManifestAcceptanceStore.IsAcceptedManifest(
+                signatureStatePath,
+                manifestJson,
+                trustedKeys,
+                clientVersion);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException or InvalidDataException) { return false; }
+    }
+}
+
+internal static class LauncherReleaseVersionValidator
+{
+    internal const string ManifestName = "bootstrap-manifest.json";
+    internal const string DescriptorName = "launcher-release.json";
+    private const string PlayerDescriptorName = "player-update.json";
+    private const string PlayerEntryName = "player-entry.exe";
+
+    internal static void Validate(string releaseRoot, BootstrapSignedManifest manifest)
+    {
+        string root = Path.GetFullPath(releaseRoot);
+        if (!Directory.Exists(root) || (File.GetAttributes(root) & FileAttributes.ReparsePoint) != 0)
+            throw new InvalidDataException("启动器版本目录无效");
+        if (Directory.EnumerateDirectories(root).Any()) throw new InvalidDataException("启动器版本包含未登记子目录");
+
+        var signed = new Dictionary<string, BootstrapSignedPackage>(StringComparer.OrdinalIgnoreCase);
+        foreach (BootstrapSignedPackage package in manifest.Packages)
+        {
+            if (package is null || Path.GetFileName(package.Name) != package.Name || !signed.TryAdd(package.Name, package) || package.Size < 0)
+                throw new InvalidDataException("启动器签名索引文件无效");
+        }
+        if (!signed.TryGetValue(DescriptorName, out BootstrapSignedPackage? descriptorPackage))
+            throw new InvalidDataException("启动器签名索引缺少发布描述");
+        bool hasPlayerDescriptor = signed.ContainsKey(PlayerDescriptorName);
+        bool hasPlayerEntry = signed.ContainsKey(PlayerEntryName);
+        if (hasPlayerDescriptor != hasPlayerEntry) throw new InvalidDataException("玩家入口更新文件不完整");
+
+        string descriptorPath = Path.Combine(root, DescriptorName);
+        VerifyPackageFile(descriptorPath, descriptorPackage);
+        if (new FileInfo(descriptorPath).Length > 1024 * 1024) throw new InvalidDataException("启动器发布描述超过大小上限");
+        LauncherReleaseDescriptor descriptor = JsonSerializer.Deserialize(
+            File.ReadAllText(descriptorPath),
+            LauncherSnapshotJsonContext.Default.LauncherReleaseDescriptor) ?? throw new InvalidDataException("启动器发布描述为空");
+        if (!string.Equals(descriptor.ResourceVersion, manifest.ResourceVersion, StringComparison.Ordinal) ||
+            descriptor.Files is null || descriptor.Files.Count is < 1 or > 256)
+            throw new InvalidDataException("启动器发布描述版本或文件列表无效");
+
+        var described = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (LauncherReleaseFile file in descriptor.Files)
+        {
+            if (file is null || Path.GetFileName(file.Name) != file.Name || !described.Add(file.Name) ||
+                !signed.TryGetValue(file.Name, out BootstrapSignedPackage? package) ||
+                !string.Equals(package.Sha256, file.Sha256, StringComparison.Ordinal))
+                throw new InvalidDataException("启动器发布描述与签名索引不一致");
+        }
+        if (!described.Contains("launcher-snapshot.json")) throw new InvalidDataException("启动器发布描述缺少快照");
+        var expectedDescribed = signed.Keys
+            .Where(name => !name.Equals(DescriptorName, StringComparison.OrdinalIgnoreCase) &&
+                           !name.Equals(PlayerDescriptorName, StringComparison.OrdinalIgnoreCase) &&
+                           !name.Equals(PlayerEntryName, StringComparison.OrdinalIgnoreCase))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        if (!described.SetEquals(expectedDescribed)) throw new InvalidDataException("启动器发布描述未精确覆盖签名资源");
+
+        var expectedFiles = described.Append(DescriptorName).Append(ManifestName).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        string[] actualFiles = Directory.EnumerateFiles(root).Select(Path.GetFileName).OfType<string>().ToArray();
+        if (!expectedFiles.SetEquals(actualFiles)) throw new InvalidDataException("启动器版本包含缺失或未登记文件");
+        foreach (string name in described.Append(DescriptorName)) VerifyPackageFile(Path.Combine(root, name), signed[name]);
+    }
+
+    private static void VerifyPackageFile(string path, BootstrapSignedPackage package)
+    {
+        if (!File.Exists(path) || (File.GetAttributes(path) & FileAttributes.ReparsePoint) != 0 || new FileInfo(path).Length != package.Size)
+            throw new InvalidDataException("启动器版本文件缺失或长度不符：" + package.Name);
+        BootstrapSignedPackageHashPolicy.VerifyFile(path, package.Sha256);
     }
 }
 

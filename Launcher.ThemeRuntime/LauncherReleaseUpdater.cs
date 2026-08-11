@@ -53,9 +53,15 @@ public static class LauncherReleaseUpdater
                     await DownloadPackageAsync(client, root, package, Path.Combine(staging, file.Name), cancellationToken).ConfigureAwait(false);
                 }
 
-                string versionName = BuildVersionName(signature.Manifest, manifestJson);
-                string acceptedVersion = PromoteVersion(staging, acceptedStore, versionName);
-                string lkgVersion = CopyVersion(acceptedVersion, lastKnownGoodStore, versionName);
+                await File.WriteAllTextAsync(Path.Combine(staging, ManifestName), manifestJson, new UTF8Encoding(false), cancellationToken).ConfigureAwait(false);
+                LauncherReleaseVersionValidator.Validate(staging, signature.Manifest);
+
+                string baseVersionName = BuildVersionName(signature.Manifest, manifestJson);
+                string versionName = SelectVersionName(baseVersionName, acceptedStore, lastKnownGoodStore, signature.Manifest);
+                string acceptedVersion = PromoteVersion(staging, acceptedStore, versionName, signature.Manifest);
+                string lkgVersion = CopyVersion(acceptedVersion, lastKnownGoodStore, versionName, signature.Manifest);
+                LauncherReleaseVersionValidator.Validate(acceptedVersion, signature.Manifest);
+                LauncherReleaseVersionValidator.Validate(lkgVersion, signature.Manifest);
                 BootstrapManifestAcceptanceStore.VerifyAndAccept(manifestJson, signatureStatePath, keys, version);
                 if (!LauncherReleaseAuthorization.IsAuthorized(acceptedVersion, signatureStatePath, keys, version) ||
                     !LauncherReleaseAuthorization.IsAuthorized(lkgVersion, signatureStatePath, keys, version))
@@ -174,31 +180,71 @@ public static class LauncherReleaseUpdater
         return manifest.Sequence.ToString(System.Globalization.CultureInfo.InvariantCulture) + "-" + hash;
     }
 
-    private static string PromoteVersion(string staging, string store, string versionName)
+    private static string PromoteVersion(string staging, string store, string versionName, BootstrapSignedManifest manifest)
     {
         string versions = Path.Combine(Path.GetFullPath(store), "versions");
         Directory.CreateDirectory(versions);
         string destination = Path.Combine(versions, versionName);
-        if (Directory.Exists(destination)) return destination;
+        if (Directory.Exists(destination))
+        {
+            LauncherReleaseVersionValidator.Validate(destination, manifest);
+            Directory.Delete(staging, recursive: true);
+            return destination;
+        }
         Directory.Move(staging, destination);
+        LauncherReleaseVersionValidator.Validate(destination, manifest);
         return destination;
     }
 
-    private static string CopyVersion(string source, string store, string versionName)
+    private static string CopyVersion(string source, string store, string versionName, BootstrapSignedManifest manifest)
     {
         string versions = Path.Combine(Path.GetFullPath(store), "versions");
         Directory.CreateDirectory(versions);
         string destination = Path.Combine(versions, versionName);
-        if (Directory.Exists(destination)) return destination;
+        if (Directory.Exists(destination))
+        {
+            LauncherReleaseVersionValidator.Validate(destination, manifest);
+            return destination;
+        }
         string temporary = Path.Combine(versions, ".copying-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(temporary);
         try
         {
             foreach (string file in Directory.EnumerateFiles(source)) File.Copy(file, Path.Combine(temporary, Path.GetFileName(file)), overwrite: false);
             Directory.Move(temporary, destination);
+            LauncherReleaseVersionValidator.Validate(destination, manifest);
             return destination;
         }
         finally { if (Directory.Exists(temporary)) Directory.Delete(temporary, recursive: true); }
+    }
+
+    private static string SelectVersionName(
+        string baseVersionName,
+        string acceptedStore,
+        string lastKnownGoodStore,
+        BootstrapSignedManifest manifest)
+    {
+        bool invalidCollision = false;
+        foreach (string store in new[] { acceptedStore, lastKnownGoodStore })
+        {
+            string destination = Path.Combine(Path.GetFullPath(store), "versions", baseVersionName);
+            if (!Directory.Exists(destination)) continue;
+            try { LauncherReleaseVersionValidator.Validate(destination, manifest); }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException or InvalidDataException)
+            {
+                invalidCollision = true;
+            }
+        }
+        if (!invalidCollision) return baseVersionName;
+
+        string candidate;
+        do
+        {
+            candidate = baseVersionName + "-repair-" + Guid.NewGuid().ToString("N")[..8];
+        }
+        while (Directory.Exists(Path.Combine(Path.GetFullPath(acceptedStore), "versions", candidate)) ||
+               Directory.Exists(Path.Combine(Path.GetFullPath(lastKnownGoodStore), "versions", candidate)));
+        return candidate;
     }
 
     private static void WritePointer(string store, string versionName)

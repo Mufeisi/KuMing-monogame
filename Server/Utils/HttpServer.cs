@@ -34,21 +34,14 @@ namespace Server.Library.Utils
             _backupService = backupService;
             _operationsMonitor = operationsMonitor ?? new BasicOperationsMonitor(backupService);
             _killSwitches = killSwitches;
-            if (Settings.MicroServerActive)
-            {
-                _microGateway.StartAsync(new MicroGatewayOptions(
-                    Settings.MicroResourcePath,
-                    Settings.MicroAuthor,
-                    Settings.MicroCode,
-                    ResourceUpdateEnabled: () => _killSwitches == null || _killSwitches.IsEnabled(KillSwitchFeature.ResourceUpdate)))
-                    .GetAwaiter().GetResult();
-            }
         }
 
         public void Start()
         {
             AdminSecurityPolicy.ValidateListener(Host);
             _operationsMonitor.Start();
+            if (Settings.MicroServerActive && Directory.Exists(Settings.MicroResourcePath))
+                EnsureMicroGatewayStarted();
             _thread = new Thread(Listen);
             _thread.Start(tokenSource.Token);
         }
@@ -88,20 +81,25 @@ namespace Server.Library.Utils
                         return;
                     }
 
-                    var microOptions = new MicroGatewayOptions(
-                        Settings.MicroResourcePath,
-                        Settings.MicroAuthor,
-                        Settings.MicroCode,
-                        ResourceUpdateEnabled: () => _killSwitches == null || _killSwitches.IsEnabled(KillSwitchFeature.ResourceUpdate));
-                    lock (_microConfigurationLock)
+                    if (path.Equals("/api/health", StringComparison.OrdinalIgnoreCase))
                     {
-                        if (Volatile.Read(ref _stopping) != 0)
-                        {
-                            WriteStatusResponse(response, HttpStatusCode.ServiceUnavailable, "micro stopping");
-                            return;
-                        }
-                        _microGateway.StartAsync(microOptions).GetAwaiter().GetResult();
+                        MicroGatewaySnapshot snapshot = _microGateway.GetSnapshot();
+                        WriteStatusResponse(
+                            response,
+                            snapshot.IsRunning ? HttpStatusCode.OK : HttpStatusCode.ServiceUnavailable,
+                            snapshot.IsRunning ? "ok" : "micro not ready");
+                        return;
                     }
+
+                    if (_killSwitches != null && !_killSwitches.IsEnabled(KillSwitchFeature.ResourceUpdate))
+                    {
+                        bool authorized = string.Equals(request.Headers["User"], Settings.MicroAuthor, StringComparison.Ordinal) &&
+                                          (string.IsNullOrEmpty(Settings.MicroCode) || string.Equals(request.Headers["Code"], Settings.MicroCode, StringComparison.Ordinal));
+                        WriteStatusResponse(response, authorized ? HttpStatusCode.ServiceUnavailable : HttpStatusCode.Unauthorized, authorized ? "resource update disabled" : "unauthorized");
+                        return;
+                    }
+
+                    EnsureMicroGatewayStarted();
                     HttpListenerMicroAdapter.HandleAsync(_microGateway, request, response).GetAwaiter().GetResult();
                     return;
                 }
@@ -193,6 +191,21 @@ namespace Server.Library.Utils
 
                 if (!HasResponseStarted(response))
                     WriteStatusResponse(response, HttpStatusCode.InternalServerError, "request error: " + error.Message);
+            }
+        }
+
+        private void EnsureMicroGatewayStarted()
+        {
+            var microOptions = new MicroGatewayOptions(
+                Settings.MicroResourcePath,
+                Settings.MicroAuthor,
+                Settings.MicroCode,
+                ResourceUpdateEnabled: () => _killSwitches == null || _killSwitches.IsEnabled(KillSwitchFeature.ResourceUpdate));
+            lock (_microConfigurationLock)
+            {
+                if (Volatile.Read(ref _stopping) != 0)
+                    throw new InvalidOperationException("微端正在停止，不能重新启动。");
+                _microGateway.StartAsync(microOptions).GetAwaiter().GetResult();
             }
         }
 

@@ -388,10 +388,37 @@ public sealed class LauncherThemeRuntimeTests
         string lkgRoot = Assert.IsType<string>(LauncherReleaseUpdater.ResolveCurrentRoot(lkg, state, keys, new Version(1, 0, 0)));
         Assert.Equal("remote-project", LauncherSnapshotLoader.Load(acceptedRoot, lkgRoot, scope.Dir("unused"), (_, _) => true).Snapshot.ProjectId);
         Assert.Equal(File.ReadAllBytes(Path.Combine(acceptedRoot, "launcher-snapshot.json")), File.ReadAllBytes(Path.Combine(lkgRoot, "launcher-snapshot.json")));
+
+        string descriptorPath = Path.Combine(acceptedRoot, "launcher-release.json");
+        File.WriteAllBytes(descriptorPath, JsonSerializer.SerializeToUtf8Bytes(
+            new LauncherReleaseDescriptor { ResourceVersion = "launcher-v1", Files = new List<LauncherReleaseFile>() },
+            LauncherSnapshotJsonContext.Default.LauncherReleaseDescriptor));
+        Assert.False(LauncherReleaseAuthorization.IsAuthorized(acceptedRoot, state, keys, new Version(1, 0, 0)));
+        File.WriteAllBytes(descriptorPath, descriptorBytes);
+        Assert.True(LauncherReleaseAuthorization.IsAuthorized(acceptedRoot, state, keys, new Version(1, 0, 0)));
+        manifest.Sequence = 2;
+        manifest.Signature = Convert.ToBase64String(signer.SignData(
+            BootstrapManifestSignaturePolicy.BuildCanonicalPayload(manifest),
+            HashAlgorithmName.SHA256,
+            DSASignatureFormat.IeeeP1363FixedFieldConcatenation));
+        File.WriteAllBytes(Path.Combine(acceptedRoot, "bootstrap-manifest.json"), JsonSerializer.SerializeToUtf8Bytes(manifest));
+        Assert.False(LauncherReleaseAuthorization.IsAuthorized(acceptedRoot, state, keys, new Version(1, 0, 0)));
+        File.WriteAllBytes(Path.Combine(acceptedRoot, "bootstrap-manifest.json"), manifestBytes);
+        File.WriteAllText(Path.Combine(acceptedRoot, "unsigned-extra.txt"), "unsigned");
+        Assert.False(LauncherReleaseAuthorization.IsAuthorized(acceptedRoot, state, keys, new Version(1, 0, 0)));
+        File.Delete(Path.Combine(acceptedRoot, "unsigned-extra.txt"));
+
+        File.WriteAllText(Path.Combine(acceptedRoot, "launcher-snapshot.json"), "corrupted");
+        Assert.True(await LauncherReleaseUpdater.TryRefreshAsync("http://launcher.test/", accepted, lkg, state, CancellationToken.None, client, keys, new Version(1, 0, 0), message => error = message), error);
+        string repairedRoot = Assert.IsType<string>(LauncherReleaseUpdater.ResolveCurrentRoot(accepted, state, keys, new Version(1, 0, 0)));
+        string repairedLkgRoot = Assert.IsType<string>(LauncherReleaseUpdater.ResolveCurrentRoot(lkg, state, keys, new Version(1, 0, 0)));
+        Assert.Equal("remote-project", LauncherSnapshotLoader.Load(repairedRoot, repairedLkgRoot, scope.Dir("unused-repaired"), (_, _) => true).Snapshot.ProjectId);
+        Assert.True(File.Exists(Path.Combine(repairedRoot, "bootstrap-manifest.json")));
+
         using var brokenClient = new HttpClient(new DictionaryHttpHandler(new Dictionary<string, byte[]> { ["bootstrap-manifest.json"] = "broken"u8.ToArray() }));
         Assert.False(await LauncherReleaseUpdater.TryRefreshAsync("http://launcher.test/", accepted, lkg, state, CancellationToken.None, brokenClient, keys, new Version(1, 0, 0)));
-        Assert.Equal(acceptedRoot, LauncherReleaseUpdater.ResolveCurrentRoot(accepted, state, keys, new Version(1, 0, 0)));
-        Assert.Equal(lkgRoot, LauncherReleaseUpdater.ResolveCurrentRoot(lkg, state, keys, new Version(1, 0, 0)));
+        Assert.Equal(repairedRoot, LauncherReleaseUpdater.ResolveCurrentRoot(accepted, state, keys, new Version(1, 0, 0)));
+        Assert.Equal(repairedLkgRoot, LauncherReleaseUpdater.ResolveCurrentRoot(lkg, state, keys, new Version(1, 0, 0)));
     }
 
     [Fact]

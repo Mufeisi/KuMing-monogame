@@ -208,7 +208,7 @@ public sealed class KillSwitchServiceTests
             Assert.Equal(HttpStatusCode.ServiceUnavailable, disabled.StatusCode);
 
             using HttpResponseMessage health = await client.GetAsync("/api/health");
-            Assert.Equal(HttpStatusCode.OK, health.StatusCode);
+            Assert.Equal(HttpStatusCode.ServiceUnavailable, health.StatusCode);
         }
         finally
         {

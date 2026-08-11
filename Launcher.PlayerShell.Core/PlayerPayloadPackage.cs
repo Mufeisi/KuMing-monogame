@@ -125,7 +125,9 @@ public static class PlayerPayloadPackage
     {
         executablePath = RequireExistingFile(executablePath, nameof(executablePath));
         destinationDirectory = Path.GetFullPath(destinationDirectory ?? throw new ArgumentNullException(nameof(destinationDirectory)));
+        RejectReparsePath(destinationDirectory, "玩家入口载荷目标目录不得经过重解析点");
         Directory.CreateDirectory(destinationDirectory);
+        RejectReparsePath(destinationDirectory, "玩家入口载荷目标目录不得经过重解析点");
         string destinationPrefix = destinationDirectory.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar;
 
         using FileStream executable = new(executablePath, FileMode.Open, FileAccess.Read, FileShare.Read, 128 * 1024, FileOptions.RandomAccess);
@@ -151,7 +153,12 @@ public static class PlayerPayloadPackage
             string targetPath = Path.GetFullPath(Path.Combine(destinationDirectory, relativePath.Replace('/', Path.DirectorySeparatorChar)));
             if (!targetPath.StartsWith(destinationPrefix, StringComparison.OrdinalIgnoreCase))
                 throw new InvalidDataException("玩家入口载荷路径越出目标目录");
-            Directory.CreateDirectory(Path.GetDirectoryName(targetPath)!);
+            string targetDirectory = Path.GetDirectoryName(targetPath)!;
+            RejectReparsePath(targetDirectory, "玩家入口载荷目标路径不得经过重解析点");
+            Directory.CreateDirectory(targetDirectory);
+            RejectReparsePath(targetDirectory, "玩家入口载荷目标路径不得经过重解析点");
+            if (File.Exists(targetPath) && (File.GetAttributes(targetPath) & FileAttributes.ReparsePoint) != 0)
+                throw new InvalidDataException("玩家入口载荷目标文件不得为重解析点");
             string temporaryPath = targetPath + ".tmp-" + Guid.NewGuid().ToString("N");
             try
             {
@@ -164,6 +171,9 @@ public static class PlayerPayloadPackage
                 string hash = HashFile(temporaryPath);
                 if (!string.Equals(hash, expectedFile.Sha256, StringComparison.Ordinal))
                     throw new InvalidDataException("玩家入口载荷文件 SHA-256 校验失败");
+                RejectReparsePath(targetDirectory, "玩家入口载荷目标路径不得经过重解析点");
+                if (File.Exists(targetPath) && (File.GetAttributes(targetPath) & FileAttributes.ReparsePoint) != 0)
+                    throw new InvalidDataException("玩家入口载荷目标文件不得为重解析点");
                 File.Move(temporaryPath, targetPath, overwrite: true);
             }
             finally
@@ -184,6 +194,7 @@ public static class PlayerPayloadPackage
     {
         executablePath = RequireExistingFile(executablePath, nameof(executablePath));
         destinationDirectory = RequireExistingDirectory(destinationDirectory, nameof(destinationDirectory));
+        RejectReparsePath(destinationDirectory, "已解包玩家载荷目录不得经过重解析点");
         string destinationPrefix = destinationDirectory.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar;
         using FileStream executable = new(executablePath, FileMode.Open, FileAccess.Read, FileShare.Read, 128 * 1024, FileOptions.RandomAccess);
         Trailer trailer = ReadTrailer(executable);
@@ -196,6 +207,7 @@ public static class PlayerPayloadPackage
             string path = Path.GetFullPath(Path.Combine(destinationDirectory, file.Path.Replace('/', Path.DirectorySeparatorChar)));
             if (!path.StartsWith(destinationPrefix, StringComparison.OrdinalIgnoreCase) || !File.Exists(path))
                 throw new InvalidDataException("已解包玩家载荷缺少清单文件");
+            RejectReparsePath(path, "已解包玩家载荷文件不得经过重解析点");
             if (new FileInfo(path).Length != file.Size || !string.Equals(HashFile(path), file.Sha256, StringComparison.Ordinal))
                 throw new InvalidDataException("已解包玩家载荷文件校验失败");
         }
@@ -311,6 +323,20 @@ public static class PlayerPayloadPackage
         string fullPath = Path.GetFullPath(path ?? throw new ArgumentNullException(parameterName));
         if (!Directory.Exists(fullPath)) throw new DirectoryNotFoundException(fullPath);
         return fullPath;
+    }
+
+    private static void RejectReparsePath(string path, string message)
+    {
+        string fullPath = Path.GetFullPath(path);
+        string? current = Path.GetPathRoot(fullPath);
+        foreach (string part in fullPath[(current?.Length ?? 0)..].Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar))
+        {
+            if (part.Length == 0) continue;
+            current = Path.Combine(current ?? string.Empty, part);
+            if ((File.Exists(current) || Directory.Exists(current)) &&
+                (File.GetAttributes(current) & FileAttributes.ReparsePoint) != 0)
+                throw new InvalidDataException(message);
+        }
     }
 
     private static bool IsWithinDirectory(string path, string directory)

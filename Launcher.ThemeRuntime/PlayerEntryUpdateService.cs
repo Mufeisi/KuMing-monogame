@@ -29,7 +29,8 @@ public static class PlayerEntryUpdateService
         HttpClient? httpClient = null)
     {
         if (string.IsNullOrWhiteSpace(baseUrl) || string.IsNullOrWhiteSpace(currentExecutable)) return null;
-        HttpClient client = httpClient ?? new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
+        using HttpClient? ownedClient = httpClient is null ? new HttpClient { Timeout = TimeSpan.FromSeconds(10) } : null;
+        HttpClient client = httpClient ?? ownedClient!;
         Uri root = await LauncherReleaseUpdater.ResolvePublishedRootAsync(client, LauncherReleaseUpdater.RequireBaseUri(baseUrl), cancellationToken).ConfigureAwait(false);
         string manifestJson = Encoding.UTF8.GetString(await LauncherReleaseUpdater.DownloadBytesAsync(client, new Uri(root, ManifestName), BootstrapManifestSignaturePolicy.MaximumJsonBytes, cancellationToken).ConfigureAwait(false));
         BootstrapSignedManifest manifest = BootstrapManifestAcceptanceStore.VerifyForAcceptance(manifestJson, acceptedStatePath, trustedKeys, BootstrapManifestTrustConfiguration.CurrentClientCompatibilityVersion);
@@ -97,7 +98,8 @@ public static class PlayerEntryUpdateService
         if (!File.Exists(target)) throw new FileNotFoundException("当前玩家入口不存在", target);
         string staged = target + ".new";
         string journal = Path.Combine(Path.GetDirectoryName(target)!, "player-replacement.json");
-        HttpClient client = httpClient ?? new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
+        using HttpClient? ownedClient = httpClient is null ? new HttpClient { Timeout = TimeSpan.FromSeconds(30) } : null;
+        HttpClient client = httpClient ?? ownedClient!;
         string temporary = staged + ".downloading-" + Guid.NewGuid().ToString("N");
         try
         {

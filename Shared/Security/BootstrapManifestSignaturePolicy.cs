@@ -373,6 +373,46 @@ public static partial class BootstrapManifestAcceptanceStore
         }
     }
 
+    public static bool IsAcceptedManifest(
+        string statePath,
+        string manifestJson,
+        IReadOnlyDictionary<string, BootstrapManifestTrustedKey> trustedKeys = null,
+        Version currentClientVersion = null)
+    {
+        if (string.IsNullOrWhiteSpace(statePath) || string.IsNullOrWhiteSpace(manifestJson)) return false;
+        lock (Gate)
+        {
+            try
+            {
+                IReadOnlyDictionary<string, BootstrapManifestTrustedKey> resolvedKeys =
+                    trustedKeys ?? BootstrapManifestTrustConfiguration.TrustedKeys;
+                Version resolvedVersion = currentClientVersion ?? BootstrapManifestTrustConfiguration.CurrentClientCompatibilityVersion;
+                BootstrapManifestSecurityState state = LoadState(statePath, resolvedKeys, resolvedVersion);
+                if (state.Sequence <= 0) return false;
+
+                var acceptedState = new BootstrapManifestAcceptedState
+                {
+                    Sequence = state.Sequence,
+                    ResourceVersion = state.ResourceVersion,
+                    CanonicalPayloadSha256 = state.CanonicalPayloadSha256,
+                };
+                BootstrapManifestVerificationResult result = BootstrapManifestSignaturePolicy.Verify(
+                    manifestJson,
+                    resolvedKeys,
+                    resolvedVersion,
+                    acceptedState);
+                return result.IsValid &&
+                       result.Manifest.Sequence == state.Sequence &&
+                       string.Equals(result.Manifest.ResourceVersion, state.ResourceVersion, StringComparison.Ordinal) &&
+                       string.Equals(HashPayload(result.CanonicalPayload), state.CanonicalPayloadSha256, StringComparison.OrdinalIgnoreCase);
+            }
+            catch (InvalidDataException)
+            {
+                return false;
+            }
+        }
+    }
+
     public static bool IsAuthorizedUpdateQueue(
         string statePath,
         string resourceVersion,
