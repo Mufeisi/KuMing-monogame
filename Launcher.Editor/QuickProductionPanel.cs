@@ -7,6 +7,7 @@ internal sealed class QuickProductionPanel : UserControl
     private readonly EditorProject _project;
     private readonly Label _resource = new() { AutoEllipsis = true, Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleLeft };
     private readonly Label _result = new() { AutoEllipsis = true, Dock = DockStyle.Fill, ForeColor = Color.FromArgb(20, 105, 45), TextAlign = ContentAlignment.MiddleLeft };
+    private Button? _generate;
 
     public QuickProductionPanel(EditorProject project, Action chooseResource, Action chooseBackground, Action chooseButton, Action generateAll, Action showAdvanced)
     {
@@ -30,6 +31,12 @@ internal sealed class QuickProductionPanel : UserControl
     public void SetResult(string outputDirectory)
     {
         _result.Text = string.IsNullOrWhiteSpace(outputDirectory) ? "尚未生成" : "已生成到：" + outputDirectory;
+    }
+
+    public void SetBusy(bool busy)
+    {
+        Enabled = !busy;
+        if (_generate is not null) _generate.Text = busy ? "正在生成，请稍候……" : "② 一键生成全部成品";
     }
 
     private Control CreateBasicSettings()
@@ -69,7 +76,7 @@ internal sealed class QuickProductionPanel : UserControl
 
     private Control CreateGenerateStep(Action generateAll, Action showAdvanced)
     {
-        var generate = BigButton("② 一键生成全部成品", generateAll, Color.FromArgb(30, 145, 70));
+        var generate = _generate = BigButton("② 一键生成全部成品", generateAll, Color.FromArgb(30, 145, 70));
         generate.Width = 260; generate.Height = 54; generate.Font = new Font(generate.Font, FontStyle.Bold);
         var advanced = BigButton("显示高级设置", showAdvanced, Color.FromArgb(110, 110, 110));
         var actions = new FlowLayoutPanel { AutoSize = true, FlowDirection = FlowDirection.LeftToRight };

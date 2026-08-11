@@ -23,6 +23,8 @@ internal sealed class MainForm : Form
     private bool _advancedVisible;
     private QuickProductionPanel? _quickPanel;
     private string _lastQuickOutput = string.Empty;
+    private CancellationTokenSource? _quickGenerationCancellation;
+    private bool _closeAfterQuickGeneration;
 
     public MainForm(EditorProjectStore store)
     {
@@ -31,6 +33,7 @@ internal sealed class MainForm : Form
         WindowState = FormWindowState.Maximized;
         MinimumSize = new Size(1100, 700);
         BuildUi();
+        EnsureFirstProject();
         ReloadProjects();
     }
 
@@ -83,8 +86,12 @@ internal sealed class MainForm : Form
         _projects.Items.Clear();
         foreach (string id in _store.ListProjectIds())
         {
-            EditorProject project = _store.Load(id);
-            _projects.Items.Add(new ProjectListItem(id, project.Snapshot.ProjectName));
+            try
+            {
+                EditorProject project = _store.Load(id);
+                _projects.Items.Add(new ProjectListItem(id, project.Snapshot.ProjectName));
+            }
+            catch { _projects.Items.Add(new ProjectListItem(id, "无法读取的旧项目")); }
         }
         if (select is not null) _projects.SelectedItem = _projects.Items.Cast<ProjectListItem>().FirstOrDefault(item => item.Id == select);
         else if (_projects.Items.Count > 0) _projects.SelectedIndex = 0;
@@ -278,6 +285,13 @@ internal sealed class MainForm : Form
         catch (Exception ex) { ShowError(ex); }
     }
 
+    private void EnsureFirstProject()
+    {
+        if (_store.ListProjectIds().Count > 0) return;
+        string id = "project-" + DateTime.Now.ToString("yyyyMMddHHmmss") + "-" + Guid.NewGuid().ToString("N")[..4];
+        _store.Create(id, "新传奇启动器", LauncherTemplateKind.Classic);
+    }
+
     private void ShowAdvanced()
     {
         if (_project is null) { MessageBox.Show(this, "请先新建或选择启动器项目。", Text); return; }
@@ -316,13 +330,14 @@ internal sealed class MainForm : Form
         catch (Exception ex) { ShowError(ex); }
     }
 
-    private void GenerateAllQuick()
+    private async void GenerateAllQuick()
     {
         if (_project is null) { MessageBox.Show(this, "请先新建启动器。", Text); return; }
         if (string.IsNullOrWhiteSpace(_project.ImportedClientDirectory) || !Directory.Exists(_project.ImportedClientDirectory))
         {
             MessageBox.Show(this, "请先完成第一步：选择完整客户端资源目录。", "还差一步", MessageBoxButtons.OK, MessageBoxIcon.Information); return;
         }
+        string? staging = null;
         try
         {
             SyncLists();
@@ -333,21 +348,46 @@ internal sealed class MainForm : Form
             string projectRoot = _store.GetProjectDirectory(_project.Snapshot.ProjectId);
             EditorPreflightValidator.ThrowIfInvalid(_project, projectRoot);
             _store.Save(_project);
-            string safeName = string.Concat(_project.Snapshot.ProjectName.Select(character => Path.GetInvalidFileNameChars().Contains(character) ? '_' : character)).Trim();
-            if (string.IsNullOrWhiteSpace(safeName)) safeName = "传奇启动器";
-            string output = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "传奇启动器成品", safeName + "-" + DateTime.Now.ToString("yyyyMMdd-HHmmss"));
-            Directory.CreateDirectory(output);
-            string player = Path.Combine(output, _project.Brand.OutputFileName);
+            string safeName = SafeFileName(_project.Snapshot.ProjectName);
+            string outputRoot = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "传奇启动器成品");
+            string output = Path.Combine(outputRoot, safeName + "-" + DateTime.Now.ToString("yyyyMMdd-HHmmss"));
+            staging = Path.Combine(outputRoot, "." + safeName + "-生成中-" + Guid.NewGuid().ToString("N"));
+            string projectId = _project.Snapshot.ProjectId;
             string? code = PlayerArtifactBuilder.RequiresMicroCredential(_project) ? GetOrCreateMicroCode() : null;
-            PlayerArtifactBuilder.Create(_project, projectRoot, player, code);
-            DeploymentPackageBuilder.CreateGatewayPackage(_project, Path.Combine(output, "独立微端部署包.zip"), GetOrCreateMicroCode());
-            if (_project.DeliveryMode == ClientDeliveryMode.FullClient) FullClientDistributionBuilder.Create(_project, player, Path.Combine(output, "完整客户端包.zip"));
+            string gatewayCode = GetOrCreateMicroCode();
+            EditorProject buildProject = _store.Load(projectId);
+            _quickGenerationCancellation = new CancellationTokenSource();
+            CancellationToken cancellation = _quickGenerationCancellation.Token;
+            _quickPanel?.SetBusy(true); UseWaitCursor = true; SetStatus("正在后台生成全部成品，请稍候……");
+            await Task.Run(() =>
+            {
+                cancellation.ThrowIfCancellationRequested();
+                Directory.CreateDirectory(staging);
+                string player = Path.Combine(staging, buildProject.Brand.OutputFileName);
+                PlayerArtifactBuilder.Create(buildProject, projectRoot, player, code);
+                cancellation.ThrowIfCancellationRequested();
+                DeploymentPackageBuilder.CreateGatewayPackage(buildProject, Path.Combine(staging, "独立微端部署包.zip"), gatewayCode);
+                cancellation.ThrowIfCancellationRequested();
+                if (buildProject.DeliveryMode == ClientDeliveryMode.FullClient) FullClientDistributionBuilder.Create(buildProject, player, Path.Combine(staging, "完整客户端包.zip"));
+                cancellation.ThrowIfCancellationRequested();
+                Directory.CreateDirectory(outputRoot);
+                Directory.Move(staging, output);
+            }, cancellation);
+            staging = null;
             _lastQuickOutput = output; _quickPanel?.SetResult(output);
             SetStatus("全部成品已生成：" + output);
             try { Process.Start(new ProcessStartInfo("explorer.exe", $"\"{output}\"") { UseShellExecute = true }); }
             catch { /* 成品已经生成，无法自动打开目录不应把成功结果误报为失败。 */ }
         }
+        catch (OperationCanceledException) { SetStatus("已安全取消生成，没有留下半套成品"); }
         catch (Exception ex) { ShowError(ex); }
+        finally
+        {
+            if (!string.IsNullOrWhiteSpace(staging)) try { if (Directory.Exists(staging)) Directory.Delete(staging, true); } catch { }
+            _quickGenerationCancellation?.Dispose(); _quickGenerationCancellation = null;
+            _quickPanel?.SetBusy(false); UseWaitCursor = false;
+            if (_closeAfterQuickGeneration && !IsDisposed) { _closeAfterQuickGeneration = false; BeginInvoke(Close); }
+        }
     }
 
     private void RefreshPreview()
@@ -558,6 +598,18 @@ internal sealed class MainForm : Form
     {
         if (disposing) _preview.Image?.Dispose();
         base.Dispose(disposing);
+    }
+
+    protected override void OnFormClosing(FormClosingEventArgs e)
+    {
+        if (_quickGenerationCancellation is not null)
+        {
+            _closeAfterQuickGeneration = true;
+            _quickGenerationCancellation.Cancel();
+            SetStatus("正在安全停止生成，完成清理后自动关闭……");
+            e.Cancel = true;
+        }
+        base.OnFormClosing(e);
     }
 
     private sealed record ProjectListItem(string Id, string Name)

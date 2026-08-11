@@ -10,7 +10,7 @@ internal sealed class GatewayProjectConfiguration
     public string ProjectId { get; set; } = string.Empty;
     public string ListenAddress { get; set; } = "127.0.0.1";
     public int Port { get; set; } = 7000;
-    public string User { get; set; } = "微端用户";
+    public string User { get; set; } = "player";
     public string ResourceVersion { get; set; } = string.Empty;
     public string SigningIdentity { get; set; } = string.Empty;
     public string ResourceDirectory { get; set; } = string.Empty;

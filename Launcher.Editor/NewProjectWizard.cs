@@ -65,8 +65,9 @@ internal sealed class NewProjectWizard : Form
             { MessageBox.Show(this, "所选目录不是完整客户端目录，请重新选择。", Text); DialogResult = DialogResult.None; }
         };
         var cancel = new Button { Text = "取消", DialogResult = DialogResult.Cancel, Width = 90, Height = 42 };
+        var skip = new Button { Text = "跳过向导，使用默认设置", DialogResult = DialogResult.OK, Width = 190, Height = 42 };
         var buttons = new FlowLayoutPanel { FlowDirection = FlowDirection.RightToLeft, AutoSize = true, Width = 650, Margin = new Padding(0, 18, 0, 0) };
-        buttons.Controls.AddRange(new Control[] { finish, cancel });
+        buttons.Controls.AddRange(new Control[] { finish, cancel, skip });
         var content = new FlowLayoutPanel { Dock = DockStyle.Fill, FlowDirection = FlowDirection.TopDown, WrapContents = false, Padding = new Padding(28) };
         content.Controls.AddRange(new Control[] { title, explanation, fields, buttons });
         Controls.Add(content); AcceptButton = finish; CancelButton = cancel;

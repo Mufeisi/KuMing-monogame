@@ -504,7 +504,7 @@ internal sealed class LauncherForm : Form
         return new Bitmap(source);
     }
     private T Own<T>(T image) where T : Image { _ownedImages.Add(image); return image; }
-    protected override void Dispose(bool disposing) { if (disposing) { _disposeStarted = true; if (_dpiLayoutPending && IsHandleCreated) Application.DoEvents(); _announcementCancellation.Dispose(); _progressTimer.Dispose(); foreach (Image image in _derivedBackgrounds.Values) image.Dispose(); _derivedBackgrounds.Clear(); foreach (Image image in _ownedImages) image.Dispose(); _ownedImages.Clear(); foreach (Font font in _ownedFonts) font.Dispose(); _ownedFonts.Clear(); } base.Dispose(disposing); }
+    protected override void Dispose(bool disposing) { if (disposing) { _disposeStarted = true; _announcementCancellation.Dispose(); _progressTimer.Dispose(); foreach (Image image in _derivedBackgrounds.Values) image.Dispose(); _derivedBackgrounds.Clear(); foreach (Image image in _ownedImages) image.Dispose(); _ownedImages.Clear(); foreach (Font font in _ownedFonts) font.Dispose(); _ownedFonts.Clear(); } base.Dispose(disposing); }
     private static LauncherPlayerSettings CloneSettings(LauncherPlayerSettings value) => new() { Resolution = value.Resolution, FullScreen = value.FullScreen, Borderless = value.Borderless, FpsCap = value.FpsCap, MaxFps = value.MaxFps, Volume = value.Volume, MusicVolume = value.MusicVolume, TopMost = value.TopMost, AutoStart = value.AutoStart, AdvancedLogs = value.AdvancedLogs, MicroCacheLimitMb = value.MicroCacheLimitMb };
     private static string StatusText(ServerOperatingStatus value) => value switch
     {
@@ -516,5 +516,5 @@ internal sealed class LauncherForm : Form
         ServerOperatingStatus.Hidden => "隐藏",
         _ => "正常",
     };
-    private static string FormatBytes(long value) => value >= 1024 * 1024 ? $"{value / 1024d / 1024d:F1} MiB" : value >= 1024 ? $"{value / 1024d:F1} KiB" : $"{value} B";
+    private static string FormatBytes(long value) => value >= 1024 * 1024 ? $"{value / 1024d / 1024d:F1} 兆字节" : value >= 1024 ? $"{value / 1024d:F1} 千字节" : $"{value} 字节";
 }

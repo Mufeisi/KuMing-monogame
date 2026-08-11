@@ -8,7 +8,7 @@ internal sealed class MainForm : Form
     private readonly TextBox _launcherRoot = new() { Dock = DockStyle.Fill };
     private readonly TextBox _address = new() { Dock = DockStyle.Fill, Text = "127.0.0.1" };
     private readonly NumericUpDown _port = new() { Dock = DockStyle.Fill, Minimum = 1, Maximum = 65535, Value = 7000 };
-    private readonly TextBox _user = new() { Dock = DockStyle.Fill, Text = "微端用户" };
+    private readonly TextBox _user = new() { Dock = DockStyle.Fill, Text = "player", UseSystemPasswordChar = true };
     private readonly TextBox _code = new() { Dock = DockStyle.Fill, UseSystemPasswordChar = true };
     private readonly TextBox _cacheRoot = new() { Dock = DockStyle.Fill };
     private readonly NumericUpDown _memoryCache = new() { Dock = DockStyle.Fill, Minimum = 16, Maximum = 1024, Value = 128 };

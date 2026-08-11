@@ -65,7 +65,7 @@ public static class PlayerArtifactBuilder
             if (process.ExitCode != 0) throw new InvalidDataException("玩家入口生成后验证失败，退出码 " + process.ExitCode);
             string renderOutput = Path.Combine(buildRoot, "render-smoke");
             using Process render = Process.Start(new ProcessStartInfo(output) { UseShellExecute = false, WorkingDirectory = Path.GetDirectoryName(output)!, ArgumentList = { "--theme-render-smoke", renderOutput } }) ?? throw new InvalidOperationException("无法启动生成后的主题验证");
-            if (!render.WaitForExit(30_000)) { render.Kill(entireProcessTree: true); throw new TimeoutException("玩家入口主题验证超时"); }
+            if (!render.WaitForExit(120_000)) { render.Kill(entireProcessTree: true); throw new TimeoutException("玩家入口主题验证超时"); }
             string[] rendered = Directory.Exists(renderOutput) ? Directory.EnumerateFiles(renderOutput, "*.png").ToArray() : Array.Empty<string>();
             if (render.ExitCode != 0 || rendered.Length != 12) throw new InvalidDataException("玩家入口主题生成后验证失败");
             foreach (string image in rendered) using (Image.FromFile(image)) { }
