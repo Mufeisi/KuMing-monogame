@@ -12,7 +12,7 @@ public static class AnnouncementPresentationResolver
         LauncherSnapshotValidator.Validate(snapshot);
         if (snapshot.AnnouncementMode != AnnouncementDisplayMode.ExternalPage) return new Presentation(AnnouncementDisplayMode.NativeCards, string.Empty);
         bool ownsClient = client is null;
-        client ??= new HttpClient { Timeout = TimeSpan.FromSeconds(3) };
+        client ??= ExternalAnnouncementHttp.CreateClient(TimeSpan.FromSeconds(3));
         try
         {
             using var request = new HttpRequestMessage(HttpMethod.Get, snapshot.ExternalAnnouncementUrl);

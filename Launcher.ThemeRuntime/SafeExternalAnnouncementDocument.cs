@@ -45,7 +45,7 @@ public static class SafeExternalAnnouncementDocument
             else if (name is "strong" or "b") { Flush(); bold = !closing; }
             else if (name == "a")
             {
-                Flush(); link = closing ? string.Empty : SafeUrl(ExtractAttribute(body, "href"));
+                Flush(); link = closing ? string.Empty : SafeUrl(ExtractAttribute(body, "href"), documentUri);
             }
             else if (!closing && name == "img")
             {
@@ -64,10 +64,15 @@ public static class SafeExternalAnnouncementDocument
         return result.Take(200).ToArray();
     }
 
-    private static string SafeUrl(string value) => LauncherActionDispatcher.TryGetHttpUri(WebUtility.HtmlDecode(value), out Uri? uri) ? uri!.AbsoluteUri : string.Empty;
+    private static string SafeUrl(string value, Uri? documentUri = null)
+    {
+        string decoded = WebUtility.HtmlDecode(value);
+        if (documentUri is not null && Uri.TryCreate(documentUri, decoded, out Uri? relative) && relative.Scheme is "http" or "https") return relative.AbsoluteUri;
+        return LauncherActionDispatcher.TryGetHttpUri(decoded, out Uri? uri) ? uri!.AbsoluteUri : string.Empty;
+    }
     private static string SafeImageUrl(string value, Uri? documentUri)
     {
-        string safe = SafeUrl(value);
+        string safe = SafeUrl(value, documentUri);
         if (string.IsNullOrEmpty(safe) || documentUri is null || !Uri.TryCreate(safe, UriKind.Absolute, out Uri? imageUri)) return string.Empty;
         return imageUri.Scheme == documentUri.Scheme && imageUri.Host == documentUri.Host && imageUri.Port == documentUri.Port ? imageUri.AbsoluteUri : string.Empty;
     }

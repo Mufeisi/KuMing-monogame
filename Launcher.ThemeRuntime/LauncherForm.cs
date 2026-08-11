@@ -83,17 +83,17 @@ internal sealed class LauncherForm : Form
                     IReadOnlyList<ExternalAnnouncementElement> elements = SafeExternalAnnouncementDocument.Parse(presentation.Html, documentUri);
                     if (elements.Count == 0) return;
                     browser = new FlowLayoutPanel { Dock = DockStyle.Fill, AutoScroll = true, FlowDirection = FlowDirection.TopDown, WrapContents = false, BackColor = Color.White, Padding = new Padding(10) };
-                    using var imageHandler = new HttpClientHandler { AllowAutoRedirect = false };
-                    using var imageClient = new HttpClient(imageHandler) { Timeout = TimeSpan.FromSeconds(5) };
+                    using HttpClient imageClient = ExternalAnnouncementHttp.CreateClient(TimeSpan.FromSeconds(5));
                     long remainingImageBytes = 8L * 1024 * 1024;
+                    long remainingImagePixels = 16_000_000;
                     foreach (ExternalAnnouncementElement element in elements)
                     {
                         if (element.Kind == ExternalAnnouncementElementKind.Image)
                         {
                             var picture = new PictureBox { Width = Math.Max(240, _announcements.Width - 45), Height = 170, SizeMode = PictureBoxSizeMode.Zoom, BackColor = Color.FromArgb(238, 238, 238) };
-                            (Image? image, long bytes) = await LoadExternalAnnouncementImageAsync(imageClient, element.Url, Math.Min(2L * 1024 * 1024, remainingImageBytes), _announcementCancellation.Token);
+                            (Image? image, long bytes, long pixels) = await LoadExternalAnnouncementImageAsync(imageClient, element.Url, Math.Min(2L * 1024 * 1024, remainingImageBytes), remainingImagePixels, _announcementCancellation.Token);
                             if (image is null) throw new InvalidDataException("外部公告图片加载失败");
-                            remainingImageBytes -= bytes;
+                            remainingImageBytes -= bytes; remainingImagePixels -= pixels;
                             picture.Image = image; picture.Disposed += (_, _) => image.Dispose(); browser.Controls.Add(picture); continue;
                         }
                         Control line;
@@ -215,20 +215,23 @@ internal sealed class LauncherForm : Form
         }
     }
 
-    private static async Task<(Image? Image, long Bytes)> LoadExternalAnnouncementImageAsync(HttpClient client, string url, long maximumBytes, CancellationToken cancellationToken)
+    private static async Task<(Image? Image, long Bytes, long Pixels)> LoadExternalAnnouncementImageAsync(HttpClient client, string url, long maximumBytes, long maximumPixels, CancellationToken cancellationToken)
     {
         try
         {
-            if (maximumBytes <= 0) return (null, 0);
+            if (maximumBytes <= 0 || maximumPixels <= 0) return (null, 0, 0);
             using HttpResponseMessage response = await client.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
-            if (!response.IsSuccessStatusCode || response.Content.Headers.ContentLength > maximumBytes) return (null, 0);
+            if (!response.IsSuccessStatusCode || response.Content.Headers.ContentLength > maximumBytes) return (null, 0, 0);
             await using Stream input = await response.Content.ReadAsStreamAsync(cancellationToken); using var bytes = new MemoryStream(); byte[] buffer = new byte[16 * 1024]; int read;
-            while ((read = await input.ReadAsync(buffer, cancellationToken)) > 0) { if (bytes.Length + read > maximumBytes) return (null, 0); bytes.Write(buffer, 0, read); }
+            while ((read = await input.ReadAsync(buffer, cancellationToken)) > 0) { if (bytes.Length + read > maximumBytes) return (null, 0, 0); bytes.Write(buffer, 0, read); }
+            if (!SafeRasterImageMetadata.TryGetDimensions(bytes.GetBuffer().AsSpan(0, checked((int)bytes.Length)), out int width, out int height)) return (null, 0, 0);
+            long pixels = (long)width * height;
+            if (width > 4096 || height > 4096 || pixels > 8_000_000 || pixels > maximumPixels) return (null, 0, 0);
             bytes.Position = 0; using Image decoded = Image.FromStream(bytes, useEmbeddedColorManagement: false, validateImageData: true);
-            if (decoded.Width > 4096 || decoded.Height > 4096 || (long)decoded.Width * decoded.Height > 16_000_000) return (null, 0);
-            return (new Bitmap(decoded), bytes.Length);
+            if (decoded.Width != width || decoded.Height != height) return (null, 0, 0);
+            return (new Bitmap(decoded), bytes.Length, pixels);
         }
-        catch (Exception ex) when (ex is HttpRequestException or IOException or OperationCanceledException or ArgumentException or OutOfMemoryException) { return (null, 0); }
+        catch (Exception ex) when (ex is HttpRequestException or IOException or OperationCanceledException or ArgumentException or OutOfMemoryException) { return (null, 0, 0); }
     }
 
     private Button CreateTopButton(string text, int rightOffset) => new() { Text = text, FlatStyle = FlatStyle.Flat, Size = new Size(110, 34), Location = new Point(Width - rightOffset, 20), Anchor = AnchorStyles.Top | AnchorStyles.Right };
