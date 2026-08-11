@@ -22,6 +22,8 @@ public sealed class LauncherThemeRuntimeTests
         snapshot.ExternalAnnouncementUrl = "https://notice.example.invalid/";
         using var client = new HttpClient(new StubHttpHandler(HttpStatusCode.BadGateway));
         Assert.Equal(AnnouncementDisplayMode.NativeCards, await AnnouncementPresentationResolver.ResolveAsync(snapshot, client, CancellationToken.None));
+        using var brokenBody = new HttpClient(new ThrowingHttpHandler());
+        Assert.Equal(AnnouncementDisplayMode.NativeCards, await AnnouncementPresentationResolver.ResolveAsync(snapshot, brokenBody, CancellationToken.None));
     }
 
     [Fact]
@@ -549,6 +551,11 @@ public sealed class LauncherThemeRuntimeTests
     {
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) =>
             Task.FromResult(new HttpResponseMessage(status) { RequestMessage = request, Content = new StringContent("<html><body>公告</body></html>") });
+    }
+
+    private sealed class ThrowingHttpHandler : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) => throw new IOException("模拟响应体读取失败");
     }
 
     private static LauncherSnapshot CreateSnapshot(string id) => new()

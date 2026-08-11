@@ -65,8 +65,8 @@ public static class BootstrapOfflinePackageInstaller
                 Directory.Delete(staging, true);
             }
             else Directory.Move(staging, destination);
-            WritePointer(root, version);
             BootstrapManifestAcceptanceStore.VerifyAndAccept(json, acceptanceState, trustedKeys, clientVersion);
+            WritePointer(root, version);
             return new BootstrapOfflineInstallResult(accepted.Sequence, version, destination);
         }
         finally

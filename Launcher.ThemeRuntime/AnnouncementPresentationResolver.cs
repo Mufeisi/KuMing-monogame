@@ -28,7 +28,7 @@ public static class AnnouncementPresentationResolver
             string html = System.Text.Encoding.UTF8.GetString(output.ToArray());
             return string.IsNullOrWhiteSpace(html) ? new Presentation(AnnouncementDisplayMode.NativeCards, string.Empty) : new Presentation(AnnouncementDisplayMode.ExternalPage, html);
         }
-        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+        catch (Exception ex) when (ex is HttpRequestException or IOException or OperationCanceledException)
         {
             return new Presentation(AnnouncementDisplayMode.NativeCards, string.Empty);
         }
