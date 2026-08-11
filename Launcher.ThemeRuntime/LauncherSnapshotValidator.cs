@@ -46,11 +46,20 @@ public static class LauncherSnapshotValidator
             ValidateMicro(server.MicroOverride);
         }
         if (snapshot.Announcements is null || snapshot.Announcements.Count > 100) throw new InvalidDataException("公告数量超过上限");
+        if (!Enum.IsDefined(snapshot.AnnouncementMode)) throw new InvalidDataException("公告显示模式无效");
+        if (!string.IsNullOrWhiteSpace(snapshot.ExternalAnnouncementUrl) && (!Uri.TryCreate(snapshot.ExternalAnnouncementUrl, UriKind.Absolute, out Uri? announcementUri) || announcementUri.Scheme is not ("http" or "https"))) throw new InvalidDataException("外部公告地址无效");
+        if (snapshot.AnnouncementMode == AnnouncementDisplayMode.ExternalPage && string.IsNullOrWhiteSpace(snapshot.ExternalAnnouncementUrl)) throw new InvalidDataException("外部公告模式必须设置 HTTP/HTTPS 地址");
         foreach (LauncherAnnouncement item in snapshot.Announcements)
         {
             if (item is null || string.IsNullOrWhiteSpace(item.Title) || item.Title.Length > 120 || item.Summary.Length > 1000) throw new InvalidDataException("公告内容无效");
             ValidateAssetPath(item.Image);
             if (!string.IsNullOrEmpty(item.ExternalUrl) && (!Uri.TryCreate(item.ExternalUrl, UriKind.Absolute, out Uri? uri) || uri.Scheme is not ("http" or "https"))) throw new InvalidDataException("公告链接无效");
+        }
+        if (snapshot.ActionLinks is null || snapshot.ActionLinks.Count > 12) throw new InvalidDataException("安全动作链接数量无效");
+        foreach (LauncherActionLink link in snapshot.ActionLinks)
+        {
+            if (link is null || string.IsNullOrWhiteSpace(link.Text) || link.Text.Length > 24 || !LauncherActionDispatcher.IsWebAction(link.Action) || !LauncherActionDispatcher.TryGetHttpUri(link.Url, out _))
+                throw new InvalidDataException("安全动作链接无效");
         }
         if (snapshot.TrustedReleaseKeys is null || snapshot.TrustedReleaseKeys.Count > 4) throw new InvalidDataException("启动器发布可信密钥数量无效");
         var releaseKeyIds = new HashSet<string>(StringComparer.Ordinal);

@@ -11,7 +11,9 @@ public sealed record MicroGatewayOptions(
     int DiskCacheMb = 2048,
     string? CacheRoot = null,
     MicroPayloadCache? PayloadCache = null,
-    int NewFileQuarantineSeconds = 10);
+    int NewFileQuarantineSeconds = 10,
+    string ResourceVersion = "",
+    string SigningIdentity = "");
 
 public sealed record MicroGatewayRequest(
     string Method,

@@ -15,6 +15,40 @@ namespace Launcher.PlayerShellIntegration;
 public sealed class LauncherEditorTests
 {
     [Fact]
+    public void ProjectCreationOptionsPersistAllWizardDomains()
+    {
+        using var scope = new EditorTempScope();
+        var store = new EditorProjectStore(scope.Dir("workspace"));
+        EditorProject project = store.Create(new EditorProjectCreationOptions
+        {
+            ProjectId = "wizard-project", ProjectName = "向导项目", Template = LauncherTemplateKind.Widescreen,
+            CompanyName = "测试公司", RemoteReleaseBaseUrl = "http://release.example.test/launcher/",
+            ServerAddress = "10.0.0.8", ServerPort = 7010, MicroAddress = "10.0.0.9", MicroPort = 8088,
+            DeliveryMode = ClientDeliveryMode.FullClient,
+        });
+        EditorProject loaded = store.Load(project.Snapshot.ProjectId);
+        Assert.Equal("测试公司", loaded.Brand.CompanyName);
+        Assert.Equal("10.0.0.8", loaded.Snapshot.Servers[0].Address);
+        Assert.Equal(ClientDeliveryMode.FullClient, loaded.DeliveryMode);
+    }
+
+    [Fact]
+    public void FullClientDeliveryPackageContainsClientAndSinglePlayerEntry()
+    {
+        using var scope = new EditorTempScope();
+        string client = scope.Dir("client");
+        File.WriteAllText(Path.Combine(client, "Client.exe"), "client");
+        Directory.CreateDirectory(Path.Combine(client, "Data"));
+        File.WriteAllText(Path.Combine(client, "Data", "Map.dat"), "resource");
+        string entry = Path.Combine(scope.Root, "玩家入口.exe"); File.WriteAllText(entry, "player");
+        var project = new EditorProject { DeliveryMode = ClientDeliveryMode.FullClient, ImportedClientDirectory = client };
+        string output = Path.Combine(scope.Root, "full.zip");
+        FullClientDistributionBuilder.Create(project, entry, output);
+        using var archive = System.IO.Compression.ZipFile.OpenRead(output);
+        Assert.Contains(archive.Entries, item => item.FullName == "Client/Client.exe");
+        Assert.Contains(archive.Entries, item => item.FullName == "玩家入口.exe");
+    }
+    [Fact]
     public void RepositorySampleProjectCanBeCopiedAndOpened()
     {
         using var scope = new EditorTempScope();
@@ -156,6 +190,17 @@ public sealed class LauncherEditorTests
     }
 
     [Fact]
+    public void PreflightRejectsMicroOverrideWithDifferentResourceIdentity()
+    {
+        using var scope = new EditorTempScope();
+        var store = new EditorProjectStore(scope.Dir("identity-workspace"));
+        EditorProject project = store.Create("identity-project", "身份项目", LauncherTemplateKind.Classic);
+        project.Snapshot.Servers[0].MicroOverride = new MicroEndpoint { Enabled = true, Address = "127.0.0.1", Port = 8081, ResourceVersion = "other", SigningIdentity = "other-key" };
+        IReadOnlyList<string> issues = EditorPreflightValidator.Validate(project, store.GetProjectDirectory(project.Snapshot.ProjectId));
+        Assert.Contains(issues, item => item.Contains("资源版本或签名身份", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public void BmpThemeAssetIsConvertedToPng()
     {
         using var scope = new EditorTempScope();
@@ -166,6 +211,49 @@ public sealed class LauncherEditorTests
         Assert.Equal("Assets/button.png", relative);
         using Image converted = Image.FromFile(Path.Combine(projectRoot, relative));
         Assert.Equal(System.Drawing.Imaging.ImageFormat.Png.Guid, converted.RawFormat.Guid);
+    }
+
+    [Fact]
+    public void BmpThemeAssetCanKeepOriginalWhenOptimizationIsDisabled()
+    {
+        using var scope = new EditorTempScope();
+        string projectRoot = scope.Dir("bmp-original-project");
+        string source = Path.Combine(scope.Root, "button-original.bmp");
+        using (var image = new Bitmap(20, 10)) image.Save(source, System.Drawing.Imaging.ImageFormat.Bmp);
+
+        string relative = ThemeAssetImporter.Import(projectRoot, source, optimize: false);
+
+        Assert.Equal("Assets/button-original.bmp", relative);
+        using Image copied = Image.FromFile(Path.Combine(projectRoot, relative));
+        Assert.Equal(System.Drawing.Imaging.ImageFormat.Bmp.Guid, copied.RawFormat.Guid);
+    }
+
+    [Fact]
+    public void ThemeTemplatePackageRoundTripsAppearanceWithoutProjectSecrets()
+    {
+        using var scope = new EditorTempScope();
+        var sourceStore = new EditorProjectStore(scope.Dir("theme-source-workspace"));
+        EditorProject source = sourceStore.Create("theme-source", "主题来源", LauncherTemplateKind.Widescreen);
+        string sourceRoot = sourceStore.GetProjectDirectory(source.Snapshot.ProjectId);
+        using (var image = new Bitmap(24, 12)) image.Save(Path.Combine(sourceRoot, "Assets", "background.png"));
+        source.Snapshot.Theme.BackgroundImage = "Assets/background.png";
+        source.Snapshot.Theme.ServerListMode = ServerListMode.Sidebar;
+        string package = Path.Combine(scope.Root, "widescreen.lyotheme");
+
+        ThemeTemplatePackage.Export(source, sourceRoot, package);
+
+        using (ZipArchive zip = ZipFile.OpenRead(package))
+        {
+            Assert.NotNull(zip.GetEntry("theme.json"));
+            Assert.DoesNotContain(zip.Entries, entry => entry.FullName.Contains("secret", StringComparison.OrdinalIgnoreCase));
+        }
+        var targetStore = new EditorProjectStore(scope.Dir("theme-target-workspace"));
+        EditorProject target = targetStore.Create("theme-target", "主题目标", LauncherTemplateKind.Classic);
+        string targetRoot = targetStore.GetProjectDirectory(target.Snapshot.ProjectId);
+        ThemeTemplatePackage.Import(target, targetRoot, package);
+        Assert.Equal(LauncherTemplateKind.Widescreen, target.Snapshot.Theme.Template);
+        Assert.Equal(ServerListMode.Sidebar, target.Snapshot.Theme.ServerListMode);
+        Assert.True(File.Exists(Path.Combine(targetRoot, target.Snapshot.Theme.BackgroundImage)));
     }
 
     [Fact]
@@ -263,6 +351,8 @@ public sealed class LauncherEditorTests
         project.Snapshot.ProjectName = "第二版";
         ProjectReleaseResult second = ProjectReleasePublisher.Publish(project, projectRoot, publishRoot, "第二版");
         Assert.Equal(2, second.Sequence);
+        ProjectReleaseDiff diff = ProjectReleasePublisher.CompareVersions(project, publishRoot, first.VersionName, second.VersionName);
+        Assert.Contains("launcher-snapshot.json", diff.Changed);
         string historicalSnapshot = Path.Combine(first.VersionDirectory, "launcher-snapshot.json");
         byte[] originalSnapshot = File.ReadAllBytes(historicalSnapshot);
         File.AppendAllText(historicalSnapshot, "tampered");
@@ -285,6 +375,14 @@ public sealed class LauncherEditorTests
         using ZipArchive archive = ZipFile.OpenRead(offline);
         Assert.NotNull(archive.GetEntry("current.txt"));
         Assert.Contains(archive.Entries, entry => entry.FullName.EndsWith("/bootstrap-manifest.json", StringComparison.Ordinal));
+        string directTarget = Path.Combine(scope.Root, "gateway-direct-import");
+        var directKeys = project.Release.RetiredPublicKeys.Concat(new[]
+        {
+            new BootstrapManifestTrustedKey { KeyId = project.Release.CurrentKeyId, SubjectPublicKeyInfo = project.Release.CurrentPublicKey, NotBeforeSequence = project.Release.CurrentKeyNotBeforeSequence },
+            new BootstrapManifestTrustedKey { KeyId = project.Release.NextKeyId, SubjectPublicKeyInfo = project.Release.NextPublicKey, NotBeforeSequence = project.Release.NextKeyNotBeforeSequence },
+        }).ToDictionary(item => item.KeyId, StringComparer.Ordinal);
+        BootstrapOfflineInstallResult direct = BootstrapOfflinePackageInstaller.Install(offline, directTarget, directKeys, new Version(1, 0, 0, 0));
+        Assert.Equal(rollback.Sequence, direct.Sequence);
         string importedRoot = Path.Combine(scope.Root, "offline-imported");
         ProjectReleaseResult imported = ProjectReleasePublisher.ImportOfflineDeploymentPackage(project, offline, importedRoot);
         Assert.Equal(rollback.Sequence, imported.Sequence);

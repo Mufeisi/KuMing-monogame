@@ -4,6 +4,22 @@ using Launcher.ThemeRuntime;
 namespace LyoCrystal.LauncherEditor;
 
 public enum PlayerUpdateMode { None, Normal, Required }
+public enum ClientDeliveryMode { MicroOnDemand, FullClient }
+
+public sealed class EditorProjectCreationOptions
+{
+    public string ProjectId { get; set; } = string.Empty;
+    public string ProjectName { get; set; } = string.Empty;
+    public LauncherTemplateKind Template { get; set; }
+    public ClientDeliveryMode DeliveryMode { get; set; }
+    public string CompanyName { get; set; } = string.Empty;
+    public string RemoteReleaseBaseUrl { get; set; } = string.Empty;
+    public string ImportedClientDirectory { get; set; } = string.Empty;
+    public string ServerAddress { get; set; } = "127.0.0.1";
+    public int ServerPort { get; set; } = 7000;
+    public string MicroAddress { get; set; } = "127.0.0.1";
+    public int MicroPort { get; set; } = 8080;
+}
 
 public sealed class EditorProject
 {
@@ -14,14 +30,23 @@ public sealed class EditorProject
     public GatewayDeploymentSettings Gateway { get; set; } = new();
     public ProjectReleaseMetadata Release { get; set; } = new();
     public string ImportedClientDirectory { get; set; } = string.Empty;
+    public bool OptimizeImportedImages { get; set; } = true;
+    public ClientDeliveryMode DeliveryMode { get; set; }
     public bool RegenerateMicroUserOnFirstLoad { get; set; }
     public DateTimeOffset UpdatedAtUtc { get; set; } = DateTimeOffset.UtcNow;
 
     public void SynchronizeMicroIdentity()
     {
+        if (string.IsNullOrWhiteSpace(Snapshot.DefaultMicro.ResourceVersion)) Snapshot.DefaultMicro.ResourceVersion = Snapshot.ProjectId;
+        if (string.IsNullOrWhiteSpace(Snapshot.DefaultMicro.SigningIdentity)) Snapshot.DefaultMicro.SigningIdentity = Release.CurrentKeyId;
         Gateway.User = Snapshot.DefaultMicro.User;
         foreach (LauncherServer server in Snapshot.Servers)
-            if (server.MicroOverride is not null) server.MicroOverride.User = Snapshot.DefaultMicro.User;
+            if (server.MicroOverride is not null)
+            {
+                server.MicroOverride.User = Snapshot.DefaultMicro.User;
+                if (string.IsNullOrWhiteSpace(server.MicroOverride.ResourceVersion)) server.MicroOverride.ResourceVersion = Snapshot.DefaultMicro.ResourceVersion;
+                if (string.IsNullOrWhiteSpace(server.MicroOverride.SigningIdentity)) server.MicroOverride.SigningIdentity = Snapshot.DefaultMicro.SigningIdentity;
+            }
     }
 }
 
@@ -78,4 +103,5 @@ public sealed record ImportPreview(IReadOnlyList<string> MappedFields, IReadOnly
 
 [JsonSourceGenerationOptions(WriteIndented = true, UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow)]
 [JsonSerializable(typeof(EditorProject))]
+[JsonSerializable(typeof(LauncherTheme))]
 internal sealed partial class EditorProjectJsonContext : JsonSerializerContext;

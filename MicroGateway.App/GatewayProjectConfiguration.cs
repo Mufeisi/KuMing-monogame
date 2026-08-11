@@ -11,11 +11,14 @@ internal sealed class GatewayProjectConfiguration
     public string ListenAddress { get; set; } = "127.0.0.1";
     public int Port { get; set; } = 7000;
     public string User { get; set; } = "MicroUser";
+    public string ResourceVersion { get; set; } = string.Empty;
+    public string SigningIdentity { get; set; } = string.Empty;
     public string ResourceDirectory { get; set; } = string.Empty;
     public string LauncherDirectory { get; set; } = string.Empty;
     public int MemoryCacheMb { get; set; } = 128;
     public int DiskCacheMb { get; set; } = 2048;
     public string CacheDirectory { get; set; } = string.Empty;
+    public List<BootstrapManifestTrustedKey> TrustedReleaseKeys { get; set; } = new();
 
     public static GatewayProjectConfiguration? TryLoad(string baseDirectory)
     {

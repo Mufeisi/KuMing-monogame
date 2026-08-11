@@ -25,6 +25,18 @@ internal static class Program
                 ?? throw new InvalidOperationException("无法确定玩家入口路径");
             PlayerPayloadInfo payload = PlayerPayloadPackage.Verify(executablePath);
             string installDirectory = EnsureExtracted(executablePath, payload);
+            if (!args.Any(argument => string.Equals(argument, "--theme-render-smoke", StringComparison.OrdinalIgnoreCase)))
+            {
+                string projectId = LoadProjectId(installDirectory);
+                string managed = PlayerManagedEntry.Ensure(executablePath, projectId, Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "LyoCrystal", "ManagedEntries"), payload);
+                if (!string.Equals(managed, executablePath, StringComparison.OrdinalIgnoreCase))
+                {
+                    var forward = new ProcessStartInfo(managed) { WorkingDirectory = Path.GetDirectoryName(managed)!, UseShellExecute = false };
+                    foreach (string argument in args) forward.ArgumentList.Add(argument);
+                    Process.Start(forward)?.Dispose();
+                    return 0;
+                }
+            }
             if (TryStartPlayerUpdateHelper(executablePath, installDirectory)) return 0;
             string entryPoint = Path.GetFullPath(Path.Combine(installDirectory, payload.EntryPoint.Replace('/', Path.DirectorySeparatorChar)));
             if (!entryPoint.StartsWith(installDirectory + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase) || !File.Exists(entryPoint))
@@ -167,6 +179,16 @@ internal static class Program
 
     private static PlayerTrustContext LoadTrustContext(string installDirectory) =>
         LoadTrustContextFromSnapshot(Path.Combine(installDirectory, "Launcher", "BuiltIn", "launcher-snapshot.json"));
+
+    private static string LoadProjectId(string installDirectory)
+    {
+        string snapshotPath = Path.Combine(installDirectory, "Launcher", "BuiltIn", "launcher-snapshot.json");
+        if (!File.Exists(snapshotPath) || new FileInfo(snapshotPath).Length > BootstrapManifestSignaturePolicy.MaximumJsonBytes) throw new InvalidDataException("玩家入口内置项目快照不存在或过大");
+        using JsonDocument document = JsonDocument.Parse(File.ReadAllBytes(snapshotPath));
+        string projectId = document.RootElement.GetProperty("ProjectId").GetString() ?? string.Empty;
+        if (projectId.Length is < 3 or > 64 || projectId.Any(character => !char.IsAsciiLetterOrDigit(character) && character is not '-' and not '_' and not '.')) throw new InvalidDataException("玩家入口项目标识无效");
+        return projectId;
+    }
 
     private static PlayerTrustContext LoadTrustContextFromSnapshot(string snapshotPath)
     {

@@ -9,6 +9,13 @@ public static class EditorPreflightValidator
         ArgumentNullException.ThrowIfNull(project);
         LauncherSnapshotValidator.Validate(project.Snapshot);
         var issues = new List<string>();
+        project.SynchronizeMicroIdentity();
+        if (project.Snapshot.DefaultMicro.Enabled && (string.IsNullOrWhiteSpace(project.Snapshot.DefaultMicro.ResourceVersion) || string.IsNullOrWhiteSpace(project.Snapshot.DefaultMicro.SigningIdentity)))
+            issues.Add("项目默认微端缺少资源版本或签名身份");
+        foreach (LauncherServer server in project.Snapshot.Servers.Where(item => item.MicroOverride?.Enabled == true))
+            if (!string.Equals(server.MicroOverride!.ResourceVersion, project.Snapshot.DefaultMicro.ResourceVersion, StringComparison.Ordinal) ||
+                !string.Equals(server.MicroOverride.SigningIdentity, project.Snapshot.DefaultMicro.SigningIdentity, StringComparison.Ordinal))
+                issues.Add($"区服 {server.Name} 的微端资源版本或签名身份与项目不一致");
         foreach (int dpi in new[] { 96, 120, 144, 192 })
         {
             LauncherDpiLayoutResult result = LauncherRuntimeHost.ValidatePerMonitorDpiForEvidence(project.Snapshot, projectRoot, dpi);

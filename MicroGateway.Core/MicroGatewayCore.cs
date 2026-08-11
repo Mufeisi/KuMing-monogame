@@ -166,6 +166,10 @@ public sealed class MicroGatewayCore
                 return MicroGatewayResponse.Text(405, "method not allowed");
             if (request.AbsolutePath.Equals("/api/health", StringComparison.OrdinalIgnoreCase))
                 return MicroGatewayResponse.Text(200, "ok");
+            if (request.AbsolutePath.Equals("/api/version", StringComparison.OrdinalIgnoreCase))
+                return PublicStatus(options, includeResources: false);
+            if (request.AbsolutePath.Equals("/api/resources", StringComparison.OrdinalIgnoreCase))
+                return PublicStatus(options, includeResources: true);
             if (request.AbsolutePath.StartsWith("/launcher/", StringComparison.OrdinalIgnoreCase))
                 return HandleLauncherFile(options, request.AbsolutePath);
             if (!request.AbsolutePath.StartsWith("/api/", StringComparison.OrdinalIgnoreCase))
@@ -191,6 +195,27 @@ public sealed class MicroGatewayCore
             lock (_lifecycleLock) _lastError = error.Message;
             return MicroGatewayResponse.Text(500, "request error");
         }
+    }
+
+    private MicroGatewayResponse PublicStatus(MicroGatewayOptions options, bool includeResources)
+    {
+        MicroResourceIndexSnapshot? index = options.ResourceIndex?.GetSnapshot();
+        using var output = new MemoryStream();
+        using (var writer = new Utf8JsonWriter(output))
+        {
+            writer.WriteStartObject();
+            writer.WriteString("format", includeResources ? "lyocrystal-micro-resources-v1" : "lyocrystal-micro-version-v1");
+            writer.WriteString("resourceVersion", options.ResourceVersion ?? string.Empty);
+            writer.WriteString("signingIdentity", options.SigningIdentity ?? string.Empty);
+            if (includeResources)
+            {
+                writer.WriteNumber("indexVersion", index?.Version ?? 0);
+                writer.WriteNumber("indexedFiles", index?.FileCount ?? 0);
+                writer.WriteNumber("indexedBytes", index?.TotalBytes ?? 0);
+            }
+            writer.WriteEndObject();
+        }
+        return MicroGatewayResponse.Bytes(200, output.ToArray(), "application/json; charset=UTF-8");
     }
 
     private bool TryBeginRequest(out MicroGatewayOptions options)

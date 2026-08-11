@@ -8,6 +8,8 @@ internal sealed class LauncherForm : Form
     private readonly ComboBox _serverDropdown = new() { DropDownStyle = ComboBoxStyle.DropDownList };
     private readonly TreeView _serverSidebar = new() { BorderStyle = BorderStyle.None, HideSelection = false };
     private readonly Panel _announcements = new() { AutoScroll = true };
+    private readonly FlowLayoutPanel _actionLinks = new() { AutoSize = true, BackColor = Color.Transparent };
+    private WebBrowser? _announcementBrowser;
     private readonly ProgressBar _overall = new();
     private readonly ProgressBar _current = new();
     private readonly Label _progressText = new() { AutoEllipsis = true };
@@ -60,9 +62,20 @@ internal sealed class LauncherForm : Form
         _progressTimer.Start();
     }
 
-    protected override void OnShown(EventArgs e)
+    protected override async void OnShown(EventArgs e)
     {
         base.OnShown(e);
+        if (_loaded.Snapshot.AnnouncementMode == AnnouncementDisplayMode.ExternalPage)
+        {
+            AnnouncementDisplayMode mode = await AnnouncementPresentationResolver.ResolveAsync(_loaded.Snapshot);
+            if (!IsDisposed && mode == AnnouncementDisplayMode.ExternalPage)
+            {
+                _announcementBrowser = new WebBrowser { Dock = DockStyle.Fill, ScriptErrorsSuppressed = true, IsWebBrowserContextMenuEnabled = false, WebBrowserShortcutsEnabled = false, AllowWebBrowserDrop = false };
+                _announcements.Controls.Clear();
+                _announcements.Controls.Add(_announcementBrowser);
+                _announcementBrowser.Navigate(_loaded.Snapshot.ExternalAnnouncementUrl);
+            }
+        }
         if (_settings.AutoStart && !_autoStartTriggered && !_entryUpdateBlocked)
         {
             _autoStartTriggered = true;
@@ -98,7 +111,15 @@ internal sealed class LauncherForm : Form
 
     private void BuildUi()
     {
-        Controls.AddRange(new Control[] { _announcements, _serverDropdown, _serverSidebar, _launchButton, _overall, _current, _progressText, _sourceText, _windowTitleText });
+        Controls.AddRange(new Control[] { _announcements, _serverDropdown, _serverSidebar, _launchButton, _overall, _current, _progressText, _sourceText, _windowTitleText, _actionLinks });
+        var actionDispatcher = new LauncherActionDispatcher();
+        foreach (LauncherActionLink link in _loaded.Snapshot.ActionLinks)
+        {
+            var item = new LinkLabel { Text = link.Text, AutoSize = true, LinkColor = Color.LightSkyBlue, Margin = new Padding(6) };
+            item.Click += (_, _) => actionDispatcher.Execute(link.Action, link.Url);
+            _actionLinks.Controls.Add(item);
+        }
+        _actionLinks.Location = new Point(18, 20);
         foreach (LauncherServer server in _loaded.Snapshot.Servers.Where(server => server.Status != ServerOperatingStatus.Hidden).OrderBy(server => server.SortOrder)) _serverDropdown.Items.Add(server);
         _serverDropdown.DisplayMember = nameof(LauncherServer.Name);
         if (_serverDropdown.Items.Count > 0) _serverDropdown.SelectedIndex = 0;

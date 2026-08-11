@@ -34,7 +34,8 @@ internal sealed class GatewayRuntime : IAsyncDisposable
         string listenHost = _project.ListenAddress is "0.0.0.0" or "*" or "+" ? "+" : _project.ListenAddress;
         await _host.StartAsync($"http://{listenHost}:{_project.Port}/", new MicroGatewayOptions(
             resources, _project.User, code, string.IsNullOrWhiteSpace(launcher) ? null : launcher,
-            MemoryCacheMb: _project.MemoryCacheMb, DiskCacheMb: _project.DiskCacheMb, CacheRoot: cache)).ConfigureAwait(false);
+            MemoryCacheMb: _project.MemoryCacheMb, DiskCacheMb: _project.DiskCacheMb, CacheRoot: cache,
+            ResourceVersion: _project.ResourceVersion, SigningIdentity: _project.SigningIdentity)).ConfigureAwait(false);
         WriteState();
         AppendLog("网关已启动");
         _monitorLifetime = new CancellationTokenSource();

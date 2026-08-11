@@ -9,9 +9,29 @@ using Shared.Security;
 namespace LyoCrystal.LauncherEditor;
 
 public sealed record ProjectReleaseResult(long Sequence, string VersionName, string VersionDirectory, string ManifestSha256);
+public sealed record ProjectReleaseDiff(IReadOnlyList<string> Added, IReadOnlyList<string> Removed, IReadOnlyList<string> Changed)
+{
+    public string Summary => $"新增 {Added.Count}，删除 {Removed.Count}，变更 {Changed.Count}";
+}
 
 public static class ProjectReleasePublisher
 {
+    public static ProjectReleaseDiff CompareVersions(EditorProject project, string publishRoot, string fromVersionName, string toVersionName)
+    {
+        string versions = Path.Combine(Path.GetFullPath(publishRoot), "versions");
+        BootstrapSignedManifest Load(string version)
+        {
+            string root = Path.GetFullPath(Path.Combine(versions, version));
+            if (!root.StartsWith(versions + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase) || !Directory.Exists(root)) throw new InvalidDataException("差异版本路径无效");
+            return VerifyImportedVersion(project, root);
+        }
+        Dictionary<string, BootstrapSignedPackage> from = Load(fromVersionName).Packages.ToDictionary(item => item.Name, StringComparer.OrdinalIgnoreCase);
+        Dictionary<string, BootstrapSignedPackage> to = Load(toVersionName).Packages.ToDictionary(item => item.Name, StringComparer.OrdinalIgnoreCase);
+        string[] added = to.Keys.Except(from.Keys, StringComparer.OrdinalIgnoreCase).OrderBy(x => x, StringComparer.OrdinalIgnoreCase).ToArray();
+        string[] removed = from.Keys.Except(to.Keys, StringComparer.OrdinalIgnoreCase).OrderBy(x => x, StringComparer.OrdinalIgnoreCase).ToArray();
+        string[] changed = from.Keys.Intersect(to.Keys, StringComparer.OrdinalIgnoreCase).Where(name => from[name].Sha256 != to[name].Sha256 || from[name].Size != to[name].Size).OrderBy(x => x, StringComparer.OrdinalIgnoreCase).ToArray();
+        return new ProjectReleaseDiff(added, removed, changed);
+    }
     public static ProjectReleaseResult Publish(EditorProject project, string projectRoot, string publishRoot, string note)
     {
         ProjectReleaseKeyStore.EnsureProvisioned(project, projectRoot);

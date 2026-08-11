@@ -22,7 +22,14 @@ public sealed class EditorProjectStore
         .OrderBy(name => name, StringComparer.OrdinalIgnoreCase).ToArray();
 
     public EditorProject Create(string projectId, string projectName, LauncherTemplateKind template)
+        => Create(new EditorProjectCreationOptions { ProjectId = projectId, ProjectName = projectName, Template = template });
+
+    public EditorProject Create(EditorProjectCreationOptions options)
     {
+        ArgumentNullException.ThrowIfNull(options);
+        string projectId = options.ProjectId;
+        string projectName = options.ProjectName;
+        LauncherTemplateKind template = options.Template;
         LauncherSnapshotValidator.ValidateProjectId(projectId);
         string directory = GetProjectDirectory(projectId);
         RejectReparsePath(WorkspaceRoot);
@@ -36,10 +43,18 @@ public sealed class EditorProjectStore
         EditorProject project = new() { Snapshot = LauncherTemplateCatalog.Create(template) };
         project.Snapshot.ProjectId = projectId;
         project.Snapshot.ProjectName = string.IsNullOrWhiteSpace(projectName) ? "未命名启动器" : projectName.Trim();
+        project.Snapshot.RemoteReleaseBaseUrl = options.RemoteReleaseBaseUrl.Trim();
+        project.Snapshot.Servers[0].Address = options.ServerAddress.Trim();
+        project.Snapshot.Servers[0].Port = options.ServerPort;
+        project.Snapshot.DefaultMicro.Address = options.MicroAddress.Trim();
+        project.Snapshot.DefaultMicro.Port = options.MicroPort;
+        project.DeliveryMode = options.DeliveryMode;
+        project.ImportedClientDirectory = options.ImportedClientDirectory.Trim();
         project.Snapshot.DefaultMicro.User = "u_" + Convert.ToHexString(RandomNumberGenerator.GetBytes(8)).ToLowerInvariant();
         project.Brand.ProductName = project.Snapshot.ProjectName;
         project.Brand.WindowTitle = project.Snapshot.ProjectName;
         project.Brand.TaskbarName = project.Snapshot.ProjectName;
+        project.Brand.CompanyName = options.CompanyName.Trim();
         ProjectReleaseKeyStore.EnsureProvisioned(project, directory);
         Save(project);
         return project;

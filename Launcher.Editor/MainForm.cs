@@ -17,6 +17,7 @@ internal sealed class MainForm : Form
     private BindingList<LauncherServer>? _servers;
     private BindingList<LauncherAnnouncement>? _announcements;
     private BindingList<LauncherControlOverride>? _controlOverrides;
+    private BindingList<LauncherActionLink>? _actionLinks;
     private float _previewScale = 1f;
 
     public MainForm(EditorProjectStore store)
@@ -36,9 +37,12 @@ internal sealed class MainForm : Form
         AddTool(tools, "导入客户端", ImportClient);
         AddTool(tools, "保存", SaveProject);
         AddTool(tools, "导入主题图片", ImportThemeImage);
+        AddTool(tools, "导入主题包", ImportThemePackage);
+        AddTool(tools, "导出主题包", ExportThemePackage);
         AddTool(tools, "刷新预览", RefreshPreview);
         AddTool(tools, "发布前检查", ValidateBeforeGeneration);
         AddTool(tools, "生成玩家 EXE", GeneratePlayerExecutable);
+        AddTool(tools, "生成完整客户端包", GenerateFullClientPackage);
         AddTool(tools, "生成微端部署包", GenerateGatewayPackage);
         AddTool(tools, "发布版本", PublishRelease);
         AddTool(tools, "回滚版本", RollbackRelease);
@@ -73,7 +77,7 @@ internal sealed class MainForm : Form
         if (wizard.ShowDialog(this) != DialogResult.OK) return;
         try
         {
-            EditorProject project = _store.Create(wizard.ProjectId, wizard.ProjectName, wizard.Template);
+            EditorProject project = _store.Create(wizard.Options);
             ReloadProjects(project.Snapshot.ProjectId);
             SetStatus("项目已创建，可在断网状态继续编辑和生成预览");
         }
@@ -97,12 +101,14 @@ internal sealed class MainForm : Form
         _servers = new BindingList<LauncherServer>(_project.Snapshot.Servers);
         _announcements = new BindingList<LauncherAnnouncement>(_project.Snapshot.Announcements);
         _controlOverrides = new BindingList<LauncherControlOverride>(_project.Snapshot.Theme.Controls);
+        _actionLinks = new BindingList<LauncherActionLink>(_project.Snapshot.ActionLinks);
 
         AddPropertyTab("项目与品牌", new ProjectBrandPropertyView(_project));
-        AddPropertyTab("主题", new ThemePropertyView(_project.Snapshot.Theme));
+        AddPropertyTab("主题", new ThemePropertyView(_project));
         _tabs.TabPages.Add(CreateControlLayoutTab());
         _tabs.TabPages.Add(CreateServerTab());
         _tabs.TabPages.Add(CreateAnnouncementTab());
+        _tabs.TabPages.Add(CreateActionLinksTab());
         _tabs.TabPages.Add(new TabPage("玩家设置") { Controls = { new SettingsEditorPanel(_project.Snapshot.Defaults) } });
         AddPropertyTab("项目默认微端", new DefaultMicroPropertyView(_project.Snapshot.DefaultMicro));
         AddPropertyTab("微端部署", new GatewayPropertyView(_project.Gateway));
@@ -153,6 +159,21 @@ internal sealed class MainForm : Form
         var page = new TabPage("公告"); page.Controls.Add(grid); page.Controls.Add(bar); return page;
     }
 
+    private TabPage CreateActionLinksTab()
+    {
+        var grid = new DataGridView { Dock = DockStyle.Fill, AutoGenerateColumns = false, DataSource = _actionLinks, AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill, AllowUserToAddRows = false };
+        grid.Columns.Add(new DataGridViewComboBoxColumn { HeaderText = "安全动作", DataPropertyName = nameof(LauncherActionLink.Action), DataSource = Enum.GetValues<LauncherAction>().Where(LauncherActionDispatcher.IsWebAction).ToArray() });
+        grid.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = "显示文字", DataPropertyName = nameof(LauncherActionLink.Text) });
+        grid.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = "HTTP/HTTPS 地址", DataPropertyName = nameof(LauncherActionLink.Url), FillWeight = 180 });
+        var bar = new FlowLayoutPanel { Dock = DockStyle.Top, Height = 42 };
+        var add = new Button { Text = "新增安全链接", AutoSize = true };
+        add.Click += (_, _) => _actionLinks!.Add(new LauncherActionLink { Action = LauncherAction.OfficialWebsite, Text = "官方网站", Url = "https://example.com/" });
+        var remove = new Button { Text = "删除", AutoSize = true };
+        remove.Click += (_, _) => { if (grid.CurrentRow?.DataBoundItem is LauncherActionLink item) _actionLinks!.Remove(item); };
+        bar.Controls.AddRange(new Control[] { add, remove, new Label { Text = "仅允许白名单网页动作，不允许脚本、程序或命令行。", AutoSize = true, Padding = new Padding(12, 8, 0, 0) } });
+        var page = new TabPage("安全动作"); page.Controls.Add(grid); page.Controls.Add(bar); return page;
+    }
+
     private TabPage CreateControlLayoutTab()
     {
         var grid = new DataGridView { Dock = DockStyle.Fill, AutoGenerateColumns = true, DataSource = _controlOverrides, AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill, AllowUserToAddRows = false };
@@ -186,6 +207,7 @@ internal sealed class MainForm : Form
         if (_servers is not null) _project.Snapshot.Servers = _servers.ToList();
         if (_announcements is not null) _project.Snapshot.Announcements = _announcements.ToList();
         if (_controlOverrides is not null) _project.Snapshot.Theme.Controls = _controlOverrides.ToList();
+        if (_actionLinks is not null) _project.Snapshot.ActionLinks = _actionLinks.ToList();
     }
 
     private void SaveProject()
@@ -246,7 +268,7 @@ internal sealed class MainForm : Form
         if (usageDialog.ShowDialog(this) != DialogResult.OK) return;
         try
         {
-            string relative = ThemeAssetImporter.Import(_store.GetProjectDirectory(_project.Snapshot.ProjectId), dialog.FileName);
+            string relative = ThemeAssetImporter.Import(_store.GetProjectDirectory(_project.Snapshot.ProjectId), dialog.FileName, _project.OptimizeImportedImages);
             switch (usageDialog.Usage)
             {
                 case ThemeImageUsage.Background: _project.Snapshot.Theme.BackgroundImage = relative; break;
@@ -257,6 +279,24 @@ internal sealed class MainForm : Form
             }
             RebuildTabs(); RefreshPreview(); SetStatus("主题图片已复制到项目素材目录");
         }
+        catch (Exception ex) { ShowError(ex); }
+    }
+
+    private void ImportThemePackage()
+    {
+        if (_project is null) return;
+        using var dialog = new OpenFileDialog { Filter = "LyoCrystal 主题模板 (*.lyotheme)|*.lyotheme" };
+        if (dialog.ShowDialog(this) != DialogResult.OK) return;
+        try { ThemeTemplatePackage.Import(_project, _store.GetProjectDirectory(_project.Snapshot.ProjectId), dialog.FileName); RebuildTabs(); RefreshPreview(); SetStatus("主题模板已导入"); }
+        catch (Exception ex) { ShowError(ex); }
+    }
+
+    private void ExportThemePackage()
+    {
+        if (_project is null) return;
+        using var dialog = new SaveFileDialog { Filter = "LyoCrystal 主题模板 (*.lyotheme)|*.lyotheme", FileName = _project.Snapshot.ProjectId + ".lyotheme" };
+        if (dialog.ShowDialog(this) != DialogResult.OK) return;
+        try { SyncLists(); ThemeTemplatePackage.Export(_project, _store.GetProjectDirectory(_project.Snapshot.ProjectId), dialog.FileName); SetStatus("不含项目秘密的主题模板已导出"); }
         catch (Exception ex) { ShowError(ex); }
     }
 
@@ -281,6 +321,18 @@ internal sealed class MainForm : Form
             PlayerPayloadInfo info = PlayerArtifactBuilder.Create(_project, _store.GetProjectDirectory(_project.Snapshot.ProjectId), dialog.FileName, microCode);
             SetStatus($"玩家 EXE 已生成并验证：{info.FileCount} 个载荷文件，{new FileInfo(dialog.FileName).Length / 1024d / 1024d:F2} MiB");
         }
+        catch (Exception ex) { ShowError(ex); }
+    }
+
+    private void GenerateFullClientPackage()
+    {
+        if (_project is null) return;
+        if (_project.DeliveryMode != ClientDeliveryMode.FullClient) { MessageBox.Show(this, "请先把项目的客户端交付模式改为 FullClient。", "完整客户端交付"); return; }
+        using var entry = new OpenFileDialog { Filter = "已生成的玩家入口 (*.exe)|*.exe", Title = "选择与本项目匹配的玩家入口" };
+        if (entry.ShowDialog(this) != DialogResult.OK) return;
+        using var output = new SaveFileDialog { Filter = "完整客户端包 (*.zip)|*.zip", FileName = _project.Snapshot.ProjectId + "-完整客户端.zip" };
+        if (output.ShowDialog(this) != DialogResult.OK) return;
+        try { SyncLists(); _store.Save(_project); FullClientDistributionBuilder.Create(_project, entry.FileName, output.FileName); SetStatus("完整客户端交付包已生成；微端项目仍只生成单 EXE 按需模式"); }
         catch (Exception ex) { ShowError(ex); }
     }
 
@@ -315,7 +367,7 @@ internal sealed class MainForm : Form
     private void RollbackRelease()
     {
         if (_project is null || _project.Release.History.Count == 0) { MessageBox.Show(this, "当前项目没有可回滚历史。", "回滚版本"); return; }
-        using var dialog = new RollbackReleaseDialog(_project.Release.History);
+        using var dialog = new RollbackReleaseDialog(_project, _project.Release.LastPublishRoot);
         if (dialog.ShowDialog(this) != DialogResult.OK || dialog.Selected is null) return;
         try
         {

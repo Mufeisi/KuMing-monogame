@@ -5,7 +5,8 @@ namespace Launcher.ThemeRuntime;
 
 public enum LauncherTemplateKind { Classic, Compact, Widescreen }
 public enum ServerListMode { Dropdown, Sidebar }
-public enum LauncherAction { LaunchGame, OpenSettings, OpenAnnouncementLink, DiagnoseServer, Minimize, Close }
+public enum AnnouncementDisplayMode { NativeCards, ExternalPage }
+public enum LauncherAction { LaunchGame, OpenSettings, OpenAnnouncementLink, DiagnoseServer, Minimize, Close, RegisterAccount, ChangePassword, RecoverPassword, OfficialWebsite, Recharge, CustomerService, CheckUpdate, RepairClient, ChooseClient }
 public enum ServerOperatingStatus { Normal, Busy, Recommended, NewServer, Maintenance, ComingSoon, Hidden }
 public enum LauncherControlId { ServerList, Announcements, LaunchButton, OverallProgress, CurrentProgress, ProgressText, SettingsButton, DiagnoseButton, ChooseClientButton }
 
@@ -21,6 +22,9 @@ public sealed class LauncherSnapshot
     public LauncherTheme Theme { get; set; } = new();
     public List<LauncherServer> Servers { get; set; } = new();
     public List<LauncherAnnouncement> Announcements { get; set; } = new();
+    public AnnouncementDisplayMode AnnouncementMode { get; set; }
+    public string ExternalAnnouncementUrl { get; set; } = string.Empty;
+    public List<LauncherActionLink> ActionLinks { get; set; } = new();
     public List<BootstrapManifestTrustedKey> TrustedReleaseKeys { get; set; } = new();
     public LauncherPlayerSettings Defaults { get; set; } = new();
     public MicroEndpoint DefaultMicro { get; set; } = new();
@@ -78,6 +82,8 @@ public sealed class MicroEndpoint
     public string BackupAddress { get; set; } = string.Empty;
     public int BackupPort { get; set; }
     public string User { get; set; } = string.Empty;
+    public string ResourceVersion { get; set; } = string.Empty;
+    public string SigningIdentity { get; set; } = string.Empty;
 }
 
 public sealed class LauncherAnnouncement
@@ -88,6 +94,13 @@ public sealed class LauncherAnnouncement
     public string Date { get; set; } = string.Empty;
     public string Image { get; set; } = string.Empty;
     public string ExternalUrl { get; set; } = string.Empty;
+}
+
+public sealed class LauncherActionLink
+{
+    public LauncherAction Action { get; set; }
+    public string Text { get; set; } = string.Empty;
+    public string Url { get; set; } = string.Empty;
 }
 
 public sealed class LauncherPlayerSettings

@@ -9,7 +9,11 @@ internal sealed class ProjectBrandPropertyView
     public ProjectBrandPropertyView(EditorProject project) => _project = project;
     [Category("项目"), DisplayName("项目标识"), ReadOnly(true)] public string ProjectId => _project.Snapshot.ProjectId;
     [Category("项目"), DisplayName("项目名称")] public string ProjectName { get => _project.Snapshot.ProjectName; set => _project.Snapshot.ProjectName = value; }
+    [Category("项目"), DisplayName("客户端交付模式"), Description("微端按需是默认；完整客户端模式由 GM 生成独立完整包，玩家不能自行切换。")]
+    public ClientDeliveryMode DeliveryMode { get => _project.DeliveryMode; set => _project.DeliveryMode = value; }
     [Category("项目"), DisplayName("远程发布地址"), Description("支持 HTTP 或 HTTPS；留空时使用内置和上次有效快照。")] public string RemoteReleaseBaseUrl { get => _project.Snapshot.RemoteReleaseBaseUrl; set => _project.Snapshot.RemoteReleaseBaseUrl = value; }
+    [Category("公告"), DisplayName("公告显示模式")] public AnnouncementDisplayMode AnnouncementMode { get => _project.Snapshot.AnnouncementMode; set => _project.Snapshot.AnnouncementMode = value; }
+    [Category("公告"), DisplayName("外部网页地址"), Description("仅允许 HTTP/HTTPS；加载失败自动回退已签名内置公告。")] public string ExternalAnnouncementUrl { get => _project.Snapshot.ExternalAnnouncementUrl; set => _project.Snapshot.ExternalAnnouncementUrl = value; }
     [Category("品牌"), DisplayName("输出文件名")] public string OutputFileName { get => _project.Brand.OutputFileName; set => _project.Brand.OutputFileName = value; }
     [Category("品牌"), DisplayName("产品名称")] public string ProductName { get => _project.Brand.ProductName; set => _project.Brand.ProductName = value; }
     [Category("品牌"), DisplayName("文件说明")] public string FileDescription { get => _project.Brand.FileDescription; set => _project.Brand.FileDescription = value; }
@@ -25,8 +29,9 @@ internal sealed class ProjectBrandPropertyView
 
 internal sealed class ThemePropertyView
 {
+    private readonly EditorProject _project;
     private readonly LauncherTheme _theme;
-    public ThemePropertyView(LauncherTheme theme) => _theme = theme;
+    public ThemePropertyView(EditorProject project) { _project = project; _theme = project.Snapshot.Theme; }
     [DisplayName("模板")] public LauncherTemplateKind Template { get => _theme.Template; set => _theme.Template = value; }
     [DisplayName("区服列表模式")] public ServerListMode ServerListMode { get => _theme.ServerListMode; set => _theme.ServerListMode = value; }
     [DisplayName("画布宽度")] public int CanvasWidth { get => _theme.CanvasWidth; set => _theme.CanvasWidth = value; }
@@ -37,6 +42,8 @@ internal sealed class ThemePropertyView
     [DisplayName("悬停图片（可选）")] public string LaunchButtonHoverImage { get => _theme.LaunchButtonHoverImage; set => _theme.LaunchButtonHoverImage = value; }
     [DisplayName("按下图片（可选）")] public string LaunchButtonPressedImage { get => _theme.LaunchButtonPressedImage; set => _theme.LaunchButtonPressedImage = value; }
     [DisplayName("禁用图片（可选）")] public string LaunchButtonDisabledImage { get => _theme.LaunchButtonDisabledImage; set => _theme.LaunchButtonDisabledImage = value; }
+    [DisplayName("导入时优化图片"), Description("启用时 BMP 默认无损转换为 PNG；关闭时保留原始格式。")]
+    public bool OptimizeImportedImages { get => _project.OptimizeImportedImages; set => _project.OptimizeImportedImages = value; }
 }
 
 internal sealed class GatewayPropertyView
@@ -58,6 +65,8 @@ internal sealed class DefaultMicroPropertyView
     [DisplayName("备用地址")] public string BackupAddress { get => _value.BackupAddress; set => _value.BackupAddress = value; }
     [DisplayName("备用端口")] public int BackupPort { get => _value.BackupPort; set => _value.BackupPort = value; }
     [DisplayName("访问用户")] public string User { get => _value.User; set => _value.User = value; }
+    [DisplayName("资源版本")] public string ResourceVersion { get => _value.ResourceVersion; set => _value.ResourceVersion = value; }
+    [DisplayName("签名身份")] public string SigningIdentity { get => _value.SigningIdentity; set => _value.SigningIdentity = value; }
 }
 
 internal sealed class ReleasePropertyView

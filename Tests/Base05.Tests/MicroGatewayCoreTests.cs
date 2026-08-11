@@ -12,6 +12,32 @@ namespace Base05.Tests;
 public sealed class MicroGatewayCoreTests
 {
     [Fact]
+    public async Task 公网只读版本与资源状态不泄露目录和凭据()
+    {
+        string root = Path.Combine(Path.GetTempPath(), "LyoCrystalPublicStatus", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        string stable = Path.Combine(root, "stable.bin");
+        await File.WriteAllBytesAsync(stable, new byte[] { 1, 2, 3 });
+        File.SetLastWriteTimeUtc(stable, DateTime.UtcNow - TimeSpan.FromMinutes(2));
+        var core = new MicroGatewayCore();
+        try
+        {
+            await core.StartAsync(new MicroGatewayOptions(root, "private-user", "private-code", ResourceVersion: "resources-v7", SigningIdentity: "project-key-7", NewFileQuarantineSeconds: 0));
+            await using MicroGatewayResponse version = await core.HandleAsync(new MicroGatewayRequest("GET", "/api/version", new Dictionary<string, string?>()));
+            await using MicroGatewayResponse resources = await core.HandleAsync(new MicroGatewayRequest("GET", "/api/resources", new Dictionary<string, string?>()));
+            string versionJson = await ReadBody(version);
+            string resourcesJson = await ReadBody(resources);
+            Assert.Equal(200, version.StatusCode);
+            Assert.Contains("resources-v7", versionJson, StringComparison.Ordinal);
+            Assert.Contains("project-key-7", versionJson, StringComparison.Ordinal);
+            Assert.Contains("\"indexedFiles\":1", resourcesJson, StringComparison.Ordinal);
+            Assert.DoesNotContain(root, versionJson + resourcesJson, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain("private-user", versionJson + resourcesJson, StringComparison.Ordinal);
+            Assert.DoesNotContain("private-code", versionJson + resourcesJson, StringComparison.Ordinal);
+        }
+        finally { await core.StopAsync(); if (Directory.Exists(root)) Directory.Delete(root, true); }
+    }
+    [Fact]
     public async Task 资源索引只原子发布稳定文件且失败保留旧快照()
     {
         string root = Path.Combine(Path.GetTempPath(), "LyoCrystalIndexTests", Guid.NewGuid().ToString("N"));
@@ -379,6 +405,7 @@ public sealed class MicroGatewayCoreTests
     private static HttpClient Client(int port) => new(new HttpClientHandler { UseProxy = false }) { BaseAddress = new Uri($"http://127.0.0.1:{port}/") };
     private static HttpRequestMessage Authorized(string path) { var request = new HttpRequestMessage(HttpMethod.Get, path); request.Headers.Add("User", "reader"); request.Headers.Add("Code", "code"); return request; }
     private static async Task WaitReady(HttpClient client) { for (int i = 0; i < 40; i++) { try { using var response = await client.GetAsync("/api/health"); if (response.IsSuccessStatusCode) return; } catch (HttpRequestException) { } await Task.Delay(50); } throw new TimeoutException("网关未就绪"); }
+    private static async Task<string> ReadBody(MicroGatewayResponse response) { using var output = new MemoryStream(); if (response.WriteBodyAsync is not null) await response.WriteBodyAsync(output, CancellationToken.None); return System.Text.Encoding.UTF8.GetString(output.ToArray()); }
     private static int GetFreePort() { var listener = new TcpListener(IPAddress.Loopback, 0); listener.Start(); int port = ((IPEndPoint)listener.LocalEndpoint).Port; listener.Stop(); return port; }
     private static string FindRepositoryRoot(string start) { DirectoryInfo? current = new(start); while (current is not null) { if (File.Exists(Path.Combine(current.FullName, "global.json"))) return current.FullName; current = current.Parent; } throw new DirectoryNotFoundException(); }
 }

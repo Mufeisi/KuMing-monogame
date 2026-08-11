@@ -1,3 +1,5 @@
+using Shared.Security;
+
 namespace LyoCrystal.MicroGateway.App;
 
 internal sealed class MainForm : Form
@@ -19,6 +21,7 @@ internal sealed class MainForm : Form
     private readonly Button _uninstallService = new() { Text = "卸载服务", AutoSize = true };
     private readonly Button _diagnose = new() { Text = "本机连通检测", AutoSize = true };
     private readonly Button _rescan = new() { Text = "立即重扫资源", AutoSize = true };
+    private readonly Button _importOffline = new() { Text = "导入离线发布包", AutoSize = true };
     private readonly Label _status = new() { AutoSize = true, Text = "未启动" };
     private readonly System.Windows.Forms.Timer _timer = new() { Interval = 1000 };
     private readonly MicroHttpListenerHost _host = new();
@@ -51,7 +54,7 @@ internal sealed class MainForm : Form
         buttons.Controls.AddRange([_start, _stop]);
         layout.Controls.Add(buttons, 1, 9);
         var operations = new FlowLayoutPanel { Dock = DockStyle.Fill, AutoSize = true };
-        operations.Controls.AddRange([_diagnose, _rescan, _network, _rollbackNetwork, _installService, _uninstallService]);
+        operations.Controls.AddRange([_diagnose, _rescan, _importOffline, _network, _rollbackNetwork, _installService, _uninstallService]);
         layout.Controls.Add(operations, 1, 10);
         layout.SetColumnSpan(operations, 2);
         layout.Controls.Add(_status, 1, 11);
@@ -77,6 +80,7 @@ internal sealed class MainForm : Form
         _uninstallService.Click += (_, _) => RunElevated("--uninstall-service");
         _diagnose.Click += async (_, _) => await DiagnoseAsync();
         _rescan.Click += async (_, _) => await RescanAsync();
+        _importOffline.Click += (_, _) => ImportOfflineRelease();
         _network.Enabled = _rollbackNetwork.Enabled = _installService.Enabled = _uninstallService.Enabled = project is not null;
         FormClosing += OnFormClosing;
         Resize += (_, _) =>
@@ -252,6 +256,21 @@ internal sealed class MainForm : Form
         }
         MessageBox.Show(this, updated ? "资源索引已原子更新。" : "网关当前未运行。", "资源重扫", MessageBoxButtons.OK,
             updated ? MessageBoxIcon.Information : MessageBoxIcon.Warning);
+    }
+
+    private void ImportOfflineRelease()
+    {
+        if (_project is null || _project.TrustedReleaseKeys.Count == 0) { MessageBox.Show(this, "当前部署包没有项目可信公钥，不能导入离线发布。", "离线发布", MessageBoxButtons.OK, MessageBoxIcon.Warning); return; }
+        using var file = new OpenFileDialog { Filter = "签名离线发布包 (*.zip)|*.zip" };
+        if (file.ShowDialog(this) != DialogResult.OK) return;
+        try
+        {
+            string root = _project.ResolveOptionalDirectory(AppContext.BaseDirectory, _project.LauncherDirectory);
+            var keys = _project.TrustedReleaseKeys.ToDictionary(item => item.KeyId, StringComparer.Ordinal);
+            BootstrapOfflineInstallResult result = BootstrapOfflinePackageInstaller.Install(file.FileName, root, keys, new Version(1, 0, 0, 0));
+            MessageBox.Show(this, $"已安装离线签名版本：序列 {result.Sequence}\n{result.VersionName}", "离线发布", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+        catch (Exception ex) { MessageBox.Show(this, ex.Message, "离线发布失败", MessageBoxButtons.OK, MessageBoxIcon.Error); }
     }
 
     private void RestoreFromTray()

@@ -15,6 +15,42 @@ namespace Launcher.PlayerShellIntegration;
 public sealed class LauncherThemeRuntimeTests
 {
     [Fact]
+    public async Task ExternalAnnouncementFallsBackToSignedCardsWhenProbeFails()
+    {
+        LauncherSnapshot snapshot = CreateSnapshot("announcement");
+        snapshot.AnnouncementMode = AnnouncementDisplayMode.ExternalPage;
+        snapshot.ExternalAnnouncementUrl = "https://notice.example.invalid/";
+        using var client = new HttpClient(new StubHttpHandler(HttpStatusCode.BadGateway));
+        Assert.Equal(AnnouncementDisplayMode.NativeCards, await AnnouncementPresentationResolver.ResolveAsync(snapshot, client, CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task ExternalAnnouncementIsUsedOnlyAfterSuccessfulHttpProbe()
+    {
+        LauncherSnapshot snapshot = CreateSnapshot("announcement");
+        snapshot.AnnouncementMode = AnnouncementDisplayMode.ExternalPage;
+        snapshot.ExternalAnnouncementUrl = "https://notice.example.test/";
+        using var client = new HttpClient(new StubHttpHandler(HttpStatusCode.OK));
+        Assert.Equal(AnnouncementDisplayMode.ExternalPage, await AnnouncementPresentationResolver.ResolveAsync(snapshot, client, CancellationToken.None));
+        snapshot.ExternalAnnouncementUrl = "file:///C:/Windows/System32/cmd.exe";
+        Assert.Throws<InvalidDataException>(() => LauncherSnapshotValidator.Validate(snapshot));
+    }
+
+    [Fact]
+    public void ActionDispatcherAllowsOnlyDeclaredLocalActionsAndHttpLinks()
+    {
+        var opened = new List<Uri>();
+        var invoked = new List<LauncherAction>();
+        var dispatcher = new LauncherActionDispatcher(opened.Add, invoked.Add);
+        dispatcher.Execute(LauncherAction.OfficialWebsite, "https://game.example.test/");
+        dispatcher.Execute(LauncherAction.RepairClient);
+        Assert.Single(opened);
+        Assert.Equal(LauncherAction.RepairClient, Assert.Single(invoked));
+        Assert.Throws<InvalidDataException>(() => dispatcher.Execute(LauncherAction.OfficialWebsite, "file:///C:/Windows/System32/cmd.exe"));
+        Assert.Throws<InvalidOperationException>(() => dispatcher.Execute((LauncherAction)999));
+    }
+
+    [Fact]
     public void LoadFallsBackAcrossThreeCompleteLayers()
     {
         using var scope = new TempScope();
@@ -507,6 +543,12 @@ public sealed class LauncherThemeRuntimeTests
             if (bytes is not null) response.Content = new ByteArrayContent(bytes);
             return Task.FromResult(response);
         }
+    }
+
+    private sealed class StubHttpHandler(HttpStatusCode status) : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) =>
+            Task.FromResult(new HttpResponseMessage(status) { RequestMessage = request });
     }
 
     private static LauncherSnapshot CreateSnapshot(string id) => new()

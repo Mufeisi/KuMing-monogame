@@ -13,6 +13,11 @@ public static class DeploymentPackageBuilder
     {
         ArgumentNullException.ThrowIfNull(project);
         project.SynchronizeMicroIdentity();
+        project.Snapshot.TrustedReleaseKeys = project.Release.RetiredPublicKeys.TakeLast(2).Concat(new[]
+        {
+            new BootstrapManifestTrustedKey { KeyId = project.Release.CurrentKeyId, SubjectPublicKeyInfo = project.Release.CurrentPublicKey, NotBeforeSequence = project.Release.CurrentKeyNotBeforeSequence },
+            new BootstrapManifestTrustedKey { KeyId = project.Release.NextKeyId, SubjectPublicKeyInfo = project.Release.NextPublicKey, NotBeforeSequence = project.Release.NextKeyNotBeforeSequence },
+        }).Where(item => !string.IsNullOrWhiteSpace(item.KeyId) && !string.IsNullOrWhiteSpace(item.SubjectPublicKeyInfo)).ToList();
         LauncherSnapshotValidator.Validate(project.Snapshot);
         string target = Path.GetFullPath(outputZip);
         if (!target.EndsWith(".zip", StringComparison.OrdinalIgnoreCase)) throw new InvalidDataException("微端部署包必须使用 .zip 扩展名");
@@ -25,6 +30,11 @@ public static class DeploymentPackageBuilder
     {
         ArgumentNullException.ThrowIfNull(project);
         project.SynchronizeMicroIdentity();
+        project.Snapshot.TrustedReleaseKeys = project.Release.RetiredPublicKeys.TakeLast(2).Concat(new[]
+        {
+            new BootstrapManifestTrustedKey { KeyId = project.Release.CurrentKeyId, SubjectPublicKeyInfo = project.Release.CurrentPublicKey, NotBeforeSequence = project.Release.CurrentKeyNotBeforeSequence },
+            new BootstrapManifestTrustedKey { KeyId = project.Release.NextKeyId, SubjectPublicKeyInfo = project.Release.NextPublicKey, NotBeforeSequence = project.Release.NextKeyNotBeforeSequence },
+        }).Where(item => !string.IsNullOrWhiteSpace(item.KeyId) && !string.IsNullOrWhiteSpace(item.SubjectPublicKeyInfo)).ToList();
         LauncherSnapshotValidator.Validate(project.Snapshot);
         ArgumentNullException.ThrowIfNull(gatewayTemplateZip);
         if (!gatewayTemplateZip.CanRead) throw new ArgumentException("微端网关模板不可读", nameof(gatewayTemplateZip));
@@ -48,8 +58,11 @@ public static class DeploymentPackageBuilder
                     listenAddress = project.Gateway.ListenAddress,
                     port = project.Gateway.Port,
                     user = project.Snapshot.DefaultMicro.User,
+                    resourceVersion = project.Snapshot.DefaultMicro.ResourceVersion,
+                    signingIdentity = project.Snapshot.DefaultMicro.SigningIdentity,
                     resourceDirectory = project.Gateway.ResourceDirectory,
                     launcherDirectory = "LauncherPublish",
+                    trustedReleaseKeys = project.Snapshot.TrustedReleaseKeys,
                 }, new JsonSerializerOptions { WriteIndented = true });
                 if (!string.IsNullOrWhiteSpace(microCode))
                 {

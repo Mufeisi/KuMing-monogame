@@ -8,6 +8,23 @@ namespace Launcher.PlayerShellIntegration.Windows;
 public sealed class PlayerPayloadPackageTests
 {
     [Fact]
+    public void DownloadedEntryMovesToManagedProjectDirectoryAndOriginalCanForward()
+    {
+        string root = CreateTemporaryRoot();
+        try
+        {
+            string shell = Path.Combine(root, "download.exe"); File.WriteAllBytes(shell, "MZ-test-shell"u8.ToArray());
+            string payload = Directory.CreateDirectory(Path.Combine(root, "payload")).FullName; File.WriteAllText(Path.Combine(payload, "Client.exe"), "client");
+            string source = Path.Combine(root, "玩家下载入口.exe"); PlayerPayloadInfo info = PlayerPayloadPackage.Create(shell, payload, source, "Client.exe");
+            string managedRoot = Directory.CreateDirectory(Path.Combine(root, "managed")).FullName;
+            string managed = PlayerManagedEntry.Ensure(source, "project-1", managedRoot, info);
+            Assert.NotEqual(source, managed);
+            Assert.Equal(info.Sha256, PlayerPayloadPackage.Verify(managed).Sha256);
+            Assert.Equal(managed, PlayerManagedEntry.Ensure(source, "project-1", managedRoot, info));
+        }
+        finally { Directory.Delete(root, recursive: true); }
+    }
+    [Fact]
     public void 玩家入口重命名后仍能校验并解包全部载荷()
     {
         string root = CreateTemporaryRoot();
