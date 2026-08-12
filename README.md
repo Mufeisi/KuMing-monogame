@@ -63,7 +63,7 @@ pwsh -NoProfile -File Tools/ResourceBaseline.ps1 -Action Validate -Scope All
 pwsh -NoProfile -File Tools/ResourceBaseline.ps1 -Action Validate -Scope All
 ```
 
-BASE-06 的移动端代码迁移与本机构建已完成，模拟器 Debug/Release/AOT+Trim/Trim-only 四态已通过；移动端当前为稳定 `net10.0-*`。BASE-08 = GATE-P0 已完成，证据见提交 [`4436426`](https://github.com/Mufeisi/KuMing-monogame/commit/443642644bc709a6059caaa94d84dc7a2eee15fd) 及 [GitHub Actions run 31081000003](https://github.com/Mufeisi/KuMing-monogame/actions/runs/31081000003)。P0～P5 已完成并转入维护；工程治理动态状态只在 [`Docs/工程治理实施路线.md`](Docs/工程治理实施路线.md) 维护。在没有外部资源时可以构建不依赖资源的项目，例如：
+BASE-06 的移动端代码迁移与本机构建已完成，模拟器 Debug/Release/AOT+Trim/Trim-only 四态已通过；移动端当前为稳定 `net10.0-*`。BASE-08 = GATE-P0 已完成，证据见提交 [`4436426`](https://github.com/Mufeisi/KuMing-monogame/commit/443642644bc709a6059caaa94d84dc7a2eee15fd) 及 [GitHub Actions run 31081000003](https://github.com/Mufeisi/KuMing-monogame/actions/runs/31081000003)。P0～P5 已完成并转入维护；工程治理状态只在 [`Docs/工程治理实施路线.md`](Docs/工程治理实施路线.md) 维护，产品任务以开工时明确指定的活动 PRD、Issue 或实施规格为准，完整生命周期规则见 [`Docs/index.md`](Docs/index.md)。在没有外部资源时可以构建不依赖资源的项目，例如：
 
 BASE-09 的 iOS TFM 已隔离：`Client_MonoGame.Shared` 默认只求值 `net10.0;net10.0-android`，iOS 工程通过 `EnableIosTarget=true` 显式求值 `net10.0;net10.0-ios`；Windows/Android restore/build 不再解析 iOS TFM。iOS 仍只做非门禁 restore，不承诺 iOS 编译或真机可玩。
 
@@ -77,7 +77,7 @@ dotnet build Tools/MobileBootstrapAudit/MobileBootstrapAudit.csproj
 
 ---
 
-移动端完成度相对较低，仍然在开发中。。
+项目仍在持续演进；各端能力、历史验收与当前任务不得由本段升级记录推断，请以 [`Docs/index.md`](Docs/index.md) 指定的事实源为准。
 </br>
 </br>
 升级记录：</br>
