@@ -37,19 +37,19 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ShareProtocolCompat", "Test
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ReleaseSigningTool", "Tools\ReleaseSigningTool\ReleaseSigningTool.csproj", "{E6AE828F-DAD9-4BA6-A5E3-C6A198B59EA0}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MicroGateway.Core", "MicroGateway.Core\MicroGateway.Core.csproj", "{820066C7-BAC8-4FB1-A485-1C869A5DC212}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MicroGateway.Core", "src\MicroGateway\MicroGateway.Core\MicroGateway.Core.csproj", "{820066C7-BAC8-4FB1-A485-1C869A5DC212}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MicroGateway.App", "MicroGateway.App\MicroGateway.App.csproj", "{F29658D4-0963-4FF2-B06B-9A96BDB7F970}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MicroGateway.App", "src\MicroGateway\MicroGateway.App\MicroGateway.App.csproj", "{F29658D4-0963-4FF2-B06B-9A96BDB7F970}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Launcher.ThemeRuntime", "Launcher.ThemeRuntime\Launcher.ThemeRuntime.csproj", "{6A5EA3CA-E44E-43C3-8DD3-DA3835E8BDB6}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Launcher.ThemeRuntime", "src\Launcher\Launcher.ThemeRuntime\Launcher.ThemeRuntime.csproj", "{6A5EA3CA-E44E-43C3-8DD3-DA3835E8BDB6}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Launcher.Editor", "Launcher.Editor\Launcher.Editor.csproj", "{E1637BE6-6406-4669-976F-42C1C89B093A}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Launcher.Editor", "src\Launcher\Launcher.Editor\Launcher.Editor.csproj", "{E1637BE6-6406-4669-976F-42C1C89B093A}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Launcher", "Launcher", "{740C5202-8AD2-6D86-0CA9-F95B1A2D697C}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Launcher.PlayerShell.Core", "Launcher.PlayerShell.Core\Launcher.PlayerShell.Core.csproj", "{8865FA02-4CAA-4061-9EDF-834C44521C55}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Launcher.PlayerShell.Core", "src\Launcher\Launcher.PlayerShell.Core\Launcher.PlayerShell.Core.csproj", "{8865FA02-4CAA-4061-9EDF-834C44521C55}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Launcher.PlayerShell", "Launcher.PlayerShell\Launcher.PlayerShell.csproj", "{E9B27C18-4E51-4529-B12D-DC9C5DB8546C}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Launcher.PlayerShell", "src\Launcher\Launcher.PlayerShell\Launcher.PlayerShell.csproj", "{E9B27C18-4E51-4529-B12D-DC9C5DB8546C}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LauncherPlayerPackager", "Tools\LauncherPlayerPackager\LauncherPlayerPackager.csproj", "{8EF6EA99-1D3E-4F92-BD85-234000D21C3C}"
 EndProject
