@@ -274,7 +274,7 @@ jobs:
             $projectCount++
             $projectRoot = Join-Path $runRoot ("project-{0}" -f $projectCount)
             New-Item -ItemType Directory -Path $projectRoot -Force | Out-Null
-            dotnet test $project --configuration Release --logger 'trx;LogFileName=test-results.trx' --results-directory $projectRoot --verbosity normal
+            dotnet test $project --configuration Release --logger 'trx;LogFileName=test-results.trx' --results-directory $projectRoot --blame-hang-timeout 3m --verbosity normal
             $testExit = $LASTEXITCODE
             if ($testExit -ne 0) { exit $testExit }
 

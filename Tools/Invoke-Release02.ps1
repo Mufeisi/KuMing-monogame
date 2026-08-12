@@ -1,4 +1,4 @@
-param(
+﻿param(
     [ValidateSet('Prepare', 'Evaluate', 'Rollback', 'Select', 'Record', 'Serve', 'StartGateway')]
     [string]$Action = 'Prepare',
     [string]$RepositoryRoot = (Get-Location).Path,
