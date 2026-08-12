@@ -52,7 +52,7 @@
         },
         "fileCount": 32,
         "bytes": 77437699,
-        "sha256": "e795d309cc33f7b70971d689850ceaab6474aef9b24fa5ca1ffe0ed201825fda",
+        "sha256": "75c32b2579936be42ef69170321f8cfddb5714529169d44f571973725de16a37",
         "expected": {
           "files": [],
           "globs": ["*"]
@@ -62,7 +62,7 @@
       "final": {
         "fileCount": 32,
         "bytes": 77437699,
-        "sha256": "e795d309cc33f7b70971d689850ceaab6474aef9b24fa5ca1ffe0ed201825fda",
+        "sha256": "75c32b2579936be42ef69170321f8cfddb5714529169d44f571973725de16a37",
         "expected": {
           "files": [],
           "globs": ["*"]
@@ -92,7 +92,7 @@
         },
         "fileCount": 31,
         "bytes": 77932526,
-        "sha256": "7438d5138b65b3c227236e3fda4a73c2f2e4036713bb5ad41f6f618386e419ca",
+        "sha256": "815f10ed210eb60053bbe069347dbf097c7b853d81d74a8ce7cb0d02f7e03691",
         "expected": {
           "files": [],
           "globs": ["*"]
@@ -102,7 +102,7 @@
       "final": {
         "fileCount": 31,
         "bytes": 77932526,
-        "sha256": "7438d5138b65b3c227236e3fda4a73c2f2e4036713bb5ad41f6f618386e419ca",
+        "sha256": "815f10ed210eb60053bbe069347dbf097c7b853d81d74a8ce7cb0d02f7e03691",
         "expected": {
           "files": [],
           "globs": ["*"]
@@ -131,8 +131,8 @@
           "phase": "final"
         },
         "fileCount": 2,
-        "bytes": 8227740,
-        "sha256": "877020e652b9a42b7a21f2af24dd1d36816205fbb1d42168f3c18e067ba89ea3",
+        "bytes": 8227762,
+        "sha256": "14500b989f3abc7c9018b882af7b637991a4979d801f3b0cd3a18ed6ebafe6fb",
         "expected": {
           "files": [],
           "globs": ["*"]
@@ -141,8 +141,8 @@
       "version": "git:3e96959ff0cdbf2618144746423ad7aeb0fdafbf",
       "final": {
         "fileCount": 2,
-        "bytes": 8227740,
-        "sha256": "877020e652b9a42b7a21f2af24dd1d36816205fbb1d42168f3c18e067ba89ea3",
+        "bytes": 8227762,
+        "sha256": "14500b989f3abc7c9018b882af7b637991a4979d801f3b0cd3a18ed6ebafe6fb",
         "expected": {
           "files": [],
           "globs": ["*"]
