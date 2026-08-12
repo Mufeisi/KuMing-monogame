@@ -52,7 +52,7 @@ jobs:
       - name: Restore signing and Android projects
         shell: pwsh
         run: |
-          dotnet restore tools/ReleaseSigningTool/ReleaseSigningTool.csproj --verbosity minimal
+          dotnet restore Tools/ReleaseSigningTool/ReleaseSigningTool.csproj --verbosity minimal
           dotnet restore Client_MonoGame.Android/Client_MonoGame.Android.csproj --verbosity minimal
 
       - name: Validate and normalize release inputs without secrets
@@ -124,7 +124,7 @@ jobs:
         env:
           LYOCRYSTAL_RESOURCE_SIGNING_PRIVATE_KEY_BASE64: ${{ secrets.LYOCRYSTAL_RESOURCE_KEY_A_PKCS8_BASE64 }}
         run: >-
-          dotnet run --project tools/ReleaseSigningTool/ReleaseSigningTool.csproj
+          dotnet run --project Tools/ReleaseSigningTool/ReleaseSigningTool.csproj
           --configuration Release --no-restore --
           sign-resource-index
           Client_MonoGame.Shared/BootstrapAssets/bootstrap-package-index.json
@@ -140,7 +140,7 @@ jobs:
         env:
           LYOCRYSTAL_RESOURCE_SIGNING_PRIVATE_KEY_BASE64: ${{ secrets.LYOCRYSTAL_RESOURCE_KEY_B_PKCS8_BASE64 }}
         run: >-
-          dotnet run --project tools/ReleaseSigningTool/ReleaseSigningTool.csproj
+          dotnet run --project Tools/ReleaseSigningTool/ReleaseSigningTool.csproj
           --configuration Release --no-restore --
           sign-resource-index
           Client_MonoGame.Shared/BootstrapAssets/bootstrap-package-index.json
@@ -153,7 +153,7 @@ jobs:
       - name: Verify resource index against compiled trust table
         shell: pwsh
         run: >-
-          dotnet run --project tools/ReleaseSigningTool/ReleaseSigningTool.csproj
+          dotnet run --project Tools/ReleaseSigningTool/ReleaseSigningTool.csproj
           --configuration Release --no-restore --
           verify-resource-index
           ${{ runner.temp }}/bootstrap-package-index.signed.json

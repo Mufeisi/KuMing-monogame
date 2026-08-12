@@ -2,11 +2,11 @@
 
 ## 一键发布
 
-唯一入口为 `tools/Invoke-Release02.ps1`。`Prepare` 在同一渠道锁内依次执行 Base05 全量冒烟、PC/服务端 Release 发布、261 个资源包导出、资源索引签名与正式信任表复验、Android arm64 AOT+Trim 独立签名构建、`apksigner` 证书复验、全部工件 SHA-256 清单生成，最后才把完整暂存目录原子移动为不可变版本目录并将渠道切到 5% 灰度。任一步失败都会删除未发布的 `.partial-*` 目录，不修改渠道指针。
+唯一入口为 `Tools/Invoke-Release02.ps1`。`Prepare` 在同一渠道锁内依次执行 Base05 全量冒烟、PC/服务端 Release 发布、261 个资源包导出、资源索引签名与正式信任表复验、Android arm64 AOT+Trim 独立签名构建、`apksigner` 证书复验、全部工件 SHA-256 清单生成，最后才把完整暂存目录原子移动为不可变版本目录并将渠道切到 5% 灰度。任一步失败都会删除未发布的 `.partial-*` 目录，不修改渠道指针。
 
 ```powershell
 $env:ANDROID_HOME = 'C:\Users\luo\AppData\Local\Android\Sdk'
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File tools\Invoke-Release02.ps1 `
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File Tools\Invoke-Release02.ps1 `
   -Action Prepare `
   -ChannelRoot C:\ReleaseChannels\LyoCrystal `
   -ReleaseId release-2026-08-10 `
@@ -39,7 +39,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File tools\Invoke-Release02.p
 OPS-BASIC-01/02 的受信采集器通过 TLS 反向代理将幂等事件提交到 `POST /release/events`；正文最大 4096 字节，必须携带格式版本、实际 `ReleaseId`、稳定 `ClientId`、事件类型和 EventId。网关先验证 Bearer，再重新执行同一 5% 分桶：只接受属于当前灰度版本 cohort 的事件，稳定版流量、旧版本迟到事件和回滚后的事件全部拒绝，不会污染当前指标。事件类型为 UpdateAttempt、UpdateFailure、Launch、Crash、FatalCrash 或 HealthyLaunch。网关在同一渠道锁内原子累计 `channel-metrics.json`，每接受一个新 EventId 就立即执行评估，无需人工轮询。`-Action Evaluate` 只保留给离线重放与灾难演练：
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File tools\Invoke-Release02.ps1 `
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File Tools\Invoke-Release02.ps1 `
   -Action Evaluate -ChannelRoot C:\ReleaseChannels\LyoCrystal -MetricsPath C:\Ops\release-metrics.json
 ```
 

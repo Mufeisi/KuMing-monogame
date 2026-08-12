@@ -1164,7 +1164,7 @@ internal static class Program
         private static void PrintUsage()
         {
             Console.WriteLine("MobileBootstrapAudit 用法:");
-            Console.WriteLine("  dotnet run --project tools/MobileBootstrapAudit -- [--repo <仓库根目录>] [--write <输出Markdown路径>] [--import-zero-gap <数量>] [--sync-manifest]");
+            Console.WriteLine("  dotnet run --project Tools/MobileBootstrapAudit -- [--repo <仓库根目录>] [--write <输出Markdown路径>] [--import-zero-gap <数量>] [--sync-manifest]");
         }
     }
 

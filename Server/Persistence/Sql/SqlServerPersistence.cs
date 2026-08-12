@@ -712,7 +712,7 @@ namespace Server.Persistence.Sql
             return
                 $"SQL 持久化表结构未就绪（Provider={provider}）。" +
                 $"请在 `Setup.ini` 的 `[Database]` 段启用 `AutoApplySchemaOnStartup=True`（开发/测试推荐），" +
-                $"或先运行后续将补齐的 `tools/DbMigrator` 来建表/迁移。原始错误：{ex.GetType().Name}: {ex.Message}";
+                $"或先运行后续将补齐的 `Tools/DbMigrator` 来建表/迁移。原始错误：{ex.GetType().Name}: {ex.Message}";
         }
 
         private static void UpsertLegacyBlob(SqlSession session, string domain, byte[] payload)

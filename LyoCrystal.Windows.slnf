@@ -10,8 +10,8 @@
       "LibraryEditor\\LibraryEditor.csproj",
       "LibraryViewer\\LibraryViewer.csproj",
       "Client_VorticeDX11\\Client_VorticeDX11.csproj",
-      "tools\\MobileBootstrapAudit\\MobileBootstrapAudit.csproj",
-      "tools\\ReleaseSigningTool\\ReleaseSigningTool.csproj"
+      "Tools\\MobileBootstrapAudit\\MobileBootstrapAudit.csproj",
+      "Tools\\ReleaseSigningTool\\ReleaseSigningTool.csproj"
     ]
   }
 }

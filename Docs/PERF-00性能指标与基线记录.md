@@ -58,7 +58,7 @@ PerformanceMetrics.TryFreezeAndWriteSnapshot(
 2026-08-08 在 SDK `10.0.200` 下执行：
 
 ```text
-dotnet test tests/Base05.Tests/Base05.Tests.csproj --no-restore --nologo --filter "FullyQualifiedName~PerformanceMetricsTests|FullyQualifiedName~SqlPersistenceRoundTripTests"
+dotnet test Tests/Base05.Tests/Base05.Tests.csproj --no-restore --nologo --filter "FullyQualifiedName~PerformanceMetricsTests|FullyQualifiedName~SqlPersistenceRoundTripTests"
 结果：17/17 通过（含全会话 >4096 百分位、子桶误差边界、环境变量启停/关闭导出、跨会话队列高水位、GC 首次采样与 SQL 保存重试计数断言）。
 ```
 
@@ -67,7 +67,7 @@ dotnet test tests/Base05.Tests/Base05.Tests.csproj --no-restore --nologo --filte
 同日完整测试命令：
 
 ```text
-dotnet test tests/Base05.Tests/Base05.Tests.csproj --no-restore --nologo
+dotnet test Tests/Base05.Tests/Base05.Tests.csproj --no-restore --nologo
 结果：153/153 通过，0 失败，0 跳过。
 ```
 

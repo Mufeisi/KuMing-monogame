@@ -9,11 +9,11 @@
       "Launcher.Editor\\Launcher.Editor.csproj",
       "MicroGateway.Core\\MicroGateway.Core.csproj",
       "MicroGateway.App\\MicroGateway.App.csproj",
-      "tools\\LauncherPlayerPackager\\LauncherPlayerPackager.csproj",
-      "tests\\WindowsIntegration\\Launcher.PlayerShellGateL0\\Launcher.PlayerShellGateL0.Windows.csproj",
-      "tests\\WindowsIntegration\\Launcher.PlayerShellIntegration\\Launcher.PlayerShellIntegration.Windows.csproj",
-      "tests\\WindowsIntegration\\Launcher.PlayerShellReplacementWorker\\Launcher.PlayerShellReplacementWorker.csproj",
-      "tests\\WindowsIntegration\\Launcher.RemoteListIntegration\\Launcher.RemoteListIntegration.Windows.csproj"
+      "Tools\\LauncherPlayerPackager\\LauncherPlayerPackager.csproj",
+      "Tests\\WindowsIntegration\\Launcher.PlayerShellGateL0\\Launcher.PlayerShellGateL0.Windows.csproj",
+      "Tests\\WindowsIntegration\\Launcher.PlayerShellIntegration\\Launcher.PlayerShellIntegration.Windows.csproj",
+      "Tests\\WindowsIntegration\\Launcher.PlayerShellReplacementWorker\\Launcher.PlayerShellReplacementWorker.csproj",
+      "Tests\\WindowsIntegration\\Launcher.RemoteListIntegration\\Launcher.RemoteListIntegration.Windows.csproj"
     ]
   }
 }

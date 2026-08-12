@@ -29,13 +29,13 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Client_MonoGame.Android", "
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Client_MonoGame.iOS", "Client_MonoGame.iOS\Client_MonoGame.iOS.csproj", "{E03D61F1-C71E-4ABD-9452-B1E177DA03B5}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MobileBootstrapAudit", "tools\MobileBootstrapAudit\MobileBootstrapAudit.csproj", "{19250888-E6C0-43BC-9C39-BEA72DD4D23D}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MobileBootstrapAudit", "Tools\MobileBootstrapAudit\MobileBootstrapAudit.csproj", "{19250888-E6C0-43BC-9C39-BEA72DD4D23D}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Base05.Tests", "tests\Base05.Tests\Base05.Tests.csproj", "{8AEC4B12-603E-4C02-8DC7-C422BB651736}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Base05.Tests", "Tests\Base05.Tests\Base05.Tests.csproj", "{8AEC4B12-603E-4C02-8DC7-C422BB651736}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ShareProtocolCompat", "tests\ShareProtocolCompat\ShareProtocolCompat.csproj", "{23DAB62A-8207-4444-A634-1F2BAA5B5A72}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ShareProtocolCompat", "Tests\ShareProtocolCompat\ShareProtocolCompat.csproj", "{23DAB62A-8207-4444-A634-1F2BAA5B5A72}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ReleaseSigningTool", "tools\ReleaseSigningTool\ReleaseSigningTool.csproj", "{E6AE828F-DAD9-4BA6-A5E3-C6A198B59EA0}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ReleaseSigningTool", "Tools\ReleaseSigningTool\ReleaseSigningTool.csproj", "{E6AE828F-DAD9-4BA6-A5E3-C6A198B59EA0}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MicroGateway.Core", "MicroGateway.Core\MicroGateway.Core.csproj", "{820066C7-BAC8-4FB1-A485-1C869A5DC212}"
 EndProject
@@ -51,25 +51,25 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Launcher.PlayerShell.Core",
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Launcher.PlayerShell", "Launcher.PlayerShell\Launcher.PlayerShell.csproj", "{E9B27C18-4E51-4529-B12D-DC9C5DB8546C}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LauncherPlayerPackager", "tools\LauncherPlayerPackager\LauncherPlayerPackager.csproj", "{8EF6EA99-1D3E-4F92-BD85-234000D21C3C}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LauncherPlayerPackager", "Tools\LauncherPlayerPackager\LauncherPlayerPackager.csproj", "{8EF6EA99-1D3E-4F92-BD85-234000D21C3C}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ProtocolManifestGenerator", "tools\ProtocolManifestGenerator\ProtocolManifestGenerator.csproj", "{46A2EB35-112B-400F-A9E5-5678AA66B24F}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ProtocolManifestGenerator", "Tools\ProtocolManifestGenerator\ProtocolManifestGenerator.csproj", "{46A2EB35-112B-400F-A9E5-5678AA66B24F}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "WindowsIntegration", "WindowsIntegration", "{09E6CDCA-DF4F-9A4A-3096-45F63831DB6C}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Launcher.PlayerShellGateL0.Windows", "tests\WindowsIntegration\Launcher.PlayerShellGateL0\Launcher.PlayerShellGateL0.Windows.csproj", "{1CD1156A-7F6E-468F-9CDC-A90557F133A9}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Launcher.PlayerShellGateL0.Windows", "Tests\WindowsIntegration\Launcher.PlayerShellGateL0\Launcher.PlayerShellGateL0.Windows.csproj", "{1CD1156A-7F6E-468F-9CDC-A90557F133A9}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Launcher.PlayerShellReplacementWorker", "tests\WindowsIntegration\Launcher.PlayerShellReplacementWorker\Launcher.PlayerShellReplacementWorker.csproj", "{A7162134-7344-49C6-B8A2-5D00510879EC}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Launcher.PlayerShellReplacementWorker", "Tests\WindowsIntegration\Launcher.PlayerShellReplacementWorker\Launcher.PlayerShellReplacementWorker.csproj", "{A7162134-7344-49C6-B8A2-5D00510879EC}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Launcher.PlayerShellIntegration.Windows", "tests\WindowsIntegration\Launcher.PlayerShellIntegration\Launcher.PlayerShellIntegration.Windows.csproj", "{446B3E9B-E333-4871-B38D-152288B845E8}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Launcher.PlayerShellIntegration.Windows", "Tests\WindowsIntegration\Launcher.PlayerShellIntegration\Launcher.PlayerShellIntegration.Windows.csproj", "{446B3E9B-E333-4871-B38D-152288B845E8}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Launcher.RemoteListIntegration.Windows", "tests\WindowsIntegration\Launcher.RemoteListIntegration\Launcher.RemoteListIntegration.Windows.csproj", "{6667853E-AED9-4993-B70E-75122AB26073}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Launcher.RemoteListIntegration.Windows", "Tests\WindowsIntegration\Launcher.RemoteListIntegration\Launcher.RemoteListIntegration.Windows.csproj", "{6667853E-AED9-4993-B70E-75122AB26073}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sec01.ClientIntegration.Windows", "tests\WindowsIntegration\Sec01.ClientIntegration\Sec01.ClientIntegration.Windows.csproj", "{C6F9FEEC-8478-4009-BA8F-0CAA193E74C5}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sec01.ClientIntegration.Windows", "Tests\WindowsIntegration\Sec01.ClientIntegration\Sec01.ClientIntegration.Windows.csproj", "{C6F9FEEC-8478-4009-BA8F-0CAA193E74C5}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sec02.ClientTlsIntegration.Windows", "tests\WindowsIntegration\Sec02.ClientTlsIntegration\Sec02.ClientTlsIntegration.Windows.csproj", "{B63BFD79-1BF1-4D90-BDF0-D55B5487D1BC}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sec02.ClientTlsIntegration.Windows", "Tests\WindowsIntegration\Sec02.ClientTlsIntegration\Sec02.ClientTlsIntegration.Windows.csproj", "{B63BFD79-1BF1-4D90-BDF0-D55B5487D1BC}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sec02.ServerConfigIntegration.Windows", "tests\WindowsIntegration\Sec02.ServerConfigIntegration\Sec02.ServerConfigIntegration.Windows.csproj", "{28427BF2-48D8-4B40-8357-686448DEB5DC}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sec02.ServerConfigIntegration.Windows", "Tests\WindowsIntegration\Sec02.ServerConfigIntegration\Sec02.ServerConfigIntegration.Windows.csproj", "{28427BF2-48D8-4B40-8357-686448DEB5DC}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Clients", "Clients", "{B80C9201-B7A3-4E40-8B5B-EEA3C8CDB401}"
 EndProject

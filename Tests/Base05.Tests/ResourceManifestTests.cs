@@ -21,7 +21,7 @@ public sealed class ResourceManifestTests
         Assert.Equal(1, root.GetProperty("schemaVersion").GetInt32());
         Assert.Equal("3e96959ff0cdbf2618144746423ad7aeb0fdafbf",
             root.GetProperty("repositoryResourceSourceRevision").GetString());
-        Assert.Equal("tools/ResourceBaseline.ps1",
+        Assert.Equal("Tools/ResourceBaseline.ps1",
             root.GetProperty("contract").GetProperty("acquire").GetProperty("script").GetString());
         Assert.Equal("Acquire", root.GetProperty("contract").GetProperty("acquire").GetProperty("action").GetString());
         Assert.Equal("Validate", root.GetProperty("contract").GetProperty("validate").GetProperty("action").GetString());
@@ -205,7 +205,7 @@ public sealed class ResourceManifestTests
 
         using var wrongEntrypoint = Fixture.Create(includeRepositoryOverlay: false);
         root = JsonNode.Parse(File.ReadAllText(wrongEntrypoint.ManifestPath))!.AsObject();
-        root["contract"]!["acquire"]!["script"] = "tools/not-resource-baseline.ps1";
+        root["contract"]!["acquire"]!["script"] = "Tools/not-resource-baseline.ps1";
         wrongEntrypoint.WriteManifest(root);
         Assert.NotEqual(0, wrongEntrypoint.Run("Validate", "Repository").ExitCode);
 
@@ -478,7 +478,7 @@ public sealed class ResourceManifestTests
                 ["acquisition"] = new JsonObject
                 {
                     ["method"] = "copy-tree-with-overlay",
-                    ["script"] = "tools/ResourceBaseline.ps1",
+                    ["script"] = "Tools/ResourceBaseline.ps1",
                     ["action"] = "Acquire",
                     ["scope"] = "All",
                     ["externalRootRelativePath"] = "source",
@@ -508,8 +508,8 @@ public sealed class ResourceManifestTests
                 ["repositoryResourceSourceRevision"] = new string('0', 40),
                 ["contract"] = new JsonObject
                 {
-                    ["acquire"] = new JsonObject { ["script"] = "tools/ResourceBaseline.ps1", ["action"] = "Acquire", ["scope"] = "All" },
-                    ["validate"] = new JsonObject { ["script"] = "tools/ResourceBaseline.ps1", ["action"] = "Validate", ["scope"] = "Repository|All" },
+                    ["acquire"] = new JsonObject { ["script"] = "Tools/ResourceBaseline.ps1", ["action"] = "Acquire", ["scope"] = "All" },
+                    ["validate"] = new JsonObject { ["script"] = "Tools/ResourceBaseline.ps1", ["action"] = "Validate", ["scope"] = "Repository|All" },
                 },
                 ["resources"] = new JsonArray(resource),
             };
@@ -546,7 +546,7 @@ public sealed class ResourceManifestTests
                 directory = directory.Parent;
             }
 
-            throw new DirectoryNotFoundException("无法定位 tools/ResourceBaseline.ps1。");
+            throw new DirectoryNotFoundException("无法定位 Tools/ResourceBaseline.ps1。");
         }
 
         public void Dispose()
@@ -599,8 +599,8 @@ public sealed class ResourceManifestTests
                 ["repositoryResourceSourceRevision"] = new string('0', 40),
                 ["contract"] = new JsonObject
                 {
-                    ["acquire"] = new JsonObject { ["script"] = "tools/ResourceBaseline.ps1", ["action"] = "Acquire", ["scope"] = "All" },
-                    ["validate"] = new JsonObject { ["script"] = "tools/ResourceBaseline.ps1", ["action"] = "Validate", ["scope"] = "Repository|All" },
+                    ["acquire"] = new JsonObject { ["script"] = "Tools/ResourceBaseline.ps1", ["action"] = "Acquire", ["scope"] = "All" },
+                    ["validate"] = new JsonObject { ["script"] = "Tools/ResourceBaseline.ps1", ["action"] = "Validate", ["scope"] = "Repository|All" },
                 },
                 ["resources"] = new JsonArray { resourceA, resourceB },
             };
@@ -624,7 +624,7 @@ public sealed class ResourceManifestTests
                 ["acquisition"] = new JsonObject
                 {
                     ["method"] = "copy-tree-with-overlay",
-                    ["script"] = "tools/ResourceBaseline.ps1",
+                    ["script"] = "Tools/ResourceBaseline.ps1",
                     ["action"] = "Acquire",
                     ["scope"] = "All",
                     ["externalRootRelativePath"] = sourcePath,
@@ -721,7 +721,7 @@ public sealed class ResourceManifestTests
                 directory = directory.Parent;
             }
 
-            throw new DirectoryNotFoundException("无法定位 tools/ResourceBaseline.ps1。");
+            throw new DirectoryNotFoundException("无法定位 Tools/ResourceBaseline.ps1。");
         }
 
         public void Dispose()
@@ -792,7 +792,7 @@ public sealed class ResourceManifestTests
                 ["acquisition"] = new JsonObject
                 {
                     ["method"] = "copy-tree-with-overlay",
-                    ["script"] = "tools/ResourceBaseline.ps1",
+                    ["script"] = "Tools/ResourceBaseline.ps1",
                     ["action"] = "Acquire",
                     ["scope"] = "All",
                     ["externalRootRelativePath"] = "Client_VorticeDX11",
@@ -827,8 +827,8 @@ public sealed class ResourceManifestTests
                 ["repositoryResourceSourceRevision"] = new string('0', 40),
                 ["contract"] = new JsonObject
                 {
-                    ["acquire"] = new JsonObject { ["script"] = "tools/ResourceBaseline.ps1", ["action"] = "Acquire", ["scope"] = "All" },
-                    ["validate"] = new JsonObject { ["script"] = "tools/ResourceBaseline.ps1", ["action"] = "Validate", ["scope"] = "Repository|All" },
+                    ["acquire"] = new JsonObject { ["script"] = "Tools/ResourceBaseline.ps1", ["action"] = "Acquire", ["scope"] = "All" },
+                    ["validate"] = new JsonObject { ["script"] = "Tools/ResourceBaseline.ps1", ["action"] = "Validate", ["scope"] = "Repository|All" },
                 },
                 ["resources"] = new JsonArray(resource),
             };
@@ -882,7 +882,7 @@ public sealed class ResourceManifestTests
                 directory = directory.Parent;
             }
 
-            throw new DirectoryNotFoundException("无法定位 tools/ResourceBaseline.ps1。");
+            throw new DirectoryNotFoundException("无法定位 Tools/ResourceBaseline.ps1。");
         }
 
         public void Dispose()
@@ -976,13 +976,13 @@ public sealed class ResourceManifestTests
             {
                 ["type"] = "generated",
                 ["id"] = "fixture-generated",
-                ["locator"] = "tools/Mobile-BootstrapPackageRepoExport.ps1",
+                ["locator"] = "Tools/Mobile-BootstrapPackageRepoExport.ps1",
                 ["version"] = sourceVersion,
                 ["versionSha256"] = HashText(sourceVersion),
                 ["acquisition"] = new JsonObject
                 {
                     ["method"] = "deterministic-export",
-                    ["script"] = "tools/Mobile-BootstrapPackageRepoExport.ps1",
+                    ["script"] = "Tools/Mobile-BootstrapPackageRepoExport.ps1",
                     ["action"] = "Export",
                     ["scope"] = "Repository",
                 },
@@ -1011,8 +1011,8 @@ public sealed class ResourceManifestTests
                 ["repositoryResourceSourceRevision"] = new string('0', 40),
                 ["contract"] = new JsonObject
                 {
-                    ["acquire"] = new JsonObject { ["script"] = "tools/ResourceBaseline.ps1", ["action"] = "Acquire", ["scope"] = "All" },
-                    ["validate"] = new JsonObject { ["script"] = "tools/ResourceBaseline.ps1", ["action"] = "Validate", ["scope"] = "Repository|All" },
+                    ["acquire"] = new JsonObject { ["script"] = "Tools/ResourceBaseline.ps1", ["action"] = "Acquire", ["scope"] = "All" },
+                    ["validate"] = new JsonObject { ["script"] = "Tools/ResourceBaseline.ps1", ["action"] = "Validate", ["scope"] = "Repository|All" },
                 },
                 ["resources"] = new JsonArray(resource),
             };
@@ -1103,7 +1103,7 @@ public sealed class ResourceManifestTests
                 directory = directory.Parent;
             }
 
-            throw new DirectoryNotFoundException("无法定位 tools/ResourceBaseline.ps1。");
+            throw new DirectoryNotFoundException("无法定位 Tools/ResourceBaseline.ps1。");
         }
 
         public void Dispose()
