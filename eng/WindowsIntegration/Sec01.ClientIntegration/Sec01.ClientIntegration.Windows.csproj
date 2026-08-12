@@ -7,6 +7,7 @@
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
   </PropertyGroup>
+
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="$(TestSdkVersion)" />
     <PackageReference Include="xunit" Version="$(XunitVersion)" />
@@ -15,14 +16,15 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
   </ItemGroup>
+
   <ItemGroup>
-    <ProjectReference Include="..\..\Launcher.Editor\Launcher.Editor.csproj" />
-    <ProjectReference Include="..\..\Launcher.PlayerShell.Core\Launcher.PlayerShell.Core.csproj" />
-    <ProjectReference Include="..\..\Launcher.ThemeRuntime\Launcher.ThemeRuntime.csproj" />
-    <ProjectReference Include="..\..\MicroGateway.Core\MicroGateway.Core.csproj" />
-    <ProjectReference Include="..\..\Shared\Shared.csproj" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="..\..\Client_VorticeDX11\MIR2.ICO" Link="TestAssets\MIR2.ICO" CopyToOutputDirectory="PreserveNewest" />
+    <ProjectReference Include="..\..\..\Shared\Shared.csproj" />
+    <ProjectReference Include="..\..\..\Client_VorticeDX11\Client_VorticeDX11.csproj">
+      <Aliases>PCClient</Aliases>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\Client_MonoGame.Shared\Client_MonoGame.Shared.csproj">
+      <Aliases>MobileClient</Aliases>
+      <SetTargetFramework>TargetFramework=net10.0</SetTargetFramework>
+    </ProjectReference>
   </ItemGroup>
 </Project>

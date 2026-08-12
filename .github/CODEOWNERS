@@ -11,8 +11,8 @@
 # 高风险边界：协议、服务端状态、数据库迁移、安全与发布。
 /Shared/ @Mufeisi
 /Server/ @Mufeisi
-/Tools/SchemaMigrator/ @Mufeisi
-/Tools/ProtocolManifestGenerator/ @Mufeisi
+/tools/SchemaMigrator/ @Mufeisi
+/tools/ProtocolManifestGenerator/ @Mufeisi
 /Docs/SEC-* @Mufeisi
 /Docs/DB-* @Mufeisi
 /Docs/RELEASE-* @Mufeisi

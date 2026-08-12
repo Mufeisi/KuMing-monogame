@@ -29,7 +29,7 @@ dotnet test Tests/Base05.Tests/Base05.Tests.csproj --configuration Release
 
 首轮项目整理已经完成并进入维护态：工程入口、模块导航、文档事实源、CI 和远端分支保护均已建立。后续不再以“整理项目”为由批量移动目录或拆分类；新功能、修复和优化应先明确活动任务，并在实际触达模块时按规范渐进改善。当前状态入口见 [`Docs/工程治理实施路线.md`](Docs/工程治理实施路线.md)。
 
-> ENG-12 正在按 [`ADR-0037`](Docs/adr/0037-物理目录采用分批迁移.md) 将源码逐步收敛到 `src/`、`tests/`、`tools/` 等稳定入口。迁移期间以解决方案和本 README 的命令为准；本机被忽略的 `artifacts/`、`bin/obj`、运行配置和秘密目录不会由迁移任务自动删除。
+> ENG-12 正在按 [`ADR-0037`](Docs/adr/0037-物理目录采用分批迁移.md) 将源码逐步收敛到 `src/`、`Tests/`、`Tools/` 等稳定入口。迁移期间以解决方案和本 README 的命令为准；本机被忽略的 `artifacts/`、`bin/obj`、运行配置和秘密目录不会由迁移任务自动删除。
 
 ## BASE-02 可复现构建基线
 
