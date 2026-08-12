@@ -156,7 +156,7 @@ public static class ClientSelection
         }
     }
 
-    internal static bool IsCompatible(string directory)
+    public static bool IsCompatible(string directory)
     {
         return ClientCapabilityProbe.Detect(directory) != ClientLaunchCapability.Unsupported;
     }
@@ -173,7 +173,7 @@ public static class ClientSelection
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException) { return false; }
     }
 
-    internal static bool IsTrustedResourceDirectory(string directory, IReadOnlyCollection<LauncherCoreResource> resources)
+    public static bool IsTrustedResourceDirectory(string directory, IReadOnlyCollection<LauncherCoreResource> resources)
     {
         if (!IsResourceDirectory(directory) || resources.Count != 3) return false;
         try

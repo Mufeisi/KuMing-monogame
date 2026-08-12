@@ -260,6 +260,7 @@ internal sealed class MainForm : Form
     private void SyncLists()
     {
         if (_project is null) return;
+        QuickProductionPanel.ApplyLauncherName(_project, _project.Snapshot.ProjectName);
         if (_servers is not null) _project.Snapshot.Servers = _servers.ToList();
         if (_announcements is not null) _project.Snapshot.Announcements = _announcements.ToList();
         if (_controlOverrides is not null) _project.Snapshot.Theme.Controls = _controlOverrides.ToList();

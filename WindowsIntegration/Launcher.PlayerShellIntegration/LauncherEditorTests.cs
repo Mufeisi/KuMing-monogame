@@ -59,6 +59,18 @@ public sealed class LauncherEditorTests
     }
 
     [Fact]
+    public void UnmodifiedClassicTemplateUsesOriginalLauncher()
+    {
+        LauncherSnapshot snapshot = LauncherTemplateCatalog.Create(LauncherTemplateKind.Classic);
+        Assert.True(LauncherRuntimeHost.UsesOriginalClassicLauncher(snapshot));
+        snapshot.Theme.BackgroundImage = "Assets/custom.png";
+        Assert.False(LauncherRuntimeHost.UsesOriginalClassicLauncher(snapshot));
+        snapshot.Theme.BackgroundImage = string.Empty;
+        snapshot.Theme.LaunchButtonHoverImage = "Assets/hover.png";
+        Assert.False(LauncherRuntimeHost.UsesOriginalClassicLauncher(snapshot));
+    }
+
+    [Fact]
     public async Task EnabledMicroMustBeReachableBeforeGameLaunch()
     {
         int unavailablePort;

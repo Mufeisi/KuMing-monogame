@@ -352,7 +352,7 @@ public sealed class LauncherRemoteListTests
     [Fact]
     public void 游戏子进程参数可以无损往返并拒绝缺项()
     {
-        var server = new ServerEntry("一区", "game.example.com", 7001, true, "micro.example.com", 8080);
+        var server = new ServerEntry("一区", "game.example.com", 7001, true, "micro.example.com", 8080, "backup.example.com", 8081);
 
         string[] arguments = GameLaunchArguments.Create(server);
         Assert.True(GameLaunchArguments.TryParse(arguments, out GameLaunchOptions options));
@@ -361,10 +361,8 @@ public sealed class LauncherRemoteListTests
         Assert.True(options.MicroEnabled);
         Assert.Equal("micro.example.com", options.MicroAddress);
         Assert.Equal(8080, options.MicroPort);
-        string[] withBackup = arguments.Concat(new[] { "--micro-backup-address", "backup.example.com", "--micro-backup-port", "8081" }).ToArray();
-        Assert.True(GameLaunchArguments.TryParse(withBackup, out GameLaunchOptions backupOptions));
-        Assert.Equal("backup.example.com", backupOptions.MicroBackupAddress);
-        Assert.Equal(8081, backupOptions.MicroBackupPort);
+        Assert.Equal("backup.example.com", options.MicroBackupAddress);
+        Assert.Equal(8081, options.MicroBackupPort);
         Assert.False(GameLaunchArguments.TryParse(arguments[..^2], out _));
         Assert.True(GameLaunchArguments.TryParse(arguments.Append("-tc").ToArray(), out _));
 

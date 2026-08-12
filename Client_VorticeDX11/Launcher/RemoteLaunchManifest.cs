@@ -45,6 +45,12 @@ namespace Launcher.Remote
                 new[] { new ServerEntry(normalizedName, serverAddress.Trim(), serverPort, microEnabled, microAddress, microPort) });
         }
 
+        internal static RemoteLaunchManifest CreateTrustedLocal(int maxInstances, string patchUrl, IReadOnlyList<ServerEntry> servers)
+        {
+            if (maxInstances is < 1 or > 10 || servers == null || servers.Count is < 1 or > 100) throw new InvalidLaunchManifestException("本地区服列表参数无效");
+            return new RemoteLaunchManifest(1, maxInstances, NormalizePatchUrl((patchUrl ?? string.Empty).Trim()), servers.ToArray());
+        }
+
         public static RemoteLaunchManifest ParseAndValidate(string json)
         {
             if (string.IsNullOrWhiteSpace(json))
@@ -212,8 +218,11 @@ namespace Launcher.Remote
         public bool MicroEnabled { get; }
         public string MicroAddress { get; }
         public int MicroPort { get; }
+        public string MicroBackupAddress { get; }
+        public int MicroBackupPort { get; }
+        public string MicroUser { get; }
 
-        public ServerEntry(string name, string serverAddress, int serverPort, bool microEnabled, string microAddress, int microPort)
+        public ServerEntry(string name, string serverAddress, int serverPort, bool microEnabled, string microAddress, int microPort, string microBackupAddress = "", int microBackupPort = 0, string microUser = "")
         {
             Name = name;
             ServerAddress = serverAddress;
@@ -221,6 +230,9 @@ namespace Launcher.Remote
             MicroEnabled = microEnabled;
             MicroAddress = microAddress;
             MicroPort = microPort;
+            MicroBackupAddress = microBackupAddress ?? string.Empty;
+            MicroBackupPort = microBackupPort;
+            MicroUser = microUser ?? string.Empty;
         }
 
         public string BuildMicroBaseUrl()
