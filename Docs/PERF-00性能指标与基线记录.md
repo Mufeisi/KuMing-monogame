@@ -4,7 +4,7 @@
 
 本文件只记录 PERF-00 的采集约定与真实采集状态，不把合成数值当作压测基线。指标接缝已加入共享层，默认关闭。生产进程可设置 `LYOCRYSTAL_PERF00_ENABLED=true`、`LYOCRYSTAL_PERF00_SCENARIO=S1|S2|S3`、`LYOCRYSTAL_PERF00_OUTPUT=<json路径>`，PC、移动端和服务端启动时会启用会话，进程退出自动冻结导出；宿主也可调用 `TryStopAndWriteConfiguredSnapshot` 提前停止导出。单元测试和临时宿主仍可使用 `Configure(true, 场景名)`/`TryFreezeAndWriteSnapshot`。冻结导出会等待正在写入的指标排空；同一路径并发导出通过临时文件和路径锁保证不会留下半截 JSON。
 
-截至 2026-08-08，仓库没有可驱动 300 个网络连接的既有机器人、测试客户端或负载脚本。`Server/MirEnvir/Robot.cs` 是 NPC 行为脚本机器人，不产生连接规模。2026-08-10 产品口径修正为：开发阶段使用隔离 SQLite、自动生成账号和真实 TLS/Packet 协议的模拟客户端做并发压测；不要求几百台真机或生产账号，真机体验仍由用户后续验证。`SimulatedProtocolLoadTests` 已补齐这一入口，并完成 300 连接、100 个已登录协议会话的短时阶段验证。模拟结果只证明服务端协议连接、登录、心跳和补连能力，不冒充真实角色战斗、渲染、设备功耗或 24/72h soak。
+截至 2026-08-08，仓库没有可驱动 300 个网络连接的既有机器人、测试客户端或负载脚本。`src/Server/Server/MirEnvir/Robot.cs` 是 NPC 行为脚本机器人，不产生连接规模。2026-08-10 产品口径修正为：开发阶段使用隔离 SQLite、自动生成账号和真实 TLS/Packet 协议的模拟客户端做并发压测；不要求几百台真机或生产账号，真机体验仍由用户后续验证。`SimulatedProtocolLoadTests` 已补齐这一入口，并完成 300 连接、100 个已登录协议会话的短时阶段验证。模拟结果只证明服务端协议连接、登录、心跳和补连能力，不冒充真实角色战斗、渲染、设备功耗或 24/72h soak。
 
 ## 固定场景定义（依据 PRD §5）
 
@@ -24,12 +24,12 @@
 
 | 指标域 | 已接入入口 | 口径与限制 |
 |---|---|---|
-| CPU/Update/Draw | PC `src/Clients/Client_VorticeDX11/Forms/CMain.cs`；移动端 `src/Clients/Client_MonoGame.Shared/CMain.cs`；服务端 `Server/MirEnvir/Envir.cs` | `Begin` 包围同一主循环阶段的墙钟耗时；移动端 `Update` 只包围 `UpdateEnviroment`，输入/UI 的 MonoGame `Update` 不与环境更新混合；三端均不宣称是操作系统进程 CPU 百分比。|
+| CPU/Update/Draw | PC `src/Clients/Client_VorticeDX11/Forms/CMain.cs`；移动端 `src/Clients/Client_MonoGame.Shared/CMain.cs`；服务端 `src/Server/Server/MirEnvir/Envir.cs` | `Begin` 包围同一主循环阶段的墙钟耗时；移动端 `Update` 只包围 `UpdateEnviroment`，输入/UI 的 MonoGame `Update` 不与环境更新混合；三端均不宣称是操作系统进程 CPU 百分比。|
 | DrawCall/TextureSwitch | PC `src/Clients/Client_VorticeDX11/MirGraphics/DXManager.cs`；移动端 `src/Clients/Client_MonoGame.Shared/MirGraphics/SpriteBatchStack.cs` | PC 在实际绘制接缝记录调用，并按 D3D 纹理绑定指针记录切换；移动端标准字段写 `Available=false`，仅记录 `MobileSpriteBatchBegin`/`MobileSpriteBatchStateChange` 代理，不把 Begin 冒充 GPU DrawCall 或纹理运行切换。|
 | TextureCreate | PC DX11 直接 `CreateTexture2D` 入口；移动端 `MLibrary`、FairyGUI、文本框/场景占位纹理等直接 `new Texture2D`/`FromStream` 入口 | 统计仓库可见的直接创建入口；`Content.Load<Texture2D>` 内部创建由框架管理，当前不宣称已覆盖。|
 | GC/Memory | PC/移动端主循环每秒 `SampleRuntime` | `Memory` 为 `GC.GetTotalMemory(false)`；`Gc`/`GcGen0`/`GcGen1`/`GcGen2` 为会话增量；`GcPause` 为两次采样间累计暂停增量。|
 | GpuMemory | PC `CMain` + `DXManager.TryGetGpuMemoryUsage`；移动端 `CMain` | PC 每秒通过 DXGI 查询本地段实际使用量与预算；移动端后端不可可靠查询时记录 `Available=false` 和原因，不写 0。|
-| Save* | `Server/Persistence/Sql/SqlDomainTransactionRunner.cs` | `Save` 覆盖完整调用（快照、事务、重试和失败）；`SaveSnapshotCapture` 只覆盖快照工厂；`SaveTransactionCommit` 按每次事务尝试记录；瞬时重试失败计入 `SaveAttemptFailure`，仅重试耗尽或不可重试异常计入最终 `SaveFailure`。|
+| Save* | `src/Server/Server/Persistence/Sql/SqlDomainTransactionRunner.cs` | `Save` 覆盖完整调用（快照、事务、重试和失败）；`SaveSnapshotCapture` 只覆盖快照工厂；`SaveTransactionCommit` 按每次事务尝试记录；瞬时重试失败计入 `SaveAttemptFailure`，仅重试耗尽或不可重试异常计入最终 `SaveFailure`。|
 | Network*/Connections | 服务端 `Envir` + `MirConnection`；PC/移动端 `MirNetwork/Network` + 主循环 | 入队/出队路径维护会话级逻辑总深度与高水位，方向字段分别维护，不把各连接或各队列的历史峰值相加；新会话首次访问时以当前深度重基线，采样即使队列已排空仍保留本会话峰值；服务端网络汇总每秒一次，避免每毫秒 O(连接数) 扫描；服务端连接数为 `Connections.Count`，活跃数为 `Players.Count`；断线在 `MirConnection.Disconnect` 计数。|
 
 性能会话通常只在环境变量或显式 `Configure(true, 场景名)`/`StartSession(场景名)` 后采样；OPS-BASIC-01 完成后，服务端启用管理 HTTP 时会自动启动不导出的 `server-operations` 会话供基础监控读取，客户端发布默认仍关闭。环境变量入口示例：

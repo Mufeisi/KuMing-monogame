@@ -69,7 +69,7 @@ jobs:
           Write-Host "已验证 $($markdownFiles.Count) 个受 Git 跟踪的 Markdown 文件。"
 
       - name: Bootstrap locked workload set
-        run: dotnet workload restore Shared/Shared.csproj --verbosity minimal
+        run: dotnet workload restore src/Shared/Shared/Shared.csproj --verbosity minimal
 
       - name: Cache NuGet packages
         uses: actions/cache@v4
@@ -215,7 +215,7 @@ jobs:
           global-json-file: global.json
 
       - name: Bootstrap locked workload set
-        run: dotnet workload restore Shared/Shared.csproj --verbosity minimal
+        run: dotnet workload restore src/Shared/Shared/Shared.csproj --verbosity minimal
 
       - name: Cache NuGet packages
         uses: actions/cache@v4

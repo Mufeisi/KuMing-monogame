@@ -4,9 +4,9 @@
 
 | 消费者 | 当前程序版本 | 正式协议源 | wire 基线 | 客户端资源兼容版本 | 当前随包资源版本 | 服务端准入 |
 |---|---|---|---|---:|---|---|
-| PC `Client_VorticeDX11` | Assembly `1.0.0.0` / `Globals.ProductVersion=Release` | `Shared/Shared.csproj` | `wire-v1` | `1.0.0` | `content-988b1bb85432df58363d3b307b7971157680b207fcd3213f12eb520c032176c9` | `CheckVersion=true` 时，客户端可执行文件哈希必须在服务端 `VersionPath` 白名单中 |
+| PC `Client_VorticeDX11` | Assembly `1.0.0.0` / `Globals.ProductVersion=Release` | `src/Shared/Shared/Shared.csproj` | `wire-v1` | `1.0.0` | `content-988b1bb85432df58363d3b307b7971157680b207fcd3213f12eb520c032176c9` | `CheckVersion=true` 时，客户端可执行文件哈希必须在服务端 `VersionPath` 白名单中 |
 | Android `Client_MonoGame.Android` | Display `2.0.0`、Application `20000`、Assembly `1.0.0.0` | `Client_MonoGame.Shared` 直接链接 `Shared` 协议 C# 文件 | `wire-v1` | `2.0.0` | `content-988b1bb85432df58363d3b307b7971157680b207fcd3213f12eb520c032176c9` | 与 PC 使用同一 `ClientVersion` wire 包；正式服仍执行可执行文件哈希白名单 |
-| Server `Server.Library` | Assembly `1.0.0.0` / `Globals.ProductVersion=Release` | `Shared/Shared.csproj` | `wire-v1` | 不适用 | 不适用 | 只接受本表所列 `wire-v1` 包布局及已登记客户端构建哈希 |
+| Server `Server.Library` | Assembly `1.0.0.0` / `Globals.ProductVersion=Release` | `src/Shared/Shared/Shared.csproj` | `wire-v1` | 不适用 | 不适用 | 只接受本表所列 `wire-v1` 包布局及已登记客户端构建哈希 |
 
 `wire-v1` 的当前范围为客户端到服务端 ID `0..144`、服务端到客户端 ID `0..274`。权威语义清单是 `Docs/protocol-wire-manifest.json`；自动生成的结构、字段、枚举、序列化 IL 与源文件摘要在 `Docs/protocol-wire-manifest.generated.json`。
 

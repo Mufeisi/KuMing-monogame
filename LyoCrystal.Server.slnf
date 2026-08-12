@@ -2,10 +2,10 @@
   "solution": {
     "path": "Legend of Mir.sln",
     "projects": [
-      "Shared\\Shared.csproj",
+      "src\\Shared\\Shared\\Shared.csproj",
       "src\\MicroGateway\\MicroGateway.Core\\MicroGateway.Core.csproj",
-      "Server\\Server.Library.csproj",
-      "Server.MirForms\\Server.csproj",
+      "src\\Server\\Server\\Server.Library.csproj",
+      "src\\Server\\Server.MirForms\\Server.csproj",
       "Tests\\Base05.Tests\\Base05.Tests.csproj"
     ]
   }

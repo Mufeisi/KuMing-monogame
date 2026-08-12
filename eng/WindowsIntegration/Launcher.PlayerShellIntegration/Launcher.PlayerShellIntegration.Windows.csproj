@@ -20,7 +20,7 @@
     <ProjectReference Include="..\..\..\src\Launcher\Launcher.PlayerShell.Core\Launcher.PlayerShell.Core.csproj" />
     <ProjectReference Include="..\..\..\src\Launcher\Launcher.ThemeRuntime\Launcher.ThemeRuntime.csproj" />
     <ProjectReference Include="..\..\..\src\MicroGateway\MicroGateway.Core\MicroGateway.Core.csproj" />
-    <ProjectReference Include="..\..\..\Shared\Shared.csproj" />
+    <ProjectReference Include="..\..\..\src\Shared\Shared\Shared.csproj" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\..\src\Clients\Client_VorticeDX11\MIR2.ICO" Link="TestAssets\MIR2.ICO" CopyToOutputDirectory="PreserveNewest" />

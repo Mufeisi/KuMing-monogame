@@ -7,71 +7,71 @@
   },
   "sources": [
     {
-      "path": "Shared/BaseStats.cs",
+      "path": "src/Shared/Shared/BaseStats.cs",
       "sha256": "673773f9a1f28fbf5a2c1e5d2f862f78648277571cb3051395b2ce9928841fce"
     },
     {
-      "path": "Shared/ClientPackets.cs",
+      "path": "src/Shared/Shared/ClientPackets.cs",
       "sha256": "1c8aa9a96c90e7617298c344f0a69dbc6137e5d1675a3db23dd1369a4462def1"
     },
     {
-      "path": "Shared/Data/ClientData.cs",
+      "path": "src/Shared/Shared/Data/ClientData.cs",
       "sha256": "d9a8c7f41376765eb182c6fb72361da1a278dac82d1282207d7960925e399667"
     },
     {
-      "path": "Shared/Data/GuildData.cs",
+      "path": "src/Shared/Shared/Data/GuildData.cs",
       "sha256": "41367d0492e9b88d7635262f367a2fa964a6d4ae97b1fbbd80be11585421ccd8"
     },
     {
-      "path": "Shared/Data/IntelligentCreatureData.cs",
+      "path": "src/Shared/Shared/Data/IntelligentCreatureData.cs",
       "sha256": "254dd0b77f955aa5a655154fc1860224c16737ea8667a2cdec7bda00c93e8a24"
     },
     {
-      "path": "Shared/Data/ItemData.cs",
+      "path": "src/Shared/Shared/Data/ItemData.cs",
       "sha256": "4e4b87c4019ed9fd1babe0580495febc8520ba901c1bd87bd953f44bcf1177a1"
     },
     {
-      "path": "Shared/Data/Notice.cs",
+      "path": "src/Shared/Shared/Data/Notice.cs",
       "sha256": "a7cc21b2de50411e553547fb3992d01cc36ee12e89a9c0a15d98bec23b976f33"
     },
     {
-      "path": "Shared/Data/SharedData.cs",
+      "path": "src/Shared/Shared/Data/SharedData.cs",
       "sha256": "f9aa421a3a66f9900dbdba66d57791b713df94ecb621eb86209cf2613193c5e8"
     },
     {
-      "path": "Shared/Data/Stat.cs",
+      "path": "src/Shared/Shared/Data/Stat.cs",
       "sha256": "a07e8e907f47c437de4128434501ccaa6148326aebbe70448bbab52f8df027dd"
     },
     {
-      "path": "Shared/Enums.cs",
+      "path": "src/Shared/Shared/Enums.cs",
       "sha256": "adbc53adab771c9eed62a7ecab2104c1dc647039440b391025a8bbaa59a9eb51"
     },
     {
-      "path": "Shared/Extensions/ExtensionMethods.cs",
+      "path": "src/Shared/Shared/Extensions/ExtensionMethods.cs",
       "sha256": "6f72c544670ebd808030c552008be2e264c34d1de9f3f470a80a0ae3fb9e1cae"
     },
     {
-      "path": "Shared/Functions/Functions.cs",
+      "path": "src/Shared/Shared/Functions/Functions.cs",
       "sha256": "95a013f59cd01af328c0fde3933f5823e89a6c1f660343638d3e760f07593bfb"
     },
     {
-      "path": "Shared/Functions/RegexFunctions.cs",
+      "path": "src/Shared/Shared/Functions/RegexFunctions.cs",
       "sha256": "78d908d1db669ab85bf0336a6f2e71b1d49504c62cbe93fcbdb412c487313ff3"
     },
     {
-      "path": "Shared/Globals.cs",
+      "path": "src/Shared/Shared/Globals.cs",
       "sha256": "a3ee4238db43d68cc494539153f951fd57ad0f2ec4466827045c09f98d58a39e"
     },
     {
-      "path": "Shared/Helpers/FileIO.cs",
+      "path": "src/Shared/Shared/Helpers/FileIO.cs",
       "sha256": "3601baefe1e54d7ffe8bc209e1d8543de5e414f9e0d319ac68d82e243fd6e433"
     },
     {
-      "path": "Shared/Packet.cs",
+      "path": "src/Shared/Shared/Packet.cs",
       "sha256": "b9db200fc7f156e7d7fa590a2f63b2efea2db7a4423477dc14a59f396167b243"
     },
     {
-      "path": "Shared/ServerPackets.cs",
+      "path": "src/Shared/Shared/ServerPackets.cs",
       "sha256": "251431fa90c8eee30732b887ca9094491eeee5eee4c0332352cac8345d2d90a6"
     }
   ],

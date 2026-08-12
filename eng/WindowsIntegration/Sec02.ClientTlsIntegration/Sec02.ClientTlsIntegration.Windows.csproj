@@ -16,7 +16,7 @@
     </PackageReference>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\..\Shared\Shared.csproj" />
+    <ProjectReference Include="..\..\..\src\Shared\Shared\Shared.csproj" />
     <ProjectReference Include="..\..\..\src\Clients\Client_VorticeDX11\Client_VorticeDX11.csproj"><Aliases>PCClient</Aliases></ProjectReference>
   </ItemGroup>
 </Project>

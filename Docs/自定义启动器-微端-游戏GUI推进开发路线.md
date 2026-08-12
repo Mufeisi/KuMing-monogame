@@ -72,8 +72,8 @@
 
 参考文件：
 
-- `D:\ChuanQi\工具端\引擎\yuanma\188BLUEM2\Source\MicroResServer\MircoResourceServer.dpr`
-- `D:\ChuanQi\工具端\引擎\yuanma\188BLUEM2\Source\MicroResServer\SResourceData.pas`
+- `D:\ChuanQi\工具端\引擎\yuanma\188BLUEM2\Source\MicroRessrc\Server\Server\MircoResourceServer.dpr`
+- `D:\ChuanQi\工具端\引擎\yuanma\188BLUEM2\Source\MicroRessrc\Server\Server\SResourceData.pas`
 
 应借鉴的是独立运营入口和资源可观察性，不复刻旧协议。当前 `MicroGateway.Core`、`BootstrapPackage*`、`PcBootstrap*` 已覆盖并超过其运行能力。
 
@@ -152,8 +152,8 @@
 - `src/Clients/Client_MonoGame.Shared/UI/FairyGui/FairyGuiHost*.cs`
 - PC 端 `src/Clients/Client_VorticeDX11/MirGraphics/DXManager.cs`
 - 移动端 `src/Clients/Client_MonoGame.Shared/MirGraphics/SpriteBatchStack.cs`
-- `Shared/Packet.cs` 及现有协议事实源
-- `Server/Scripting/` 受控脚本 Hook
+- `src/Shared/Shared/Packet.cs` 及现有协议事实源
+- `src/Server/Server/Scripting/` 受控脚本 Hook
 
 FairyGUI 运行时只作为移动端 Adapter 的实现基础。它目前不等于自定义 GUI 系统，不能把现有固定窗口接线直接当作设计器模型。
 
@@ -397,7 +397,7 @@ public interface IVisualDesignSession
 
 任务：
 
-- `GUI-07`：在 `Shared/` 定义真实协议包和严格上限。
+- `GUI-07`：在 `src/Shared/Shared/` 定义真实协议包和严格上限。
 - `GUI-08`：服务端窗口会话、版本绑定和重放保护。
 - `GUI-09`：主线程验证动作、输入和物品所有权。
 - `GUI-10`：PC/Android 状态投影和增量更新。
@@ -438,9 +438,9 @@ public interface IVisualDesignSession
 
 - 启动器发布事实归 `ProjectReleasePublisher`。
 - 微端资源事实归 `MicroGateway/Bootstrap`。
-- 协议事实归 `Shared/`。
+- 协议事实归 `src/Shared/Shared/`。
 - 数据库版本事实归 `SchemaMigrator`。
-- 脚本运行事实归 `Server/Scripting`。
+- 脚本运行事实归 `src/Server/Server/Scripting`。
 
 `GATE-WB` 退出条件：版本作者能够在一个项目中完成“编辑启动器 → 配置发行体 → 设计活动 GUI → 预检 → 发布测试版本 → 验证 → 回滚”，但数据仍分域存储，不形成巨型项目文件。
 
@@ -530,7 +530,7 @@ Components/VisualDesign/                 # 阶段 C 才创建
 ├─ DesignHistory.cs
 └─ DesignValidation.cs
 
-Shared/CustomGui/                        # 阶段 D/E
+src/Shared/Shared/CustomGui/                        # 阶段 D/E
 ├─ CustomGuiSchema.cs
 ├─ CustomGuiRuntimeDocument.cs
 ├─ CustomGuiPackets.cs 或纳入现有包文件
@@ -538,8 +538,8 @@ Shared/CustomGui/                        # 阶段 D/E
 
 src/Clients/Client_VorticeDX11/CustomGui/            # PC Adapter
 src/Clients/Client_MonoGame.Shared/UI/CustomGui/     # 移动 Adapter；复用 FairyGUI Runtime
-Server/CustomGui/                        # 会话、动作验证、状态投影
-Server.MirForms/CustomGui/               # 游戏 GUI 设计入口
+src/Server/Server/CustomGui/                        # 会话、动作验证、状态投影
+src/Server/Server.MirForms/CustomGui/               # 游戏 GUI 设计入口
 ```
 
 不得创建：

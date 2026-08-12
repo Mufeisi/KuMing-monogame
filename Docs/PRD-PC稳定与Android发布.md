@@ -130,7 +130,7 @@ GATE-P0 ──► GATE-P1 ──► GATE-P2 ──► GATE-P3 ──► GATE-P4 
 2. 任务分支从同一个已验证基线创建，会话内自行实现、测试、分阶段提交；不直接在共享 `main` 工作区并行写入。
 3. 每个任务交付“提交 + 测试输出 + 门禁证据”；只有达到本任务退出条件才能进入集成队列。
 4. 由单一集成会话按依赖顺序合并；每次合并后跑局部回归，一批任务合并后跑完整测试/CI，失败时只回退引入问题的任务提交。任务达到退出条件且集成验证通过后，集成会话自主合并并推送远程，不再逐次要求人工确认；仅破坏性操作、门禁定义冲突或不可恢复风险需升级。
-5. 下一门禁的分支不得提前合并。高冲突区（`Shared/Packet.cs`、主循环、网络发送队列、数据库 Schema）默认单会话独占。
+5. 下一门禁的分支不得提前合并。高冲突区（`src/Shared/Shared/Packet.cs`、主循环、网络发送队列、数据库 Schema）默认单会话独占。
 6. 任务状态统一使用 `待领取 → 进行中 → 待审核 → 需修正/审核通过 → 已合并`。领取前必须检查 `git worktree list` 与 `git branch --list "codex/*"`；领取后立即创建独立分支/工作树，并在任务自有证据目录提交 `CLAIM.md`（任务、会话、分支、工作树、基线、状态），该提交即为跨会话占用通知。其他会话发现状态为“进行中/待审核/需修正”时必须改领其他任务，不得重复开工。
 7. Worker 只修改任务所有权内文件；Reviewer 必须使用独立只读子代理，不得修改文件、构建、暂存、提交、合并或推送。只有单一集成会话可以更新下表的汇总状态并合并到 `main`，避免多个执行会话争写本文。
 
@@ -160,7 +160,7 @@ GATE-P1 关闭后，P2 的 SEC-03、SEC-04、SEC-05、SEC-06 各为独立任务�
 | BASE-04 | 日志系统恢复：ILog 门面 + 有界异步队列（Debug/Info 满载丢弃并计数，Error/Fatal 走紧急通道）+ 按大小/日期轮转 + 保留天数 + 过滤 PII | BASE-01 | 崩溃现场有最近 N 分钟全量日志 |
 | BASE-05 | **最小测试集建立**（§4.1 T-01/T-04/T-06 先行，其余随阶段增量） | BASE-03 | §4.1 已启用项可跑 |
 | BASE-06 | **Android/移动共享 net11→net10 迁移**：TFM 改 net10.0-android/ios、MAUI 包降版、workload 锁定、`SupportedOSPlatformVersion` 21→**24**；Debug/Release/AOT+Trim/Trim-only 模拟器验证 | BASE-02 | x86_64 模拟器四态验证通过；真机 arm64 四态延期至 RELEASE-03 最终设备验收；net10 可构建 |
-| BASE-07 | **Server/PC/Shared net8→net10 迁移**：TFM 改 net10.0；明确过渡期限；四态验证 | BASE-02 | net10 可构建；无 net8 残留 |
+| BASE-07 | **src/Server/Server/PC/Shared net8→net10 迁移**：TFM 改 net10.0；明确过渡期限；四态验证 | BASE-02 | net10 可构建；无 net8 残留 |
 | BASE-08 | **CI 全绿门禁 = GATE-P0**：BASE-05 测试集 + BASE-06/07 构建全绿 | BASE-05/06/07 | **已完成（GATE-P0）；证据见下方**；iOS 不阻塞 Windows/Android 构建 |
 | BASE-09 | **iOS 隔离**：隔离 iOS TFM，确保 Windows/Android restore/build 不被 iOS workload 阻塞；不承诺 iOS 可编译 | BASE-06 | **已实现并本机验证**：Shared 默认 `net10.0;net10.0-android`，显式 `EnableIosTarget=true` 时仅求值 `net10.0;net10.0-ios`；Windows/Android graph 不含 iOS，iOS restore 为非门禁 |
 
@@ -300,7 +300,7 @@ GATE-P1 关闭后，P2 的 SEC-03、SEC-04、SEC-05、SEC-06 各为独立任务�
 
 **OPS-BASIC-04 收口记录（2026-08-10）**：使用 Microsoft SBOM Tool 4.1.5 为服务端、PC 和 Android 六个真实 Release 工件生成 SPDX 2.2 发布侧车，记录 218 个包、6 个文件及 988 条依赖关系；另将 218 包纯依赖 SPDX、外部资源清单、许可证/NOTICE/EULA 正文及全部 217 个第三方生产包的实际版权/作者归属随 PC、服务端、Android APK 与 iOS 发布。依赖 SPDX 不含文件校验码、自引用或悬空引用，并由专项测试验证关系闭合。许可证自动识别 204/221 个唯一组件，12 个 `NOASSERTION` 项按包名和版本由专项测试锁定。初扫发现的 `log4net 3.0.3` 中危和 `SQLitePCLRaw.lib.e_sqlite3 2.1.11` 高危已分别升级到 3.3.2 和 2.1.12，Windows、Android、iOS 直接/传递依赖复扫原始 JSON 均为退出码 0、无漏洞包。`D:\ChuanQi\Crystal_monogame` 的素材、字体、FairyGUI、音频、地图和微端资源已按项目所有者的明确授权确认分类记录，不把 11GB 外部资源复制进 Git；资源签名继续复用 SEC-06。证据见 `Docs/Evidence/GATE-P5/ops-basic-04-license-audit-20260810/`；执行边界见 `Docs/OPS-BASIC-04-授权与依赖审计.md`。PERF-01/02 模拟并发与 PROTO-02/03 已于后续回补完成；RELEASE-01～03 仍未完成，GATE-P5 保持开启。
 
-**PROTO-02/03 收口记录（2026-08-10）**：Android 正式构建已从编译 `Share/**/*.cs` 协议副本切换为直接链接 `Shared` 的 17 个协议源文件；PC 与 Server 继续通过项目引用消费同一 `Shared`。历史 `Share` 副本不删除、不修改，只保留给 `ShareProtocolCompat` 作为 PROTO-01 兼容差异夹具。新增受限的 `ProtocolManifestGenerator` 从实际 `Shared.dll` 和 C# 源生成包方向、ID、字段、枚举、读写 IL 与源文件摘要，源摘要先统一换行，CI 每次执行 `--verify`，漂移即失败；当前覆盖 145 个客户端包、275 个服务端包和 64 个公开枚举，并已在 LF 工作树副本复验。兼容矩阵固化 `wire-v1`、PC/Server Assembly `1.0.0.0`、Android Display `2.0.0`、PC 资源兼容版本 `1.0.0`、Android `2.0.0`、两端当前随包资源版本、SEC-06 签名清单最低版本门禁及服务端构建哈希白名单边界。专项 14/14、Base05 348/348、Android 正式宿主及 Android Shared/PC/Server Release 构建均 0 错误；证据见 `Docs/Evidence/GATE-P5/proto02-03-unification-20260810/`。RELEASE-01～03 仍未完成，GATE-P5 保持开启。
+**PROTO-02/03 收口记录（2026-08-10）**：Android 正式构建已从编译 `Share/**/*.cs` 协议副本切换为直接链接 `Shared` 的 17 个协议源文件；PC 与 Server 继续通过项目引用消费同一 `Shared`。历史 `Share` 副本不删除、不修改，只保留给 `ShareProtocolCompat` 作为 PROTO-01 兼容差异夹具。新增受限的 `ProtocolManifestGenerator` 从实际 `Shared.dll` 和 C# 源生成包方向、ID、字段、枚举、读写 IL 与源文件摘要，源摘要先统一换行，CI 每次执行 `--verify`，漂移即失败；当前覆盖 145 个客户端包、275 个服务端包和 64 个公开枚举，并已在 LF 工作树副本复验。兼容矩阵固化 `wire-v1`、PC/Server Assembly `1.0.0.0`、Android Display `2.0.0`、PC 资源兼容版本 `1.0.0`、Android `2.0.0`、两端当前随包资源版本、SEC-06 签名清单最低版本门禁及服务端构建哈希白名单边界。专项 14/14、Base05 348/348、Android 正式宿主及 Android src/Shared/Shared/PC/Server Release 构建均 0 错误；证据见 `Docs/Evidence/GATE-P5/proto02-03-unification-20260810/`。RELEASE-01～03 仍未完成，GATE-P5 保持开启。
 
 **RELEASE-01 收口记录（2026-08-10）**：APK 与资源索引已使用不可互换的独立生产密钥。资源侧生成当前 `resource-2026-a` 与下一 `resource-2026-b` 两把 ECDSA P-256 密钥，私钥仅保存在忽略的 Windows DPAPI CurrentUser 文件或 CI `production-signing` Environment Secret；SPKI 公钥和重叠序列窗口编译进客户端信任表。正式签名索引覆盖随包全部 261 个资源包，PC `1.0.0` 与 Android `2.0.0` 均验签通过。Android arm64 Release/AOT+Trim APK 使用独立 RSA 4096 keystore 签名，`apksigner` 验证 v2/v3、单签名者通过。`ReleaseSigningTool` 对资源私钥执行完整 P-256 PKCS#8 导入、签名后自验和敏感字节清零；本地 APK 口令通过 DPAPI 解密后只进入子进程环境，构建日志可原子更新而密钥输出仍拒绝覆盖。CI 工作流在缺秘密或三份密钥材料任意相同时失败关闭，仅在对应步骤取用 Secret，并始终清理临时 keystore/索引。T-07 与生产专项 11/11、Base05 全量 351/351；签名工具和 Server.Library Release 0 错误，PC Release 0 错误，Android 正式签名构建成功。运维边界见 `Docs/RELEASE-01-签名密钥与受保护签名.md`，证据见 `Docs/Evidence/GATE-P5/release01-signing-20260810/`。远端 Secret 实值由仓库管理员在 GitHub 外部配置，不在 Git 中保存或伪称已配置；事务发布、灰度/回滚与 APK 密钥灾难恢复仍分别属于 RELEASE-02/03，GATE-P5 保持开启。
 

@@ -17,7 +17,7 @@ public sealed class Release02PipelineTests
 
         Assert.Contains("dotnet' @('test'", script, StringComparison.Ordinal);
         Assert.Contains("dotnet' @('publish', 'src/Clients/Client_VorticeDX11/Client_VorticeDX11.csproj'", script, StringComparison.Ordinal);
-        Assert.Contains("dotnet' @('publish', 'Server.MirForms/Server.csproj'", script, StringComparison.Ordinal);
+        Assert.Contains("dotnet' @('publish', 'src/Server/Server.MirForms/Server.csproj'", script, StringComparison.Ordinal);
         Assert.Contains("Mobile-BootstrapPackageRepoExport.ps1", script, StringComparison.Ordinal);
         Assert.Contains("sign-resource-index", script, StringComparison.Ordinal);
         Assert.Contains("verify-resource-index", script, StringComparison.Ordinal);

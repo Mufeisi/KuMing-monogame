@@ -106,7 +106,7 @@
 
 	<ItemGroup>
 		<ProjectReference Include="..\..\Launcher\Launcher.ThemeRuntime\Launcher.ThemeRuntime.csproj" />
-		<ProjectReference Include="..\..\..\Shared\Shared.csproj" />
+		<ProjectReference Include="..\..\..\src\Shared\Shared\Shared.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>
