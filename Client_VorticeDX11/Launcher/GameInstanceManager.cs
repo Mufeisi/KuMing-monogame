@@ -38,6 +38,17 @@ namespace Launcher.Remote
                 return false;
             }
 
+            int slotReleased = 0;
+            void ReleaseSlot()
+            {
+                if (Interlocked.Exchange(ref slotReleased, 1) != 0) return;
+                _limit.Release();
+                ActiveCountChanged?.Invoke(this, EventArgs.Empty);
+            }
+
+            Process process = null;
+            bool started = false;
+
             try
             {
                 if (!string.IsNullOrWhiteSpace(_projectId))
@@ -60,16 +71,16 @@ namespace Launcher.Remote
                 if (_useTestConfig) startInfo.ArgumentList.Add("-tc");
                 if (!string.IsNullOrWhiteSpace(_projectId)) startInfo.Environment["LYOCRYSTAL_CLASSIC_PROJECT_ID"] = _projectId;
 
-                Process process = new() { StartInfo = startInfo, EnableRaisingEvents = true };
+                process = new Process { StartInfo = startInfo, EnableRaisingEvents = true };
                 process.Exited += (_, _) =>
                 {
                     process.Dispose();
-                    _limit.Release();
-                    ActiveCountChanged?.Invoke(this, EventArgs.Empty);
+                    ReleaseSlot();
                 };
 
                 if (!process.Start())
                     throw new InvalidOperationException("操作系统未能启动游戏进程");
+                started = true;
 
                 if (!string.IsNullOrWhiteSpace(_projectId))
                 {
@@ -90,9 +101,9 @@ namespace Launcher.Remote
             }
             catch (Exception ex)
             {
-                _limit.Release();
+                if (!started) process?.Dispose();
+                ReleaseSlot();
                 error = "启动游戏失败：" + ex.Message;
-                ActiveCountChanged?.Invoke(this, EventArgs.Empty);
                 return false;
             }
         }

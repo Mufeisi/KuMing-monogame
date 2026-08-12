@@ -44,7 +44,7 @@ internal sealed class MainForm : Form
         ToolStrip tools = _tools;
         AddTool(tools, "新建启动器", NewProject);
         AddTool(tools, "选择客户端资源", SelectQuickResource);
-        AddTool(tools, "一键生成全部成品", GenerateAllQuick);
+        AddTool(tools, "生成启动器成品", GenerateAllQuick);
         AddTool(tools, "快速制作首页", () => { if (_tabs.TabPages.Count > 0) _tabs.SelectedIndex = 0; });
         var advanced = new ToolStripDropDownButton("高级工具");
         AddAdvanced(advanced, "显示高级设置", ShowAdvanced);
@@ -350,7 +350,7 @@ internal sealed class MainForm : Form
             LauncherServer server = _project.Snapshot.Servers[0];
             _project.Gateway.Port = _project.Snapshot.DefaultMicro.Port;
             _project.Gateway.ResourceDirectory = _project.ImportedClientDirectory;
-            if (string.IsNullOrWhiteSpace(server.Address) || string.IsNullOrWhiteSpace(_project.Snapshot.DefaultMicro.Address)) throw new InvalidDataException("请填写游戏服务器地址和微端服务器地址");
+            if (string.IsNullOrWhiteSpace(server.Address)) throw new InvalidDataException("请填写游戏服务器地址");
             string projectRoot = _store.GetProjectDirectory(_project.Snapshot.ProjectId);
             EditorPreflightValidator.ThrowIfInvalid(_project, projectRoot);
             _store.Save(_project);
@@ -360,21 +360,17 @@ internal sealed class MainForm : Form
             staging = Path.Combine(outputRoot, "." + safeName + "-生成中-" + Guid.NewGuid().ToString("N"));
             string projectId = _project.Snapshot.ProjectId;
             string? code = PlayerArtifactBuilder.RequiresMicroCredential(_project) ? GetOrCreateMicroCode() : null;
-            string gatewayCode = GetOrCreateMicroCode();
             EditorProject buildProject = _store.Load(projectId);
             generation = new CancellationTokenSource();
             _quickGenerationCancellation = generation; _quickGenerationRunning = true;
             CancellationToken cancellation = generation.Token;
-            _quickPanel?.SetBusy(true); _projects.Enabled = false; _tools.Enabled = false; UseWaitCursor = true; SetStatus("正在后台生成全部成品，请稍候……");
+            _quickPanel?.SetBusy(true); _projects.Enabled = false; _tools.Enabled = false; UseWaitCursor = true; SetStatus("正在后台生成启动器成品，请稍候……");
             await Task.Run(() =>
             {
                 cancellation.ThrowIfCancellationRequested();
                 Directory.CreateDirectory(staging);
                 string player = Path.Combine(staging, buildProject.Brand.OutputFileName);
                 PlayerArtifactBuilder.Create(buildProject, projectRoot, player, code, cancellation);
-                cancellation.ThrowIfCancellationRequested();
-                DeploymentPackageBuilder.CreateGatewayPackage(buildProject, Path.Combine(staging, "独立微端部署包.zip"), gatewayCode, cancellation);
-                cancellation.ThrowIfCancellationRequested();
                 if (buildProject.DeliveryMode == ClientDeliveryMode.FullClient) FullClientDistributionBuilder.Create(buildProject, player, Path.Combine(staging, "完整客户端包.zip"), cancellation);
                 cancellation.ThrowIfCancellationRequested();
                 Directory.CreateDirectory(outputRoot);
@@ -382,7 +378,7 @@ internal sealed class MainForm : Form
             }, cancellation);
             staging = null;
             _lastQuickOutput = output; _quickPanel?.SetResult(output);
-            SetStatus("全部成品已生成：" + output);
+            SetStatus("启动器成品已生成：" + output);
             try { Process.Start(new ProcessStartInfo("explorer.exe", $"\"{output}\"") { UseShellExecute = true }); }
             catch { /* 成品已经生成，无法自动打开目录不应把成功结果误报为失败。 */ }
         }

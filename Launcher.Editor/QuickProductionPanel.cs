@@ -37,7 +37,7 @@ internal sealed class QuickProductionPanel : UserControl
     public void SetBusy(bool busy)
     {
         Enabled = !busy;
-        if (_generate is not null) _generate.Text = busy ? "正在生成，请稍候……" : "② 一键生成全部成品";
+        if (_generate is not null) _generate.Text = busy ? "正在生成，请稍候……" : "② 生成启动器成品";
     }
 
     private Control CreateBasicSettings()
@@ -97,13 +97,13 @@ internal sealed class QuickProductionPanel : UserControl
 
     private Control CreateGenerateStep(Action generateAll, Action showAdvanced)
     {
-        var generate = _generate = BigButton("② 一键生成全部成品", generateAll, Color.FromArgb(30, 145, 70));
+        var generate = _generate = BigButton("② 生成启动器成品", generateAll, Color.FromArgb(30, 145, 70));
         generate.Width = 260; generate.Height = 54; generate.Font = OwnFont(new Font(generate.Font, FontStyle.Bold));
         var advanced = BigButton("显示高级设置", showAdvanced, Color.FromArgb(110, 110, 110));
         var actions = new FlowLayoutPanel { AutoSize = true, FlowDirection = FlowDirection.LeftToRight };
         actions.Controls.AddRange(new Control[] { generate, advanced });
         var panel = new TableLayoutPanel { AutoSize = true, ColumnCount = 1, Dock = DockStyle.Top, Padding = new Padding(16) };
-        panel.Controls.Add(actions); panel.Controls.Add(new Label { Text = "自动保存项目、检查配置，并生成玩家单文件启动器和独立微端部署包。", AutoSize = true, ForeColor = Color.DimGray, Margin = new Padding(3, 8, 3, 3) }); panel.Controls.Add(_result);
+        panel.Controls.Add(actions); panel.Controls.Add(new Label { Text = "自动保存项目、检查配置并生成玩家单文件启动器；完整交付模式会同时生成完整客户端包。独立微端部署包仅在高级工具中按需生成。", AutoSize = true, ForeColor = Color.DimGray, Margin = new Padding(3, 8, 3, 3) }); panel.Controls.Add(_result);
         return Group("第二步：生成成品", panel);
     }
 
