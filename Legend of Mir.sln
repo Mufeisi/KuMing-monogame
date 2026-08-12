@@ -9,15 +9,15 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Server.Library", "Server\Se
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Server", "Server.MirForms\Server.csproj", "{884D7004-37B4-4C38-AA64-F73BF64E9CB4}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AutoPatcherAdmin", "AutoPatcherAdmin\AutoPatcherAdmin.csproj", "{6312929E-6CD5-48FE-A147-C10C09983A00}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AutoPatcherAdmin", "src\Editors\AutoPatcherAdmin\AutoPatcherAdmin.csproj", "{6312929E-6CD5-48FE-A147-C10C09983A00}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Controls", "Controls", "{8E10D0C3-2E10-468B-BD77-C717ED6C7754}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CustomFormControl", "Controls\FixedListViewControl\CustomFormControl.csproj", "{297E115E-AC0A-48CC-8FD7-059FED59BA73}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CustomFormControl", "src\Editors\Controls\FixedListViewControl\CustomFormControl.csproj", "{297E115E-AC0A-48CC-8FD7-059FED59BA73}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LibraryEditor", "LibraryEditor\LibraryEditor.csproj", "{A3B8CA9F-5C91-49CB-902D-62A38DF4EF93}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LibraryEditor", "src\Editors\LibraryEditor\LibraryEditor.csproj", "{A3B8CA9F-5C91-49CB-902D-62A38DF4EF93}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LibraryViewer", "LibraryViewer\LibraryViewer.csproj", "{456E4777-5510-49E1-BE8D-C536753964E3}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LibraryViewer", "src\Editors\LibraryViewer\LibraryViewer.csproj", "{456E4777-5510-49E1-BE8D-C536753964E3}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Client_VorticeDX11", "Client_VorticeDX11\Client_VorticeDX11.csproj", "{BAA247EA-7B61-DEBC-54FD-206138DDFECD}"
 EndProject

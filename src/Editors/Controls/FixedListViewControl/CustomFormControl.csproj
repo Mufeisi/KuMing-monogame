@@ -5,7 +5,7 @@
     <Nullable>enable</Nullable>
     <UseWindowsForms>true</UseWindowsForms>
     <ImplicitUsings>enable</ImplicitUsings>
-    <BaseOutputPath>..\..\Components\</BaseOutputPath>
+    <BaseOutputPath>..\..\..\..\third-party\Components\</BaseOutputPath>
   </PropertyGroup>
 
   <PropertyGroup>

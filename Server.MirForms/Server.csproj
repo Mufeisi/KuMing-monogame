@@ -96,10 +96,10 @@
 
 	<ItemGroup>
 		<Reference Include="CustomFormControl">
-			<HintPath>..\Components\CustomFormControl.dll</HintPath>
+			<HintPath>..\third-party\Components\CustomFormControl.dll</HintPath>
 		</Reference>
 		<Reference Include="Microsoft.VisualBasic.PowerPacks.Vs">
-			<HintPath>..\Components\Microsoft.VisualBasic.PowerPacks.Vs.dll</HintPath>
+			<HintPath>..\third-party\Components\Microsoft.VisualBasic.PowerPacks.Vs.dll</HintPath>
 		</Reference>
 	</ItemGroup>
 
