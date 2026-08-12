@@ -476,15 +476,16 @@ namespace Client.MirScenes.Dialogs
 
         private void HealthOrb_BeforeDraw(object sender, EventArgs e)
         {
-            if (Libraries.Prguse == null || User == null || User.Stats == null) return;
+            MLibrary library = Libraries.Prguse;
+            UserObject user = User;
+            MirControl healthOrb = HealthOrb;
+            if (!TryGetOrbLevels(user, out int maximumHealth, out int maximumMana) || library == null || healthOrb == null) return;
 
-            int maximumHealth = User.Stats[Stat.HP];
-            int maximumMana = User.Stats[Stat.MP];
             if (maximumHealth <= 0) return;
 
             int height;
-            if (User.HP != maximumHealth)
-                height = (int)(80 * User.HP / (float)maximumHealth);
+            if (user.HP != maximumHealth)
+                height = (int)(80 * user.HP / (float)maximumHealth);
             else
                 height = 80;
 
@@ -495,20 +496,20 @@ namespace Client.MirScenes.Dialogs
 
             bool hpOnly = false;
 
-            if (HPOnly)
+            if (user.Class == MirClass.战士 && user.Level < 26)
             {
                 hpOnly = true;
                 orbImage = 6;
             }
 
             Rectangle r = new Rectangle(0, 80 - height, hpOnly ? 100 : 50, height);
-            Libraries.Prguse.Draw(orbImage, r, new Point(((Settings.ScreenWidth / 2) - (Size.Width / 2)), HealthOrb.DisplayLocation.Y + 80 - height), Color.White, false);
+            library.Draw(orbImage, r, new Point(((Settings.ScreenWidth / 2) - (Size.Width / 2)), healthOrb.DisplayLocation.Y + 80 - height), Color.White, false);
 
             if (hpOnly) return;
             if (maximumMana <= 0) return;
 
-            if (User.MP != maximumMana)
-                height = (int)(80 * User.MP / (float)maximumMana);
+            if (user.MP != maximumMana)
+                height = (int)(80 * user.MP / (float)maximumMana);
             else
                 height = 80;
 
@@ -516,7 +517,18 @@ namespace Client.MirScenes.Dialogs
             if (height > 80) height = 80;
             r = new Rectangle(51, 80 - height, 50, height);
 
-            Libraries.Prguse.Draw(4, r, new Point(((Settings.ScreenWidth / 2) - (Size.Width / 2)) + 51, HealthOrb.DisplayLocation.Y + 80 - height), Color.White, false);
+            library.Draw(4, r, new Point(((Settings.ScreenWidth / 2) - (Size.Width / 2)) + 51, healthOrb.DisplayLocation.Y + 80 - height), Color.White, false);
+        }
+
+        internal static bool TryGetOrbLevels(UserObject user, out int maximumHealth, out int maximumMana)
+        {
+            maximumHealth = 0;
+            maximumMana = 0;
+            Stats stats = user?.Stats;
+            if (stats == null) return false;
+            maximumHealth = stats[Stat.HP];
+            maximumMana = stats[Stat.MP];
+            return true;
         }
 
         private void ExperienceBar_BeforeDraw(object sender, EventArgs e)

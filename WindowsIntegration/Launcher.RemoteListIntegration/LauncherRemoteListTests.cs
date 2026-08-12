@@ -1,5 +1,7 @@
 using Launcher.Remote;
 using Client;
+using Client.MirObjects;
+using Client.MirScenes.Dialogs;
 using System.Net;
 using System.Text;
 using Xunit;
@@ -8,6 +10,21 @@ namespace Launcher.RemoteListIntegration.Windows;
 
 public sealed class LauncherRemoteListTests
 {
+    [Fact]
+    public void 人物场景生命球在角色资料尚未到达时安全跳过绘制()
+    {
+        Assert.False(MainDialog.TryGetOrbLevels(null!, out _, out _));
+        Assert.False(MainDialog.TryGetOrbLevels(new UserObject(), out _, out _));
+
+        var user = new UserObject { Stats = new Stats() };
+        user.Stats[Stat.HP] = 120;
+        user.Stats[Stat.MP] = 80;
+
+        Assert.True(MainDialog.TryGetOrbLevels(user, out int maximumHealth, out int maximumMana));
+        Assert.Equal(120, maximumHealth);
+        Assert.Equal(80, maximumMana);
+    }
+
     [Fact]
     public void 有效清单解析为规范化的区服快照()
     {
