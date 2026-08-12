@@ -7,27 +7,24 @@ public static class ClientSelection
 
     internal static ClientSelectionResult GetPreferred(string projectId, string embeddedDirectory, IReadOnlyCollection<LauncherCoreResource> resources)
     {
-        string persisted = ReadPersisted(GetStatePath(projectId));
-        if (IsCompatible(persisted)) return new(persisted, persisted);
-        if (IsTrustedResourceDirectory(persisted, resources)) return new(Path.GetFullPath(embeddedDirectory), persisted);
         string source = Environment.GetEnvironmentVariable("LYOCRYSTAL_PLAYER_SOURCE_DIRECTORY") ?? string.Empty;
-        if (IsCompatible(source)) return new(Path.GetFullPath(source), Path.GetFullPath(source));
-        if (IsTrustedResourceDirectory(source, resources)) return new(Path.GetFullPath(embeddedDirectory), Path.GetFullPath(source));
+        if (TryUseSourceDirectory(source, embeddedDirectory, resources, out ClientSelectionResult? sourceSelection)) return sourceSelection!;
+        string persisted = ReadPersisted(GetStatePath(projectId));
+        if (TryUseSourceDirectory(persisted, embeddedDirectory, resources, out ClientSelectionResult? persistedSelection)) return persistedSelection!;
         return new(Path.GetFullPath(embeddedDirectory), Path.GetFullPath(embeddedDirectory));
     }
 
     internal static ClientSelectionResult? Resolve(IWin32Window owner, string projectId, string embeddedDirectory, IReadOnlyCollection<LauncherCoreResource> resources)
     {
         string statePath = GetStatePath(projectId);
-        string persisted = ReadPersisted(statePath);
-        if (IsCompatible(persisted)) return new(persisted, persisted);
-        if (IsTrustedResourceDirectory(persisted, resources)) return new(Path.GetFullPath(embeddedDirectory), persisted);
         string source = Environment.GetEnvironmentVariable("LYOCRYSTAL_PLAYER_SOURCE_DIRECTORY") ?? string.Empty;
-        if (IsCompatible(source))
+        if (TryUseSourceDirectory(source, embeddedDirectory, resources, out ClientSelectionResult? sourceSelection))
         {
             Persist(statePath, source);
-            return new(Path.GetFullPath(source), Path.GetFullPath(source));
+            return sourceSelection;
         }
+        string persisted = ReadPersisted(statePath);
+        if (TryUseSourceDirectory(persisted, embeddedDirectory, resources, out ClientSelectionResult? persistedSelection)) return persistedSelection;
         string[] driveRoots = DriveInfo.GetDrives().Where(drive => drive.IsReady && drive.DriveType is DriveType.Fixed or DriveType.Removable).Select(drive => drive.RootDirectory.FullName).ToArray();
         string[] roots = new[] { source, Environment.CurrentDirectory }
             .Concat(driveRoots.SelectMany(root => new[] { Path.Combine(root, "Games"), Path.Combine(root, "ChuanQi"), Path.Combine(root, "传奇"), Path.Combine(root, "Mir") }))
@@ -74,6 +71,15 @@ public static class ClientSelection
         }
         if (string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("LYOCRYSTAL_PLAYER_SOURCE_DIRECTORY"))) return new(Path.GetFullPath(embeddedDirectory), Path.GetFullPath(embeddedDirectory));
         return InstallEmbeddedClient(owner, projectId, embeddedDirectory);
+    }
+
+    private static bool TryUseSourceDirectory(string source, string embeddedDirectory, IReadOnlyCollection<LauncherCoreResource> resources, out ClientSelectionResult? selection)
+    {
+        selection = null;
+        if (!IsTrustedResourceDirectory(source, resources)) return false;
+        string resourceRoot = Path.GetFullPath(source);
+        selection = new(IsCompatible(source) ? resourceRoot : Path.GetFullPath(embeddedDirectory), resourceRoot);
+        return true;
     }
 
     internal static ClientSelectionResult? SelectManually(IWin32Window owner, string projectId, string embeddedDirectory, IReadOnlyCollection<LauncherCoreResource> resources)

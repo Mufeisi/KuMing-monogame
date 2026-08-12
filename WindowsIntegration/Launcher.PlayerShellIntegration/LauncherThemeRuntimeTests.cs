@@ -5,6 +5,7 @@ using System.Text;
 using System.Net;
 using System.Net.Http;
 using System.Security.Cryptography;
+using System.Windows.Forms;
 using Launcher.ThemeRuntime;
 using Launcher.PlayerShell;
 using Shared.Security;
@@ -14,6 +15,8 @@ namespace Launcher.PlayerShellIntegration;
 
 public sealed class LauncherThemeRuntimeTests
 {
+    private static readonly object ClientSourceEnvironmentLock = new();
+
     [Fact]
     public async Task ExternalAnnouncementFallsBackToSignedCardsWhenProbeFails()
     {
@@ -164,6 +167,62 @@ public sealed class LauncherThemeRuntimeTests
         Assert.Equal(new[] { Path.Combine(root, "Data") }, discovered);
         File.AppendAllText(Path.Combine(root, "Data", "Title.Lib"), "tampered");
         Assert.False(ClientSelection.IsTrustedResourceDirectory(root, manifest));
+    }
+
+    [Fact]
+    public void LauncherDirectoryFullResourcesOverrideRememberedPayloadCache()
+    {
+        lock (ClientSourceEnvironmentLock)
+        {
+            using var scope = new TempScope();
+            string source = scope.Dir("full-client");
+            string embedded = scope.Dir("embedded-payload");
+            string remembered = scope.Dir("remembered-payload-cache");
+            foreach (string root in new[] { source, remembered })
+            foreach (string file in new[] { "Title.Lib", "ChrSel.Lib", "Prguse.Lib" })
+            {
+                string path = Path.Combine(root, "Data", file);
+                Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+                File.WriteAllText(path, file);
+            }
+            File.WriteAllText(Path.Combine(source, "Client.exe"), "placeholder");
+            File.WriteAllText(Path.Combine(source, "launcher-capabilities.json"), "{\"product\":\"LyoCrystal\",\"launchArgumentsVersion\":1}");
+            LauncherCoreResource[] manifest = Directory.EnumerateFiles(Path.Combine(source, "Data"), "*.Lib").Select(path => new LauncherCoreResource
+            {
+                Path = "Data/" + Path.GetFileName(path), Size = new FileInfo(path).Length,
+                Sha256 = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(path))).ToLowerInvariant(),
+            }).ToArray();
+            string projectId = "source-priority-" + Guid.NewGuid().ToString("N");
+            string statePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "LyoCrystal", "Launcher", "Clients", projectId + ".txt");
+            string? previous = Environment.GetEnvironmentVariable("LYOCRYSTAL_PLAYER_SOURCE_DIRECTORY");
+            try
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(statePath)!);
+                File.WriteAllText(statePath, remembered);
+                Environment.SetEnvironmentVariable("LYOCRYSTAL_PLAYER_SOURCE_DIRECTORY", source);
+
+                ClientSelectionResult preferred = ClientSelection.GetPreferred(projectId, embedded, manifest);
+                Assert.Equal(Path.GetFullPath(source), preferred.ResourceDirectory);
+                Assert.Equal(Path.GetFullPath(source), preferred.ExecutableDirectory);
+
+                File.WriteAllText(statePath, remembered);
+                using var owner = new Form();
+                ClientSelectionResult resolved = Assert.IsType<ClientSelectionResult>(ClientSelection.Resolve(owner, projectId, embedded, manifest));
+                Assert.Equal(Path.GetFullPath(source), resolved.ResourceDirectory);
+                Assert.Equal(Path.GetFullPath(source), File.ReadAllText(statePath));
+
+                File.AppendAllText(Path.Combine(source, "Data", "Title.Lib"), "tampered");
+                File.WriteAllText(statePath, remembered);
+                Environment.SetEnvironmentVariable("LYOCRYSTAL_PLAYER_SOURCE_DIRECTORY", source);
+                ClientSelectionResult rejectedSource = ClientSelection.GetPreferred(projectId, embedded, manifest);
+                Assert.Equal(Path.GetFullPath(remembered), rejectedSource.ResourceDirectory);
+            }
+            finally
+            {
+                Environment.SetEnvironmentVariable("LYOCRYSTAL_PLAYER_SOURCE_DIRECTORY", previous);
+                try { File.Delete(statePath); } catch { }
+            }
+        }
     }
 
     [Fact]
