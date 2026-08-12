@@ -1,29 +1,32 @@
 namespace Launcher.ThemeRuntime;
 
-internal static class ClientSelection
+public static class ClientSelection
 {
     private const string EntryFileName = "Client.exe";
     private const string CapabilityFileName = "launcher-capabilities.json";
 
-    public static string GetPreferred(string projectId, string embeddedDirectory)
+    internal static ClientSelectionResult GetPreferred(string projectId, string embeddedDirectory, IReadOnlyCollection<LauncherCoreResource> resources)
     {
         string persisted = ReadPersisted(GetStatePath(projectId));
-        if (IsCompatible(persisted)) return persisted;
+        if (IsCompatible(persisted)) return new(persisted, persisted);
+        if (IsTrustedResourceDirectory(persisted, resources)) return new(Path.GetFullPath(embeddedDirectory), persisted);
         string source = Environment.GetEnvironmentVariable("LYOCRYSTAL_PLAYER_SOURCE_DIRECTORY") ?? string.Empty;
-        if (IsCompatible(source)) return Path.GetFullPath(source);
-        return embeddedDirectory;
+        if (IsCompatible(source)) return new(Path.GetFullPath(source), Path.GetFullPath(source));
+        if (IsTrustedResourceDirectory(source, resources)) return new(Path.GetFullPath(embeddedDirectory), Path.GetFullPath(source));
+        return new(Path.GetFullPath(embeddedDirectory), Path.GetFullPath(embeddedDirectory));
     }
 
-    public static string? Resolve(IWin32Window owner, string projectId, string embeddedDirectory)
+    internal static ClientSelectionResult? Resolve(IWin32Window owner, string projectId, string embeddedDirectory, IReadOnlyCollection<LauncherCoreResource> resources)
     {
         string statePath = GetStatePath(projectId);
         string persisted = ReadPersisted(statePath);
-        if (IsCompatible(persisted)) return persisted;
+        if (IsCompatible(persisted)) return new(persisted, persisted);
+        if (IsTrustedResourceDirectory(persisted, resources)) return new(Path.GetFullPath(embeddedDirectory), persisted);
         string source = Environment.GetEnvironmentVariable("LYOCRYSTAL_PLAYER_SOURCE_DIRECTORY") ?? string.Empty;
         if (IsCompatible(source))
         {
             Persist(statePath, source);
-            return Path.GetFullPath(source);
+            return new(Path.GetFullPath(source), Path.GetFullPath(source));
         }
         string[] driveRoots = DriveInfo.GetDrives().Where(drive => drive.IsReady && drive.DriveType is DriveType.Fixed or DriveType.Removable).Select(drive => drive.RootDirectory.FullName).ToArray();
         string[] roots = new[] { source, Environment.CurrentDirectory }
@@ -41,20 +44,39 @@ internal static class ClientSelection
         if (candidates.Count == 1)
         {
             Persist(statePath, candidates[0]);
-            return candidates[0];
+            return new(candidates[0], candidates[0]);
         }
         if (candidates.Count > 1)
         {
             using var dialog = new ClientChoiceDialog(candidates, persisted);
             if (dialog.ShowDialog(owner) != DialogResult.OK) return null;
             Persist(statePath, dialog.SelectedDirectory!);
-            return dialog.SelectedDirectory;
+            return new(dialog.SelectedDirectory!, dialog.SelectedDirectory!);
         }
-        if (string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("LYOCRYSTAL_PLAYER_SOURCE_DIRECTORY"))) return embeddedDirectory;
+        IReadOnlyList<string> resourceCandidates = ClientLocator.Find(
+                "Title.Lib", roots, maximumDepth: 5,
+                candidateFilter: dataDirectory => string.Equals(Path.GetFileName(dataDirectory), "Data", StringComparison.OrdinalIgnoreCase)
+                    && IsTrustedResourceDirectory(Path.GetDirectoryName(dataDirectory) ?? string.Empty, resources),
+                timeBudget: TimeSpan.FromSeconds(2))
+            .Select(dataDirectory => Path.GetDirectoryName(dataDirectory)!)
+            .Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+        if (resourceCandidates.Count == 1)
+        {
+            Persist(statePath, resourceCandidates[0]);
+            return new(Path.GetFullPath(embeddedDirectory), resourceCandidates[0]);
+        }
+        if (resourceCandidates.Count > 1)
+        {
+            using var dialog = new ClientChoiceDialog(resourceCandidates, persisted);
+            if (dialog.ShowDialog(owner) != DialogResult.OK) return null;
+            Persist(statePath, dialog.SelectedDirectory!);
+            return new(Path.GetFullPath(embeddedDirectory), dialog.SelectedDirectory!);
+        }
+        if (string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("LYOCRYSTAL_PLAYER_SOURCE_DIRECTORY"))) return new(Path.GetFullPath(embeddedDirectory), Path.GetFullPath(embeddedDirectory));
         return InstallEmbeddedClient(owner, projectId, embeddedDirectory);
     }
 
-    public static string? SelectManually(IWin32Window owner, string projectId)
+    internal static ClientSelectionResult? SelectManually(IWin32Window owner, string projectId, string embeddedDirectory, IReadOnlyCollection<LauncherCoreResource> resources)
     {
         using var dialog = new FolderBrowserDialog
         {
@@ -64,16 +86,16 @@ internal static class ClientSelection
         };
         if (dialog.ShowDialog(owner) != DialogResult.OK) return null;
         string selected = Path.GetFullPath(dialog.SelectedPath);
-        if (!IsCompatible(selected))
+        if (!IsCompatible(selected) && !IsTrustedResourceDirectory(selected, resources))
         {
-            MessageBox.Show(owner, "所选目录不是本启动器支持的客户端，或缺少能力标记。", "选择客户端", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            MessageBox.Show(owner, "所选目录不是可用的客户端资源目录。请选择包含 Data 文件夹及 Title.Lib、ChrSel.Lib、Prguse.Lib 的完整客户端目录。", "选择客户端", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             return null;
         }
         Persist(GetStatePath(projectId), selected);
-        return selected;
+        return IsCompatible(selected) ? new(selected, selected) : new(Path.GetFullPath(embeddedDirectory), selected);
     }
 
-    private static string? InstallEmbeddedClient(IWin32Window owner, string projectId, string embeddedDirectory)
+    private static ClientSelectionResult? InstallEmbeddedClient(IWin32Window owner, string projectId, string embeddedDirectory)
     {
         using var dialog = new FolderBrowserDialog
         {
@@ -105,7 +127,7 @@ internal static class ClientSelection
             if (Directory.Exists(target)) Directory.Delete(target);
             Directory.Move(staging, target);
             Persist(GetStatePath(projectId), target);
-            return target;
+            return new(target, target);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
@@ -139,6 +161,58 @@ internal static class ClientSelection
         return ClientCapabilityProbe.Detect(directory) != ClientLaunchCapability.Unsupported;
     }
 
+    internal static bool IsResourceDirectory(string directory)
+    {
+        try
+        {
+            string root = Path.GetFullPath(directory);
+            if (!Directory.Exists(root)) return false;
+            RejectReparseChain(root, Path.Combine(root, "Data"));
+            return new[] { "Title.Lib", "ChrSel.Lib", "Prguse.Lib" }.All(file => IsPlainNonEmptyFile(root, Path.Combine(root, "Data", file)));
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException) { return false; }
+    }
+
+    internal static bool IsTrustedResourceDirectory(string directory, IReadOnlyCollection<LauncherCoreResource> resources)
+    {
+        if (!IsResourceDirectory(directory) || resources.Count != 3) return false;
+        try
+        {
+            string root = Path.GetFullPath(directory);
+            return resources.All(resource =>
+            {
+                string path = Path.GetFullPath(Path.Combine(root, resource.Path.Replace('/', Path.DirectorySeparatorChar)));
+                RejectReparseChain(root, path);
+                if (!File.Exists(path) || (File.GetAttributes(path) & FileAttributes.ReparsePoint) != 0 || new FileInfo(path).Length != resource.Size) return false;
+                using FileStream stream = new(path, FileMode.Open, FileAccess.Read, FileShare.Read, 1024 * 1024, FileOptions.SequentialScan);
+                return string.Equals(Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(stream)), resource.Sha256, StringComparison.OrdinalIgnoreCase);
+            });
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or InvalidDataException) { return false; }
+    }
+
+    private static bool IsPlainNonEmptyFile(string root, string path)
+    {
+        RejectReparseChain(root, path);
+        return File.Exists(path) && (File.GetAttributes(path) & FileAttributes.ReparsePoint) == 0 && new FileInfo(path).Length > 0;
+    }
+
+    private static void RejectReparseChain(string root, string path)
+    {
+        string fullRoot = Path.GetFullPath(root).TrimEnd(Path.DirectorySeparatorChar);
+        string full = Path.GetFullPath(path);
+        if (!full.Equals(fullRoot, StringComparison.OrdinalIgnoreCase) && !full.StartsWith(fullRoot + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
+            throw new InvalidDataException("客户端资源路径越界");
+        string current = Path.GetPathRoot(full) ?? string.Empty;
+        foreach (string part in full[current.Length..].Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar))
+        {
+            if (part.Length == 0) continue;
+            current = Path.Combine(current, part);
+            if ((File.Exists(current) || Directory.Exists(current)) && (File.GetAttributes(current) & FileAttributes.ReparsePoint) != 0)
+                throw new InvalidDataException("客户端资源路径不得经过重解析点");
+        }
+    }
+
 
     private static string GetStatePath(string projectId)
     {
@@ -152,7 +226,7 @@ internal static class ClientSelection
         {
             if (!File.Exists(path) || new FileInfo(path).Length > 4096) return string.Empty;
             string value = Path.GetFullPath(File.ReadAllText(path).Trim());
-            return IsCompatible(value) ? value : string.Empty;
+            return IsCompatible(value) || IsResourceDirectory(value) ? value : string.Empty;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException) { return string.Empty; }
     }
@@ -165,6 +239,8 @@ internal static class ClientSelection
         File.Move(temporary, path, overwrite: true);
     }
 }
+
+internal sealed record ClientSelectionResult(string ExecutableDirectory, string ResourceDirectory);
 
 internal sealed class ClientChoiceDialog : Form
 {

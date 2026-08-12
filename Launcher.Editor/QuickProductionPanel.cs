@@ -47,7 +47,7 @@ internal sealed class QuickProductionPanel : UserControl
         name.TextChanged += (_, _) =>
         {
             string value = string.IsNullOrWhiteSpace(name.Text) ? "未命名启动器" : name.Text.Trim();
-            _project.Snapshot.ProjectName = value; _project.Brand.ProductName = value; _project.Brand.WindowTitle = value; _project.Brand.TaskbarName = value;
+            ApplyLauncherName(_project, value);
         };
         var gameAddress = new TextBox { Text = server.Address }; gameAddress.TextChanged += (_, _) => server.Address = gameAddress.Text.Trim();
         var gamePort = Number(server.Port); gamePort.ValueChanged += (_, _) => server.Port = (int)gamePort.Value;
@@ -60,6 +60,26 @@ internal sealed class QuickProductionPanel : UserControl
         return Card("基础设置（一般只改这里）",
             ("启动器名称", name), ("游戏服务器地址", gameAddress), ("游戏服务器端口", gamePort),
             ("微端服务器地址", microAddress), ("微端服务器端口", microPort), ("界面样式", template), ("区服选择方式", serverList));
+    }
+
+    internal static void ApplyLauncherName(EditorProject project, string value)
+    {
+        string name = string.IsNullOrWhiteSpace(value) ? "未命名启动器" : value.Trim();
+        project.Snapshot.ProjectName = name;
+        project.Brand.ProductName = name;
+        project.Brand.WindowTitle = name;
+        project.Brand.TaskbarName = name;
+        project.Brand.OutputFileName = ToExecutableFileName(name);
+    }
+
+    internal static string ToExecutableFileName(string name)
+    {
+        string safe = string.Concat(name.Select(character => Path.GetInvalidFileNameChars().Contains(character) ? '_' : character)).Trim().TrimEnd('.');
+        if (string.IsNullOrWhiteSpace(safe)) safe = "未命名启动器";
+        string stem = Path.GetFileNameWithoutExtension(safe);
+        string[] reserved = { "CON", "PRN", "AUX", "NUL", "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9", "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9" };
+        if (reserved.Contains(stem, StringComparer.OrdinalIgnoreCase)) safe = "启动器-" + safe;
+        return safe + ".exe";
     }
 
     private Control CreateResourceStep(Action chooseResource, Action chooseBackground, Action chooseButton)

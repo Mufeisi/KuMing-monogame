@@ -3,6 +3,33 @@ using System.Drawing.Imaging;
 
 namespace Launcher.ThemeRuntime;
 
+internal sealed class LauncherProgressBar : Control
+{
+    private int _maximum = 100;
+    private int _value;
+    [System.ComponentModel.Browsable(false), System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
+    public int Maximum { get => _maximum; set { _maximum = Math.Max(1, value); _value = Math.Min(_value, _maximum); Invalidate(); } }
+    [System.ComponentModel.Browsable(false), System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
+    public int Value { get => _value; set { _value = Math.Clamp(value, 0, _maximum); Invalidate(); } }
+    [System.ComponentModel.Browsable(false), System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
+    public Color FillColor { get; set; } = Color.FromArgb(36, 175, 74);
+
+    public LauncherProgressBar()
+    {
+        DoubleBuffered = true;
+        BackColor = Color.FromArgb(5, 12, 18);
+    }
+
+    protected override void OnPaint(PaintEventArgs e)
+    {
+        e.Graphics.Clear(BackColor);
+        int width = Maximum <= 0 ? 0 : (int)Math.Round(ClientSize.Width * (Value / (double)Maximum));
+        if (width > 0) using (var fill = new SolidBrush(FillColor)) e.Graphics.FillRectangle(fill, 1, 1, Math.Max(0, width - 2), Math.Max(0, Height - 2));
+        using var border = new Pen(Color.FromArgb(52, 71, 78));
+        e.Graphics.DrawRectangle(border, 0, 0, Math.Max(0, Width - 1), Math.Max(0, Height - 1));
+    }
+}
+
 internal sealed class AnnouncementCard : Panel
 {
     private Image? _ownedImage;

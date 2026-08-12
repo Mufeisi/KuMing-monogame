@@ -4,7 +4,7 @@ namespace Launcher.ThemeRuntime;
 
 public static class LauncherRuntimeHost
 {
-    public static int Run(string clientDirectory, Action<string, LauncherServer, MicroEndpoint, LauncherPlayerSettings> launchGame)
+    public static int Run(string clientDirectory, Action<string, string, LauncherServer, MicroEndpoint, LauncherPlayerSettings> launchGame)
     {
         string builtIn = Path.Combine(clientDirectory, "Launcher", "BuiltIn");
         LoadedLauncherSnapshot builtInSnapshot = LauncherSnapshotLoader.Load(null, null, builtIn);
@@ -127,7 +127,7 @@ public static class LauncherRuntimeHost
         if (dpi is not (96 or 120 or 144 or 192)) throw new ArgumentOutOfRangeException(nameof(scale));
         LauncherSnapshotValidator.Validate(snapshot);
         Application.SetHighDpiMode(HighDpiMode.PerMonitorV2);
-        using var form = new LauncherForm(new LoadedLauncherSnapshot(snapshot, assetRoot, SnapshotSource.BuiltIn), assetRoot, (_, _, _, _) => { });
+        using var form = new LauncherForm(new LoadedLauncherSnapshot(snapshot, assetRoot, SnapshotSource.BuiltIn), assetRoot, (_, _, _, _, _) => { });
         form.StartPosition = FormStartPosition.Manual;
         form.Location = new Point(-32000, -32000);
         form.Show();
@@ -144,7 +144,7 @@ public static class LauncherRuntimeHost
     {
         if (dpi is not (96 or 120 or 144 or 192)) throw new ArgumentOutOfRangeException(nameof(dpi));
         Application.SetHighDpiMode(HighDpiMode.PerMonitorV2);
-        using var form = new LauncherForm(new LoadedLauncherSnapshot(snapshot, assetRoot, SnapshotSource.BuiltIn), assetRoot, (_, _, _, _) => { });
+        using var form = new LauncherForm(new LoadedLauncherSnapshot(snapshot, assetRoot, SnapshotSource.BuiltIn), assetRoot, (_, _, _, _, _) => { });
         form.StartPosition = FormStartPosition.Manual;
         form.Location = new Point(-32000, -32000);
         form.Show();

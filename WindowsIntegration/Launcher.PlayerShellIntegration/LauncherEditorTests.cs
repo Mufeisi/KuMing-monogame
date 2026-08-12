@@ -25,13 +25,27 @@ public sealed class LauncherEditorTests
         Assert.Empty(snapshot.Theme.BackgroundImage);
         Assert.Empty(snapshot.Theme.LaunchButtonImage);
         using Bitmap rendered = LauncherForm.BuildClassicBackground(new Size(snapshot.Theme.CanvasWidth, snapshot.Theme.CanvasHeight));
+        Assert.Equal(new Size(801, 554), rendered.Size);
         Color center = rendered.GetPixel(rendered.Width / 2, rendered.Height / 2);
-        Color corner = rendered.GetPixel(16, 16);
-        Assert.NotEqual(Color.Black.ToArgb(), center.ToArgb());
-        Assert.NotEqual(center.ToArgb(), corner.ToArgb());
+        Color header = rendered.GetPixel(100, 25);
+        Assert.True(center.B > center.R / 2);
+        Assert.NotEqual(center.ToArgb(), header.ToArgb());
         string output = Path.Combine(scope.Root, "classic-no-assets.png");
         rendered.Save(output, System.Drawing.Imaging.ImageFormat.Png);
         Assert.True(new FileInfo(output).Length > 4_000);
+    }
+
+    [Fact]
+    public void QuickLauncherNameAlsoControlsGeneratedFileName()
+    {
+        EditorProject project = new();
+        QuickProductionPanel.ApplyLauncherName(project, "酷明传奇");
+        Assert.Equal("酷明传奇", project.Snapshot.ProjectName);
+        Assert.Equal("酷明传奇.exe", project.Brand.OutputFileName);
+        QuickProductionPanel.ApplyLauncherName(project, "酷明:传奇");
+        Assert.Equal("酷明_传奇.exe", project.Brand.OutputFileName);
+        Assert.Equal("未命名启动器.exe", QuickProductionPanel.ToExecutableFileName("..."));
+        Assert.Equal("启动器-CON.exe", QuickProductionPanel.ToExecutableFileName("CON"));
     }
 
     [Fact]
@@ -75,6 +89,23 @@ public sealed class LauncherEditorTests
         Assert.All(new[] { "Title.Lib", "ChrSel.Lib", "Prguse.Lib" }, file =>
             Assert.True(new FileInfo(Path.Combine(client, "Data", file)).Length > 0));
         Assert.Empty(Directory.EnumerateFiles(client, "*.downloading-*", SearchOption.AllDirectories));
+    }
+
+    [Fact]
+    public async Task ValidLocalLoginLibrariesDoNotRequireRunningMicroGateway()
+    {
+        using var scope = new EditorTempScope();
+        string client = scope.Dir("local-client");
+        var resources = new List<LauncherCoreResource>();
+        foreach (string file in new[] { "Title.Lib", "ChrSel.Lib", "Prguse.Lib" })
+        {
+            string path = Path.Combine(client, "Data", file);
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            File.WriteAllText(path, "local-" + file);
+            resources.Add(new LauncherCoreResource { Path = "Data/" + file, Size = new FileInfo(path).Length, Sha256 = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(path))).ToLowerInvariant() });
+        }
+        var endpoint = new MicroEndpoint { Enabled = true, Address = "127.0.0.1", Port = 1, User = "player" };
+        Assert.True(await MicroGatewayReadiness.EnsureCoreLibrariesAsync(endpoint, "local-project", client, resources, null, CancellationToken.None));
     }
 
     [Fact]
@@ -445,6 +476,7 @@ public sealed class LauncherEditorTests
         using var scope = new EditorTempScope();
         var store = new EditorProjectStore(scope.Dir("release-workspace"));
         EditorProject project = store.Create("release-project", "发布项目", LauncherTemplateKind.Compact);
+        AttachLoginResources(project, scope.Dir("release-client"));
         string projectRoot = store.GetProjectDirectory(project.Snapshot.ProjectId);
         string publishRoot = scope.Dir("publish-root");
         ProjectReleaseResult first = ProjectReleasePublisher.Publish(project, projectRoot, publishRoot, "首发");
@@ -514,6 +546,7 @@ public sealed class LauncherEditorTests
         using var scope = new EditorTempScope();
         var store = new EditorProjectStore(scope.Dir("rotation-workspace"));
         EditorProject project = store.Create("rotation-project", "轮换项目", LauncherTemplateKind.Classic);
+        AttachLoginResources(project, scope.Dir("rotation-client"));
         string projectRoot = store.GetProjectDirectory(project.Snapshot.ProjectId), publishRoot = scope.Dir("rotation-publish"), chainRoot = scope.Dir("rotation-chain");
         var anchors = new Dictionary<string, BootstrapManifestTrustedKey>(StringComparer.Ordinal)
         {
@@ -541,6 +574,7 @@ public sealed class LauncherEditorTests
         using var scope = new EditorTempScope();
         var store = new EditorProjectStore(scope.Dir("http-source-workspace"));
         EditorProject project = store.Create("http-source-project", "HTTP 发布源", LauncherTemplateKind.Compact);
+        AttachLoginResources(project, scope.Dir("http-source-client"));
         string projectRoot = store.GetProjectDirectory(project.Snapshot.ProjectId), publishRoot = scope.Dir("http-publish");
         _ = ProjectReleasePublisher.Publish(project, projectRoot, publishRoot, "真实 HTTP 源");
         var keys = new Dictionary<string, BootstrapManifestTrustedKey>(StringComparer.Ordinal)
@@ -561,6 +595,17 @@ public sealed class LauncherEditorTests
     }
 
     private static string Hash(string path) => Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(path)));
+
+    private static void AttachLoginResources(EditorProject project, string clientRoot)
+    {
+        foreach (string file in new[] { "Title.Lib", "ChrSel.Lib", "Prguse.Lib" })
+        {
+            string path = Path.Combine(clientRoot, "Data", file);
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            File.WriteAllText(path, "test-library-" + file);
+        }
+        project.ImportedClientDirectory = clientRoot;
+    }
 
     private static string FindRepositoryRoot(string start)
     {

@@ -140,6 +140,33 @@ public sealed class LauncherThemeRuntimeTests
     }
 
     [Fact]
+    public void ResourceOnlyClientDirectoryCanBeReusedWithoutCapabilityMarker()
+    {
+        using var scope = new TempScope();
+        string root = scope.Dir("resource-client");
+        foreach (string file in new[] { "Title.Lib", "ChrSel.Lib", "Prguse.Lib" })
+        {
+            string path = Path.Combine(root, "Data", file);
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            File.WriteAllText(path, file);
+        }
+        Assert.False(ClientSelection.IsCompatible(root));
+        Assert.True(ClientSelection.IsResourceDirectory(root));
+        LauncherCoreResource[] manifest = Directory.EnumerateFiles(Path.Combine(root, "Data"), "*.Lib").Select(path => new LauncherCoreResource
+        {
+            Path = "Data/" + Path.GetFileName(path), Size = new FileInfo(path).Length,
+            Sha256 = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(File.ReadAllBytes(path))).ToLowerInvariant(),
+        }).ToArray();
+        Assert.True(ClientSelection.IsTrustedResourceDirectory(root, manifest));
+        IReadOnlyList<string> discovered = ClientLocator.Find("Title.Lib", new[] { Path.GetDirectoryName(root)! }, maximumDepth: 3,
+            candidateFilter: dataDirectory => string.Equals(Path.GetFileName(dataDirectory), "Data", StringComparison.OrdinalIgnoreCase)
+                && ClientSelection.IsTrustedResourceDirectory(Path.GetDirectoryName(dataDirectory)!, manifest));
+        Assert.Equal(new[] { Path.Combine(root, "Data") }, discovered);
+        File.AppendAllText(Path.Combine(root, "Data", "Title.Lib"), "tampered");
+        Assert.False(ClientSelection.IsTrustedResourceDirectory(root, manifest));
+    }
+
+    [Fact]
     public void UnmarkedLegacyClientIsRejectedWithoutModification()
     {
         using var scope = new TempScope();

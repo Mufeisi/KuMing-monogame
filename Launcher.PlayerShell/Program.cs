@@ -24,6 +24,8 @@ internal static class Program
             string executablePath = Environment.ProcessPath
                 ?? throw new InvalidOperationException("无法确定玩家入口路径");
             PlayerPayloadInfo payload = PlayerPayloadPackage.Verify(executablePath);
+            string originalSourceExecutable = ResolveOriginalSource(executablePath, payload);
+            string originalSourceDirectory = Path.GetDirectoryName(originalSourceExecutable)!;
             string installDirectory = EnsureExtracted(executablePath, payload);
             if (!args.Any(argument => string.Equals(argument, "--theme-render-smoke", StringComparison.OrdinalIgnoreCase)))
             {
@@ -32,6 +34,8 @@ internal static class Program
                 if (!string.Equals(managed, executablePath, StringComparison.OrdinalIgnoreCase))
                 {
                     var forward = new ProcessStartInfo(managed) { WorkingDirectory = Path.GetDirectoryName(managed)!, UseShellExecute = false };
+                    forward.Environment["LYOCRYSTAL_PLAYER_SOURCE_DIRECTORY"] = originalSourceDirectory;
+                    forward.Environment["LYOCRYSTAL_PLAYER_SOURCE_EXECUTABLE"] = originalSourceExecutable;
                     foreach (string argument in args) forward.ArgumentList.Add(argument);
                     Process.Start(forward)?.Dispose();
                     return 0;
@@ -47,8 +51,8 @@ internal static class Program
                 WorkingDirectory = installDirectory,
                 UseShellExecute = false,
             };
-            start.Environment["LYOCRYSTAL_PLAYER_SOURCE_DIRECTORY"] = Path.GetDirectoryName(executablePath)!;
-            start.Environment["LYOCRYSTAL_PLAYER_SOURCE_EXECUTABLE"] = executablePath;
+            start.Environment["LYOCRYSTAL_PLAYER_SOURCE_DIRECTORY"] = originalSourceDirectory;
+            start.Environment["LYOCRYSTAL_PLAYER_SOURCE_EXECUTABLE"] = originalSourceExecutable;
             foreach (string argument in args) start.ArgumentList.Add(argument);
             using Process? child = Process.Start(start);
             if (args.Any(argument => string.Equals(argument, "--theme-render-smoke", StringComparison.OrdinalIgnoreCase)))
@@ -67,6 +71,22 @@ internal static class Program
             MessageBoxW(0, ex.Message, "玩家入口无法启动", 0x00000010);
             return 2;
         }
+    }
+
+    private static string ResolveOriginalSource(string executablePath, PlayerPayloadInfo verifiedPayload)
+    {
+        string inherited = Environment.GetEnvironmentVariable("LYOCRYSTAL_PLAYER_SOURCE_EXECUTABLE") ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(inherited)) return executablePath;
+        try
+        {
+            string candidate = Path.GetFullPath(inherited);
+            if (!File.Exists(candidate) || (File.GetAttributes(candidate) & FileAttributes.ReparsePoint) != 0) return executablePath;
+            PlayerPayloadInfo candidatePayload = PlayerPayloadPackage.Verify(candidate);
+            return string.Equals(candidatePayload.Sha256, verifiedPayload.Sha256, StringComparison.OrdinalIgnoreCase)
+                && string.Equals(candidatePayload.EntryPoint, verifiedPayload.EntryPoint, StringComparison.OrdinalIgnoreCase)
+                && candidatePayload.FileCount == verifiedPayload.FileCount ? candidate : executablePath;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException or ArgumentException) { return executablePath; }
     }
 
     private static bool TryStartPlayerUpdateHelper(string executablePath, string installDirectory)

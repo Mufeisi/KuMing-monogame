@@ -13,8 +13,8 @@ public static class LauncherTemplateCatalog
             {
                 Template = kind,
                 ServerListMode = wide ? ServerListMode.Sidebar : ServerListMode.Dropdown,
-                CanvasWidth = wide ? 1180 : kind == LauncherTemplateKind.Compact ? 760 : 900,
-                CanvasHeight = wide ? 680 : kind == LauncherTemplateKind.Compact ? 520 : 600,
+                CanvasWidth = wide ? 1180 : kind == LauncherTemplateKind.Compact ? 760 : 801,
+                CanvasHeight = wide ? 680 : kind == LauncherTemplateKind.Compact ? 520 : 554,
                 AccentColor = kind switch { LauncherTemplateKind.Compact => "#43A5D5", LauncherTemplateKind.Widescreen => "#B570E8", _ => "#D8A73A" },
             },
             DefaultMicro = new MicroEndpoint { Enabled = true, Address = "127.0.0.1", Port = 8080, BackupAddress = "127.0.0.1", BackupPort = 8081, User = "player" },

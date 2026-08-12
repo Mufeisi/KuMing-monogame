@@ -4,15 +4,15 @@ internal sealed class LauncherForm : Form
 {
     private readonly LoadedLauncherSnapshot _loaded;
     private readonly string _clientDirectory;
-    private readonly Action<string, LauncherServer, MicroEndpoint, LauncherPlayerSettings> _launch;
+    private readonly Action<string, string, LauncherServer, MicroEndpoint, LauncherPlayerSettings> _launch;
     private readonly ComboBox _serverDropdown = new() { DropDownStyle = ComboBoxStyle.DropDownList };
     private readonly TreeView _serverSidebar = new() { BorderStyle = BorderStyle.None, HideSelection = false };
     private readonly Panel _announcements = new() { AutoScroll = true };
     private readonly FlowLayoutPanel _actionLinks = new() { AutoSize = true, BackColor = Color.Transparent };
     private readonly CancellationTokenSource _announcementCancellation = new();
     private readonly CancellationTokenSource _lifetimeCancellation = new();
-    private readonly ProgressBar _overall = new();
-    private readonly ProgressBar _current = new();
+    private readonly LauncherProgressBar _overall = new() { FillColor = Color.LimeGreen };
+    private readonly LauncherProgressBar _current = new() { FillColor = Color.DeepSkyBlue };
     private readonly Label _progressText = new() { AutoEllipsis = true };
     private readonly Label _sourceText = new() { AutoSize = true };
     private readonly Label _windowTitleText = new() { AutoSize = true, BackColor = Color.Transparent };
@@ -22,26 +22,33 @@ internal sealed class LauncherForm : Form
     private readonly Dictionary<Control, (string Family, float Size, FontStyle Style)> _originalFontSpecs = new();
     private readonly Dictionary<Control, Image> _derivedBackgrounds = new();
     private LauncherPlayerSettings _settings;
-    private string _selectedClientDirectory;
+    private ClientSelectionResult _selectedClient;
     private bool _settingsDirty;
     private bool _launching;
     private readonly List<Image> _ownedImages = new();
     private readonly List<Font> _ownedFonts = new();
     private readonly List<Control> _clickTargets = new();
     private readonly System.Windows.Forms.Timer _progressTimer = new() { Interval = 300 };
+    private readonly bool _builtInClassicSkin;
+    private ImageStateButton? _classicCloseButton;
+    private ImageStateButton? _classicSettingsButton;
+    private Label? _classicServerLabel;
     private bool _autoStartTriggered;
     private bool _buttonImagesLoaded;
     private bool _entryUpdateBlocked;
     private bool _dpiLayoutPending;
     private bool _disposeStarted;
 
-    public LauncherForm(LoadedLauncherSnapshot loaded, string clientDirectory, Action<string, LauncherServer, MicroEndpoint, LauncherPlayerSettings> launch)
+    public LauncherForm(LoadedLauncherSnapshot loaded, string clientDirectory, Action<string, string, LauncherServer, MicroEndpoint, LauncherPlayerSettings> launch)
     {
         _loaded = loaded;
         _clientDirectory = clientDirectory;
         _launch = launch;
-        _selectedClientDirectory = ClientSelection.GetPreferred(loaded.Snapshot.ProjectId, clientDirectory);
-        _settings = ClientSettingsWriter.Read(_selectedClientDirectory, CloneSettings(loaded.Snapshot.Defaults));
+        _builtInClassicSkin = loaded.Snapshot.Theme.Template == LauncherTemplateKind.Classic
+            && string.IsNullOrWhiteSpace(loaded.Snapshot.Theme.BackgroundImage)
+            && string.IsNullOrWhiteSpace(loaded.Snapshot.Theme.LaunchButtonImage);
+        _selectedClient = ClientSelection.GetPreferred(loaded.Snapshot.ProjectId, clientDirectory, loaded.Snapshot.LoginCoreResources);
+        _settings = ClientSettingsWriter.Read(_selectedClient.ResourceDirectory, CloneSettings(loaded.Snapshot.Defaults));
         string windowTitle = string.IsNullOrWhiteSpace(loaded.Snapshot.WindowTitle) ? loaded.Snapshot.ProjectName : loaded.Snapshot.WindowTitle;
         Text = string.IsNullOrWhiteSpace(loaded.Snapshot.TaskbarName) ? windowTitle : loaded.Snapshot.TaskbarName;
         _windowTitleText.Text = windowTitle;
@@ -55,10 +62,11 @@ internal sealed class LauncherForm : Form
         BackColor = Color.FromArgb(18, 20, 28);
         ForeColor = Color.WhiteSmoke;
         DoubleBuffered = true;
+        if (_builtInClassicSkin) FormBorderStyle = FormBorderStyle.None;
         BuildUi();
         string background = LauncherSnapshotValidator.ResolveAsset(_loaded.Root, _loaded.Snapshot.Theme.BackgroundImage);
         if (!string.IsNullOrEmpty(background)) { BackgroundImage = Own(SafeLoadImage(background)); BackgroundImageLayout = ImageLayout.Stretch; }
-        else if (_loaded.Snapshot.Theme.Template == LauncherTemplateKind.Classic) BackgroundImage = Own(BuildClassicBackground(ClientSize));
+        else if (_loaded.Snapshot.Theme.Template == LauncherTemplateKind.Classic) { BackgroundImage = Own(BuildClassicBackground(ClientSize)); BackgroundImageLayout = ImageLayout.Stretch; }
         ApplyTemplate();
         DpiChanged += (_, _) => QueueDpiLayout();
         UpdateProgress(new LauncherProgressState("启动核心已就绪，可进入游戏", string.Empty, 0, 0, 0, 0, 0));
@@ -182,19 +190,28 @@ internal sealed class LauncherForm : Form
         if (_serverSidebar.Nodes.Count > 0 && _serverSidebar.Nodes[0].Nodes.Count > 0) _serverSidebar.SelectedNode = _serverSidebar.Nodes[0].Nodes[0];
         ShowNativeAnnouncements();
         var settings = CreateTopButton("游戏设置", 145);
-        settings.Click += (_, _) => { using var dialog = new PlayerSettingsForm(_settings, _selectedClientDirectory); if (dialog.ShowDialog(this) == DialogResult.OK) { _settings = dialog.Value; _settingsDirty = true; } };
+        settings.Click += (_, _) => { using var dialog = new PlayerSettingsForm(_settings, _selectedClient.ResourceDirectory); if (dialog.ShowDialog(this) == DialogResult.OK) { _settings = dialog.Value; _settingsDirty = true; } };
         var diagnose = CreateTopButton("连通诊断", 265);
         diagnose.Click += async (_, _) => await DiagnoseAsync();
         var chooseClient = CreateTopButton("更换客户端", 385);
         chooseClient.Click += (_, _) =>
         {
-            string? selected = ClientSelection.SelectManually(this, _loaded.Snapshot.ProjectId);
+            ClientSelectionResult? selected = ClientSelection.SelectManually(this, _loaded.Snapshot.ProjectId, _clientDirectory, _loaded.Snapshot.LoginCoreResources);
             if (selected is null) return;
-            _selectedClientDirectory = selected;
-            _settings = ClientSettingsWriter.Read(selected, CloneSettings(_loaded.Snapshot.Defaults));
+            _selectedClient = selected;
+            _settings = ClientSettingsWriter.Read(selected.ResourceDirectory, CloneSettings(_loaded.Snapshot.Defaults));
             _settingsDirty = false;
         };
         Controls.AddRange(new Control[] { settings, diagnose, chooseClient });
+        if (_builtInClassicSkin)
+        {
+            _classicCloseButton = new ImageStateButton { Text = string.Empty, TabStop = false };
+            _classicCloseButton.Click += (_, _) => Close();
+            _classicSettingsButton = new ImageStateButton { Text = string.Empty, TabStop = false };
+            _classicSettingsButton.Click += (_, _) => settings.PerformClick();
+            _classicServerLabel = new Label { Text = "选择服务器：", AutoSize = true, BackColor = Color.Transparent, ForeColor = Color.White };
+            Controls.AddRange(new Control[] { _classicCloseButton, _classicSettingsButton, _classicServerLabel });
+        }
         _themeControls[LauncherControlId.ServerList] = _loaded.Snapshot.Theme.ServerListMode == ServerListMode.Sidebar ? _serverSidebar : _serverDropdown;
         _themeControls[LauncherControlId.Announcements] = _announcements;
         _themeControls[LauncherControlId.LaunchButton] = _launchButton;
@@ -277,19 +294,27 @@ internal sealed class LauncherForm : Form
                 _announcements.SetBounds(S(24), S(70), Math.Max(S(200), ClientSize.Width - S(48)), Math.Min(S(205), ClientSize.Height - S(250)));
                 break;
             default:
+                if (_builtInClassicSkin)
+                {
+                    ApplyBuiltInClassicLayout(S);
+                    break;
+                }
                 _serverDropdown.SetBounds(S(30), Math.Min(S(350), ClientSize.Height - S(180)), Math.Min(S(360), ClientSize.Width - S(60)), S(34));
                 _serverSidebar.SetBounds(S(30), S(80), S(245), Math.Min(S(255), ClientSize.Height - S(220)));
                 _announcements.SetBounds(S(sidebar ? 295 : 30), S(80), Math.Max(S(200), sidebar ? ClientSize.Width - S(325) : ClientSize.Width - S(60)), Math.Min(S(245), ClientSize.Height - S(250)));
                 break;
         }
-        _launchButton.SetBounds(ClientSize.Width - S(220), ClientSize.Height - S(125), S(180), S(54));
-        _overall.SetBounds(S(30), ClientSize.Height - S(68), ClientSize.Width - S(60), S(12));
-        _current.SetBounds(S(30), ClientSize.Height - S(48), ClientSize.Width - S(60), S(8));
-        _progressText.SetBounds(S(30), ClientSize.Height - S(92), Math.Max(S(120), ClientSize.Width - S(280)), S(22));
-        _sourceText.Location = new Point(S(30), ClientSize.Height - S(28));
-        _windowTitleText.Location = new Point(S(24), S(24));
-        Button[] topButtons = Controls.OfType<Button>().Where(button => button != _launchButton).ToArray();
-        for (int i = 0; i < topButtons.Length; i++) topButtons[i].SetBounds(ClientSize.Width - S(145 + i * 120), S(20), S(110), S(34));
+        if (!_builtInClassicSkin)
+        {
+            _launchButton.SetBounds(ClientSize.Width - S(220), ClientSize.Height - S(125), S(180), S(54));
+            _overall.SetBounds(S(30), ClientSize.Height - S(68), ClientSize.Width - S(60), S(12));
+            _current.SetBounds(S(30), ClientSize.Height - S(48), ClientSize.Width - S(60), S(8));
+            _progressText.SetBounds(S(30), ClientSize.Height - S(92), Math.Max(S(120), ClientSize.Width - S(280)), S(22));
+            _sourceText.Location = new Point(S(30), ClientSize.Height - S(28));
+            _windowTitleText.Location = new Point(S(24), S(24));
+            Button[] topButtons = Controls.OfType<Button>().Where(button => button != _launchButton).ToArray();
+            for (int i = 0; i < topButtons.Length; i++) topButtons[i].SetBounds(ClientSize.Width - S(145 + i * 120), S(20), S(110), S(34));
+        }
         if (!_buttonImagesLoaded)
         {
             _buttonImagesLoaded = true;
@@ -301,26 +326,73 @@ internal sealed class LauncherForm : Form
             if (!string.IsNullOrEmpty(pressed)) _launchButton.PressedImage = SafeLoadImage(pressed);
             string disabled = LauncherSnapshotValidator.ResolveAsset(_loaded.Root, _loaded.Snapshot.Theme.LaunchButtonDisabledImage);
             if (!string.IsNullOrEmpty(disabled)) _launchButton.DisabledImage = SafeLoadImage(disabled);
-            if (_launchButton.BaseImage is null && _loaded.Snapshot.Theme.Template == LauncherTemplateKind.Classic) ApplyClassicLaunchButtonStyle();
+            if (_launchButton.BaseImage is null && _builtInClassicSkin) ApplyBuiltInClassicImages();
+            else if (_launchButton.BaseImage is null && _loaded.Snapshot.Theme.Template == LauncherTemplateKind.Classic) ApplyClassicLaunchButtonStyle();
         }
         ApplyControlOverrides(S);
     }
 
     internal static Bitmap BuildClassicBackground(Size size)
     {
+        using Bitmap source = LoadClassicBitmap("pfffft.png");
         var image = new Bitmap(Math.Max(1, size.Width), Math.Max(1, size.Height), System.Drawing.Imaging.PixelFormat.Format32bppArgb);
         using Graphics graphics = Graphics.FromImage(image);
-        using var background = new System.Drawing.Drawing2D.LinearGradientBrush(
-            new Rectangle(Point.Empty, image.Size), Color.FromArgb(30, 38, 54), Color.FromArgb(8, 11, 18), 90f);
-        graphics.FillRectangle(background, new Rectangle(Point.Empty, image.Size));
-        using var glow = new System.Drawing.Drawing2D.LinearGradientBrush(
-            new Rectangle(0, 0, image.Width, Math.Max(1, image.Height / 2)), Color.FromArgb(90, 112, 72, 22), Color.Transparent, 90f);
-        graphics.FillRectangle(glow, 0, 0, image.Width, Math.Max(1, image.Height / 2));
-        using var border = new Pen(Color.FromArgb(150, 216, 167, 58), 2f);
-        graphics.DrawRectangle(border, 8, 8, Math.Max(1, image.Width - 17), Math.Max(1, image.Height - 17));
-        using var inner = new Pen(Color.FromArgb(80, 255, 226, 148));
-        graphics.DrawRectangle(inner, 13, 13, Math.Max(1, image.Width - 27), Math.Max(1, image.Height - 27));
+        graphics.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+        graphics.DrawImage(source, new Rectangle(Point.Empty, image.Size));
         return image;
+    }
+
+    private void ApplyBuiltInClassicLayout(Func<int, int> scale)
+    {
+        Size classicSize = new(scale(801), scale(554));
+        if (ClientSize != classicSize) ClientSize = classicSize;
+        _announcements.Visible = false;
+        _serverSidebar.Visible = false;
+        _serverDropdown.Visible = true;
+        _serverDropdown.SetBounds(scale(67), scale(428), scale(150), scale(24));
+        _classicServerLabel?.SetBounds(scale(67), scale(407), scale(120), scale(20));
+        _launchButton.SetBounds(scale(661), scale(471), scale(114), scale(57));
+        _overall.SetBounds(scale(59), scale(491), scale(553), scale(12));
+        _current.SetBounds(scale(59), scale(509), scale(553), scale(12));
+        _progressText.SetBounds(scale(220), scale(466), scale(390), scale(20));
+        _progressText.ForeColor = Color.LimeGreen;
+        _sourceText.Visible = false;
+        _windowTitleText.Visible = false;
+        _actionLinks.Visible = false;
+        Control settings = _themeControls[LauncherControlId.SettingsButton];
+        settings.Visible = false;
+        _themeControls[LauncherControlId.DiagnoseButton].Visible = false;
+        _themeControls[LauncherControlId.ChooseClientButton].Visible = false;
+        _classicSettingsButton?.SetBounds(scale(743), scale(15), scale(22), scale(26));
+        _classicCloseButton?.SetBounds(scale(767), scale(15), scale(22), scale(26));
+    }
+
+    private void ApplyBuiltInClassicImages()
+    {
+        _launchButton.BaseImage = LoadClassicBitmap("Launch_Base.png");
+        _launchButton.HoverImage = LoadClassicBitmap("Launch_Hover.png");
+        _launchButton.PressedImage = LoadClassicBitmap("Launch_Pressed.png");
+        _launchButton.Text = string.Empty;
+        if (_classicSettingsButton is not null)
+        {
+            _classicSettingsButton.BaseImage = LoadClassicBitmap("Config_Base.png");
+            _classicSettingsButton.HoverImage = LoadClassicBitmap("Config_Hover.png");
+            _classicSettingsButton.PressedImage = LoadClassicBitmap("Config_Pressed.png");
+        }
+        if (_classicCloseButton is not null)
+        {
+            _classicCloseButton.BaseImage = LoadClassicBitmap("Cross_Base.png");
+            _classicCloseButton.HoverImage = LoadClassicBitmap("Cross_Hover.png");
+            _classicCloseButton.PressedImage = LoadClassicBitmap("Cross_Pressed.png");
+        }
+    }
+
+    private static Bitmap LoadClassicBitmap(string name)
+    {
+        using Stream stream = typeof(LauncherForm).Assembly.GetManifestResourceStream("Launcher.ThemeRuntime.Classic." + name)
+            ?? throw new InvalidOperationException("内置经典皮肤资源缺失：" + name);
+        using var image = new Bitmap(stream);
+        return new Bitmap(image);
     }
 
     private void ApplyClassicLaunchButtonStyle()
@@ -414,25 +486,25 @@ internal sealed class LauncherForm : Form
             return;
         }
         MicroEndpoint micro = server.MicroOverride ?? _loaded.Snapshot.DefaultMicro;
-        string? selectedClient = ClientSelection.Resolve(this, _loaded.Snapshot.ProjectId, _clientDirectory);
+        ClientSelectionResult? selectedClient = ClientSelection.Resolve(this, _loaded.Snapshot.ProjectId, _clientDirectory, _loaded.Snapshot.LoginCoreResources);
         if (selectedClient is null) return;
         var readinessProgress = new Progress<LauncherProgressState>(state => { if (!_disposeStarted && !IsDisposed && !Disposing) UpdateProgress(state); });
-        if (micro.Enabled && (!await MicroGatewayReadiness.ProbeAsync(micro, _lifetimeCancellation.Token) ||
-            !await MicroGatewayReadiness.EnsureCoreLibrariesAsync(micro, _loaded.Snapshot.ProjectId, selectedClient, _loaded.Snapshot.LoginCoreResources, readinessProgress, _lifetimeCancellation.Token)))
+        if (micro.Enabled && !await MicroGatewayReadiness.EnsureCoreLibrariesAsync(micro, _loaded.Snapshot.ProjectId, selectedClient.ResourceDirectory, _loaded.Snapshot.LoginCoreResources, readinessProgress, _lifetimeCancellation.Token))
         {
             if (_lifetimeCancellation.IsCancellationRequested || IsDisposed || Disposing) return;
             MessageBox.Show(this, $"微端服务器 {micro.Address}:{micro.Port} 尚未启动，或缺少登录核心资源。\r\n\r\n请先运行“一键生成全部成品”得到的独立微端部署包，并确认资源目录中包含 Title.Lib、ChrSel.Lib、Prguse.Lib。", "登录资源尚未就绪", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             return;
         }
-        if (!string.Equals(selectedClient, _selectedClientDirectory, StringComparison.OrdinalIgnoreCase))
+        if (!string.Equals(selectedClient.ResourceDirectory, _selectedClient.ResourceDirectory, StringComparison.OrdinalIgnoreCase))
         {
-            _selectedClientDirectory = selectedClient;
-            if (!_settingsDirty) _settings = ClientSettingsWriter.Read(selectedClient, CloneSettings(_loaded.Snapshot.Defaults));
+            _selectedClient = selectedClient;
+            if (!_settingsDirty) _settings = ClientSettingsWriter.Read(selectedClient.ResourceDirectory, CloneSettings(_loaded.Snapshot.Defaults));
         }
         LauncherProgressChannel.Clear(_loaded.Snapshot.ProjectId);
-        ClientSettingsWriter.Write(selectedClient, _settings);
-        ClientSettingsWriter.WriteMicroIdentity(selectedClient, _loaded.Snapshot.ProjectId, micro.User);
-        _launch(selectedClient, server, micro, _settings);
+        ClientSettingsWriter.Write(selectedClient.ResourceDirectory, _settings);
+        ClientSettingsWriter.WriteMicroIdentity(selectedClient.ResourceDirectory, _loaded.Snapshot.ProjectId, micro.User);
+        ClientSettingsWriter.ValidateWritableDirectory(selectedClient.ResourceDirectory);
+        _launch(selectedClient.ExecutableDirectory, selectedClient.ResourceDirectory, server, micro, _settings);
         UpdateProgress(new LauncherProgressState("游戏已启动；普通资源继续按需下载", string.Empty, 0, 0, 0, 0, 0));
         await Task.Delay(1500);
         }

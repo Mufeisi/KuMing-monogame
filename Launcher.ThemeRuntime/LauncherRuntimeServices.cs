@@ -267,6 +267,7 @@ public static class MicroGatewayReadiness
         if (!endpoint.Enabled) return true;
         if (files.Length != 3 || !files.Select(item => item.Path).ToHashSet(StringComparer.OrdinalIgnoreCase)
             .SetEquals(new[] { "Data/Title.Lib", "Data/ChrSel.Lib", "Data/Prguse.Lib" })) return false;
+        if (files.All(resource => IsValidLocalResource(clientRoot, resource))) return true;
         for (int endpointIndex = 0; endpointIndex < 2; endpointIndex++)
         {
             (string address, int port) = endpointIndex == 0 ? (endpoint.Address, endpoint.Port) : (endpoint.BackupAddress, endpoint.BackupPort);
@@ -342,6 +343,20 @@ public static class MicroGatewayReadiness
             return string.Equals(Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(stream)), expected, StringComparison.OrdinalIgnoreCase);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { return false; }
+    }
+
+    private static bool IsValidLocalResource(string clientRoot, LauncherCoreResource resource)
+    {
+        string relative = resource.Path.Replace('\\', '/').TrimStart('/');
+        string target = Path.GetFullPath(Path.Combine(clientRoot, relative.Replace('/', Path.DirectorySeparatorChar)));
+        try
+        {
+            RejectReparseChain(clientRoot, target);
+            return target.StartsWith(clientRoot.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)
+                && File.Exists(target) && (File.GetAttributes(target) & FileAttributes.ReparsePoint) == 0
+                && new FileInfo(target).Length == resource.Size && HashMatches(target, resource.Sha256);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException) { return false; }
     }
 
     private static void RejectReparseChain(string root, string path)

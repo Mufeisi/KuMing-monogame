@@ -147,11 +147,11 @@ namespace Client
         private static void RunThemeLauncher()
         {
             string clientDirectory = AppContext.BaseDirectory;
-            LauncherRuntimeHost.Run(clientDirectory, (selectedDirectory, server, micro, _) =>
+            LauncherRuntimeHost.Run(clientDirectory, (executableDirectory, resourceDirectory, server, micro, _) =>
             {
-                string selectedClient = Path.Combine(selectedDirectory, "Client.exe");
-                var start = new ProcessStartInfo(selectedClient) { WorkingDirectory = selectedDirectory, UseShellExecute = false };
-                foreach (string argument in GameProcessLaunchArguments.Create(server, micro, ClientCapabilityProbe.Detect(selectedDirectory))) start.ArgumentList.Add(argument);
+                string selectedClient = Path.Combine(executableDirectory, "Client.exe");
+                var start = new ProcessStartInfo(selectedClient) { WorkingDirectory = resourceDirectory, UseShellExecute = false };
+                foreach (string argument in GameProcessLaunchArguments.Create(server, micro, ClientCapabilityProbe.Detect(executableDirectory))) start.ArgumentList.Add(argument);
                 using Process? game = Process.Start(start);
                 string sourcePlayer = Environment.GetEnvironmentVariable("LYOCRYSTAL_PLAYER_SOURCE_EXECUTABLE") ?? string.Empty;
                 if (game is not null && !string.IsNullOrWhiteSpace(sourcePlayer))

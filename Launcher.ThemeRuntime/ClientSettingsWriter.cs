@@ -29,30 +29,76 @@ public static class ClientSettingsWriter
     {
         ArgumentNullException.ThrowIfNull(settings);
         string directory = Path.GetFullPath(clientDirectory);
-        Directory.CreateDirectory(directory);
+        ValidateWritableDirectory(directory);
         string ini = Path.Combine(directory, "Mir2Config.ini");
-        Write(ini, "Graphics", "Resolution", settings.Resolution.ToString(System.Globalization.CultureInfo.InvariantCulture));
-        Write(ini, "Graphics", "FullScreen", settings.FullScreen.ToString());
-        Write(ini, "Graphics", "Borderless", settings.Borderless.ToString());
-        Write(ini, "Graphics", "FPSCap", settings.FpsCap.ToString());
-        Write(ini, "Graphics", "MaxFPS", settings.MaxFps.ToString(System.Globalization.CultureInfo.InvariantCulture));
-        Write(ini, "Graphics", "AlwaysOnTop", settings.TopMost.ToString());
-        Write(ini, "Sound", "Volume", settings.Volume.ToString(System.Globalization.CultureInfo.InvariantCulture));
-        Write(ini, "Sound", "Music", settings.MusicVolume.ToString(System.Globalization.CultureInfo.InvariantCulture));
-        Write(ini, "Launcher", "AutoStart", settings.AutoStart.ToString());
-        Write(ini, "Logs", "TracePackets", settings.AdvancedLogs.ToString());
-        Write(ini, "Micro", "CacheLimitMb", settings.MicroCacheLimitMb.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        ValidateIniPath(directory, ini);
+        WriteAtomically(directory, ini, temporary =>
+        {
+            WriteValue(temporary, "Graphics", "Resolution", settings.Resolution.ToString(System.Globalization.CultureInfo.InvariantCulture));
+            WriteValue(temporary, "Graphics", "FullScreen", settings.FullScreen.ToString());
+            WriteValue(temporary, "Graphics", "Borderless", settings.Borderless.ToString());
+            WriteValue(temporary, "Graphics", "FPSCap", settings.FpsCap.ToString());
+            WriteValue(temporary, "Graphics", "MaxFPS", settings.MaxFps.ToString(System.Globalization.CultureInfo.InvariantCulture));
+            WriteValue(temporary, "Graphics", "AlwaysOnTop", settings.TopMost.ToString());
+            WriteValue(temporary, "Sound", "Volume", settings.Volume.ToString(System.Globalization.CultureInfo.InvariantCulture));
+            WriteValue(temporary, "Sound", "Music", settings.MusicVolume.ToString(System.Globalization.CultureInfo.InvariantCulture));
+            WriteValue(temporary, "Launcher", "AutoStart", settings.AutoStart.ToString());
+            WriteValue(temporary, "Logs", "TracePackets", settings.AdvancedLogs.ToString());
+            WriteValue(temporary, "Micro", "CacheLimitMb", settings.MicroCacheLimitMb.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        });
     }
 
     public static void WriteMicroIdentity(string clientDirectory, string projectId, string? user)
     {
-        string ini = Path.Combine(Path.GetFullPath(clientDirectory), "Mir2Config.ini");
-        Write(ini, "Micro", "CredentialKey", projectId);
-        Write(ini, "Micro", "User", user?.Trim() ?? string.Empty);
-        Write(ini, "Micro", "Code", string.Empty);
+        string directory = Path.GetFullPath(clientDirectory);
+        ValidateWritableDirectory(directory);
+        string ini = Path.Combine(directory, "Mir2Config.ini");
+        ValidateIniPath(directory, ini);
+        WriteAtomically(directory, ini, temporary =>
+        {
+            WriteValue(temporary, "Micro", "CredentialKey", projectId);
+            WriteValue(temporary, "Micro", "User", user?.Trim() ?? string.Empty);
+            WriteValue(temporary, "Micro", "Code", string.Empty);
+        });
     }
 
-    private static void Write(string path, string section, string key, string value)
+    public static void ValidateWritableDirectory(string clientDirectory)
+    {
+        string full = Path.GetFullPath(clientDirectory);
+        if (!Directory.Exists(full)) throw new DirectoryNotFoundException("客户端资源目录不存在");
+        string current = Path.GetPathRoot(full) ?? string.Empty;
+        foreach (string part in full[current.Length..].Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar))
+        {
+            if (part.Length == 0) continue;
+            current = Path.Combine(current, part);
+            if ((File.GetAttributes(current) & FileAttributes.ReparsePoint) != 0) throw new InvalidDataException("客户端资源目录不得经过重解析点");
+        }
+    }
+
+    private static void ValidateIniPath(string directory, string ini)
+    {
+        string full = Path.GetFullPath(ini);
+        if (!string.Equals(Path.GetDirectoryName(full), directory, StringComparison.OrdinalIgnoreCase)) throw new InvalidDataException("玩家设置路径越界");
+        if (File.Exists(full) && (File.GetAttributes(full) & FileAttributes.ReparsePoint) != 0) throw new InvalidDataException("玩家设置文件不得为重解析点");
+    }
+
+    private static void WriteAtomically(string directory, string ini, Action<string> update)
+    {
+        string temporary = ini + ".tmp-" + Guid.NewGuid().ToString("N");
+        try
+        {
+            if (File.Exists(ini)) File.Copy(ini, temporary, overwrite: false); else using (File.Create(temporary)) { }
+            update(temporary);
+            ValidateWritableDirectory(directory);
+            ValidateIniPath(directory, ini);
+            if ((File.GetAttributes(temporary) & FileAttributes.ReparsePoint) != 0 || !string.Equals(Path.GetDirectoryName(Path.GetFullPath(temporary)), directory, StringComparison.OrdinalIgnoreCase))
+                throw new InvalidDataException("玩家设置临时文件路径无效");
+            File.Move(temporary, ini, overwrite: true);
+        }
+        finally { try { File.Delete(temporary); } catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { } }
+    }
+
+    private static void WriteValue(string path, string section, string key, string value)
     {
         if (!OperatingSystem.IsWindows()) throw new PlatformNotSupportedException("玩家设置仅支持 Windows");
         if (!WritePrivateProfileStringW(section, key, value, path)) throw new IOException("无法写入玩家设置：" + key);
