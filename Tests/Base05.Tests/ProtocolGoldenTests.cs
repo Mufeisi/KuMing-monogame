@@ -199,20 +199,20 @@ public sealed class ProtocolGoldenTests
         Assert.Equal("all LevelEffects identifier occurrences in non-protocol C# source", runtimePolicy.GetProperty("scope").GetString());
         Assert.Equal(new[] { "field", "state", "call", "method", "packetRoute" },
             runtimePolicy.GetProperty("includeKinds").EnumerateArray().Select(item => item.GetString()).ToArray());
-        Assert.Equal(new[] { "Shared/", "src/Clients/Client_MonoGame.Shared/Share/" },
+        Assert.Equal(new[] { "src/Shared/Shared/", "src/Clients/Client_MonoGame.Shared/Share/" },
             runtimePolicy.GetProperty("excludedRoots").EnumerateArray().Select(item => item.GetString()).ToArray());
         Assert.Equal("src/Clients/Client_VorticeDX11/", runtimePolicy.GetProperty("platforms").GetProperty("pc").GetString());
         Assert.Equal("src/Clients/Client_MonoGame.Shared/ (excluding Share/)", runtimePolicy.GetProperty("platforms").GetProperty("mobile").GetString());
-        Assert.Equal("Server/", runtimePolicy.GetProperty("platforms").GetProperty("server").GetString());
+        Assert.Equal("src/Server/Server/", runtimePolicy.GetProperty("platforms").GetProperty("server").GetString());
         Assert.Equal(17, runtimeUses.Count(item => item.GetProperty("side").GetString() == "pc"));
         Assert.Equal(11, runtimeUses.Count(item => item.GetProperty("side").GetString() == "mobile"));
         Assert.Equal(18, runtimeUses.Count(item => item.GetProperty("side").GetString() == "server"));
         Assert.Contains(runtimeUses, item => item.GetProperty("source").GetString() == "src/Clients/Client_VorticeDX11/MirScenes/GameScene.cs:1938");
         Assert.Contains(runtimeUses, item => item.GetProperty("source").GetString() == "src/Clients/Client_MonoGame.Shared/MirScenes/GameScene.cs:3332");
         Assert.Contains(runtimeUses, item => item.GetProperty("source").GetString() == "src/Clients/Client_MonoGame.Shared/MirScenes/GameScene.cs:7110");
-        Assert.Contains(runtimeUses, item => item.GetProperty("source").GetString() == "Server/MirObjects/PlayerObject.cs:1283");
-        Assert.Contains(runtimeUses, item => item.GetProperty("source").GetString() == "Server/MirObjects/HumanObject.cs:1684");
-        Assert.Contains(runtimeUses, item => item.GetProperty("source").GetString() == "Server/MirObjects/NPC/NPCSegment.cs:3822");
+        Assert.Contains(runtimeUses, item => item.GetProperty("source").GetString() == "src/Server/Server/MirObjects/PlayerObject.cs:1283");
+        Assert.Contains(runtimeUses, item => item.GetProperty("source").GetString() == "src/Server/Server/MirObjects/HumanObject.cs:1684");
+        Assert.Contains(runtimeUses, item => item.GetProperty("source").GetString() == "src/Server/Server/MirObjects/NPC/NPCSegment.cs:3822");
     }
 
     [Fact]
@@ -260,7 +260,7 @@ public sealed class ProtocolGoldenTests
         Assert.Contains(buffType.GetProperty("wireUses").EnumerateArray(), item => item.GetProperty("packet").GetString() == "Data.ClientBuff");
         foreach (var side in new[] { "Shared", "Share" })
         {
-            var packetPath = side == "Shared" ? "Shared/ServerPackets.cs:" : "src/Clients/Client_MonoGame.Shared/Share/ServerPackets.cs:";
+            var packetPath = side == "Shared" ? "src/Shared/Shared/ServerPackets.cs:" : "src/Clients/Client_MonoGame.Shared/Share/ServerPackets.cs:";
             var removeBuff = buffType.GetProperty("wireUses").EnumerateArray()
                 .Single(item => item.GetProperty("side").GetString() == side && item.GetProperty("packet").GetString() == "RemoveBuff");
             Assert.Contains(removeBuff.GetProperty("occurrences").EnumerateArray(), occurrence =>
@@ -321,24 +321,24 @@ public sealed class ProtocolGoldenTests
             (Side: "mobile", Source: "src/Clients/Client_MonoGame.Shared/MirObjects/PlayerObject.cs:734", Expression: "if (LevelEffects.HasFlag(LevelEffects.BlueDragon))"),
             (Side: "mobile", Source: "src/Clients/Client_MonoGame.Shared/MirObjects/PlayerObject.cs:741", Expression: "if (LevelEffects.HasFlag(LevelEffects.RedDragon))"),
             (Side: "mobile", Source: "src/Clients/Client_MonoGame.Shared/MirObjects/PlayerObject.cs:748", Expression: "if (LevelEffects.HasFlag(LevelEffects.Mist))"),
-            (Side: "server", Source: "Server/MirObjects/HumanObject.cs:183", Expression: "public LevelEffects LevelEffects = LevelEffects.None;"),
-            (Side: "server", Source: "Server/MirObjects/HumanObject.cs:1684", Expression: "public void SetLevelEffects()"),
-            (Side: "server", Source: "Server/MirObjects/HumanObject.cs:1686", Expression: "LevelEffects = LevelEffects.None;"),
-            (Side: "server", Source: "Server/MirObjects/HumanObject.cs:1688", Expression: "if (Info.Flags[990]) LevelEffects |= LevelEffects.Mist;"),
-            (Side: "server", Source: "Server/MirObjects/HumanObject.cs:1689", Expression: "if (Info.Flags[991]) LevelEffects |= LevelEffects.RedDragon;"),
-            (Side: "server", Source: "Server/MirObjects/HumanObject.cs:1690", Expression: "if (Info.Flags[992]) LevelEffects |= LevelEffects.BlueDragon;"),
-            (Side: "server", Source: "Server/MirObjects/HumanObject.cs:1691", Expression: "if (Info.Flags[993]) LevelEffects |= LevelEffects.Rebirth1;"),
-            (Side: "server", Source: "Server/MirObjects/HumanObject.cs:1692", Expression: "if (Info.Flags[994]) LevelEffects |= LevelEffects.Rebirth2;"),
-            (Side: "server", Source: "Server/MirObjects/HumanObject.cs:1693", Expression: "if (Info.Flags[995]) LevelEffects |= LevelEffects.Rebirth3;"),
-            (Side: "server", Source: "Server/MirObjects/HumanObject.cs:1694", Expression: "if (Info.Flags[996]) LevelEffects |= LevelEffects.NewBlue;"),
-            (Side: "server", Source: "Server/MirObjects/HumanObject.cs:1695", Expression: "if (Info.Flags[997]) LevelEffects |= LevelEffects.YellowDragon;"),
-            (Side: "server", Source: "Server/MirObjects/HumanObject.cs:1696", Expression: "if (Info.Flags[998]) LevelEffects |= LevelEffects.Phoenix;"),
-            (Side: "server", Source: "Server/MirObjects/HeroObject.cs:1330", Expression: "LevelEffects = LevelEffects,"),
-            (Side: "server", Source: "Server/MirObjects/PlayerObject.cs:1283", Expression: "SetLevelEffects();"),
-            (Side: "server", Source: "Server/MirObjects/PlayerObject.cs:1981", Expression: "LevelEffects = LevelEffects,"),
-            (Side: "server", Source: "Server/MirObjects/PlayerObject.cs:5978", Expression: "LevelEffects = LevelEffects"),
-            (Side: "server", Source: "Server/MirObjects/NPC/NPCSegment.cs:3822", Expression: "player.SetLevelEffects();"),
-            (Side: "server", Source: "Server/MirObjects/NPC/NPCSegment.cs:3823", Expression: "var p = new S.ObjectLevelEffects { ObjectID = player.ObjectID, LevelEffects = player.LevelEffects };"),
+            (Side: "server", Source: "src/Server/Server/MirObjects/HumanObject.cs:183", Expression: "public LevelEffects LevelEffects = LevelEffects.None;"),
+            (Side: "server", Source: "src/Server/Server/MirObjects/HumanObject.cs:1684", Expression: "public void SetLevelEffects()"),
+            (Side: "server", Source: "src/Server/Server/MirObjects/HumanObject.cs:1686", Expression: "LevelEffects = LevelEffects.None;"),
+            (Side: "server", Source: "src/Server/Server/MirObjects/HumanObject.cs:1688", Expression: "if (Info.Flags[990]) LevelEffects |= LevelEffects.Mist;"),
+            (Side: "server", Source: "src/Server/Server/MirObjects/HumanObject.cs:1689", Expression: "if (Info.Flags[991]) LevelEffects |= LevelEffects.RedDragon;"),
+            (Side: "server", Source: "src/Server/Server/MirObjects/HumanObject.cs:1690", Expression: "if (Info.Flags[992]) LevelEffects |= LevelEffects.BlueDragon;"),
+            (Side: "server", Source: "src/Server/Server/MirObjects/HumanObject.cs:1691", Expression: "if (Info.Flags[993]) LevelEffects |= LevelEffects.Rebirth1;"),
+            (Side: "server", Source: "src/Server/Server/MirObjects/HumanObject.cs:1692", Expression: "if (Info.Flags[994]) LevelEffects |= LevelEffects.Rebirth2;"),
+            (Side: "server", Source: "src/Server/Server/MirObjects/HumanObject.cs:1693", Expression: "if (Info.Flags[995]) LevelEffects |= LevelEffects.Rebirth3;"),
+            (Side: "server", Source: "src/Server/Server/MirObjects/HumanObject.cs:1694", Expression: "if (Info.Flags[996]) LevelEffects |= LevelEffects.NewBlue;"),
+            (Side: "server", Source: "src/Server/Server/MirObjects/HumanObject.cs:1695", Expression: "if (Info.Flags[997]) LevelEffects |= LevelEffects.YellowDragon;"),
+            (Side: "server", Source: "src/Server/Server/MirObjects/HumanObject.cs:1696", Expression: "if (Info.Flags[998]) LevelEffects |= LevelEffects.Phoenix;"),
+            (Side: "server", Source: "src/Server/Server/MirObjects/HeroObject.cs:1330", Expression: "LevelEffects = LevelEffects,"),
+            (Side: "server", Source: "src/Server/Server/MirObjects/PlayerObject.cs:1283", Expression: "SetLevelEffects();"),
+            (Side: "server", Source: "src/Server/Server/MirObjects/PlayerObject.cs:1981", Expression: "LevelEffects = LevelEffects,"),
+            (Side: "server", Source: "src/Server/Server/MirObjects/PlayerObject.cs:5978", Expression: "LevelEffects = LevelEffects"),
+            (Side: "server", Source: "src/Server/Server/MirObjects/NPC/NPCSegment.cs:3822", Expression: "player.SetLevelEffects();"),
+            (Side: "server", Source: "src/Server/Server/MirObjects/NPC/NPCSegment.cs:3823", Expression: "var p = new S.ObjectLevelEffects { ObjectID = player.ObjectID, LevelEffects = player.LevelEffects };"),
         };
         var actualRuntimeUses = levelEffects.GetProperty("runtimeUses").EnumerateArray()
             .Select(item => (

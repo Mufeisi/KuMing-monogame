@@ -2,7 +2,7 @@
   "solution": {
     "path": "Legend of Mir.sln",
     "projects": [
-      "Shared\\Shared.csproj",
+      "src\\Shared\\Shared\\Shared.csproj",
       "src\\Launcher\\Launcher.PlayerShell.Core\\Launcher.PlayerShell.Core.csproj",
       "src\\Launcher\\Launcher.PlayerShell\\Launcher.PlayerShell.csproj",
       "src\\Launcher\\Launcher.ThemeRuntime\\Launcher.ThemeRuntime.csproj",

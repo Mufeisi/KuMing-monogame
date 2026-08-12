@@ -135,7 +135,7 @@ internal static class Program
 
     private static string[] ProtocolSourceFiles(string repositoryRoot)
     {
-        string shared = Path.Combine(repositoryRoot, "Shared");
+        string shared = Path.Combine(repositoryRoot, "src", "Shared", "Shared");
         string[] roots =
         [
             "BaseStats.cs", "ClientPackets.cs", "Enums.cs", "Globals.cs", "Packet.cs", "ServerPackets.cs",
@@ -343,7 +343,7 @@ internal static class Program
         while (current != null)
         {
             if (File.Exists(Path.Combine(current.FullName, "global.json")) &&
-                Directory.Exists(Path.Combine(current.FullName, "Shared")))
+                Directory.Exists(Path.Combine(current.FullName, "src", "Shared")))
                 return current.FullName;
             current = current.Parent;
         }

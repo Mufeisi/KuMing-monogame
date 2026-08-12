@@ -12,8 +12,8 @@
 [Dd]ebugPublic/
 [Rr]elease/
 [Rr]eleases/
-!Shared/Release/
-!Shared/Release/TransactionalFileDeployment.cs
+!src/Shared/Shared/Release/
+!src/Shared/Shared/Release/TransactionalFileDeployment.cs
 x64/
 x86/
 [Ww][Ii][Nn]32/
@@ -81,9 +81,9 @@ CodeCoverage/
 [Bb]uild[Ll]og.*
 
 # The server scripting debugger is source code, not a build output directory.
-!/Server/Scripting/Debug/
-/Server/Scripting/Debug/*
-!/Server/Scripting/Debug/*.cs
+!/src/Server/Server/Scripting/Debug/
+/src/Server/Server/Scripting/Debug/*
+!/src/Server/Server/Scripting/Debug/*.cs
 
 # NUnit
 *.VisualState.xml

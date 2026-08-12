@@ -8,8 +8,8 @@
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(MSBuildProjectName)' == 'Client_MonoGame.Shared'">
-    <MobileCurrentContentBinRoot>$(MobileBuildRoot)Shared\Content\bin</MobileCurrentContentBinRoot>
-    <MobileCurrentContentObjRoot>$(MobileBuildRoot)Shared\Content\obj</MobileCurrentContentObjRoot>
+    <MobileCurrentContentBinRoot>$(MobileBuildRoot)src\Shared\Shared\Content\bin</MobileCurrentContentBinRoot>
+    <MobileCurrentContentObjRoot>$(MobileBuildRoot)src\Shared\Shared\Content\obj</MobileCurrentContentObjRoot>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(MSBuildProjectName)' == 'Client_MonoGame.Android'">
@@ -23,7 +23,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <LegacyMobileBuildDirectory Include="$(MobileBuildRoot)Shared\Debug\net6.0-android31.0" />
+    <LegacyMobileBuildDirectory Include="$(MobileBuildRoot)src\Shared\Shared\Debug\net6.0-android31.0" />
     <LegacyMobileBuildDirectory Include="$(MobileBuildRoot)Android\Debug\net8.0-android" />
     <LegacyMobileBuildDirectory Include="$(MobileBuildRoot)iOS\Debug\net8.0-ios" />
     <LegacyMobileBuildDirectory Include="$(MobileBuildRoot)iOS\Debug\net6.0-ios15.4" />

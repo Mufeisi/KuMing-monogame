@@ -1,8 +1,8 @@
 
 #----------------------------- Global Properties ----------------------------#
 
-/outputDir:../../Build/Mobile/Shared/Content/bin/$(Platform)
-/intermediateDir:../../Build/Mobile/Shared/Content/obj/$(Platform)
+/outputDir:../../Build/Mobile/src/Shared/Shared/Content/bin/$(Platform)
+/intermediateDir:../../Build/Mobile/src/Shared/Shared/Content/obj/$(Platform)
 /platform:Windows
 /config:
 /profile:Reach

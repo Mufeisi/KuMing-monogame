@@ -2,9 +2,9 @@
   "solution": {
     "path": "Legend of Mir.sln",
     "projects": [
-      "Shared\\Shared.csproj",
-      "Server\\Server.Library.csproj",
-      "Server.MirForms\\Server.csproj",
+      "src\\Shared\\Shared\\Shared.csproj",
+      "src\\Server\\Server\\Server.Library.csproj",
+      "src\\Server\\Server.MirForms\\Server.csproj",
       "src\\Editors\\AutoPatcherAdmin\\AutoPatcherAdmin.csproj",
       "src\\Editors\\Controls\\FixedListViewControl\\CustomFormControl.csproj",
       "src\\Editors\\LibraryEditor\\LibraryEditor.csproj",

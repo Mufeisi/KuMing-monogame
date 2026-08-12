@@ -2,7 +2,7 @@
 
 ## 目标
 
-`Server/MirObjects/HumanObject.cs` 原本同时承担装备扫描、普通套装规则、圣龙戒指组合和天龙部位组合。PERF-03 将其中纯进程内、无 I/O 的套装加成规则提取为 `EquipmentSetBonusModule`，不改变数值、执行顺序或玩家主线程写入边界。
+`src/Server/Server/MirObjects/HumanObject.cs` 原本同时承担装备扫描、普通套装规则、圣龙戒指组合和天龙部位组合。PERF-03 将其中纯进程内、无 I/O 的套装加成规则提取为 `EquipmentSetBonusModule`，不改变数值、执行顺序或玩家主线程写入边界。
 
 ## 模块接口
 

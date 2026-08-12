@@ -35,7 +35,7 @@
 			<Choose>
 				<When Condition="$([MSBuild]::IsOSPlatform('Windows'))">
 					<PropertyGroup>
-						<OutputPath>..\Build\Server</OutputPath>
+						<OutputPath>..\..\..\Build\Server</OutputPath>
 					</PropertyGroup>
 				</When>
 				<When Condition="$([MSBuild]::IsOSPlatform('OSX'))">
@@ -81,25 +81,25 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<None Include="..\resources.manifest.json" Link="resources.manifest.json">
+		<None Include="..\..\..\resources.manifest.json" Link="resources.manifest.json">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</None>
-		<None Include="..\THIRD-PARTY-NOTICES.md" Link="THIRD-PARTY-NOTICES.md">
+		<None Include="..\..\..\THIRD-PARTY-NOTICES.md" Link="THIRD-PARTY-NOTICES.md">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</None>
-		<None Include="..\Docs\Compliance\SBOM\dependencies.spdx.json" Link="Compliance\SBOM\dependencies.spdx.json" CopyToOutputDirectory="PreserveNewest" />
-		<None Include="..\Docs\Compliance\external-assets.manifest.json" Link="Compliance\external-assets.manifest.json" CopyToOutputDirectory="PreserveNewest" />
-		<None Include="..\Docs\Compliance\Licenses\**\*" Link="Compliance\Licenses\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+		<None Include="..\..\..\Docs\Compliance\SBOM\dependencies.spdx.json" Link="Compliance\SBOM\dependencies.spdx.json" CopyToOutputDirectory="PreserveNewest" />
+		<None Include="..\..\..\Docs\Compliance\external-assets.manifest.json" Link="Compliance\external-assets.manifest.json" CopyToOutputDirectory="PreserveNewest" />
+		<None Include="..\..\..\Docs\Compliance\Licenses\**\*" Link="Compliance\Licenses\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
 		<ProjectReference Include="..\Server\Server.Library.csproj" />
-		<ProjectReference Include="..\Shared\Shared.csproj" />
+		<ProjectReference Include="..\..\Shared\Shared\Shared.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>
 		<Reference Include="CustomFormControl">
-			<HintPath>..\third-party\Components\CustomFormControl.dll</HintPath>
+			<HintPath>..\..\..\third-party\Components\CustomFormControl.dll</HintPath>
 		</Reference>
 		<Reference Include="Microsoft.VisualBasic.PowerPacks.Vs">
-			<HintPath>..\third-party\Components\Microsoft.VisualBasic.PowerPacks.Vs.dll</HintPath>
+			<HintPath>..\..\..\third-party\Components\Microsoft.VisualBasic.PowerPacks.Vs.dll</HintPath>
 		</Reference>
 	</ItemGroup>
 

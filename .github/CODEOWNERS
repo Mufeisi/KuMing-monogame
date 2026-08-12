@@ -9,8 +9,8 @@
 /Docs/工程治理实施路线.md @Mufeisi
 
 # 高风险边界：协议、服务端状态、数据库迁移、安全与发布。
-/Shared/ @Mufeisi
-/Server/ @Mufeisi
+/src/Shared/ @Mufeisi
+/src/Server/ @Mufeisi
 /Tools/SchemaMigrator/ @Mufeisi
 /Tools/ProtocolManifestGenerator/ @Mufeisi
 /Docs/SEC-* @Mufeisi

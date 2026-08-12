@@ -512,7 +512,7 @@ function Invoke-Prepare {
         $transcriptStarted = $true
         Invoke-Checked 'dotnet' @('test', 'Tests/Base05.Tests/Base05.Tests.csproj', '-c', 'Release') $repo
         Invoke-Checked 'dotnet' @('publish', 'src/Clients/Client_VorticeDX11/Client_VorticeDX11.csproj', '-c', 'Release', '-o', (Join-Path $partial 'pc')) $repo
-        Invoke-Checked 'dotnet' @('publish', 'Server.MirForms/Server.csproj', '-c', 'Release', '-o', (Join-Path $partial 'server')) $repo
+        Invoke-Checked 'dotnet' @('publish', 'src/Server/Server.MirForms/Server.csproj', '-c', 'Release', '-o', (Join-Path $partial 'server')) $repo
         Invoke-Checked 'dotnet' @('restore', 'Tools/ReleaseSigningTool/ReleaseSigningTool.csproj', '--verbosity', 'minimal') $repo
         Invoke-Checked 'dotnet' @('build', 'Tools/ReleaseSigningTool/ReleaseSigningTool.csproj', '-c', 'Release', '--no-restore') $repo
         Invoke-Checked 'dotnet' @('restore', 'src/Clients/Client_MonoGame.Android/Client_MonoGame.Android.csproj', '-r', 'android-arm64', '--verbosity', 'minimal') $repo

@@ -34,10 +34,10 @@ public sealed class ProtocolGeneratedManifestTests
 
         JsonElement[] sources = root.GetProperty("sources").EnumerateArray().ToArray();
         Assert.Equal(17, sources.Length);
-        Assert.Contains(sources, source => source.GetProperty("path").GetString() == "Shared/Packet.cs");
-        Assert.Contains(sources, source => source.GetProperty("path").GetString() == "Shared/ClientPackets.cs");
-        Assert.Contains(sources, source => source.GetProperty("path").GetString() == "Shared/ServerPackets.cs");
-        Assert.Contains(sources, source => source.GetProperty("path").GetString() == "Shared/Enums.cs");
+        Assert.Contains(sources, source => source.GetProperty("path").GetString() == "src/Shared/Shared/Packet.cs");
+        Assert.Contains(sources, source => source.GetProperty("path").GetString() == "src/Shared/Shared/ClientPackets.cs");
+        Assert.Contains(sources, source => source.GetProperty("path").GetString() == "src/Shared/Shared/ServerPackets.cs");
+        Assert.Contains(sources, source => source.GetProperty("path").GetString() == "src/Shared/Shared/Enums.cs");
         Assert.All(sources, source => AssertHash(source.GetProperty("sha256").GetString()));
         Assert.All(sources, source =>
         {
@@ -56,7 +56,7 @@ public sealed class ProtocolGeneratedManifestTests
         string repositoryRoot = FindRepositoryRoot(AppContext.BaseDirectory);
         string pcLayout = File.ReadAllText(Path.Combine(repositoryRoot, "src", "Clients", "Client_VorticeDX11", "Bootstrap", "PcBootstrapLayout.cs"));
         string mobileLayout = File.ReadAllText(Path.Combine(repositoryRoot, "src", "Clients", "Client_MonoGame.Shared", "ClientResourceLayout.cs"));
-        string serverSettings = File.ReadAllText(Path.Combine(repositoryRoot, "Server", "Settings.cs"));
+        string serverSettings = File.ReadAllText(Path.Combine(repositoryRoot, "src", "Server", "Server", "Settings.cs"));
         using JsonDocument index = JsonDocument.Parse(File.ReadAllText(Path.Combine(
             repositoryRoot, "src", "Clients", "Client_MonoGame.Shared", "BootstrapAssets", "bootstrap-package-index.json")));
         XDocument androidProject = XDocument.Load(Path.Combine(repositoryRoot, "src", "Clients", "Client_MonoGame.Android", "Client_MonoGame.Android.csproj"));
@@ -83,10 +83,10 @@ public sealed class ProtocolGeneratedManifestTests
             .ToArray();
 
         Assert.DoesNotContain(androidIncludes, include => include.Contains("Share\\**\\*.cs", StringComparison.OrdinalIgnoreCase));
-        Assert.Contains("..\\..\\..\\Shared\\Packet.cs", androidIncludes);
-        Assert.Contains("..\\..\\..\\Shared\\ClientPackets.cs", androidIncludes);
-        Assert.Contains("..\\..\\..\\Shared\\ServerPackets.cs", androidIncludes);
-        Assert.Contains("..\\..\\..\\Shared\\Enums.cs", androidIncludes);
+        Assert.Contains("..\\..\\..\\src\\Shared\\Shared\\Packet.cs", androidIncludes);
+        Assert.Contains("..\\..\\..\\src\\Shared\\Shared\\ClientPackets.cs", androidIncludes);
+        Assert.Contains("..\\..\\..\\src\\Shared\\Shared\\ServerPackets.cs", androidIncludes);
+        Assert.Contains("..\\..\\..\\src\\Shared\\Shared\\Enums.cs", androidIncludes);
         Assert.Contains("Share\\Language.cs", androidIncludes);
         Assert.Contains("Share\\Functions\\IniReader.cs", androidIncludes);
 
@@ -97,16 +97,21 @@ public sealed class ProtocolGeneratedManifestTests
         Assert.Equal(["Share\\Functions\\IniReader.cs", "Share\\Language.cs"], retainedForkFiles);
 
         AssertReferencesSharedProject(Path.Combine(repositoryRoot, "src", "Clients", "Client_VorticeDX11", "Client_VorticeDX11.csproj"));
-        AssertReferencesSharedProject(Path.Combine(repositoryRoot, "Server", "Server.Library.csproj"));
+        AssertReferencesSharedProject(Path.Combine(repositoryRoot, "src", "Server", "Server", "Server.Library.csproj"));
     }
 
     private static void AssertReferencesSharedProject(string projectPath)
     {
         XDocument project = XDocument.Load(projectPath);
+        string expectedPath = Path.GetFullPath(Path.Combine(
+            FindRepositoryRoot(Path.GetDirectoryName(projectPath)!),
+            "src", "Shared", "Shared", "Shared.csproj"));
         Assert.Contains(project.Descendants("ProjectReference"), reference =>
-            (((string?)reference.Attribute("Include")) ?? string.Empty)
-            .Replace('/', '\\')
-            .EndsWith("Shared\\Shared.csproj", StringComparison.OrdinalIgnoreCase));
+        {
+            string include = ((string?)reference.Attribute("Include")) ?? string.Empty;
+            string actualPath = Path.GetFullPath(Path.Combine(Path.GetDirectoryName(projectPath)!, include));
+            return string.Equals(actualPath, expectedPath, StringComparison.OrdinalIgnoreCase);
+        });
     }
 
     private static void AssertHash(string? value)
@@ -121,7 +126,7 @@ public sealed class ProtocolGeneratedManifestTests
         while (current != null)
         {
             if (File.Exists(Path.Combine(current.FullName, "global.json")) &&
-                Directory.Exists(Path.Combine(current.FullName, "Shared")))
+                Directory.Exists(Path.Combine(current.FullName, "src", "Shared")))
                 return current.FullName;
             current = current.Parent;
         }

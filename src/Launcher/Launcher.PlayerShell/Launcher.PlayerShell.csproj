@@ -14,6 +14,6 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\Launcher.PlayerShell.Core\Launcher.PlayerShell.Core.csproj" />
-    <ProjectReference Include="..\..\..\Shared\Shared.csproj" />
+    <ProjectReference Include="..\..\..\src\Shared\Shared\Shared.csproj" />
   </ItemGroup>
 </Project>
