@@ -63,11 +63,11 @@
 
 # Resource-baseline text inputs are always checked out with LF so their tree
 # hashes remain stable across Windows core.autocrlf settings.
-/Client_MonoGame.Shared/Content/Content.mgcb text eol=lf
-/Client_MonoGame.Shared/Assets/UI/**/ui.version.txt text eol=lf
+/src/Clients/Client_MonoGame.Shared/Content/Content.mgcb text eol=lf
+/src/Clients/Client_MonoGame.Shared/Assets/UI/**/ui.version.txt text eol=lf
 # Micro bootstrap metadata and core assets are byte-stable release inputs;
 # never normalize their existing line endings or treat binary payloads as text.
-/Client_MonoGame.Shared/BootstrapAssets/** -text
+/src/Clients/Client_MonoGame.Shared/BootstrapAssets/** -text
 /Build/Mobile/BootstrapRepo/Packages/core-startup.zip -text
 /Build/Mobile/BootstrapRepo/Packages/core-startup.zip.sha256 -text
 #*.RTF   diff=astextplain

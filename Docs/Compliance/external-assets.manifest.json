@@ -38,7 +38,7 @@
     },
     {
       "name": "FairyGUI MonoGame 运行时",
-      "sourcePath": "Client_MonoGame.Shared/UI/FairyGui/Runtime",
+      "sourcePath": "src/Clients/Client_MonoGame.Shared/UI/FairyGui/Runtime",
       "files": 136,
       "license": "MIT",
       "upstream": "https://github.com/fairygui/FairyGUI-monogame",
@@ -46,7 +46,7 @@
     },
     {
       "name": "HarmonyOS Sans SC Medium 字体",
-      "sourcePath": "Client_MonoGame.Shared/Content/hm.ttf",
+      "sourcePath": "src/Clients/Client_MonoGame.Shared/Content/hm.ttf",
       "files": 1,
       "sizeMiB": 7.85,
       "copyright": "Copyright 2021 Huawei Device Co., Ltd. All Rights Reserved.",
@@ -54,7 +54,7 @@
     },
     {
       "name": "图标、着色器与启动资源",
-      "sourcePath": "Client_VorticeDX11/MIR2.ICO；Client_MonoGame.Android/Resources；Client_MonoGame.Shared/BootstrapAssets；各客户端 Content/FairyGUI.fx",
+      "sourcePath": "src/Clients/Client_VorticeDX11/MIR2.ICO；src/Clients/Client_MonoGame.Android/Resources；src/Clients/Client_MonoGame.Shared/BootstrapAssets；各客户端 Content/FairyGUI.fx",
       "usage": "应用图标、启动资源与渲染着色器"
     }
   ]

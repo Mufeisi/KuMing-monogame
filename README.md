@@ -46,7 +46,7 @@ pwsh -NoProfile -File Tools/ResourceBaseline.ps1 -Action Validate -Scope Reposit
 
 当前授权镜像根为 `D:\ChuanQi\客户端`：移动资源位于 `monogame`，PC 资源位于 `Client_VorticeDX11`。不修改该源目录。BASE-02 的唯一可复现链是：先获取并校验 `acquired`，移动资源再运行现有分包导出器，最后校验 `final`；PC 资源没有隐藏的 finalize 步骤，清单明确 `acquired=final`，因此 Acquire 后即可进入最终校验。
 
-首次从 Git fresh clone 执行 Acquire 时，`Client_MonoGame.Shared/BootstrapAssets` 已包含 273 个仓库追踪文件。脚本只在该目录当前内容与清单 `repositoryOverlay` 摘要精确一致时允许 overlay；任何漂移或额外文件都拒绝。没有 `repositoryOverlay` 的其它目标必须不存在或为空。BASE-02b 的 CI 裸克隆资源镜像仍是独立 backlog，本 README 不将本机 QQ 群资源声明为 BASE-02b 完成。
+首次从 Git fresh clone 执行 Acquire 时，`src/Clients/Client_MonoGame.Shared/BootstrapAssets` 已包含 273 个仓库追踪文件。脚本只在该目录当前内容与清单 `repositoryOverlay` 摘要精确一致时允许 overlay；任何漂移或额外文件都拒绝。没有 `repositoryOverlay` 的其它目标必须不存在或为空。BASE-02b 的 CI 裸克隆资源镜像仍是独立 backlog，本 README 不将本机 QQ 群资源声明为 BASE-02b 完成。
 
 ```powershell
 pwsh -NoProfile -File Tools/ResourceBaseline.ps1 `

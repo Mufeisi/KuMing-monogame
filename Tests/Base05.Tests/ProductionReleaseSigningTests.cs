@@ -56,7 +56,7 @@ public sealed class ProductionReleaseSigningTests
         Assert.Equal(261, pc.Manifest.Packages.Count);
 
         using JsonDocument unsigned = JsonDocument.Parse(File.ReadAllText(Path.Combine(
-            root, "Client_MonoGame.Shared", "BootstrapAssets", "bootstrap-package-index.json")));
+            root, "src", "Clients", "Client_MonoGame.Shared", "BootstrapAssets", "bootstrap-package-index.json")));
         Dictionary<string, (string Hash, long Size)> expected = unsigned.RootElement.GetProperty("Packages")
             .EnumerateArray()
             .ToDictionary(

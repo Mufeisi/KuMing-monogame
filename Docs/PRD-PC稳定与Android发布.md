@@ -141,7 +141,7 @@ GATE-P0 ──► GATE-P1 ──► GATE-P2 ──► GATE-P3 ──► GATE-P4 
 | P1-VERIFY-A | 旧预验收已审核并合并：`70d1787`；后续设备闭环由 P1-RUNTIME 接管 | `Docs/Evidence/GATE-P1/android-01-03/`；验收时不改生产代码 | 商城/师徒/关系的截图、日志、APK/设备信息归档 | 已停止独立领取，避免与 P1-RUNTIME 重复 |
 | P1-VERIFY-B | 旧预验收已审核并合并：`e417e0a`；后续设备闭环由 P1-RUNTIME 接管 | `Docs/Evidence/GATE-P1/android-04-07/`；验收时不改生产代码 | 坐骑/封印租赁/钓鱼/活动的截图、日志、APK/设备信息归档 | 已停止独立领取，避免与 P1-RUNTIME 重复 |
 | P1-EVIDENCE | 已审核并合并：`ff0b436` | `Docs/Evidence/GATE-P1/proto-base-perf/`；只读复核现有清单/测试入口 | 清单可读、兼容/资源/性能专项绿，证据归档 | 可与两组真机验收并行 |
-| P1-RUNTIME | 已审核并合并：`2c5ecc5`；首轮双币默认扣点券风险已修正，复审无阻塞项 | `Client_MonoGame.Shared/UI/FairyGui/`、Bootstrap 默认配置、`Docs/Evidence/GATE-P1/runtime-20260809/` | 本地服务、资源、账号、APK、设备证据归档；发现的真实缺口转为后续修正 | 已释放文件所有权；后续按坐骑、活动和商城闭环拆分新任务领取 |
+| P1-RUNTIME | 已审核并合并：`2c5ecc5`；首轮双币默认扣点券风险已修正，复审无阻塞项 | `src/Clients/Client_MonoGame.Shared/UI/FairyGui/`、Bootstrap 默认配置、`Docs/Evidence/GATE-P1/runtime-20260809/` | 本地服务、资源、账号、APK、设备证据归档；发现的真实缺口转为后续修正 | 已释放文件所有权；后续按坐骑、活动和商城闭环拆分新任务领取 |
 | P1-MOUNT | 已审核并合并：`8d0d2f1` | 坐骑窗口解析与 `Docs/Evidence/GATE-P1/mount-window-20260809/` | 不再误命中排名组件；专用 fallback 证据与专项 13/13 | 已释放文件所有权；完整业务闭环另行领取 |
 | P1-ACTIVITY | 已审核并合并：`79783e8` | 活动窗口、上下文分页与 `Docs/Evidence/GATE-P1/activity-window-20260809/` | 绕过损坏 FUI；缓存双向切换、分页证据与专项 15/15 | 已释放文件所有权；完整业务闭环另行领取 |
 | P1-SHOP | 已审核并合并：`6f91c42` | 商城局部、购买策略与 `Docs/Evidence/GATE-P1/shop-e2e-20260809/` | 135 商品/15 格/9 页，重复点击单请求，数据库购买前后可复核，专项 24/24 | 已完成商城端到端闭环并释放文件所有权 |

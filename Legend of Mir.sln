@@ -19,15 +19,15 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LibraryEditor", "src\Editor
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LibraryViewer", "src\Editors\LibraryViewer\LibraryViewer.csproj", "{456E4777-5510-49E1-BE8D-C536753964E3}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Client_VorticeDX11", "Client_VorticeDX11\Client_VorticeDX11.csproj", "{BAA247EA-7B61-DEBC-54FD-206138DDFECD}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Client_VorticeDX11", "src\Clients\Client_VorticeDX11\Client_VorticeDX11.csproj", "{BAA247EA-7B61-DEBC-54FD-206138DDFECD}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tools", "Tools", "{07C2787E-EAC7-C090-1BA3-A61EC2A24D84}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Client_MonoGame.Shared", "Client_MonoGame.Shared\Client_MonoGame.Shared.csproj", "{E4B17394-C1D7-46E5-B4A7-5C6056CF6192}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Client_MonoGame.Shared", "src\Clients\Client_MonoGame.Shared\Client_MonoGame.Shared.csproj", "{E4B17394-C1D7-46E5-B4A7-5C6056CF6192}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Client_MonoGame.Android", "Client_MonoGame.Android\Client_MonoGame.Android.csproj", "{40159DAB-877A-4449-BCB2-DDFDEEE356B1}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Client_MonoGame.Android", "src\Clients\Client_MonoGame.Android\Client_MonoGame.Android.csproj", "{40159DAB-877A-4449-BCB2-DDFDEEE356B1}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Client_MonoGame.iOS", "Client_MonoGame.iOS\Client_MonoGame.iOS.csproj", "{E03D61F1-C71E-4ABD-9452-B1E177DA03B5}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Client_MonoGame.iOS", "src\Clients\Client_MonoGame.iOS\Client_MonoGame.iOS.csproj", "{E03D61F1-C71E-4ABD-9452-B1E177DA03B5}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MobileBootstrapAudit", "Tools\MobileBootstrapAudit\MobileBootstrapAudit.csproj", "{19250888-E6C0-43BC-9C39-BEA72DD4D23D}"
 EndProject
@@ -494,7 +494,7 @@ Global
 		SolutionGuid = {72BECBF0-1873-44F4-AC66-1E923AD0937A}
 	EndGlobalSection
 	GlobalSection(SharedMSBuildProjectFiles) = preSolution
-		Client_MonoGame.Shared\Client_MonoGame.Shared.projitems*{40159dab-877a-4449-bcb2-ddfdeee356b1}*SharedItemsImports = 5
-		Client_MonoGame.Shared\Client_MonoGame.Shared.projitems*{e4b17394-c1d7-46e5-b4a7-5c6056cf6192}*SharedItemsImports = 5
+		src\Clients\Client_MonoGame.Shared\Client_MonoGame.Shared.projitems*{40159dab-877a-4449-bcb2-ddfdeee356b1}*SharedItemsImports = 5
+		src\Clients\Client_MonoGame.Shared\Client_MonoGame.Shared.projitems*{e4b17394-c1d7-46e5-b4a7-5c6056cf6192}*SharedItemsImports = 5
 	EndGlobalSection
 EndGlobal

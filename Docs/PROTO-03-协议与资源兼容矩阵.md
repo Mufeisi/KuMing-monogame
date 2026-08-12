@@ -33,5 +33,5 @@
 - 修改 `Shared` 协议事实源后，运行：
   `dotnet run --project Tools/ProtocolManifestGenerator/ProtocolManifestGenerator.csproj -c Release -- --write Docs/protocol-wire-manifest.generated.json`
 - 提交前及 CI 运行 `--verify`。清单不一致返回非零退出码。
-- `Client_MonoGame.Shared/Share` 中的历史协议副本不再进入 Android 正式构建，只由 `Tests/ShareProtocolCompat` 保留为 PROTO-01 旧 wire 差异夹具；本任务不修改该副本。
+- `src/Clients/Client_MonoGame.Shared/Share` 中的历史协议副本不再进入 Android 正式构建，只由 `Tests/ShareProtocolCompat` 保留为 PROTO-01 旧 wire 差异夹具；本任务不修改该副本。
 - 本矩阵记录当前已实现兼容边界；密钥注入、发布流水线和设备验收分别属于 RELEASE-01～03。

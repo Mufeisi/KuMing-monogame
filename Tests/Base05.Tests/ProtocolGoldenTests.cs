@@ -199,17 +199,17 @@ public sealed class ProtocolGoldenTests
         Assert.Equal("all LevelEffects identifier occurrences in non-protocol C# source", runtimePolicy.GetProperty("scope").GetString());
         Assert.Equal(new[] { "field", "state", "call", "method", "packetRoute" },
             runtimePolicy.GetProperty("includeKinds").EnumerateArray().Select(item => item.GetString()).ToArray());
-        Assert.Equal(new[] { "Shared/", "Client_MonoGame.Shared/Share/" },
+        Assert.Equal(new[] { "Shared/", "src/Clients/Client_MonoGame.Shared/Share/" },
             runtimePolicy.GetProperty("excludedRoots").EnumerateArray().Select(item => item.GetString()).ToArray());
-        Assert.Equal("Client_VorticeDX11/", runtimePolicy.GetProperty("platforms").GetProperty("pc").GetString());
-        Assert.Equal("Client_MonoGame.Shared/ (excluding Share/)", runtimePolicy.GetProperty("platforms").GetProperty("mobile").GetString());
+        Assert.Equal("src/Clients/Client_VorticeDX11/", runtimePolicy.GetProperty("platforms").GetProperty("pc").GetString());
+        Assert.Equal("src/Clients/Client_MonoGame.Shared/ (excluding Share/)", runtimePolicy.GetProperty("platforms").GetProperty("mobile").GetString());
         Assert.Equal("Server/", runtimePolicy.GetProperty("platforms").GetProperty("server").GetString());
         Assert.Equal(17, runtimeUses.Count(item => item.GetProperty("side").GetString() == "pc"));
         Assert.Equal(11, runtimeUses.Count(item => item.GetProperty("side").GetString() == "mobile"));
         Assert.Equal(18, runtimeUses.Count(item => item.GetProperty("side").GetString() == "server"));
-        Assert.Contains(runtimeUses, item => item.GetProperty("source").GetString() == "Client_VorticeDX11/MirScenes/GameScene.cs:1938");
-        Assert.Contains(runtimeUses, item => item.GetProperty("source").GetString() == "Client_MonoGame.Shared/MirScenes/GameScene.cs:3332");
-        Assert.Contains(runtimeUses, item => item.GetProperty("source").GetString() == "Client_MonoGame.Shared/MirScenes/GameScene.cs:7110");
+        Assert.Contains(runtimeUses, item => item.GetProperty("source").GetString() == "src/Clients/Client_VorticeDX11/MirScenes/GameScene.cs:1938");
+        Assert.Contains(runtimeUses, item => item.GetProperty("source").GetString() == "src/Clients/Client_MonoGame.Shared/MirScenes/GameScene.cs:3332");
+        Assert.Contains(runtimeUses, item => item.GetProperty("source").GetString() == "src/Clients/Client_MonoGame.Shared/MirScenes/GameScene.cs:7110");
         Assert.Contains(runtimeUses, item => item.GetProperty("source").GetString() == "Server/MirObjects/PlayerObject.cs:1283");
         Assert.Contains(runtimeUses, item => item.GetProperty("source").GetString() == "Server/MirObjects/HumanObject.cs:1684");
         Assert.Contains(runtimeUses, item => item.GetProperty("source").GetString() == "Server/MirObjects/NPC/NPCSegment.cs:3822");
@@ -260,7 +260,7 @@ public sealed class ProtocolGoldenTests
         Assert.Contains(buffType.GetProperty("wireUses").EnumerateArray(), item => item.GetProperty("packet").GetString() == "Data.ClientBuff");
         foreach (var side in new[] { "Shared", "Share" })
         {
-            var packetPath = side == "Shared" ? "Shared/ServerPackets.cs:" : "Client_MonoGame.Shared/Share/ServerPackets.cs:";
+            var packetPath = side == "Shared" ? "Shared/ServerPackets.cs:" : "src/Clients/Client_MonoGame.Shared/Share/ServerPackets.cs:";
             var removeBuff = buffType.GetProperty("wireUses").EnumerateArray()
                 .Single(item => item.GetProperty("side").GetString() == side && item.GetProperty("packet").GetString() == "RemoveBuff");
             Assert.Contains(removeBuff.GetProperty("occurrences").EnumerateArray(), occurrence =>
@@ -293,34 +293,34 @@ public sealed class ProtocolGoldenTests
         Assert.Equal(0, levelEffects.GetProperty("criticalValues").GetProperty("Phoenix").GetProperty("shareValueAfterByteCast").GetInt32());
         var expectedRuntimeUses = new[]
         {
-            (Side: "pc", Source: "Client_VorticeDX11/MirObjects/UserObject.cs:93", Expression: "LevelEffects = info.LevelEffects;"),
-            (Side: "pc", Source: "Client_VorticeDX11/MirScenes/GameScene.cs:1938", Expression: "case (short)ServerPacketIds.ObjectLevelEffects:"),
-            (Side: "pc", Source: "Client_VorticeDX11/MirScenes/GameScene.cs:1939", Expression: "ObjectLevelEffects((S.ObjectLevelEffects)p);"),
-            (Side: "pc", Source: "Client_VorticeDX11/MirScenes/GameScene.cs:5542", Expression: "private void ObjectLevelEffects(S.ObjectLevelEffects p)"),
-            (Side: "pc", Source: "Client_VorticeDX11/MirScenes/GameScene.cs:5551", Expression: "temp.LevelEffects = p.LevelEffects;"),
-            (Side: "pc", Source: "Client_VorticeDX11/MirObjects/PlayerObject.cs:106", Expression: "public LevelEffects LevelEffects;"),
-            (Side: "pc", Source: "Client_VorticeDX11/MirObjects/PlayerObject.cs:162", Expression: "LevelEffects = info.LevelEffects;"),
-            (Side: "pc", Source: "Client_VorticeDX11/MirObjects/PlayerObject.cs:723", Expression: "if (LevelEffects == LevelEffects.None) return;"),
-            (Side: "pc", Source: "Client_VorticeDX11/MirObjects/PlayerObject.cs:726", Expression: "if (LevelEffects.HasFlag(LevelEffects.BlueDragon))"),
-            (Side: "pc", Source: "Client_VorticeDX11/MirObjects/PlayerObject.cs:734", Expression: "if (LevelEffects.HasFlag(LevelEffects.RedDragon))"),
-            (Side: "pc", Source: "Client_VorticeDX11/MirObjects/PlayerObject.cs:742", Expression: "if (LevelEffects.HasFlag(LevelEffects.Mist))"),
-            (Side: "pc", Source: "Client_VorticeDX11/MirObjects/PlayerObject.cs:747", Expression: "if (LevelEffects.HasFlag(LevelEffects.Rebirth1))"),
-            (Side: "pc", Source: "Client_VorticeDX11/MirObjects/PlayerObject.cs:754", Expression: "if (LevelEffects.HasFlag(LevelEffects.Rebirth2))"),
-            (Side: "pc", Source: "Client_VorticeDX11/MirObjects/PlayerObject.cs:762", Expression: "if (LevelEffects.HasFlag(LevelEffects.Rebirth3))"),
-            (Side: "pc", Source: "Client_VorticeDX11/MirObjects/PlayerObject.cs:770", Expression: "if (LevelEffects.HasFlag(LevelEffects.NewBlue))"),
-            (Side: "pc", Source: "Client_VorticeDX11/MirObjects/PlayerObject.cs:778", Expression: "if (LevelEffects.HasFlag(LevelEffects.YellowDragon))"),
-            (Side: "pc", Source: "Client_VorticeDX11/MirObjects/PlayerObject.cs:786", Expression: "if (LevelEffects.HasFlag(LevelEffects.Phoenix))"),
-            (Side: "mobile", Source: "Client_MonoGame.Shared/MirObjects/UserObject.cs:94", Expression: "LevelEffects = info.LevelEffects;"),
-            (Side: "mobile", Source: "Client_MonoGame.Shared/MirScenes/GameScene.cs:3332", Expression: "case (short)ServerPacketIds.ObjectLevelEffects:"),
-            (Side: "mobile", Source: "Client_MonoGame.Shared/MirScenes/GameScene.cs:3333", Expression: "ObjectLevelEffects((S.ObjectLevelEffects)p);"),
-            (Side: "mobile", Source: "Client_MonoGame.Shared/MirScenes/GameScene.cs:7110", Expression: "private void ObjectLevelEffects(S.ObjectLevelEffects p)"),
-            (Side: "mobile", Source: "Client_MonoGame.Shared/MirScenes/GameScene.cs:7119", Expression: "temp.LevelEffects = p.LevelEffects;"),
-            (Side: "mobile", Source: "Client_MonoGame.Shared/MirObjects/PlayerObject.cs:114", Expression: "public LevelEffects LevelEffects;"),
-            (Side: "mobile", Source: "Client_MonoGame.Shared/MirObjects/PlayerObject.cs:170", Expression: "LevelEffects = info.LevelEffects;"),
-            (Side: "mobile", Source: "Client_MonoGame.Shared/MirObjects/PlayerObject.cs:731", Expression: "if (LevelEffects == LevelEffects.None) return;"),
-            (Side: "mobile", Source: "Client_MonoGame.Shared/MirObjects/PlayerObject.cs:734", Expression: "if (LevelEffects.HasFlag(LevelEffects.BlueDragon))"),
-            (Side: "mobile", Source: "Client_MonoGame.Shared/MirObjects/PlayerObject.cs:741", Expression: "if (LevelEffects.HasFlag(LevelEffects.RedDragon))"),
-            (Side: "mobile", Source: "Client_MonoGame.Shared/MirObjects/PlayerObject.cs:748", Expression: "if (LevelEffects.HasFlag(LevelEffects.Mist))"),
+            (Side: "pc", Source: "src/Clients/Client_VorticeDX11/MirObjects/UserObject.cs:93", Expression: "LevelEffects = info.LevelEffects;"),
+            (Side: "pc", Source: "src/Clients/Client_VorticeDX11/MirScenes/GameScene.cs:1938", Expression: "case (short)ServerPacketIds.ObjectLevelEffects:"),
+            (Side: "pc", Source: "src/Clients/Client_VorticeDX11/MirScenes/GameScene.cs:1939", Expression: "ObjectLevelEffects((S.ObjectLevelEffects)p);"),
+            (Side: "pc", Source: "src/Clients/Client_VorticeDX11/MirScenes/GameScene.cs:5542", Expression: "private void ObjectLevelEffects(S.ObjectLevelEffects p)"),
+            (Side: "pc", Source: "src/Clients/Client_VorticeDX11/MirScenes/GameScene.cs:5551", Expression: "temp.LevelEffects = p.LevelEffects;"),
+            (Side: "pc", Source: "src/Clients/Client_VorticeDX11/MirObjects/PlayerObject.cs:106", Expression: "public LevelEffects LevelEffects;"),
+            (Side: "pc", Source: "src/Clients/Client_VorticeDX11/MirObjects/PlayerObject.cs:162", Expression: "LevelEffects = info.LevelEffects;"),
+            (Side: "pc", Source: "src/Clients/Client_VorticeDX11/MirObjects/PlayerObject.cs:723", Expression: "if (LevelEffects == LevelEffects.None) return;"),
+            (Side: "pc", Source: "src/Clients/Client_VorticeDX11/MirObjects/PlayerObject.cs:726", Expression: "if (LevelEffects.HasFlag(LevelEffects.BlueDragon))"),
+            (Side: "pc", Source: "src/Clients/Client_VorticeDX11/MirObjects/PlayerObject.cs:734", Expression: "if (LevelEffects.HasFlag(LevelEffects.RedDragon))"),
+            (Side: "pc", Source: "src/Clients/Client_VorticeDX11/MirObjects/PlayerObject.cs:742", Expression: "if (LevelEffects.HasFlag(LevelEffects.Mist))"),
+            (Side: "pc", Source: "src/Clients/Client_VorticeDX11/MirObjects/PlayerObject.cs:747", Expression: "if (LevelEffects.HasFlag(LevelEffects.Rebirth1))"),
+            (Side: "pc", Source: "src/Clients/Client_VorticeDX11/MirObjects/PlayerObject.cs:754", Expression: "if (LevelEffects.HasFlag(LevelEffects.Rebirth2))"),
+            (Side: "pc", Source: "src/Clients/Client_VorticeDX11/MirObjects/PlayerObject.cs:762", Expression: "if (LevelEffects.HasFlag(LevelEffects.Rebirth3))"),
+            (Side: "pc", Source: "src/Clients/Client_VorticeDX11/MirObjects/PlayerObject.cs:770", Expression: "if (LevelEffects.HasFlag(LevelEffects.NewBlue))"),
+            (Side: "pc", Source: "src/Clients/Client_VorticeDX11/MirObjects/PlayerObject.cs:778", Expression: "if (LevelEffects.HasFlag(LevelEffects.YellowDragon))"),
+            (Side: "pc", Source: "src/Clients/Client_VorticeDX11/MirObjects/PlayerObject.cs:786", Expression: "if (LevelEffects.HasFlag(LevelEffects.Phoenix))"),
+            (Side: "mobile", Source: "src/Clients/Client_MonoGame.Shared/MirObjects/UserObject.cs:94", Expression: "LevelEffects = info.LevelEffects;"),
+            (Side: "mobile", Source: "src/Clients/Client_MonoGame.Shared/MirScenes/GameScene.cs:3332", Expression: "case (short)ServerPacketIds.ObjectLevelEffects:"),
+            (Side: "mobile", Source: "src/Clients/Client_MonoGame.Shared/MirScenes/GameScene.cs:3333", Expression: "ObjectLevelEffects((S.ObjectLevelEffects)p);"),
+            (Side: "mobile", Source: "src/Clients/Client_MonoGame.Shared/MirScenes/GameScene.cs:7110", Expression: "private void ObjectLevelEffects(S.ObjectLevelEffects p)"),
+            (Side: "mobile", Source: "src/Clients/Client_MonoGame.Shared/MirScenes/GameScene.cs:7119", Expression: "temp.LevelEffects = p.LevelEffects;"),
+            (Side: "mobile", Source: "src/Clients/Client_MonoGame.Shared/MirObjects/PlayerObject.cs:114", Expression: "public LevelEffects LevelEffects;"),
+            (Side: "mobile", Source: "src/Clients/Client_MonoGame.Shared/MirObjects/PlayerObject.cs:170", Expression: "LevelEffects = info.LevelEffects;"),
+            (Side: "mobile", Source: "src/Clients/Client_MonoGame.Shared/MirObjects/PlayerObject.cs:731", Expression: "if (LevelEffects == LevelEffects.None) return;"),
+            (Side: "mobile", Source: "src/Clients/Client_MonoGame.Shared/MirObjects/PlayerObject.cs:734", Expression: "if (LevelEffects.HasFlag(LevelEffects.BlueDragon))"),
+            (Side: "mobile", Source: "src/Clients/Client_MonoGame.Shared/MirObjects/PlayerObject.cs:741", Expression: "if (LevelEffects.HasFlag(LevelEffects.RedDragon))"),
+            (Side: "mobile", Source: "src/Clients/Client_MonoGame.Shared/MirObjects/PlayerObject.cs:748", Expression: "if (LevelEffects.HasFlag(LevelEffects.Mist))"),
             (Side: "server", Source: "Server/MirObjects/HumanObject.cs:183", Expression: "public LevelEffects LevelEffects = LevelEffects.None;"),
             (Side: "server", Source: "Server/MirObjects/HumanObject.cs:1684", Expression: "public void SetLevelEffects()"),
             (Side: "server", Source: "Server/MirObjects/HumanObject.cs:1686", Expression: "LevelEffects = LevelEffects.None;"),

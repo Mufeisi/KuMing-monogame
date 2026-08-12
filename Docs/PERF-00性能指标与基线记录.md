@@ -24,8 +24,8 @@
 
 | 指标域 | 已接入入口 | 口径与限制 |
 |---|---|---|
-| CPU/Update/Draw | PC `Client_VorticeDX11/Forms/CMain.cs`；移动端 `Client_MonoGame.Shared/CMain.cs`；服务端 `Server/MirEnvir/Envir.cs` | `Begin` 包围同一主循环阶段的墙钟耗时；移动端 `Update` 只包围 `UpdateEnviroment`，输入/UI 的 MonoGame `Update` 不与环境更新混合；三端均不宣称是操作系统进程 CPU 百分比。|
-| DrawCall/TextureSwitch | PC `Client_VorticeDX11/MirGraphics/DXManager.cs`；移动端 `Client_MonoGame.Shared/MirGraphics/SpriteBatchStack.cs` | PC 在实际绘制接缝记录调用，并按 D3D 纹理绑定指针记录切换；移动端标准字段写 `Available=false`，仅记录 `MobileSpriteBatchBegin`/`MobileSpriteBatchStateChange` 代理，不把 Begin 冒充 GPU DrawCall 或纹理运行切换。|
+| CPU/Update/Draw | PC `src/Clients/Client_VorticeDX11/Forms/CMain.cs`；移动端 `src/Clients/Client_MonoGame.Shared/CMain.cs`；服务端 `Server/MirEnvir/Envir.cs` | `Begin` 包围同一主循环阶段的墙钟耗时；移动端 `Update` 只包围 `UpdateEnviroment`，输入/UI 的 MonoGame `Update` 不与环境更新混合；三端均不宣称是操作系统进程 CPU 百分比。|
+| DrawCall/TextureSwitch | PC `src/Clients/Client_VorticeDX11/MirGraphics/DXManager.cs`；移动端 `src/Clients/Client_MonoGame.Shared/MirGraphics/SpriteBatchStack.cs` | PC 在实际绘制接缝记录调用，并按 D3D 纹理绑定指针记录切换；移动端标准字段写 `Available=false`，仅记录 `MobileSpriteBatchBegin`/`MobileSpriteBatchStateChange` 代理，不把 Begin 冒充 GPU DrawCall 或纹理运行切换。|
 | TextureCreate | PC DX11 直接 `CreateTexture2D` 入口；移动端 `MLibrary`、FairyGUI、文本框/场景占位纹理等直接 `new Texture2D`/`FromStream` 入口 | 统计仓库可见的直接创建入口；`Content.Load<Texture2D>` 内部创建由框架管理，当前不宣称已覆盖。|
 | GC/Memory | PC/移动端主循环每秒 `SampleRuntime` | `Memory` 为 `GC.GetTotalMemory(false)`；`Gc`/`GcGen0`/`GcGen1`/`GcGen2` 为会话增量；`GcPause` 为两次采样间累计暂停增量。|
 | GpuMemory | PC `CMain` + `DXManager.TryGetGpuMemoryUsage`；移动端 `CMain` | PC 每秒通过 DXGI 查询本地段实际使用量与预算；移动端后端不可可靠查询时记录 `Available=false` 和原因，不写 0。|
@@ -74,11 +74,11 @@ dotnet test Tests/Base05.Tests/Base05.Tests.csproj --no-restore --nologo
 同日平台构建：
 
 ```text
-dotnet build Client_VorticeDX11/Client_VorticeDX11.csproj --no-restore --nologo
+dotnet build src/Clients/Client_VorticeDX11/Client_VorticeDX11.csproj --no-restore --nologo
 结果：0 错误（既有警告）。
-dotnet build Client_MonoGame.Shared/Client_MonoGame.Shared.csproj -f net10.0 --no-restore --nologo
+dotnet build src/Clients/Client_MonoGame.Shared/Client_MonoGame.Shared.csproj -f net10.0 --no-restore --nologo
 结果：0 错误（既有警告）。
-dotnet build Client_MonoGame.Shared/Client_MonoGame.Shared.csproj -f net10.0-android --no-restore --nologo
+dotnet build src/Clients/Client_MonoGame.Shared/Client_MonoGame.Shared.csproj -f net10.0-android --no-restore --nologo
 结果：0 错误（既有警告）。
 ```
 

@@ -28,7 +28,7 @@ dotnet run --project Tools/ReleaseSigningTool/ReleaseSigningTool.csproj -c Relea
 生成公钥后必须把 SPKI 与序列窗口编译进 `BootstrapManifestTrustConfiguration.TrustedKeys`，再发布同时信任当前/下一密钥的客户端。签名与复验：
 
 ```powershell
-dotnet run --project Tools/ReleaseSigningTool/ReleaseSigningTool.csproj -c Release -- sign-resource-index Client_MonoGame.Shared/BootstrapAssets/bootstrap-package-index.json Docs/ReleaseKeys/bootstrap-package-index.signed.json resource-2026-a 1 1.0.0 Configs/ReleaseSecrets/resource-2026-a.pkcs8.dpapi
+dotnet run --project Tools/ReleaseSigningTool/ReleaseSigningTool.csproj -c Release -- sign-resource-index src/Clients/Client_MonoGame.Shared/BootstrapAssets/bootstrap-package-index.json Docs/ReleaseKeys/bootstrap-package-index.signed.json resource-2026-a 1 1.0.0 Configs/ReleaseSecrets/resource-2026-a.pkcs8.dpapi
 dotnet run --project Tools/ReleaseSigningTool/ReleaseSigningTool.csproj -c Release -- verify-resource-index Docs/ReleaseKeys/bootstrap-package-index.signed.json 1.0.0
 ```
 
@@ -52,7 +52,7 @@ finally {
 签名构建由工具在子进程环境中传递口令，命令行和构建日志不出现口令：
 
 ```powershell
-dotnet run --project Tools/ReleaseSigningTool/ReleaseSigningTool.csproj -c Release -- publish-signed-android Client_MonoGame.Android/Client_MonoGame.Android.csproj Configs/ReleaseSecrets/lyocrystal-android-2026-r2.keystore Configs/ReleaseSecrets/lyocrystal-android-2026-r2-password.dpapi android-apk-2026 lyocrystal-release-2026 Docs/Evidence/GATE-P5/release01-signing-20260810/android-production-signing-build.log
+dotnet run --project Tools/ReleaseSigningTool/ReleaseSigningTool.csproj -c Release -- publish-signed-android src/Clients/Client_MonoGame.Android/Client_MonoGame.Android.csproj Configs/ReleaseSecrets/lyocrystal-android-2026-r2.keystore Configs/ReleaseSecrets/lyocrystal-android-2026-r2-password.dpapi android-apk-2026 lyocrystal-release-2026 Docs/Evidence/GATE-P5/release01-signing-20260810/android-production-signing-build.log
 ```
 
 发布前必须再用 Android SDK `apksigner verify --verbose --print-certs` 验证 APK；资源索引密钥不得被导入 APK keystore，APK keystore 也不得传给资源签名命令。

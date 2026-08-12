@@ -135,7 +135,7 @@ public sealed class MicroGatewayCoreTests
     public async Task 一百个并发流式请求内容一致且全部收敛()
     {
         string repository = FindRepositoryRoot(AppContext.BaseDirectory);
-        string resources = Path.Combine(repository, "Client_MonoGame.Shared", "BootstrapAssets");
+        string resources = Path.Combine(repository, "src", "Clients", "Client_MonoGame.Shared", "BootstrapAssets");
         int port = GetFreePort();
         await using var host = new MicroHttpListenerHost();
         await host.StartAsync($"http://127.0.0.1:{port}/", new MicroGatewayOptions(resources, "reader", "code", NewFileQuarantineSeconds: 0));
@@ -251,7 +251,7 @@ public sealed class MicroGatewayCoreTests
     public async Task 独立网关与内置服务端四类协议响应一致且公开目录只读安全()
     {
         string repository = FindRepositoryRoot(AppContext.BaseDirectory);
-        string resources = Path.Combine(repository, "Client_MonoGame.Shared", "BootstrapAssets");
+        string resources = Path.Combine(repository, "src", "Clients", "Client_MonoGame.Shared", "BootstrapAssets");
         string launcherRoot = Path.Combine(Path.GetTempPath(), "LyoCrystalLauncherPublic", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(launcherRoot);
         await File.WriteAllTextAsync(Path.Combine(launcherRoot, "server-catalog.json"), "{\"sequence\":1}");
@@ -377,7 +377,7 @@ public sealed class MicroGatewayCoreTests
     public async Task 快照和停止覆盖响应体的完整写入周期()
     {
         string repository = FindRepositoryRoot(AppContext.BaseDirectory);
-        string resources = Path.Combine(repository, "Client_MonoGame.Shared", "BootstrapAssets");
+        string resources = Path.Combine(repository, "src", "Clients", "Client_MonoGame.Shared", "BootstrapAssets");
         var core = new MicroGatewayCore();
         await core.StartAsync(new MicroGatewayOptions(resources, "reader", "code", NewFileQuarantineSeconds: 0));
         var headers = new Dictionary<string, string?> { ["user"] = "reader", ["code"] = "code", ["range"] = "bytes=0-31" };

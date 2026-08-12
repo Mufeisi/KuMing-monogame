@@ -16,6 +16,6 @@
     </PackageReference>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\..\Client_VorticeDX11\Client_VorticeDX11.csproj" />
+    <ProjectReference Include="..\..\..\src\Clients\Client_VorticeDX11\Client_VorticeDX11.csproj" />
   </ItemGroup>
 </Project>

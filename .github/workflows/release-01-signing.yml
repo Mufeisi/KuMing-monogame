@@ -53,7 +53,7 @@ jobs:
         shell: pwsh
         run: |
           dotnet restore Tools/ReleaseSigningTool/ReleaseSigningTool.csproj --verbosity minimal
-          dotnet restore Client_MonoGame.Android/Client_MonoGame.Android.csproj --verbosity minimal
+          dotnet restore src/Clients/Client_MonoGame.Android/Client_MonoGame.Android.csproj --verbosity minimal
 
       - name: Validate and normalize release inputs without secrets
         shell: pwsh
@@ -127,7 +127,7 @@ jobs:
           dotnet run --project Tools/ReleaseSigningTool/ReleaseSigningTool.csproj
           --configuration Release --no-restore --
           sign-resource-index
-          Client_MonoGame.Shared/BootstrapAssets/bootstrap-package-index.json
+          src/Clients/Client_MonoGame.Shared/BootstrapAssets/bootstrap-package-index.json
           ${{ runner.temp }}/bootstrap-package-index.signed.json
           resource-2026-a
           $env:RELEASE_SEQUENCE
@@ -143,7 +143,7 @@ jobs:
           dotnet run --project Tools/ReleaseSigningTool/ReleaseSigningTool.csproj
           --configuration Release --no-restore --
           sign-resource-index
-          Client_MonoGame.Shared/BootstrapAssets/bootstrap-package-index.json
+          src/Clients/Client_MonoGame.Shared/BootstrapAssets/bootstrap-package-index.json
           ${{ runner.temp }}/bootstrap-package-index.signed.json
           resource-2026-b
           $env:RELEASE_SEQUENCE
@@ -166,7 +166,7 @@ jobs:
           LYOCRYSTAL_APK_KEY_PASSWORD: ${{ secrets.LYOCRYSTAL_ANDROID_KEY_PASSWORD }}
           LYOCRYSTAL_APK_KEY_ALIAS: ${{ secrets.LYOCRYSTAL_ANDROID_KEY_ALIAS }}
         run: >-
-          dotnet publish Client_MonoGame.Android/Client_MonoGame.Android.csproj
+          dotnet publish src/Clients/Client_MonoGame.Android/Client_MonoGame.Android.csproj
           -f net10.0-android -c Release -r android-arm64 --no-restore
           -p:MobileBootstrapAssetMode=Micro
           -p:AndroidPackageFormat=apk
@@ -183,7 +183,7 @@ jobs:
       - name: Verify APK signature
         shell: pwsh
         run: |
-          $apks = @(Get-ChildItem 'Client_MonoGame.Android/bin/Release/net10.0-android/android-arm64/publish' -Filter '*-Signed.apk' -File)
+          $apks = @(Get-ChildItem 'src/Clients/Client_MonoGame.Android/bin/Release/net10.0-android/android-arm64/publish' -Filter '*-Signed.apk' -File)
           $signer = Get-ChildItem $env:ANDROID_HOME -Filter 'apksigner*' -File -Recurse | Sort-Object FullName -Descending | Select-Object -First 1
           if ($apks.Count -ne 1 -or $null -eq $signer) { throw "签名 APK 数量必须为 1 且必须存在 apksigner；APK 数量=$($apks.Count)。" }
           & $signer.FullName verify --verbose --print-certs $apks[0].FullName
@@ -195,7 +195,7 @@ jobs:
           name: release-01-signed-artifacts
           path: |
             ${{ runner.temp }}/bootstrap-package-index.signed.json
-            Client_MonoGame.Android/bin/Release/net10.0-android/android-arm64/publish/*-Signed.apk
+            src/Clients/Client_MonoGame.Android/bin/Release/net10.0-android/android-arm64/publish/*-Signed.apk
           if-no-files-found: error
           retention-days: 7
 

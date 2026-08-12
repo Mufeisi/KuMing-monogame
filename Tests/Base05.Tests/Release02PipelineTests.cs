@@ -16,7 +16,7 @@ public sealed class Release02PipelineTests
         string script = File.ReadAllText(Path.Combine(FindRepositoryRoot(), "Tools", "Invoke-Release02.ps1"));
 
         Assert.Contains("dotnet' @('test'", script, StringComparison.Ordinal);
-        Assert.Contains("dotnet' @('publish', 'Client_VorticeDX11/Client_VorticeDX11.csproj'", script, StringComparison.Ordinal);
+        Assert.Contains("dotnet' @('publish', 'src/Clients/Client_VorticeDX11/Client_VorticeDX11.csproj'", script, StringComparison.Ordinal);
         Assert.Contains("dotnet' @('publish', 'Server.MirForms/Server.csproj'", script, StringComparison.Ordinal);
         Assert.Contains("Mobile-BootstrapPackageRepoExport.ps1", script, StringComparison.Ordinal);
         Assert.Contains("sign-resource-index", script, StringComparison.Ordinal);
@@ -33,9 +33,9 @@ public sealed class Release02PipelineTests
         Assert.Contains("/release/select", script, StringComparison.Ordinal);
         Assert.Contains("/release/events", script, StringComparison.Ordinal);
 
-        string pc = File.ReadAllText(Path.Combine(FindRepositoryRoot(), "Client_VorticeDX11", "Bootstrap", "PcBootstrapPreLoginUpdateService.cs"));
-        string mobile = File.ReadAllText(Path.Combine(FindRepositoryRoot(), "Client_MonoGame.Shared", "ClientResourceLayout.cs"));
-        string mobileRuntime = File.ReadAllText(Path.Combine(FindRepositoryRoot(), "Client_MonoGame.Shared", "BootstrapPackageRuntime.cs"));
+        string pc = File.ReadAllText(Path.Combine(FindRepositoryRoot(), "src", "Clients", "Client_VorticeDX11", "Bootstrap", "PcBootstrapPreLoginUpdateService.cs"));
+        string mobile = File.ReadAllText(Path.Combine(FindRepositoryRoot(), "src", "Clients", "Client_MonoGame.Shared", "ClientResourceLayout.cs"));
+        string mobileRuntime = File.ReadAllText(Path.Combine(FindRepositoryRoot(), "src", "Clients", "Client_MonoGame.Shared", "BootstrapPackageRuntime.cs"));
         Assert.Contains("InstallExtractedPackagesToClient(preparedPackages, stateEntries)", pc, StringComparison.Ordinal);
         Assert.DoesNotContain("InstallExtractedPackageToClient(stagingRoot, packageName)", pc, StringComparison.Ordinal);
         Assert.Contains("updatePackages.All(signedBundles.ContainsKey)", mobile, StringComparison.Ordinal);
@@ -50,7 +50,7 @@ public sealed class Release02PipelineTests
         int callbackEnd = mobileRuntime.IndexOf("ClientResourceLayout.ReloadBootstrapMetadata();", callbackStart, StringComparison.Ordinal);
         Assert.DoesNotContain("TryApplyPackageBundleFromDirectory", mobileRuntime[callbackStart..callbackEnd], StringComparison.Ordinal);
 
-        string mobileUpdate = File.ReadAllText(Path.Combine(FindRepositoryRoot(), "Client_MonoGame.Shared", "BootstrapPackageUpdateService.cs"));
+        string mobileUpdate = File.ReadAllText(Path.Combine(FindRepositoryRoot(), "src", "Clients", "Client_MonoGame.Shared", "BootstrapPackageUpdateService.cs"));
         Assert.Contains("BootstrapPackageUpdateRuntime.SignedPackageIndexFileName", mobileUpdate, StringComparison.Ordinal);
         Assert.Contains("签名更新是整版事务", mobile, StringComparison.Ordinal);
     }

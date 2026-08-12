@@ -54,12 +54,12 @@ public sealed class ProtocolGeneratedManifestTests
     public void CompatibilityMatrixMatchesTrackedRuntimeVersions()
     {
         string repositoryRoot = FindRepositoryRoot(AppContext.BaseDirectory);
-        string pcLayout = File.ReadAllText(Path.Combine(repositoryRoot, "Client_VorticeDX11", "Bootstrap", "PcBootstrapLayout.cs"));
-        string mobileLayout = File.ReadAllText(Path.Combine(repositoryRoot, "Client_MonoGame.Shared", "ClientResourceLayout.cs"));
+        string pcLayout = File.ReadAllText(Path.Combine(repositoryRoot, "src", "Clients", "Client_VorticeDX11", "Bootstrap", "PcBootstrapLayout.cs"));
+        string mobileLayout = File.ReadAllText(Path.Combine(repositoryRoot, "src", "Clients", "Client_MonoGame.Shared", "ClientResourceLayout.cs"));
         string serverSettings = File.ReadAllText(Path.Combine(repositoryRoot, "Server", "Settings.cs"));
         using JsonDocument index = JsonDocument.Parse(File.ReadAllText(Path.Combine(
-            repositoryRoot, "Client_MonoGame.Shared", "BootstrapAssets", "bootstrap-package-index.json")));
-        XDocument androidProject = XDocument.Load(Path.Combine(repositoryRoot, "Client_MonoGame.Android", "Client_MonoGame.Android.csproj"));
+            repositoryRoot, "src", "Clients", "Client_MonoGame.Shared", "BootstrapAssets", "bootstrap-package-index.json")));
+        XDocument androidProject = XDocument.Load(Path.Combine(repositoryRoot, "src", "Clients", "Client_MonoGame.Android", "Client_MonoGame.Android.csproj"));
 
         Assert.Contains("ClientCompatibilityVersion { get; } = new Version(1, 0, 0)", pcLayout, StringComparison.Ordinal);
         Assert.Contains("BootstrapClientCompatibilityVersion { get; } = new Version(2, 0, 0)", mobileLayout, StringComparison.Ordinal);
@@ -74,7 +74,7 @@ public sealed class ProtocolGeneratedManifestTests
     public void AndroidFormalBuildLinksCanonicalSharedProtocolSources()
     {
         string repositoryRoot = FindRepositoryRoot(AppContext.BaseDirectory);
-        string projectPath = Path.Combine(repositoryRoot, "Client_MonoGame.Shared", "Client_MonoGame.Shared.csproj");
+        string projectPath = Path.Combine(repositoryRoot, "src", "Clients", "Client_MonoGame.Shared", "Client_MonoGame.Shared.csproj");
         XDocument project = XDocument.Load(projectPath);
         string[] androidIncludes = project.Descendants("ItemGroup")
             .Where(group => ((string?)group.Attribute("Condition"))?.Contains("'$(TargetFramework)' == 'net10.0-android'", StringComparison.Ordinal) == true)
@@ -83,10 +83,10 @@ public sealed class ProtocolGeneratedManifestTests
             .ToArray();
 
         Assert.DoesNotContain(androidIncludes, include => include.Contains("Share\\**\\*.cs", StringComparison.OrdinalIgnoreCase));
-        Assert.Contains("..\\Shared\\Packet.cs", androidIncludes);
-        Assert.Contains("..\\Shared\\ClientPackets.cs", androidIncludes);
-        Assert.Contains("..\\Shared\\ServerPackets.cs", androidIncludes);
-        Assert.Contains("..\\Shared\\Enums.cs", androidIncludes);
+        Assert.Contains("..\\..\\..\\Shared\\Packet.cs", androidIncludes);
+        Assert.Contains("..\\..\\..\\Shared\\ClientPackets.cs", androidIncludes);
+        Assert.Contains("..\\..\\..\\Shared\\ServerPackets.cs", androidIncludes);
+        Assert.Contains("..\\..\\..\\Shared\\Enums.cs", androidIncludes);
         Assert.Contains("Share\\Language.cs", androidIncludes);
         Assert.Contains("Share\\Functions\\IniReader.cs", androidIncludes);
 
@@ -96,7 +96,7 @@ public sealed class ProtocolGeneratedManifestTests
             .ToArray();
         Assert.Equal(["Share\\Functions\\IniReader.cs", "Share\\Language.cs"], retainedForkFiles);
 
-        AssertReferencesSharedProject(Path.Combine(repositoryRoot, "Client_VorticeDX11", "Client_VorticeDX11.csproj"));
+        AssertReferencesSharedProject(Path.Combine(repositoryRoot, "src", "Clients", "Client_VorticeDX11", "Client_VorticeDX11.csproj"));
         AssertReferencesSharedProject(Path.Combine(repositoryRoot, "Server", "Server.Library.csproj"));
     }
 

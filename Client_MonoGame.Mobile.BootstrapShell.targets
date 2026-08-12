@@ -1,6 +1,6 @@
 <Project>
   <PropertyGroup>
-    <BootstrapSharedRoot>$(MSBuildThisFileDirectory)Client_MonoGame.Shared\BootstrapAssets\</BootstrapSharedRoot>
+    <BootstrapSharedRoot>$(MSBuildThisFileDirectory)src\Clients\Client_MonoGame.Shared\BootstrapAssets\</BootstrapSharedRoot>
   </PropertyGroup>
 
   <ItemGroup>

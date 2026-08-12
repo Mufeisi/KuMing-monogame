@@ -39,20 +39,20 @@
     <None Include="..\..\Docs\Compliance\Licenses\**\*" Link="Compliance\Licenses\%(RecursiveDir)%(Filename)%(Extension)">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <Compile Include="..\..\Client_MonoGame.Shared\MirScenes\GameShopState.cs" Link="Mobile\GameShopState.cs" />
-    <Compile Include="..\..\Client_MonoGame.Shared\MirScenes\MobileHeroState.cs" Link="Mobile\MobileHeroState.cs" />
-    <Compile Include="..\..\Client_MonoGame.Shared\MirScenes\MobileMentorState.cs" Link="Mobile\MobileMentorState.cs" />
-    <Compile Include="..\..\Client_MonoGame.Shared\MirScenes\MobileMarriageState.cs" Link="Mobile\MobileMarriageState.cs" />
-    <Compile Include="..\..\Client_MonoGame.Shared\MirScenes\MobileMountState.cs" Link="Mobile\MobileMountState.cs" />
-    <Compile Include="..\..\Client_MonoGame.Shared\MirScenes\MobileFishingState.cs" Link="Mobile\MobileFishingState.cs" />
-    <Compile Include="..\..\Client_MonoGame.Shared\MirScenes\MobileSealRentalState.cs" Link="Mobile\MobileSealRentalState.cs" />
-    <Compile Include="..\..\Client_MonoGame.Shared\MirScenes\MobileActivityState.cs" Link="Mobile\MobileActivityState.cs" />
-    <Compile Include="..\..\Client_MonoGame.Shared\MirScenes\MobileActivityRewardSelection.cs" Link="Mobile\MobileActivityRewardSelection.cs" />
-    <Compile Include="..\..\Client_MonoGame.Shared\MirScenes\MobileSealRentalLayout.cs" Link="Mobile\MobileSealRentalLayout.cs" />
-    <Compile Include="..\..\Client_MonoGame.Shared\UI\FairyGui\MobileMainHudFallbackLayout.cs" Link="Mobile\MobileMainHudFallbackLayout.cs" />
-    <Compile Include="..\..\Client_MonoGame.Shared\UI\FairyGui\MobileQuestContextState.cs" Link="Mobile\MobileQuestContextState.cs" />
-    <Compile Include="..\..\Client_MonoGame.Shared\UI\FairyGui\MobileMountInventoryPolicy.cs" Link="Mobile\MobileMountInventoryPolicy.cs" />
-    <Compile Include="..\..\Client_MonoGame.Shared\UI\FairyGui\MobileFishingInventoryPolicy.cs" Link="Mobile\MobileFishingInventoryPolicy.cs" />
+    <Compile Include="..\..\src\Clients\Client_MonoGame.Shared\MirScenes\GameShopState.cs" Link="Mobile\GameShopState.cs" />
+    <Compile Include="..\..\src\Clients\Client_MonoGame.Shared\MirScenes\MobileHeroState.cs" Link="Mobile\MobileHeroState.cs" />
+    <Compile Include="..\..\src\Clients\Client_MonoGame.Shared\MirScenes\MobileMentorState.cs" Link="Mobile\MobileMentorState.cs" />
+    <Compile Include="..\..\src\Clients\Client_MonoGame.Shared\MirScenes\MobileMarriageState.cs" Link="Mobile\MobileMarriageState.cs" />
+    <Compile Include="..\..\src\Clients\Client_MonoGame.Shared\MirScenes\MobileMountState.cs" Link="Mobile\MobileMountState.cs" />
+    <Compile Include="..\..\src\Clients\Client_MonoGame.Shared\MirScenes\MobileFishingState.cs" Link="Mobile\MobileFishingState.cs" />
+    <Compile Include="..\..\src\Clients\Client_MonoGame.Shared\MirScenes\MobileSealRentalState.cs" Link="Mobile\MobileSealRentalState.cs" />
+    <Compile Include="..\..\src\Clients\Client_MonoGame.Shared\MirScenes\MobileActivityState.cs" Link="Mobile\MobileActivityState.cs" />
+    <Compile Include="..\..\src\Clients\Client_MonoGame.Shared\MirScenes\MobileActivityRewardSelection.cs" Link="Mobile\MobileActivityRewardSelection.cs" />
+    <Compile Include="..\..\src\Clients\Client_MonoGame.Shared\MirScenes\MobileSealRentalLayout.cs" Link="Mobile\MobileSealRentalLayout.cs" />
+    <Compile Include="..\..\src\Clients\Client_MonoGame.Shared\UI\FairyGui\MobileMainHudFallbackLayout.cs" Link="Mobile\MobileMainHudFallbackLayout.cs" />
+    <Compile Include="..\..\src\Clients\Client_MonoGame.Shared\UI\FairyGui\MobileQuestContextState.cs" Link="Mobile\MobileQuestContextState.cs" />
+    <Compile Include="..\..\src\Clients\Client_MonoGame.Shared\UI\FairyGui\MobileMountInventoryPolicy.cs" Link="Mobile\MobileMountInventoryPolicy.cs" />
+    <Compile Include="..\..\src\Clients\Client_MonoGame.Shared\UI\FairyGui\MobileFishingInventoryPolicy.cs" Link="Mobile\MobileFishingInventoryPolicy.cs" />
     <ProjectReference Include="..\..\Shared\Shared.csproj" />
     <ProjectReference Include="..\..\Server\Server.Library.csproj" />
     <ProjectReference Include="..\..\Tools\ReleaseSigningTool\ReleaseSigningTool.csproj"
