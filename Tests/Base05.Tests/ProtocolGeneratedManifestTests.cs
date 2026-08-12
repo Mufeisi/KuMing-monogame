@@ -15,7 +15,7 @@ public sealed class ProtocolGeneratedManifestTests
         using JsonDocument document = JsonDocument.Parse(File.ReadAllText(path));
         JsonElement root = document.RootElement;
 
-        Assert.Equal("PROTO-02.generated-wire-manifest.v1", root.GetProperty("schemaVersion").GetString());
+        Assert.Equal("PROTO-02.generated-wire-manifest.v2", root.GetProperty("schemaVersion").GetString());
         JsonElement coverage = root.GetProperty("coverage");
         Assert.Equal(145, coverage.GetProperty("clientPacketCount").GetInt32());
         Assert.Equal(275, coverage.GetProperty("serverPacketCount").GetInt32());
