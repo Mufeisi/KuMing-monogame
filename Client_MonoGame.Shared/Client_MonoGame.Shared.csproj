@@ -3,7 +3,9 @@
 
   <PropertyGroup>
     <EnableIosTarget Condition="'$(EnableIosTarget)' == ''">false</EnableIosTarget>
-    <TargetFrameworks>net10.0;net10.0-android</TargetFrameworks>
+    <EnableAndroidTarget Condition="'$(EnableAndroidTarget)' == ''">true</EnableAndroidTarget>
+    <TargetFrameworks>net10.0</TargetFrameworks>
+    <TargetFrameworks Condition="'$(EnableAndroidTarget)' == 'true'">net10.0;net10.0-android</TargetFrameworks>
     <TargetFrameworks Condition="'$(EnableIosTarget)' == 'true'">net10.0;net10.0-ios</TargetFrameworks>
     <ImplicitUsings>disable</ImplicitUsings>
     <Nullable>enable</Nullable>

@@ -106,7 +106,9 @@ jobs:
           Write-Host "Verified $($diskProjects.Count) projects in Legend of Mir.sln."
 
       - name: Restore SEC-01 client integration tests
-        run: dotnet restore WindowsIntegration/Sec01.ClientIntegration/Sec01.ClientIntegration.Windows.csproj --verbosity minimal
+        run: >-
+          dotnet restore WindowsIntegration/Sec01.ClientIntegration/Sec01.ClientIntegration.Windows.csproj
+          -p:EnableAndroidTarget=false --verbosity minimal
 
       - name: Restore SEC-02 server config integration tests
         run: dotnet restore WindowsIntegration/Sec02.ServerConfigIntegration/Sec02.ServerConfigIntegration.Windows.csproj --verbosity minimal
@@ -118,7 +120,9 @@ jobs:
         run: dotnet build LyoCrystal.Windows.slnf --configuration Release --no-restore --verbosity minimal
 
       - name: Run SEC-01 client integration tests
-        run: dotnet test WindowsIntegration/Sec01.ClientIntegration/Sec01.ClientIntegration.Windows.csproj --configuration Release --no-restore --verbosity minimal
+        run: >-
+          dotnet test WindowsIntegration/Sec01.ClientIntegration/Sec01.ClientIntegration.Windows.csproj
+          --configuration Release --no-restore -p:EnableAndroidTarget=false --verbosity minimal
 
       - name: Run SEC-02 server config integration tests
         run: dotnet test WindowsIntegration/Sec02.ServerConfigIntegration/Sec02.ServerConfigIntegration.Windows.csproj --configuration Release --no-restore --verbosity minimal
@@ -198,7 +202,8 @@ jobs:
 
   general-tests:
     name: General tests (discovered projects)
-    runs-on: ubuntu-latest
+    # Base05 覆盖 DPAPI、Windows 卷隔离与真实 Windows 进程，必须在产品支持平台运行。
+    runs-on: windows-latest
     timeout-minutes: 20
     steps:
       - name: Checkout
