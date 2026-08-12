@@ -46,6 +46,29 @@ jobs:
       - name: Restore Windows solution filter
         run: dotnet restore LyoCrystal.Windows.slnf --verbosity minimal
 
+      - name: Verify solution project inventory
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $diskProjects = @(
+            Get-ChildItem -Path . -Recurse -Filter *.csproj -File |
+              Where-Object { $_.FullName -notmatch '[\\/](bin|obj|Build|artifacts|graphify-out|_archived)[\\/]' } |
+              ForEach-Object { [IO.Path]::GetRelativePath((Get-Location).Path, $_.FullName).Replace('/', '\') } |
+              Sort-Object
+          )
+          $solutionProjects = @(
+            dotnet sln 'Legend of Mir.sln' list |
+              Where-Object { $_ -match '\.csproj$' } |
+              ForEach-Object { $_.Trim().Replace('/', '\') } |
+              Sort-Object
+          )
+          $difference = @(Compare-Object $solutionProjects $diskProjects)
+          if ($difference.Count -ne 0) {
+            $difference | Format-Table -AutoSize
+            throw '磁盘工程与 Legend of Mir.sln 不一致。新增、移动或删除工程时必须同步主解决方案。'
+          }
+          Write-Host "Verified $($diskProjects.Count) projects in Legend of Mir.sln."
+
       - name: Restore SEC-01 client integration tests
         run: dotnet restore WindowsIntegration/Sec01.ClientIntegration/Sec01.ClientIntegration.Windows.csproj --verbosity minimal
 
