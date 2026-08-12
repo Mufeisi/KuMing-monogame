@@ -27,7 +27,7 @@
 			<Choose>
 				<When Condition="$([MSBuild]::IsOSPlatform('Windows'))">
 					<PropertyGroup>
-						<OutputPath>..\Build\Server Tools\LibraryEditor</OutputPath>
+						<OutputPath>..\..\..\Build\Server Tools\LibraryEditor</OutputPath>
 					</PropertyGroup>
 				</When>
 				<When Condition="$([MSBuild]::IsOSPlatform('OSX'))">
@@ -50,15 +50,15 @@
 
 	<ItemGroup>
 		<ProjectReference Include="..\Controls\FixedListViewControl\CustomFormControl.csproj" />
-		<ProjectReference Include="..\Shared\Shared.csproj" />
+		<ProjectReference Include="..\..\..\Shared\Shared.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>
 		<Reference Include="Ionic.Zlib">
-			<HintPath>..\Components\dotnet zlib\Ionic.Zlib.dll</HintPath>
+			<HintPath>..\..\..\third-party\Components\dotnet zlib\Ionic.Zlib.dll</HintPath>
 		</Reference>
 		<Reference Include="ManagedSquish">
-			<HintPath>..\Components\Squish 2.0\ManagedSquish.dll</HintPath>
+			<HintPath>..\..\..\third-party\Components\Squish 2.0\ManagedSquish.dll</HintPath>
 		</Reference>
 	</ItemGroup>
 
