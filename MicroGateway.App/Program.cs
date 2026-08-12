@@ -11,10 +11,10 @@ internal static class Program
         {
             try
             {
-                GatewayProjectConfiguration operationProject = GatewayProjectConfiguration.TryLoad(AppContext.BaseDirectory) ?? throw new InvalidDataException("gateway-project.json 无效");
+                GatewayProjectConfiguration operationProject = GatewayProjectConfiguration.TryLoad(AppContext.BaseDirectory) ?? throw new InvalidDataException("微端部署配置无效");
                 if (args[0] == "--configure-network")
                 {
-                    string callerSid = args.Length == 3 ? args[2] : (System.Security.Principal.WindowsIdentity.GetCurrent().User?.Value ?? throw new InvalidOperationException("无法读取当前用户 SID。"));
+                    string callerSid = args.Length == 3 ? args[2] : (System.Security.Principal.WindowsIdentity.GetCurrent().User?.Value ?? throw new InvalidOperationException("无法读取当前用户身份。"));
                     WindowsGatewayOperations.ConfigureNetwork(operationProject, callerSid);
                 }
                 else if (args[0] == "--rollback-network") WindowsGatewayOperations.RollbackNetwork(operationProject);

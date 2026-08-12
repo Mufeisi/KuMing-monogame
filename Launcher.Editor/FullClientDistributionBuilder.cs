@@ -7,8 +7,9 @@ namespace LyoCrystal.LauncherEditor;
 
 public static class FullClientDistributionBuilder
 {
-    public static void Create(EditorProject project, string playerEntryExe, string outputZip)
+    public static void Create(EditorProject project, string playerEntryExe, string outputZip, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         if (project.DeliveryMode != ClientDeliveryMode.FullClient) throw new InvalidOperationException("当前项目不是完整客户端交付模式");
         string root = Path.GetFullPath(project.ImportedClientDirectory);
         string entry = Path.GetFullPath(playerEntryExe);
@@ -31,19 +32,30 @@ public static class FullClientDistributionBuilder
             int count = 0; long total = 0;
             foreach (string file in EnumerateFilesSafe(root))
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 if (++count > 200_000) throw new InvalidDataException("完整客户端文件数量超过限制");
                 long length = new FileInfo(file).Length;
-                if ((total = checked(total + length)) > 32L * 1024 * 1024 * 1024) throw new InvalidDataException("完整客户端总量超过 32 GiB 限制");
-                archive.CreateEntryFromFile(file, "Client/" + Path.GetRelativePath(root, file).Replace('\\', '/'), CompressionLevel.Optimal);
+                if ((total = checked(total + length)) > 32L * 1024 * 1024 * 1024) throw new InvalidDataException("完整客户端总量超过 32 吉字节限制");
+                AddFile(archive, file, "Client/" + Path.GetRelativePath(root, file).Replace('\\', '/'), cancellationToken);
             }
-            archive.CreateEntryFromFile(entry, Path.GetFileName(entry), CompressionLevel.Optimal);
+            AddFile(archive, entry, Path.GetFileName(entry), cancellationToken);
             ZipArchiveEntry note = archive.CreateEntry("使用说明.txt", CompressionLevel.Optimal);
             using var writer = new StreamWriter(note.Open(), new System.Text.UTF8Encoding(false));
-            writer.WriteLine("解压全部文件后，双击根目录中的玩家入口 EXE。玩家不能在启动器中切换交付模式。");
+            writer.WriteLine("解压全部文件后，双击根目录中的玩家启动器。玩家不能自行切换下载方式。");
         }
         catch { if (File.Exists(temporary)) File.Delete(temporary); throw; }
         finally { if (Directory.Exists(entryProbe)) { RejectReparseChain(entryProbe); Directory.Delete(entryProbe, true); } }
         File.Move(temporary, target, overwrite: true);
+    }
+
+    private static void AddFile(ZipArchive archive, string source, string name, CancellationToken cancellationToken)
+    {
+        ZipArchiveEntry entry = archive.CreateEntry(name, CompressionLevel.Optimal);
+        using Stream input = new FileStream(source, FileMode.Open, FileAccess.Read, FileShare.Read);
+        using Stream output = entry.Open();
+        byte[] buffer = new byte[1024 * 1024];
+        int read;
+        while ((read = input.Read(buffer, 0, buffer.Length)) > 0) { cancellationToken.ThrowIfCancellationRequested(); output.Write(buffer, 0, read); }
     }
 
     private static IEnumerable<string> EnumerateFilesSafe(string root)

@@ -60,7 +60,7 @@ internal static class WindowsGatewayOperations
     public static void InstallService(string executablePath, string code)
     {
         string directory = Path.GetDirectoryName(executablePath)!;
-        GatewayProjectConfiguration project = GatewayProjectConfiguration.TryLoad(directory) ?? throw new InvalidDataException("gateway-project.json 无效");
+        GatewayProjectConfiguration project = GatewayProjectConfiguration.TryLoad(directory) ?? throw new InvalidDataException("微端部署配置无效");
         string name = ServiceName(project.ProjectId);
         string statePath = ServiceStatePath();
         ServiceInstallState? existingState = LoadServiceState(statePath);
@@ -71,7 +71,7 @@ internal static class WindowsGatewayOperations
             if (existingState is null || existingState.ProjectId != project.ProjectId || existingState.ServiceName != name ||
                 !string.Equals(existingState.ExecutablePath, Path.GetFullPath(executablePath), StringComparison.OrdinalIgnoreCase) ||
                 !ServiceConfigurationMatches(configuration, existingState.ExecutablePath))
-                throw new InvalidOperationException("同名 Windows Service 不属于当前部署包，未做任何修改。");
+                throw new InvalidOperationException("同名系统服务不属于当前部署包，未做任何修改。");
             if (existingState.Completed)
             {
                 if (GetServiceState(name) != 4) Run("sc.exe", ["start", name]);
@@ -79,7 +79,7 @@ internal static class WindowsGatewayOperations
                 return;
             }
         }
-        if (string.IsNullOrEmpty(code)) throw new InvalidOperationException("未找到微端访问 Code，请先运行 GUI 完成凭据导入。");
+        if (string.IsNullOrEmpty(code)) throw new InvalidOperationException("未找到微端访问密码，请先运行图形界面完成凭据导入。");
         project.WriteServiceSecret(directory, code);
         ServiceInstallState state = existingState ?? new ServiceInstallState(project.ProjectId, name, Path.GetFullPath(executablePath), false, false);
         SaveServiceState(statePath, state);
@@ -87,12 +87,12 @@ internal static class WindowsGatewayOperations
         {
             if (!exists)
             {
-                Run("sc.exe", ["create", name, "binPath=", $"\"{executablePath}\" --service", "start=", "auto", "obj=", "LocalSystem", "DisplayName=", $"LyoCrystal 微端 {project.ProjectId}"]);
+                Run("sc.exe", ["create", name, "binPath=", $"\"{executablePath}\" --service", "start=", "auto", "obj=", "LocalSystem", "DisplayName=", $"传奇微端 {project.ProjectId}"]);
                 state = state with { Created = true }; SaveServiceState(statePath, state);
             }
             else if (!state.Created) { state = state with { Created = true }; SaveServiceState(statePath, state); }
             Run("sc.exe", ["sidtype", name, "unrestricted"]);
-            Run("sc.exe", ["description", name, "LyoCrystal 微端资源只读网关"]);
+            Run("sc.exe", ["description", name, "传奇微端资源只读网关"]);
             if (GetServiceState(name) != 4) Run("sc.exe", ["start", name]);
             if (!WaitServiceState(name, 4, TimeSpan.FromSeconds(15))) throw new InvalidOperationException("服务未在规定时间内进入运行状态。");
             SaveServiceState(statePath, state with { Completed = true });
@@ -107,7 +107,7 @@ internal static class WindowsGatewayOperations
 
     public static void UninstallService()
     {
-        GatewayProjectConfiguration project = GatewayProjectConfiguration.TryLoad(AppContext.BaseDirectory) ?? throw new InvalidDataException("gateway-project.json 无效");
+        GatewayProjectConfiguration project = GatewayProjectConfiguration.TryLoad(AppContext.BaseDirectory) ?? throw new InvalidDataException("微端部署配置无效");
         string name = ServiceName(project.ProjectId);
         string statePath = ServiceStatePath();
         ServiceInstallState? state = LoadServiceState(statePath);
@@ -125,7 +125,7 @@ internal static class WindowsGatewayOperations
 
     public static int RelaunchElevated(string operation)
     {
-        string callerSid = WindowsIdentity.GetCurrent().User?.Value ?? throw new InvalidOperationException("无法读取当前用户 SID。");
+        string callerSid = WindowsIdentity.GetCurrent().User?.Value ?? throw new InvalidOperationException("无法读取当前用户身份。");
         var start = new ProcessStartInfo(Environment.ProcessPath!) { UseShellExecute = true, Verb = "runas" };
         start.ArgumentList.Add(operation);
         start.ArgumentList.Add("--caller-sid");
@@ -151,8 +151,8 @@ internal static class WindowsGatewayOperations
 
     internal static void ProtectServiceSecret(string path)
     {
-        if (!File.Exists(path)) throw new FileNotFoundException("服务凭据文件不存在，请先由 GUI 导入。", path);
-        string userSid = WindowsIdentity.GetCurrent().User?.Value ?? throw new InvalidOperationException("无法读取当前用户 SID。");
+        if (!File.Exists(path)) throw new FileNotFoundException("服务凭据文件不存在，请先由图形界面导入。", path);
+        string userSid = WindowsIdentity.GetCurrent().User?.Value ?? throw new InvalidOperationException("无法读取当前用户身份。");
         Run("icacls.exe", [path, "/inheritance:r", "/grant:r", "*S-1-5-18:F", "*S-1-5-32-544:F", $"*{userSid}:F"]);
     }
 
@@ -262,7 +262,7 @@ internal static class WindowsGatewayOperations
         string urlOutput = Run("netsh.exe", ["http", "show", "urlacl", $"url={state.Url}"], allowFailure: true).Output;
         bool urlExists = urlOutput.Contains(state.Url, StringComparison.OrdinalIgnoreCase);
         bool urlOwned = urlExists && urlOutput.Contains(state.ServiceSid, StringComparison.OrdinalIgnoreCase) && urlOutput.Contains(state.InteractiveSid, StringComparison.OrdinalIgnoreCase);
-        if (urlExists && !urlOwned && rejectForeign) throw new InvalidOperationException("目标 URLACL 已被其他程序占用，未做任何修改。");
+        if (urlExists && !urlOwned && rejectForeign) throw new InvalidOperationException("目标网络监听地址已被其他程序占用，未做任何修改。");
         var firewall = Run("netsh.exe", ["advfirewall", "firewall", "show", "rule", $"name={state.FirewallRule}", "verbose"], allowFailure: true);
         bool firewallExists = firewall.ExitCode == 0;
         bool firewallOwned = firewallExists && firewall.Output.Contains(state.Marker, StringComparison.Ordinal);
@@ -301,7 +301,7 @@ internal static class WindowsServiceHost
         _stopping = new CancellationTokenSource();
         try
         {
-            GatewayProjectConfiguration project = GatewayProjectConfiguration.TryLoad(AppContext.BaseDirectory) ?? throw new InvalidDataException("gateway-project.json 无效");
+            GatewayProjectConfiguration project = GatewayProjectConfiguration.TryLoad(AppContext.BaseDirectory) ?? throw new InvalidDataException("微端部署配置无效");
             var runtime = new GatewayRuntime(AppContext.BaseDirectory, project, serviceMode: true);
             try { runtime.StartAsync().GetAwaiter().GetResult(); SetStatus(ServiceRunning, ServiceAcceptStop); _stopping.Token.WaitHandle.WaitOne(); SetStatus(ServiceStopPending, 0); runtime.StopAsync().GetAwaiter().GetResult(); }
             finally { runtime.DisposeAsync().AsTask().GetAwaiter().GetResult(); }

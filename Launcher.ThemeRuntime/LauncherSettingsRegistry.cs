@@ -28,7 +28,7 @@ public static class LauncherSettingsRegistry
         new() { Key = "autoStart", Label = "自动开始", Editor = LauncherSettingEditorKind.Boolean, Read = value => value.AutoStart, Write = (value, selected) => value.AutoStart = (bool)selected },
         new() { Key = "volume", Label = "音效音量", Editor = LauncherSettingEditorKind.Integer, Minimum = 0, Maximum = 100, Read = value => value.Volume, Write = (value, selected) => value.Volume = Convert.ToInt32(selected, System.Globalization.CultureInfo.InvariantCulture) },
         new() { Key = "musicVolume", Label = "音乐音量", Editor = LauncherSettingEditorKind.Integer, Minimum = 0, Maximum = 100, Read = value => value.MusicVolume, Write = (value, selected) => value.MusicVolume = Convert.ToInt32(selected, System.Globalization.CultureInfo.InvariantCulture) },
-        new() { Key = "microCacheLimitMb", Label = "微端响应缓存上限(MiB)", Editor = LauncherSettingEditorKind.Integer, Minimum = 256, Maximum = 16384, Read = value => value.MicroCacheLimitMb, Write = (value, selected) => value.MicroCacheLimitMb = Convert.ToInt32(selected, System.Globalization.CultureInfo.InvariantCulture) },
+        new() { Key = "microCacheLimitMb", Label = "微端响应缓存上限（兆字节）", Editor = LauncherSettingEditorKind.Integer, Minimum = 256, Maximum = 16384, Read = value => value.MicroCacheLimitMb, Write = (value, selected) => value.MicroCacheLimitMb = Convert.ToInt32(selected, System.Globalization.CultureInfo.InvariantCulture) },
         new() { Key = "advancedLogs", Label = "高级诊断日志", Editor = LauncherSettingEditorKind.Boolean, Read = value => value.AdvancedLogs, Write = (value, selected) => value.AdvancedLogs = (bool)selected },
     };
 }

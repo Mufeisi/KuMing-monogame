@@ -1,5 +1,7 @@
 using Launcher.Remote;
 using Client;
+using Client.MirObjects;
+using Client.MirScenes.Dialogs;
 using System.Net;
 using System.Text;
 using Xunit;
@@ -8,6 +10,21 @@ namespace Launcher.RemoteListIntegration.Windows;
 
 public sealed class LauncherRemoteListTests
 {
+    [Fact]
+    public void 人物场景生命球在角色资料尚未到达时安全跳过绘制()
+    {
+        Assert.False(MainDialog.TryGetOrbLevels(null!, out _, out _));
+        Assert.False(MainDialog.TryGetOrbLevels(new UserObject(), out _, out _));
+
+        var user = new UserObject { Stats = new Stats() };
+        user.Stats[Stat.HP] = 120;
+        user.Stats[Stat.MP] = 80;
+
+        Assert.True(MainDialog.TryGetOrbLevels(user, out int maximumHealth, out int maximumMana));
+        Assert.Equal(120, maximumHealth);
+        Assert.Equal(80, maximumMana);
+    }
+
     [Fact]
     public void 有效清单解析为规范化的区服快照()
     {
@@ -352,7 +369,7 @@ public sealed class LauncherRemoteListTests
     [Fact]
     public void 游戏子进程参数可以无损往返并拒绝缺项()
     {
-        var server = new ServerEntry("一区", "game.example.com", 7001, true, "micro.example.com", 8080);
+        var server = new ServerEntry("一区", "game.example.com", 7001, true, "micro.example.com", 8080, "backup.example.com", 8081);
 
         string[] arguments = GameLaunchArguments.Create(server);
         Assert.True(GameLaunchArguments.TryParse(arguments, out GameLaunchOptions options));
@@ -361,10 +378,8 @@ public sealed class LauncherRemoteListTests
         Assert.True(options.MicroEnabled);
         Assert.Equal("micro.example.com", options.MicroAddress);
         Assert.Equal(8080, options.MicroPort);
-        string[] withBackup = arguments.Concat(new[] { "--micro-backup-address", "backup.example.com", "--micro-backup-port", "8081" }).ToArray();
-        Assert.True(GameLaunchArguments.TryParse(withBackup, out GameLaunchOptions backupOptions));
-        Assert.Equal("backup.example.com", backupOptions.MicroBackupAddress);
-        Assert.Equal(8081, backupOptions.MicroBackupPort);
+        Assert.Equal("backup.example.com", options.MicroBackupAddress);
+        Assert.Equal(8081, options.MicroBackupPort);
         Assert.False(GameLaunchArguments.TryParse(arguments[..^2], out _));
         Assert.True(GameLaunchArguments.TryParse(arguments.Append("-tc").ToArray(), out _));
 

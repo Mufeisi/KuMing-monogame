@@ -28,6 +28,14 @@ public sealed class LauncherSnapshot
     public List<BootstrapManifestTrustedKey> TrustedReleaseKeys { get; set; } = new();
     public LauncherPlayerSettings Defaults { get; set; } = new();
     public MicroEndpoint DefaultMicro { get; set; } = new();
+    public List<LauncherCoreResource> LoginCoreResources { get; set; } = new();
+}
+
+public sealed class LauncherCoreResource
+{
+    public string Path { get; set; } = string.Empty;
+    public long Size { get; set; }
+    public string Sha256 { get; set; } = string.Empty;
 }
 
 public sealed class LauncherTheme

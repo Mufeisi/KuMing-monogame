@@ -39,6 +39,12 @@ namespace Client
                 Environment.Exit(RenderThemeEvidence(args[renderIndex + 1]));
                 return;
             }
+            int classicRenderIndex = Array.FindIndex(args, item => string.Equals(item, "--native-classic-render-smoke", StringComparison.OrdinalIgnoreCase));
+            if (classicRenderIndex >= 0 && classicRenderIndex + 1 < args.Length)
+            {
+                Environment.Exit(RenderNativeClassicEvidence(args[classicRenderIndex + 1]));
+                return;
+            }
 
             if (args.Length > 0)
             {
@@ -147,11 +153,11 @@ namespace Client
         private static void RunThemeLauncher()
         {
             string clientDirectory = AppContext.BaseDirectory;
-            LauncherRuntimeHost.Run(clientDirectory, (selectedDirectory, server, micro, _) =>
+            LauncherRuntimeHost.Run(clientDirectory, (executableDirectory, resourceDirectory, server, micro, _) =>
             {
-                string selectedClient = Path.Combine(selectedDirectory, "Client.exe");
-                var start = new ProcessStartInfo(selectedClient) { WorkingDirectory = selectedDirectory, UseShellExecute = false };
-                foreach (string argument in GameProcessLaunchArguments.Create(server, micro, ClientCapabilityProbe.Detect(selectedDirectory))) start.ArgumentList.Add(argument);
+                string selectedClient = Path.Combine(executableDirectory, "Client.exe");
+                var start = new ProcessStartInfo(selectedClient) { WorkingDirectory = resourceDirectory, UseShellExecute = false };
+                foreach (string argument in GameProcessLaunchArguments.Create(server, micro, ClientCapabilityProbe.Detect(executableDirectory))) start.ArgumentList.Add(argument);
                 using Process? game = Process.Start(start);
                 string sourcePlayer = Environment.GetEnvironmentVariable("LYOCRYSTAL_PLAYER_SOURCE_EXECUTABLE") ?? string.Empty;
                 if (game is not null && !string.IsNullOrWhiteSpace(sourcePlayer))
@@ -159,7 +165,43 @@ namespace Client
                     try { Launcher.PlayerShell.PlayerGameSessionMarker.Record(sourcePlayer, game); }
                     catch { try { game.Kill(entireProcessTree: true); } catch { } throw; }
                 }
-            });
+            }, RunOriginalClassicLauncher);
+        }
+
+        private static int RenderNativeClassicEvidence(string outputPath)
+        {
+            System.Windows.Forms.Application.SetHighDpiMode(System.Windows.Forms.HighDpiMode.PerMonitorV2);
+            System.Windows.Forms.Application.EnableVisualStyles();
+            LauncherSnapshot snapshot = LauncherTemplateCatalog.Create(LauncherTemplateKind.Classic);
+            snapshot.ProjectName = "酷明传奇";
+            snapshot.TaskbarName = "酷明传奇";
+            using var form = new AMain(snapshot, AppContext.BaseDirectory, AppContext.BaseDirectory);
+            using var bitmap = new Bitmap(form.Width, form.Height, PixelFormat.Format32bppArgb);
+            form.DrawToBitmap(bitmap, new Rectangle(Point.Empty, bitmap.Size));
+            Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(outputPath))!);
+            bitmap.Save(outputPath, ImageFormat.Png);
+            return form.ClientSize == new Size(801, 554) && form.Text == "酷明传奇" ? 0 : 2;
+        }
+
+        private static void RunOriginalClassicLauncher(LoadedLauncherSnapshot loaded, string executableDirectory, string resourceDirectory)
+        {
+            Directory.SetCurrentDirectory(resourceDirectory);
+            Settings.P_Patcher = false;
+            Settings.P_ServerListUrl = string.Empty;
+            Settings.P_BrowserAddress = string.Empty;
+            Settings.P_ServerName = loaded.Snapshot.ProjectName;
+            LauncherServer first = loaded.Snapshot.Servers[0];
+            Settings.IPAddress = first.Address;
+            Settings.Port = first.Port;
+            MicroEndpoint micro = first.MicroOverride ?? loaded.Snapshot.DefaultMicro;
+            Settings.MicroBaseUrl = micro.Enabled
+                ? new UriBuilder(Uri.UriSchemeHttp, micro.Address, micro.Port, "api/").Uri.AbsoluteUri
+                : string.Empty;
+            System.Windows.Forms.Application.EnableVisualStyles();
+            System.Windows.Forms.Application.SetCompatibleTextRenderingDefault(false);
+            using var form = new AMain(loaded.Snapshot, executableDirectory, resourceDirectory);
+            Program.PForm = form;
+            System.Windows.Forms.Application.Run(form);
         }
 
         private static int RunPreLoginUpdateCli(string[] args)

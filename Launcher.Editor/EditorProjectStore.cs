@@ -43,6 +43,7 @@ public sealed class EditorProjectStore
         EditorProject project = new() { Snapshot = LauncherTemplateCatalog.Create(template) };
         project.Snapshot.ProjectId = projectId;
         project.Snapshot.ProjectName = string.IsNullOrWhiteSpace(projectName) ? "未命名启动器" : projectName.Trim();
+        project.Snapshot.Theme.ServerListMode = options.ServerListMode;
         project.Snapshot.RemoteReleaseBaseUrl = options.RemoteReleaseBaseUrl.Trim();
         project.Snapshot.Servers[0].Address = options.ServerAddress.Trim();
         project.Snapshot.Servers[0].Port = options.ServerPort;
@@ -59,6 +60,7 @@ public sealed class EditorProjectStore
         project.Brand.ProductName = project.Snapshot.ProjectName;
         project.Brand.WindowTitle = project.Snapshot.ProjectName;
         project.Brand.TaskbarName = project.Snapshot.ProjectName;
+        project.Brand.OutputFileName = QuickProductionPanel.ToExecutableFileName(project.Snapshot.ProjectName);
         project.Brand.CompanyName = options.CompanyName.Trim();
         project.Release.PlayerUpdateMode = options.PlayerUpdateMode;
         project.Gateway.CacheDirectory = options.GatewayCacheDirectory.Trim();
@@ -210,7 +212,9 @@ public sealed class EditorProjectStore
     {
         if (project.Format != EditorProject.CurrentFormat) throw new InvalidDataException("编辑器项目格式不受支持");
         LauncherSnapshotValidator.Validate(project.Snapshot);
-        if (project.Brand.OutputFileName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0 || !project.Brand.OutputFileName.EndsWith(".exe", StringComparison.OrdinalIgnoreCase)) throw new InvalidDataException("玩家入口文件名无效");
+        if (project.Brand.OutputFileName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0 || !project.Brand.OutputFileName.EndsWith(".exe", StringComparison.OrdinalIgnoreCase)
+            || !string.Equals(project.Brand.OutputFileName, QuickProductionPanel.ToExecutableFileName(Path.GetFileNameWithoutExtension(project.Brand.OutputFileName)), StringComparison.OrdinalIgnoreCase))
+            throw new InvalidDataException("玩家入口文件名无效");
         if (project.Gateway.Port is < 1 or > 65535) throw new InvalidDataException("微端部署参数无效");
     }
 

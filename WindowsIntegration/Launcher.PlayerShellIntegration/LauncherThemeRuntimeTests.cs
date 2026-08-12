@@ -5,6 +5,7 @@ using System.Text;
 using System.Net;
 using System.Net.Http;
 using System.Security.Cryptography;
+using System.Windows.Forms;
 using Launcher.ThemeRuntime;
 using Launcher.PlayerShell;
 using Shared.Security;
@@ -14,6 +15,8 @@ namespace Launcher.PlayerShellIntegration;
 
 public sealed class LauncherThemeRuntimeTests
 {
+    private static readonly object ClientSourceEnvironmentLock = new();
+
     [Fact]
     public async Task ExternalAnnouncementFallsBackToSignedCardsWhenProbeFails()
     {
@@ -140,6 +143,89 @@ public sealed class LauncherThemeRuntimeTests
     }
 
     [Fact]
+    public void ResourceOnlyClientDirectoryCanBeReusedWithoutCapabilityMarker()
+    {
+        using var scope = new TempScope();
+        string root = scope.Dir("resource-client");
+        foreach (string file in new[] { "Title.Lib", "ChrSel.Lib", "Prguse.Lib" })
+        {
+            string path = Path.Combine(root, "Data", file);
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            File.WriteAllText(path, file);
+        }
+        Assert.False(ClientSelection.IsCompatible(root));
+        Assert.True(ClientSelection.IsResourceDirectory(root));
+        LauncherCoreResource[] manifest = Directory.EnumerateFiles(Path.Combine(root, "Data"), "*.Lib").Select(path => new LauncherCoreResource
+        {
+            Path = "Data/" + Path.GetFileName(path), Size = new FileInfo(path).Length,
+            Sha256 = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(File.ReadAllBytes(path))).ToLowerInvariant(),
+        }).ToArray();
+        Assert.True(ClientSelection.IsTrustedResourceDirectory(root, manifest));
+        IReadOnlyList<string> discovered = ClientLocator.Find("Title.Lib", new[] { Path.GetDirectoryName(root)! }, maximumDepth: 3,
+            candidateFilter: dataDirectory => string.Equals(Path.GetFileName(dataDirectory), "Data", StringComparison.OrdinalIgnoreCase)
+                && ClientSelection.IsTrustedResourceDirectory(Path.GetDirectoryName(dataDirectory)!, manifest));
+        Assert.Equal(new[] { Path.Combine(root, "Data") }, discovered);
+        File.AppendAllText(Path.Combine(root, "Data", "Title.Lib"), "tampered");
+        Assert.False(ClientSelection.IsTrustedResourceDirectory(root, manifest));
+    }
+
+    [Fact]
+    public void LauncherDirectoryFullResourcesOverrideRememberedPayloadCache()
+    {
+        lock (ClientSourceEnvironmentLock)
+        {
+            using var scope = new TempScope();
+            string source = scope.Dir("full-client");
+            string embedded = scope.Dir("embedded-payload");
+            string remembered = scope.Dir("remembered-payload-cache");
+            foreach (string root in new[] { source, remembered })
+            foreach (string file in new[] { "Title.Lib", "ChrSel.Lib", "Prguse.Lib" })
+            {
+                string path = Path.Combine(root, "Data", file);
+                Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+                File.WriteAllText(path, file);
+            }
+            File.WriteAllText(Path.Combine(source, "Client.exe"), "placeholder");
+            File.WriteAllText(Path.Combine(source, "launcher-capabilities.json"), "{\"product\":\"LyoCrystal\",\"launchArgumentsVersion\":1}");
+            LauncherCoreResource[] manifest = Directory.EnumerateFiles(Path.Combine(source, "Data"), "*.Lib").Select(path => new LauncherCoreResource
+            {
+                Path = "Data/" + Path.GetFileName(path), Size = new FileInfo(path).Length,
+                Sha256 = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(path))).ToLowerInvariant(),
+            }).ToArray();
+            string projectId = "source-priority-" + Guid.NewGuid().ToString("N");
+            string statePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "LyoCrystal", "Launcher", "Clients", projectId + ".txt");
+            string? previous = Environment.GetEnvironmentVariable("LYOCRYSTAL_PLAYER_SOURCE_DIRECTORY");
+            try
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(statePath)!);
+                File.WriteAllText(statePath, remembered);
+                Environment.SetEnvironmentVariable("LYOCRYSTAL_PLAYER_SOURCE_DIRECTORY", source);
+
+                ClientSelectionResult preferred = ClientSelection.GetPreferred(projectId, embedded, manifest);
+                Assert.Equal(Path.GetFullPath(source), preferred.ResourceDirectory);
+                Assert.Equal(Path.GetFullPath(source), preferred.ExecutableDirectory);
+
+                File.WriteAllText(statePath, remembered);
+                using var owner = new Form();
+                ClientSelectionResult resolved = Assert.IsType<ClientSelectionResult>(ClientSelection.Resolve(owner, projectId, embedded, manifest));
+                Assert.Equal(Path.GetFullPath(source), resolved.ResourceDirectory);
+                Assert.Equal(Path.GetFullPath(source), File.ReadAllText(statePath));
+
+                File.AppendAllText(Path.Combine(source, "Data", "Title.Lib"), "tampered");
+                File.WriteAllText(statePath, remembered);
+                Environment.SetEnvironmentVariable("LYOCRYSTAL_PLAYER_SOURCE_DIRECTORY", source);
+                ClientSelectionResult rejectedSource = ClientSelection.GetPreferred(projectId, embedded, manifest);
+                Assert.Equal(Path.GetFullPath(remembered), rejectedSource.ResourceDirectory);
+            }
+            finally
+            {
+                Environment.SetEnvironmentVariable("LYOCRYSTAL_PLAYER_SOURCE_DIRECTORY", previous);
+                try { File.Delete(statePath); } catch { }
+            }
+        }
+    }
+
+    [Fact]
     public void UnmarkedLegacyClientIsRejectedWithoutModification()
     {
         using var scope = new TempScope();
@@ -197,14 +283,35 @@ public sealed class LauncherThemeRuntimeTests
         foreach (float scale in new[] { 1f, 1.25f, 1.5f, 2f })
         {
             using Bitmap bitmap = LauncherRuntimeHost.RenderTemplateForEvidence(LauncherTemplateCatalog.Create(kind), scope.Dir("render"), scale);
-            Assert.True(bitmap.Width >= 640 * scale);
-            Assert.True(bitmap.Height >= 420 * scale);
+            if (kind == LauncherTemplateKind.Classic)
+            {
+                Assert.True(bitmap.Width >= 801);
+                Assert.True(bitmap.Height >= 554);
+            }
+            else
+            {
+                Assert.True(bitmap.Width >= 640 * scale);
+                Assert.True(bitmap.Height >= 420 * scale);
+            }
             Color background = bitmap.GetPixel(bitmap.Width / 2, bitmap.Height / 2);
             int differentSamples = 0;
             for (int y = 0; y < bitmap.Height; y += Math.Max(1, bitmap.Height / 20))
             for (int x = 0; x < bitmap.Width; x += Math.Max(1, bitmap.Width / 20))
                 if (bitmap.GetPixel(x, y).ToArgb() != background.ToArgb()) differentSamples++;
             Assert.True(differentSamples >= 10, $"{kind} {scale:P0} 主题没有渲染足够的可见控件");
+        }
+    }
+
+    [Fact]
+    public void ClassicTemplateKeepsLongServerAddressInsideFixedCanvas()
+    {
+        using var scope = new TempScope();
+        LauncherSnapshot snapshot = LauncherTemplateCatalog.Create(LauncherTemplateKind.Classic);
+        snapshot.Servers[0].Address = new string('a', 180) + ".example.test";
+        foreach (int dpi in new[] { 96, 120, 144, 192 })
+        {
+            LauncherDpiLayoutResult result = LauncherRuntimeHost.ValidatePerMonitorDpiForEvidence(snapshot, scope.Dir("long-host"), dpi);
+            Assert.True(result.AllControlsInsideCanvas, result.Details);
         }
     }
 

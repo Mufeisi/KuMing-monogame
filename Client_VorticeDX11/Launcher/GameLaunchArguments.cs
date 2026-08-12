@@ -42,6 +42,8 @@ namespace Launcher.Remote
                 "--micro-enabled", server.MicroEnabled ? "true" : "false",
                 "--micro-address", server.MicroAddress,
                 "--micro-port", server.MicroPort.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                "--micro-backup-address", server.MicroBackupAddress,
+                "--micro-backup-port", server.MicroBackupPort.ToString(System.Globalization.CultureInfo.InvariantCulture),
             };
         }
 

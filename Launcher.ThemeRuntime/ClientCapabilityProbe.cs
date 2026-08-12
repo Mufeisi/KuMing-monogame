@@ -10,12 +10,33 @@ public static class ClientCapabilityProbe
         try
         {
             string root = Path.GetFullPath(directory);
-            if (!File.Exists(Path.Combine(root, "Client.exe"))) return ClientLaunchCapability.Unsupported;
+            RejectReparseChain(root);
+            string executable = Path.Combine(root, "Client.exe");
+            if (!IsPlainFile(executable)) return ClientLaunchCapability.Unsupported;
             string marker = Path.Combine(root, "launcher-capabilities.json");
-            if (File.Exists(marker)) return ValidateCurrentMarker(marker) ? ClientLaunchCapability.Current15Arguments : ClientLaunchCapability.Unsupported;
+            if (IsPlainFile(marker)) return ValidateCurrentMarker(marker) ? ClientLaunchCapability.Current15Arguments : ClientLaunchCapability.Unsupported;
             return ClientLaunchCapability.Unsupported;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or BadImageFormatException) { return ClientLaunchCapability.Unsupported; }
+    }
+
+    private static bool IsPlainFile(string path)
+    {
+        RejectReparseChain(path);
+        return File.Exists(path) && (File.GetAttributes(path) & FileAttributes.ReparsePoint) == 0;
+    }
+
+    private static void RejectReparseChain(string path)
+    {
+        string full = Path.GetFullPath(path);
+        string current = Path.GetPathRoot(full) ?? string.Empty;
+        foreach (string part in full[current.Length..].Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar))
+        {
+            if (part.Length == 0) continue;
+            current = Path.Combine(current, part);
+            if ((File.Exists(current) || Directory.Exists(current)) && (File.GetAttributes(current) & FileAttributes.ReparsePoint) != 0)
+                throw new IOException("客户端入口路径不得经过重解析点");
+        }
     }
 
     private static bool ValidateCurrentMarker(string marker)

@@ -30,7 +30,7 @@ internal sealed class GatewayRuntime : IAsyncDisposable
             ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "LyoCrystal", "MicroGateway", SafeProjectId(_project.ProjectId), "Cache")
             : _project.ResolveOptionalDirectory(_baseDirectory, _project.CacheDirectory);
         string code = _project.ReadSecret(_baseDirectory, _serviceMode);
-        if (string.IsNullOrEmpty(code)) throw new InvalidOperationException("未找到微端访问 Code，请先用 GUI 导入部署凭据。");
+        if (string.IsNullOrEmpty(code)) throw new InvalidOperationException("未找到微端访问密码，请先用图形界面导入部署凭据。");
         string listenHost = _project.ListenAddress is "0.0.0.0" or "*" or "+" ? "+" : _project.ListenAddress;
         await _host.StartAsync($"http://{listenHost}:{_project.Port}/", new MicroGatewayOptions(
             resources, _project.User, code, string.IsNullOrWhiteSpace(launcher) ? null : launcher,
@@ -108,7 +108,7 @@ internal sealed class GatewayRuntime : IAsyncDisposable
         {
             if (_serviceMode && File.Exists(_rescanRequestPath) && (File.GetAttributes(_rescanRequestPath) & FileAttributes.ReparsePoint) == 0)
             {
-                try { File.Delete(_rescanRequestPath); await ReconcileResourcesAsync(cancellationToken).ConfigureAwait(false); AppendLog("收到 GUI 手动重扫请求"); }
+                try { File.Delete(_rescanRequestPath); await ReconcileResourcesAsync(cancellationToken).ConfigureAwait(false); AppendLog("收到图形界面手动重扫请求"); }
                 catch (IOException) { }
             }
             WriteState();
@@ -130,14 +130,14 @@ internal sealed class GatewayRuntime : IAsyncDisposable
             long active = root.GetProperty("activeRequests").GetInt64();
             int files = root.GetProperty("indexedFiles").GetInt32();
             long bytes = root.GetProperty("indexedBytes").GetInt64();
-            return $"Windows Service 运行中｜请求 {requests}｜处理中 {active}｜索引 {files} 个文件 / {bytes / 1024 / 1024} MiB";
+            return $"系统服务运行中｜请求 {requests}｜处理中 {active}｜索引 {files} 个文件 / {bytes / 1024 / 1024} 兆字节";
         }
         catch (Exception error) when (error is IOException or UnauthorizedAccessException or JsonException or InvalidOperationException) { return null; }
     }
 
     public static void RequestServiceRescan(string baseDirectory, string projectId)
     {
-        if (TryReadServiceStatus(baseDirectory, projectId) is null) throw new InvalidOperationException("Windows Service 当前未运行。");
+        if (TryReadServiceStatus(baseDirectory, projectId) is null) throw new InvalidOperationException("系统服务当前未运行。");
         string target = Path.Combine(baseDirectory, "gateway-rescan.request");
         string temporary = target + ".tmp-" + Guid.NewGuid().ToString("N");
         try { File.WriteAllText(temporary, projectId); File.Move(temporary, target, true); }

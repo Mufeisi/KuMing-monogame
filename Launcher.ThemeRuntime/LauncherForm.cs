@@ -4,14 +4,15 @@ internal sealed class LauncherForm : Form
 {
     private readonly LoadedLauncherSnapshot _loaded;
     private readonly string _clientDirectory;
-    private readonly Action<string, LauncherServer, MicroEndpoint, LauncherPlayerSettings> _launch;
+    private readonly Action<string, string, LauncherServer, MicroEndpoint, LauncherPlayerSettings> _launch;
     private readonly ComboBox _serverDropdown = new() { DropDownStyle = ComboBoxStyle.DropDownList };
     private readonly TreeView _serverSidebar = new() { BorderStyle = BorderStyle.None, HideSelection = false };
     private readonly Panel _announcements = new() { AutoScroll = true };
     private readonly FlowLayoutPanel _actionLinks = new() { AutoSize = true, BackColor = Color.Transparent };
     private readonly CancellationTokenSource _announcementCancellation = new();
-    private readonly ProgressBar _overall = new();
-    private readonly ProgressBar _current = new();
+    private readonly CancellationTokenSource _lifetimeCancellation = new();
+    private readonly LauncherProgressBar _overall = new() { FillColor = Color.LimeGreen };
+    private readonly LauncherProgressBar _current = new() { FillColor = Color.DeepSkyBlue };
     private readonly Label _progressText = new() { AutoEllipsis = true };
     private readonly Label _sourceText = new() { AutoSize = true };
     private readonly Label _windowTitleText = new() { AutoSize = true, BackColor = Color.Transparent };
@@ -21,42 +22,60 @@ internal sealed class LauncherForm : Form
     private readonly Dictionary<Control, (string Family, float Size, FontStyle Style)> _originalFontSpecs = new();
     private readonly Dictionary<Control, Image> _derivedBackgrounds = new();
     private LauncherPlayerSettings _settings;
-    private string _selectedClientDirectory;
+    private ClientSelectionResult _selectedClient;
     private bool _settingsDirty;
     private bool _launching;
     private readonly List<Image> _ownedImages = new();
     private readonly List<Font> _ownedFonts = new();
+    private readonly List<Font> _classicOwnedFonts = new();
     private readonly List<Control> _clickTargets = new();
     private readonly System.Windows.Forms.Timer _progressTimer = new() { Interval = 300 };
+    private readonly bool _builtInClassicSkin;
+    private ImageStateButton? _classicCloseButton;
+    private ImageStateButton? _classicSettingsButton;
+    private Label? _classicServerLabel;
+    private Label? _classicServerEndpoint;
+    private Label? _classicCurrentPercent;
+    private Label? _classicOverallPercent;
+    private Label? _classicCredit;
+    private Label? _classicVersion;
+    private Label? _classicSpeed;
+    private Label? _classicRemaining;
     private bool _autoStartTriggered;
     private bool _buttonImagesLoaded;
     private bool _entryUpdateBlocked;
+    private bool _dpiLayoutPending;
+    private bool _disposeStarted;
 
-    public LauncherForm(LoadedLauncherSnapshot loaded, string clientDirectory, Action<string, LauncherServer, MicroEndpoint, LauncherPlayerSettings> launch)
+    public LauncherForm(LoadedLauncherSnapshot loaded, string clientDirectory, Action<string, string, LauncherServer, MicroEndpoint, LauncherPlayerSettings> launch)
     {
         _loaded = loaded;
         _clientDirectory = clientDirectory;
         _launch = launch;
-        _selectedClientDirectory = ClientSelection.GetPreferred(loaded.Snapshot.ProjectId, clientDirectory);
-        _settings = ClientSettingsWriter.Read(_selectedClientDirectory, CloneSettings(loaded.Snapshot.Defaults));
+        _builtInClassicSkin = loaded.Snapshot.Theme.Template == LauncherTemplateKind.Classic
+            && string.IsNullOrWhiteSpace(loaded.Snapshot.Theme.BackgroundImage)
+            && string.IsNullOrWhiteSpace(loaded.Snapshot.Theme.LaunchButtonImage);
+        _selectedClient = ClientSelection.GetPreferred(loaded.Snapshot.ProjectId, clientDirectory, loaded.Snapshot.LoginCoreResources);
+        _settings = ClientSettingsWriter.Read(_selectedClient.ResourceDirectory, CloneSettings(loaded.Snapshot.Defaults));
         string windowTitle = string.IsNullOrWhiteSpace(loaded.Snapshot.WindowTitle) ? loaded.Snapshot.ProjectName : loaded.Snapshot.WindowTitle;
         Text = string.IsNullOrWhiteSpace(loaded.Snapshot.TaskbarName) ? windowTitle : loaded.Snapshot.TaskbarName;
         _windowTitleText.Text = windowTitle;
         ApplyTaskbarIdentity(loaded.Snapshot.ProjectId, loaded.Snapshot.TaskbarName);
         StartPosition = FormStartPosition.CenterScreen;
-        FormBorderStyle = FormBorderStyle.FixedSingle;
+        FormBorderStyle = _builtInClassicSkin ? FormBorderStyle.None : FormBorderStyle.FixedSingle;
         MaximizeBox = false;
         AutoScaleMode = AutoScaleMode.Dpi;
         ClientSize = new Size(loaded.Snapshot.Theme.CanvasWidth, loaded.Snapshot.Theme.CanvasHeight);
-        MinimumSize = Size;
+        MinimumSize = _builtInClassicSkin ? Size.Empty : Size;
         BackColor = Color.FromArgb(18, 20, 28);
         ForeColor = Color.WhiteSmoke;
         DoubleBuffered = true;
         BuildUi();
         string background = LauncherSnapshotValidator.ResolveAsset(_loaded.Root, _loaded.Snapshot.Theme.BackgroundImage);
         if (!string.IsNullOrEmpty(background)) { BackgroundImage = Own(SafeLoadImage(background)); BackgroundImageLayout = ImageLayout.Stretch; }
+        else if (_loaded.Snapshot.Theme.Template == LauncherTemplateKind.Classic) { BackgroundImage = Own(BuildClassicBackground(ClientSize)); BackgroundImageLayout = ImageLayout.Center; }
         ApplyTemplate();
-        DpiChanged += (_, _) => BeginInvoke(() => ApplyTemplate(initial: false));
+        DpiChanged += (_, _) => QueueDpiLayout();
         UpdateProgress(new LauncherProgressState("启动核心已就绪，可进入游戏", string.Empty, 0, 0, 0, 0, 0));
         _progressTimer.Tick += (_, _) => PollProgress();
         _progressTimer.Start();
@@ -124,6 +143,7 @@ internal sealed class LauncherForm : Form
     protected override void OnFormClosing(FormClosingEventArgs e)
     {
         _announcementCancellation.Cancel();
+        _lifetimeCancellation.Cancel();
         base.OnFormClosing(e);
     }
 
@@ -177,19 +197,40 @@ internal sealed class LauncherForm : Form
         if (_serverSidebar.Nodes.Count > 0 && _serverSidebar.Nodes[0].Nodes.Count > 0) _serverSidebar.SelectedNode = _serverSidebar.Nodes[0].Nodes[0];
         ShowNativeAnnouncements();
         var settings = CreateTopButton("游戏设置", 145);
-        settings.Click += (_, _) => { using var dialog = new PlayerSettingsForm(_settings, _selectedClientDirectory); if (dialog.ShowDialog(this) == DialogResult.OK) { _settings = dialog.Value; _settingsDirty = true; } };
+        settings.Click += (_, _) => { using var dialog = new PlayerSettingsForm(_settings, _selectedClient.ResourceDirectory); if (dialog.ShowDialog(this) == DialogResult.OK) { _settings = dialog.Value; _settingsDirty = true; } };
         var diagnose = CreateTopButton("连通诊断", 265);
         diagnose.Click += async (_, _) => await DiagnoseAsync();
         var chooseClient = CreateTopButton("更换客户端", 385);
         chooseClient.Click += (_, _) =>
         {
-            string? selected = ClientSelection.SelectManually(this, _loaded.Snapshot.ProjectId);
+            ClientSelectionResult? selected = ClientSelection.SelectManually(this, _loaded.Snapshot.ProjectId, _clientDirectory, _loaded.Snapshot.LoginCoreResources);
             if (selected is null) return;
-            _selectedClientDirectory = selected;
-            _settings = ClientSettingsWriter.Read(selected, CloneSettings(_loaded.Snapshot.Defaults));
+            _selectedClient = selected;
+            _settings = ClientSettingsWriter.Read(selected.ResourceDirectory, CloneSettings(_loaded.Snapshot.Defaults));
             _settingsDirty = false;
         };
         Controls.AddRange(new Control[] { settings, diagnose, chooseClient });
+        if (_builtInClassicSkin)
+        {
+            _classicCloseButton = new ImageStateButton { Text = string.Empty, TabStop = false };
+            _classicCloseButton.Click += (_, _) => Close();
+            _classicSettingsButton = new ImageStateButton { Text = string.Empty, TabStop = false };
+            _classicSettingsButton.Click += (_, _) => settings.PerformClick();
+            _classicServerLabel = new Label { Text = "选择服务器：", AutoSize = true, BackColor = Color.Transparent, ForeColor = Color.White };
+            _classicServerEndpoint = new Label { AutoSize = false, AutoEllipsis = true, BackColor = Color.Transparent, ForeColor = Color.LimeGreen };
+            Font classicFont = new("Calibri", 8.25f);
+            _classicOwnedFonts.Add(classicFont);
+            _classicCurrentPercent = ClassicFooterLabel("100%", ContentAlignment.MiddleCenter, classicFont);
+            _classicOverallPercent = ClassicFooterLabel("100%", ContentAlignment.MiddleCenter, classicFont);
+            _classicCredit = ClassicFooterLabel("Powered by Crystal M2", ContentAlignment.MiddleLeft, classicFont);
+            _classicSpeed = ClassicFooterLabel(string.Empty, ContentAlignment.TopRight, classicFont);
+            _classicRemaining = ClassicFooterLabel(string.Empty, ContentAlignment.MiddleRight, classicFont);
+            string version = typeof(LauncherForm).Assembly.GetName().Version?.ToString(3) ?? "1.0.0";
+            _classicVersion = ClassicFooterLabel("版本：" + version, ContentAlignment.TopRight, classicFont);
+            _serverDropdown.SelectedIndexChanged += (_, _) => UpdateClassicServerEndpoint();
+            Controls.AddRange(new Control[] { _classicCloseButton, _classicSettingsButton, _classicServerLabel, _classicServerEndpoint, _classicCurrentPercent, _classicOverallPercent, _classicCredit, _classicSpeed, _classicRemaining, _classicVersion });
+            UpdateClassicServerEndpoint();
+        }
         _themeControls[LauncherControlId.ServerList] = _loaded.Snapshot.Theme.ServerListMode == ServerListMode.Sidebar ? _serverSidebar : _serverDropdown;
         _themeControls[LauncherControlId.Announcements] = _announcements;
         _themeControls[LauncherControlId.LaunchButton] = _launchButton;
@@ -236,6 +277,21 @@ internal sealed class LauncherForm : Form
 
     private Button CreateTopButton(string text, int rightOffset) => new() { Text = text, FlatStyle = FlatStyle.Flat, Size = new Size(110, 34), Location = new Point(Width - rightOffset, 20), Anchor = AnchorStyles.Top | AnchorStyles.Right };
 
+    private void QueueDpiLayout()
+    {
+        if (_dpiLayoutPending || _disposeStarted || IsDisposed || Disposing) return;
+        _dpiLayoutPending = true;
+        try
+        {
+            BeginInvoke(() =>
+            {
+                try { if (!_disposeStarted && !IsDisposed && !Disposing) ApplyTemplate(initial: false); }
+                finally { _dpiLayoutPending = false; }
+            });
+        }
+        catch (InvalidOperationException) { _dpiLayoutPending = false; }
+    }
+
     private void ApplyTemplate(bool initial = true)
     {
         int S(int value) => (int)Math.Round(value * DeviceDpi / 96d);
@@ -257,19 +313,27 @@ internal sealed class LauncherForm : Form
                 _announcements.SetBounds(S(24), S(70), Math.Max(S(200), ClientSize.Width - S(48)), Math.Min(S(205), ClientSize.Height - S(250)));
                 break;
             default:
+                if (_builtInClassicSkin)
+                {
+                    ApplyBuiltInClassicLayout(S);
+                    break;
+                }
                 _serverDropdown.SetBounds(S(30), Math.Min(S(350), ClientSize.Height - S(180)), Math.Min(S(360), ClientSize.Width - S(60)), S(34));
                 _serverSidebar.SetBounds(S(30), S(80), S(245), Math.Min(S(255), ClientSize.Height - S(220)));
                 _announcements.SetBounds(S(sidebar ? 295 : 30), S(80), Math.Max(S(200), sidebar ? ClientSize.Width - S(325) : ClientSize.Width - S(60)), Math.Min(S(245), ClientSize.Height - S(250)));
                 break;
         }
-        _launchButton.SetBounds(ClientSize.Width - S(220), ClientSize.Height - S(125), S(180), S(54));
-        _overall.SetBounds(S(30), ClientSize.Height - S(68), ClientSize.Width - S(60), S(12));
-        _current.SetBounds(S(30), ClientSize.Height - S(48), ClientSize.Width - S(60), S(8));
-        _progressText.SetBounds(S(30), ClientSize.Height - S(92), Math.Max(S(120), ClientSize.Width - S(280)), S(22));
-        _sourceText.Location = new Point(S(30), ClientSize.Height - S(28));
-        _windowTitleText.Location = new Point(S(24), S(24));
-        Button[] topButtons = Controls.OfType<Button>().Where(button => button != _launchButton).ToArray();
-        for (int i = 0; i < topButtons.Length; i++) topButtons[i].SetBounds(ClientSize.Width - S(145 + i * 120), S(20), S(110), S(34));
+        if (!_builtInClassicSkin)
+        {
+            _launchButton.SetBounds(ClientSize.Width - S(220), ClientSize.Height - S(125), S(180), S(54));
+            _overall.SetBounds(S(30), ClientSize.Height - S(68), ClientSize.Width - S(60), S(12));
+            _current.SetBounds(S(30), ClientSize.Height - S(48), ClientSize.Width - S(60), S(8));
+            _progressText.SetBounds(S(30), ClientSize.Height - S(92), Math.Max(S(120), ClientSize.Width - S(280)), S(22));
+            _sourceText.Location = new Point(S(30), ClientSize.Height - S(28));
+            _windowTitleText.Location = new Point(S(24), S(24));
+            Button[] topButtons = Controls.OfType<Button>().Where(button => button != _launchButton).ToArray();
+            for (int i = 0; i < topButtons.Length; i++) topButtons[i].SetBounds(ClientSize.Width - S(145 + i * 120), S(20), S(110), S(34));
+        }
         if (!_buttonImagesLoaded)
         {
             _buttonImagesLoaded = true;
@@ -281,8 +345,111 @@ internal sealed class LauncherForm : Form
             if (!string.IsNullOrEmpty(pressed)) _launchButton.PressedImage = SafeLoadImage(pressed);
             string disabled = LauncherSnapshotValidator.ResolveAsset(_loaded.Root, _loaded.Snapshot.Theme.LaunchButtonDisabledImage);
             if (!string.IsNullOrEmpty(disabled)) _launchButton.DisabledImage = SafeLoadImage(disabled);
+            if (_launchButton.BaseImage is null && _builtInClassicSkin) ApplyBuiltInClassicImages();
+            else if (_launchButton.BaseImage is null && _loaded.Snapshot.Theme.Template == LauncherTemplateKind.Classic) ApplyClassicLaunchButtonStyle();
         }
-        ApplyControlOverrides(S);
+        if (!_builtInClassicSkin) ApplyControlOverrides(S);
+    }
+
+    internal static Bitmap BuildClassicBackground(Size size)
+    {
+        using Bitmap source = LoadClassicBitmap("pfffft.png");
+        var image = new Bitmap(Math.Max(1, size.Width), Math.Max(1, size.Height), System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+        using Graphics graphics = Graphics.FromImage(image);
+        graphics.Clear(Color.FromArgb(18, 20, 28));
+        int x = (image.Width - source.Width) / 2;
+        int y = (image.Height - source.Height) / 2;
+        graphics.DrawImageUnscaled(source, x, y);
+        return image;
+    }
+
+    private void ApplyBuiltInClassicLayout(Func<int, int> scale)
+    {
+        Size classicSize = new(801, 554);
+        if (ClientSize != classicSize) ClientSize = classicSize;
+        _announcements.Visible = false;
+        _serverSidebar.Visible = false;
+        _serverDropdown.Visible = true;
+        _serverDropdown.SetBounds(67, 430, 150, 23);
+        _classicServerLabel?.SetBounds(67, 408, 120, 20);
+        _classicServerEndpoint?.SetBounds(227, 431, 180, 20);
+        _launchButton.SetBounds(661, 471, 114, 57);
+        _current.SetBounds(59, 492, 556, 20);
+        _overall.SetBounds(58, 510, 556, 20);
+        _progressText.SetBounds(147, 525, 222, 21);
+        _progressText.ForeColor = Color.Gray;
+        _progressText.BackColor = Color.Transparent;
+        _progressText.AutoEllipsis = true;
+        _sourceText.Visible = false;
+        _windowTitleText.Visible = false;
+        _actionLinks.Visible = false;
+        Control settings = _themeControls[LauncherControlId.SettingsButton];
+        settings.Visible = false;
+        _themeControls[LauncherControlId.DiagnoseButton].Visible = false;
+        _themeControls[LauncherControlId.ChooseClientButton].Visible = false;
+        _classicSettingsButton?.SetBounds(743, 15, 22, 26);
+        _classicCloseButton?.SetBounds(767, 15, 22, 26);
+        _classicCurrentPercent?.SetBounds(613, 485, 41, 26);
+        _classicOverallPercent?.SetBounds(613, 503, 41, 26);
+        _classicCredit?.SetBounds(9, 529, 145, 18);
+        _classicSpeed?.SetBounds(379, 528, 100, 15);
+        _classicRemaining?.SetBounds(489, 522, 118, 24);
+        _classicVersion?.SetBounds(627, 530, 155, 17);
+    }
+
+    private static Label ClassicFooterLabel(string text, ContentAlignment alignment, Font font) => new()
+    {
+        Text = text, BackColor = Color.Transparent, ForeColor = Color.Gray,
+        Font = font, TextAlign = alignment,
+    };
+
+    private void UpdateClassicServerEndpoint()
+    {
+        if (_classicServerEndpoint is null || _serverDropdown.SelectedItem is not LauncherServer server) return;
+        _classicServerEndpoint.Text = $"{server.Address}:{server.Port}";
+    }
+
+    private void ApplyBuiltInClassicImages()
+    {
+        _launchButton.BaseImage = LoadClassicBitmap("Launch_Base.png");
+        _launchButton.HoverImage = LoadClassicBitmap("Launch_Hover.png");
+        _launchButton.PressedImage = LoadClassicBitmap("Launch_Pressed.png");
+        _launchButton.Text = string.Empty;
+        if (_classicSettingsButton is not null)
+        {
+            _classicSettingsButton.BaseImage = LoadClassicBitmap("Config_Base.png");
+            _classicSettingsButton.HoverImage = LoadClassicBitmap("Config_Hover.png");
+            _classicSettingsButton.PressedImage = LoadClassicBitmap("Config_Pressed.png");
+        }
+        if (_classicCloseButton is not null)
+        {
+            _classicCloseButton.BaseImage = LoadClassicBitmap("Cross_Base.png");
+            _classicCloseButton.HoverImage = LoadClassicBitmap("Cross_Hover.png");
+            _classicCloseButton.PressedImage = LoadClassicBitmap("Cross_Pressed.png");
+        }
+        _current.FillImage = LoadClassicBitmap("Green_Progress.png");
+        _overall.FillImage = LoadClassicBitmap("Blue_Progress.png");
+        _current.EndImage = LoadClassicBitmap("Green_Progress_End.png");
+        _overall.EndImage = LoadClassicBitmap("Blue_Progress_End.png");
+        _current.ClassicImageMode = _overall.ClassicImageMode = true;
+        _current.BackColor = _overall.BackColor = Color.Transparent;
+    }
+
+    private static Bitmap LoadClassicBitmap(string name)
+    {
+        using Stream stream = typeof(LauncherForm).Assembly.GetManifestResourceStream("Launcher.ThemeRuntime.Classic." + name)
+            ?? throw new InvalidOperationException("内置经典皮肤资源缺失：" + name);
+        using var image = new Bitmap(stream);
+        return new Bitmap(image);
+    }
+
+    private void ApplyClassicLaunchButtonStyle()
+    {
+        _launchButton.FlatStyle = FlatStyle.Flat;
+        _launchButton.FlatAppearance.BorderSize = 1;
+        _launchButton.FlatAppearance.BorderColor = Color.FromArgb(235, 190, 76);
+        _launchButton.BackColor = Color.FromArgb(132, 82, 20);
+        _launchButton.ForeColor = Color.FromArgb(255, 241, 190);
     }
 
     private void ApplyControlOverrides(Func<int, int> scale)
@@ -367,19 +534,31 @@ internal sealed class LauncherForm : Form
             return;
         }
         MicroEndpoint micro = server.MicroOverride ?? _loaded.Snapshot.DefaultMicro;
-        string? selectedClient = ClientSelection.Resolve(this, _loaded.Snapshot.ProjectId, _clientDirectory);
+        ClientSelectionResult? selectedClient = ClientSelection.Resolve(this, _loaded.Snapshot.ProjectId, _clientDirectory, _loaded.Snapshot.LoginCoreResources);
         if (selectedClient is null) return;
-        if (!string.Equals(selectedClient, _selectedClientDirectory, StringComparison.OrdinalIgnoreCase))
+        var readinessProgress = new Progress<LauncherProgressState>(state => { if (!_disposeStarted && !IsDisposed && !Disposing) UpdateProgress(state); });
+        if (micro.Enabled && !await MicroGatewayReadiness.EnsureCoreLibrariesAsync(micro, _loaded.Snapshot.ProjectId, selectedClient.ResourceDirectory, _loaded.Snapshot.LoginCoreResources, readinessProgress, _lifetimeCancellation.Token))
         {
-            _selectedClientDirectory = selectedClient;
-            if (!_settingsDirty) _settings = ClientSettingsWriter.Read(selectedClient, CloneSettings(_loaded.Snapshot.Defaults));
+            if (_lifetimeCancellation.IsCancellationRequested || IsDisposed || Disposing) return;
+            MessageBox.Show(this, $"微端服务器 {micro.Address}:{micro.Port} 尚未启动，或缺少登录核心资源。\r\n\r\n请先运行“一键生成全部成品”得到的独立微端部署包，并确认资源目录中包含 Title.Lib、ChrSel.Lib、Prguse.Lib。", "登录资源尚未就绪", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return;
+        }
+        if (!string.Equals(selectedClient.ResourceDirectory, _selectedClient.ResourceDirectory, StringComparison.OrdinalIgnoreCase))
+        {
+            _selectedClient = selectedClient;
+            if (!_settingsDirty) _settings = ClientSettingsWriter.Read(selectedClient.ResourceDirectory, CloneSettings(_loaded.Snapshot.Defaults));
         }
         LauncherProgressChannel.Clear(_loaded.Snapshot.ProjectId);
-        ClientSettingsWriter.Write(selectedClient, _settings);
-        ClientSettingsWriter.WriteMicroIdentity(selectedClient, _loaded.Snapshot.ProjectId, micro.User);
-        _launch(selectedClient, server, micro, _settings);
+        ClientSettingsWriter.Write(selectedClient.ResourceDirectory, _settings);
+        ClientSettingsWriter.WriteMicroIdentity(selectedClient.ResourceDirectory, _loaded.Snapshot.ProjectId, micro.User);
+        ClientSettingsWriter.ValidateWritableDirectory(selectedClient.ResourceDirectory);
+        _launch(selectedClient.ExecutableDirectory, selectedClient.ResourceDirectory, server, micro, _settings);
         UpdateProgress(new LauncherProgressState("游戏已启动；普通资源继续按需下载", string.Empty, 0, 0, 0, 0, 0));
         await Task.Delay(1500);
+        }
+        catch (OperationCanceledException) when (_lifetimeCancellation.IsCancellationRequested)
+        {
+            return;
         }
         finally
         {
@@ -401,7 +580,28 @@ internal sealed class LauncherForm : Form
     {
         _overall.Value = (int)Math.Round(state.OverallFraction * 100);
         _current.Value = (int)Math.Round(state.CurrentFraction * 100);
-        _progressText.Text = state.Stage + (string.IsNullOrEmpty(state.CurrentFile) ? string.Empty : $" · {state.CurrentFile}") + (state.BytesPerSecond <= 0 ? string.Empty : $" · {FormatBytes((long)state.BytesPerSecond)}/s · 剩余 {FormatBytes(state.RemainingBytes)}");
+        int overallPercent = state.OverallTotal <= 0 ? 100 : (int)Math.Round(state.OverallFraction * 100);
+        int currentPercent = state.CurrentTotal <= 0 ? 100 : (int)Math.Round(state.CurrentFraction * 100);
+        if (_classicOverallPercent is not null) _classicOverallPercent.Text = $"{overallPercent}%";
+        if (_classicCurrentPercent is not null) _classicCurrentPercent.Text = $"{currentPercent}%";
+        _progressText.Text = string.IsNullOrWhiteSpace(state.CurrentFile) ? state.Stage : state.CurrentFile;
+        if (_builtInClassicSkin)
+        {
+            bool active = !string.IsNullOrWhiteSpace(state.CurrentFile) || state.CurrentTotal > 0 || state.OverallTotal > 0;
+            _progressText.Text = active ? _progressText.Text : "数据更新";
+            _progressText.Visible = true;
+            if (_classicSpeed is not null)
+            {
+                _classicSpeed.Text = state.BytesPerSecond <= 0 ? string.Empty : FormatBytes((long)state.BytesPerSecond) + "/s";
+                _classicSpeed.Visible = active;
+            }
+            if (_classicRemaining is not null)
+            {
+                _classicRemaining.Text = state.RemainingBytes <= 0 ? string.Empty : "剩余 " + FormatBytes(state.RemainingBytes);
+                _classicRemaining.Visible = active;
+            }
+        }
+        else _progressText.Text = state.Stage + (string.IsNullOrEmpty(state.CurrentFile) ? string.Empty : $" · {state.CurrentFile}") + (state.BytesPerSecond <= 0 ? string.Empty : $" · {FormatBytes((long)state.BytesPerSecond)}/s · 剩余 {FormatBytes(state.RemainingBytes)}");
     }
 
     private void PollProgress()
@@ -487,7 +687,7 @@ internal sealed class LauncherForm : Form
         return new Bitmap(source);
     }
     private T Own<T>(T image) where T : Image { _ownedImages.Add(image); return image; }
-    protected override void Dispose(bool disposing) { if (disposing) { _announcementCancellation.Dispose(); _progressTimer.Dispose(); foreach (Image image in _derivedBackgrounds.Values) image.Dispose(); _derivedBackgrounds.Clear(); foreach (Image image in _ownedImages) image.Dispose(); _ownedImages.Clear(); foreach (Font font in _ownedFonts) font.Dispose(); _ownedFonts.Clear(); } base.Dispose(disposing); }
+    protected override void Dispose(bool disposing) { if (disposing) { _disposeStarted = true; _lifetimeCancellation.Cancel(); _lifetimeCancellation.Dispose(); _announcementCancellation.Dispose(); _progressTimer.Dispose(); foreach (Image image in _derivedBackgrounds.Values) image.Dispose(); _derivedBackgrounds.Clear(); foreach (Image image in _ownedImages) image.Dispose(); _ownedImages.Clear(); foreach (Font font in _ownedFonts) font.Dispose(); _ownedFonts.Clear(); foreach (Font font in _classicOwnedFonts) font.Dispose(); _classicOwnedFonts.Clear(); } base.Dispose(disposing); }
     private static LauncherPlayerSettings CloneSettings(LauncherPlayerSettings value) => new() { Resolution = value.Resolution, FullScreen = value.FullScreen, Borderless = value.Borderless, FpsCap = value.FpsCap, MaxFps = value.MaxFps, Volume = value.Volume, MusicVolume = value.MusicVolume, TopMost = value.TopMost, AutoStart = value.AutoStart, AdvancedLogs = value.AdvancedLogs, MicroCacheLimitMb = value.MicroCacheLimitMb };
     private static string StatusText(ServerOperatingStatus value) => value switch
     {
@@ -499,5 +699,5 @@ internal sealed class LauncherForm : Form
         ServerOperatingStatus.Hidden => "隐藏",
         _ => "正常",
     };
-    private static string FormatBytes(long value) => value >= 1024 * 1024 ? $"{value / 1024d / 1024d:F1} MiB" : value >= 1024 ? $"{value / 1024d:F1} KiB" : $"{value} B";
+    private static string FormatBytes(long value) => value >= 1024 * 1024 ? $"{value / 1024d / 1024d:F1} 兆字节" : value >= 1024 ? $"{value / 1024d:F1} 千字节" : $"{value} 字节";
 }

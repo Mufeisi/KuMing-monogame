@@ -10,7 +10,7 @@ public static class ThemeAssetImporter
     {
         string source = Path.GetFullPath(sourceFile);
         if (!File.Exists(source) || new FileInfo(source).Length > MaximumSourceBytes)
-            throw new InvalidDataException("主题图片不存在或超过 64 MiB");
+            throw new InvalidDataException("主题图片不存在或超过 64 兆字节");
         string extension = Path.GetExtension(source);
         if (!new[] { ".png", ".bmp", ".jpg", ".jpeg" }.Contains(extension, StringComparer.OrdinalIgnoreCase))
             throw new InvalidDataException("主题图片仅支持 PNG、BMP、JPG");

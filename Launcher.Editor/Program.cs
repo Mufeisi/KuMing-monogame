@@ -10,9 +10,38 @@ internal static class Program
     {
         ApplicationConfiguration.Initialize();
         if (args.Length == 2 && args[0] == "--editor-smoke") return RunSmoke(args[1]);
-        string workspace = args.Length == 2 && args[0] == "--workspace" ? args[1] : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "LyoCrystal 启动器项目");
+        if (args.Length == 2 && args[0] == "--editor-ui-smoke") return RunUiSmoke(args[1]);
+        string workspace = args.Length == 2 && args[0] == "--workspace" ? args[1] : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "传奇启动器项目");
         Application.Run(new MainForm(new EditorProjectStore(workspace)));
         return 0;
+    }
+
+    private static int RunUiSmoke(string outputDirectory)
+    {
+        string output = Path.GetFullPath(outputDirectory);
+        try
+        {
+            Directory.CreateDirectory(output);
+            var store = new EditorProjectStore(Path.Combine(output, "项目"));
+            if (store.ListProjectIds().Count == 0) store.Create("ui-project", "中文傻瓜启动器", LauncherTemplateKind.Classic);
+            using var form = new MainForm(store) { StartPosition = FormStartPosition.Manual, Location = new Point(-32000, -32000) };
+            form.Show(); form.WindowState = FormWindowState.Normal; form.Size = new Size(1280, 800); Application.DoEvents();
+            using var screenshot = new Bitmap(form.Width, form.Height);
+            form.DrawToBitmap(screenshot, new Rectangle(Point.Empty, screenshot.Size));
+            screenshot.Save(Path.Combine(output, "中文傻瓜配置器.png"), ImageFormat.Png);
+            ToolStripDropDownButton advanced = form.Controls.OfType<ToolStrip>().SelectMany(strip => strip.Items.OfType<ToolStripDropDownButton>()).Single(item => item.Text == "高级工具");
+            ((ToolStripMenuItem)advanced.DropDownItems[0]).PerformClick(); Application.DoEvents();
+            using var advancedScreenshot = new Bitmap(form.Width, form.Height);
+            form.DrawToBitmap(advancedScreenshot, new Rectangle(Point.Empty, advancedScreenshot.Size));
+            advancedScreenshot.Save(Path.Combine(output, "中文高级设置.png"), ImageFormat.Png);
+            form.Hide();
+            return 0;
+        }
+        catch (Exception ex)
+        {
+            try { Directory.CreateDirectory(output); File.WriteAllText(Path.Combine(output, "界面验证错误.txt"), ex.ToString()); } catch { }
+            return 1;
+        }
     }
 
     private static int RunSmoke(string outputDirectory)
@@ -24,11 +53,21 @@ internal static class Program
             var store = new EditorProjectStore(Path.Combine(output, "workspace"));
             EditorProject project = store.ListProjectIds().Contains("smoke-project", StringComparer.OrdinalIgnoreCase)
                 ? store.Load("smoke-project")
-                : store.Create("smoke-project", "GM 离线编辑器验收", LauncherTemplateKind.Widescreen);
+                : store.Create("smoke-project", "管理员离线配置器验收", LauncherTemplateKind.Widescreen);
             project.Snapshot.Theme.ServerListMode = ServerListMode.Sidebar;
             project.Snapshot.RemoteReleaseBaseUrl = "http://127.0.0.1:8080/launcher/";
             project.Snapshot.Servers[0].Name = "编辑器验收一区";
             project.Snapshot.Announcements = new List<LauncherAnnouncement> { new() { Title = "离线公告", Summary = "断网状态也可以保存、预览和生成部署包。", Date = DateTime.Today.ToString("yyyy-MM-dd") } };
+            if (string.IsNullOrWhiteSpace(project.ImportedClientDirectory))
+            {
+                project.ImportedClientDirectory = Path.Combine(output, "smoke-client");
+                foreach (string relative in new[] { "Data/Title.Lib", "Data/ChrSel.Lib", "Data/Prguse.Lib" })
+                {
+                    string path = Path.Combine(project.ImportedClientDirectory, relative.Replace('/', Path.DirectorySeparatorChar));
+                    Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+                    if (!File.Exists(path)) File.WriteAllBytes(path, System.Text.Encoding.ASCII.GetBytes("editor-smoke-" + relative));
+                }
+            }
             store.Save(project);
             using Bitmap preview = LauncherRuntimeHost.RenderTemplateForEvidence(project.Snapshot, store.GetProjectDirectory(project.Snapshot.ProjectId), 1f);
             preview.Save(Path.Combine(output, "editor-preview.png"), ImageFormat.Png);

@@ -36,6 +36,7 @@ public static class ProjectReleasePublisher
     {
         ProjectReleaseKeyStore.EnsureProvisioned(project, projectRoot);
         LauncherSnapshot snapshot = CloneSnapshot(project.Snapshot);
+        snapshot.LoginCoreResources = PlayerArtifactBuilder.BuildLoginCoreManifest(project.ImportedClientDirectory);
         return PublishCore(project, projectRoot, publishRoot, note, snapshot, null, null);
     }
 
@@ -51,6 +52,7 @@ public static class ProjectReleasePublisher
         string snapshotPath = Path.Combine(source, "launcher-snapshot.json");
         LauncherSnapshot snapshot = JsonSerializer.Deserialize(File.ReadAllBytes(snapshotPath), LauncherSnapshotJsonContext.Default.LauncherSnapshot) ?? throw new InvalidDataException("回滚源快照为空");
         LauncherSnapshotValidator.Validate(snapshot);
+        snapshot.LoginCoreResources = PlayerArtifactBuilder.BuildLoginCoreManifest(project.ImportedClientDirectory);
         return PublishCore(project, projectRoot, publishRoot, note, snapshot, source, history.Sequence, historicalManifest);
     }
 
@@ -79,7 +81,7 @@ public static class ProjectReleasePublisher
     public static ProjectReleaseResult ImportOfflineDeploymentPackage(EditorProject project, string inputZip, string publishRoot)
     {
         string zipPath = Path.GetFullPath(inputZip);
-        if (!File.Exists(zipPath) || new FileInfo(zipPath).Length > 256L * 1024 * 1024) throw new InvalidDataException("离线发布包不存在或超过 256 MiB");
+        if (!File.Exists(zipPath) || new FileInfo(zipPath).Length > 256L * 1024 * 1024) throw new InvalidDataException("离线发布包不存在或超过 256 兆字节");
         string root = Path.GetFullPath(publishRoot);
         RejectReparsePath(root); if (!Directory.Exists(root)) Directory.CreateDirectory(root); RejectReparsePath(root);
         using IDisposable publishLock = AcquirePublishLock(root);
@@ -245,7 +247,7 @@ public static class ProjectReleasePublisher
     {
         if (project.Release.PlayerUpdateMode == PlayerUpdateMode.None) return;
         string source = Path.GetFullPath(project.Release.PlayerUpdateFile);
-        if (!File.Exists(source) || !source.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) || new FileInfo(source).Length > Launcher.PlayerShell.PlayerPayloadPackage.MaximumPlayerExecutableBytes) throw new InvalidDataException("新版玩家入口不存在、格式无效或超过 80 MiB");
+        if (!File.Exists(source) || !source.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) || new FileInfo(source).Length > Launcher.PlayerShell.PlayerPayloadPackage.MaximumPlayerExecutableBytes) throw new InvalidDataException("新版玩家入口不存在、格式无效或超过 80 兆字节");
         if (!Version.TryParse(project.Release.PlayerUpdateVersion, out Version? configuredVersion)) throw new InvalidDataException("新版玩家入口版本无效");
         string? actualValue = FileVersionInfo.GetVersionInfo(source).FileVersion;
         if (!Version.TryParse(actualValue, out Version? actualVersion) || actualVersion != configuredVersion) throw new InvalidDataException("新版玩家入口文件版本与发布设置不一致");
@@ -348,7 +350,7 @@ public static class ProjectReleasePublisher
         foreach (string path in Directory.EnumerateFiles(staging))
         {
             string name = Path.GetFileName(path);
-            if (name == "launcher-snapshot.json" || name.StartsWith("asset-", StringComparison.OrdinalIgnoreCase) || name is "player-entry.exe" or "player-update.json")
+            if (name.StartsWith("asset-", StringComparison.OrdinalIgnoreCase) || name is "player-entry.exe" or "player-update.json")
             {
                 if (!packages.TryGetValue(name, out BootstrapSignedPackage? package) || new FileInfo(path).Length != package.Size) throw new InvalidDataException("回滚复制文件不在历史签名索引中：" + name);
                 BootstrapSignedPackageHashPolicy.VerifyFile(path, package.Sha256);

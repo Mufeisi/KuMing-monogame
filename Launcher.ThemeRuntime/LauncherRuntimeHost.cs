@@ -4,7 +4,10 @@ namespace Launcher.ThemeRuntime;
 
 public static class LauncherRuntimeHost
 {
-    public static int Run(string clientDirectory, Action<string, LauncherServer, MicroEndpoint, LauncherPlayerSettings> launchGame)
+    public static int Run(
+        string clientDirectory,
+        Action<string, string, LauncherServer, MicroEndpoint, LauncherPlayerSettings> launchGame,
+        Action<LoadedLauncherSnapshot, string, string>? runNativeClassic = null)
     {
         string builtIn = Path.Combine(clientDirectory, "Launcher", "BuiltIn");
         LoadedLauncherSnapshot builtInSnapshot = LauncherSnapshotLoader.Load(null, null, builtIn);
@@ -26,6 +29,19 @@ public static class LauncherRuntimeHost
             try { Shared.Security.BootstrapTrustChainStore.Record(loaded.Root, trustChain, trustedKeys, Shared.Security.BootstrapManifestTrustConfiguration.CurrentClientCompatibilityVersion); } catch { }
         }
         ProvisionMicroCredential(loaded);
+        if (runNativeClassic is not null && UsesOriginalClassicLauncher(loaded.Snapshot))
+        {
+            string nativeSourceExecutable = Environment.GetEnvironmentVariable("LYOCRYSTAL_PLAYER_SOURCE_EXECUTABLE") ?? string.Empty;
+            StartBoundedBackgroundRefresh(builtInSnapshot.Snapshot.RemoteReleaseBaseUrl, remoteStore, cacheStore, signatureState, trustedKeys);
+            if (!EnsureNativeClassicEntryReady(builtInSnapshot.Snapshot.RemoteReleaseBaseUrl, nativeSourceExecutable, signatureState, requiredUpdateBarrier, trustedKeys)) return 0;
+            ClientSelectionResult? selected = ClientSelection.Resolve(new NativeWindow(), loaded.Snapshot.ProjectId, clientDirectory, loaded.Snapshot.LoginCoreResources);
+            if (selected is null) return 0;
+            ClientSettingsWriter.ValidateWritableDirectory(selected.ResourceDirectory);
+            LauncherPlayerSettings settings = ClientSettingsWriter.Read(selected.ResourceDirectory, loaded.Snapshot.Defaults);
+            ClientSettingsWriter.Write(selected.ResourceDirectory, settings);
+            runNativeClassic(loaded, selected.ExecutableDirectory, selected.ResourceDirectory);
+            return 0;
+        }
         Application.SetHighDpiMode(HighDpiMode.PerMonitorV2);
         Application.EnableVisualStyles();
         Application.SetCompatibleTextRenderingDefault(false);
@@ -40,6 +56,70 @@ public static class LauncherRuntimeHost
         Application.Run(form);
         return 0;
     }
+
+    private static bool EnsureNativeClassicEntryReady(
+        string remoteBaseUrl,
+        string sourceExecutable,
+        string signatureState,
+        string barrierPath,
+        IReadOnlyDictionary<string, Shared.Security.BootstrapManifestTrustedKey> trustedKeys)
+    {
+        if (string.IsNullOrWhiteSpace(sourceExecutable)) return true;
+        bool barrierActive = PlayerEntryUpdateService.IsRequiredBarrierActive(barrierPath, sourceExecutable, trustedKeys, out string barrierMessage, out Version? barrierVersion);
+        if (string.IsNullOrWhiteSpace(remoteBaseUrl))
+        {
+            if (barrierActive) MessageBox.Show(barrierMessage, "必须更新尚未完成", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return !barrierActive;
+        }
+        try
+        {
+            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(12));
+            PlayerEntryUpdatePlan? plan = PlayerEntryUpdateService.InspectAsync(remoteBaseUrl, sourceExecutable, signatureState, trustedKeys, timeout.Token).GetAwaiter().GetResult();
+            if (plan is null)
+            {
+                if (barrierActive) MessageBox.Show(barrierMessage, "必须更新尚未完成", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return !barrierActive;
+            }
+            Version offered = Version.Parse(plan.Descriptor.Version);
+            if (barrierActive && (barrierVersion is null || offered < barrierVersion))
+            {
+                MessageBox.Show(barrierMessage, "必须更新尚未完成", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return false;
+            }
+            bool blocking = barrierActive || plan.Descriptor.Required;
+            if (!blocking)
+            {
+                _ = Task.Run(async () =>
+                {
+                    using var stageTimeout = new CancellationTokenSource(TimeSpan.FromMinutes(5));
+                    try { await PlayerEntryUpdateService.StageAsync(plan, sourceExecutable, signatureState, trustedKeys, stageTimeout.Token).ConfigureAwait(false); } catch { }
+                });
+                return true;
+            }
+            if (plan.Descriptor.Required) PlayerEntryUpdateService.PersistRequiredBarrier(plan, barrierPath);
+            using var requiredTimeout = new CancellationTokenSource(TimeSpan.FromMinutes(5));
+            PlayerEntryUpdateService.StageAsync(plan, sourceExecutable, signatureState, trustedKeys, requiredTimeout.Token).GetAwaiter().GetResult();
+            MessageBox.Show("必须更新已准备完成，请关闭并重新打开启动器。", "玩家入口更新", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            return false;
+        }
+        catch (Exception ex)
+        {
+            if (!barrierActive && !File.Exists(barrierPath)) return true;
+            MessageBox.Show(barrierMessage + "\r\n更新检查失败：" + ex.Message, "必须更新尚未完成", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return false;
+        }
+    }
+
+    internal static bool UsesOriginalClassicLauncher(LauncherSnapshot snapshot) =>
+        snapshot.Theme.Template == LauncherTemplateKind.Classic &&
+        string.IsNullOrWhiteSpace(snapshot.Theme.BackgroundImage) &&
+        string.IsNullOrWhiteSpace(snapshot.Theme.LaunchButtonImage) &&
+        string.IsNullOrWhiteSpace(snapshot.Theme.LaunchButtonHoverImage) &&
+        string.IsNullOrWhiteSpace(snapshot.Theme.LaunchButtonPressedImage) &&
+        string.IsNullOrWhiteSpace(snapshot.Theme.LaunchButtonDisabledImage) &&
+        snapshot.Theme.Controls.Count == 0;
+
+    private sealed class NativeWindow : IWin32Window { public IntPtr Handle => IntPtr.Zero; }
 
     private static void StartPlayerEntryUpdate(LauncherForm form, string remoteBaseUrl, string sourceExecutable, string signatureState, string barrierPath, bool barrierActive, Version? barrierVersion, string barrierMessage, IReadOnlyDictionary<string, Shared.Security.BootstrapManifestTrustedKey> trustedKeys)
     {
@@ -127,7 +207,7 @@ public static class LauncherRuntimeHost
         if (dpi is not (96 or 120 or 144 or 192)) throw new ArgumentOutOfRangeException(nameof(scale));
         LauncherSnapshotValidator.Validate(snapshot);
         Application.SetHighDpiMode(HighDpiMode.PerMonitorV2);
-        using var form = new LauncherForm(new LoadedLauncherSnapshot(snapshot, assetRoot, SnapshotSource.BuiltIn), assetRoot, (_, _, _, _) => { });
+        using var form = new LauncherForm(new LoadedLauncherSnapshot(snapshot, assetRoot, SnapshotSource.BuiltIn), assetRoot, (_, _, _, _, _) => { });
         form.StartPosition = FormStartPosition.Manual;
         form.Location = new Point(-32000, -32000);
         form.Show();
@@ -144,7 +224,7 @@ public static class LauncherRuntimeHost
     {
         if (dpi is not (96 or 120 or 144 or 192)) throw new ArgumentOutOfRangeException(nameof(dpi));
         Application.SetHighDpiMode(HighDpiMode.PerMonitorV2);
-        using var form = new LauncherForm(new LoadedLauncherSnapshot(snapshot, assetRoot, SnapshotSource.BuiltIn), assetRoot, (_, _, _, _) => { });
+        using var form = new LauncherForm(new LoadedLauncherSnapshot(snapshot, assetRoot, SnapshotSource.BuiltIn), assetRoot, (_, _, _, _, _) => { });
         form.StartPosition = FormStartPosition.Manual;
         form.Location = new Point(-32000, -32000);
         form.Show();

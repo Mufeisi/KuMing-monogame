@@ -10,12 +10,144 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text.Json;
 using Launcher.PlayerShell;
+using System.ComponentModel;
 using Xunit;
 
 namespace Launcher.PlayerShellIntegration;
 
 public sealed class LauncherEditorTests
 {
+    [Fact]
+    public void ClassicTemplateWithoutImagesStillRendersVisibleBuiltInSkin()
+    {
+        using var scope = new EditorTempScope();
+        LauncherSnapshot snapshot = LauncherTemplateCatalog.Create(LauncherTemplateKind.Classic);
+        Assert.Empty(snapshot.Theme.BackgroundImage);
+        Assert.Empty(snapshot.Theme.LaunchButtonImage);
+        using Bitmap rendered = LauncherForm.BuildClassicBackground(new Size(snapshot.Theme.CanvasWidth, snapshot.Theme.CanvasHeight));
+        Assert.Equal(new Size(801, 554), rendered.Size);
+        Color center = rendered.GetPixel(rendered.Width / 2, rendered.Height / 2);
+        Color header = rendered.GetPixel(100, 25);
+        Assert.True(center.B > center.R / 2);
+        Assert.NotEqual(center.ToArgb(), header.ToArgb());
+        string output = Path.Combine(scope.Root, "classic-no-assets.png");
+        rendered.Save(output, System.Drawing.Imaging.ImageFormat.Png);
+        Assert.True(new FileInfo(output).Length > 4_000);
+    }
+
+    [Fact]
+    public void ClassicBackgroundIsCenteredWithoutResampling()
+    {
+        using Bitmap originalSize = LauncherForm.BuildClassicBackground(new Size(800, 550));
+        using Bitmap classicCanvas = LauncherForm.BuildClassicBackground(new Size(801, 554));
+        for (int y = 0; y < originalSize.Height; y++)
+            for (int x = 0; x < originalSize.Width; x++)
+                Assert.Equal(originalSize.GetPixel(x, y), classicCanvas.GetPixel(x, y + 2));
+    }
+
+    [Fact]
+    public void QuickLauncherNameAlsoControlsGeneratedFileName()
+    {
+        EditorProject project = new();
+        QuickProductionPanel.ApplyLauncherName(project, "酷明传奇");
+        Assert.Equal("酷明传奇", project.Snapshot.ProjectName);
+        Assert.Equal("酷明传奇.exe", project.Brand.OutputFileName);
+        QuickProductionPanel.ApplyLauncherName(project, "酷明:传奇");
+        Assert.Equal("酷明_传奇.exe", project.Brand.OutputFileName);
+        Assert.Equal("未命名启动器.exe", QuickProductionPanel.ToExecutableFileName("..."));
+        Assert.Equal("启动器-CON.exe", QuickProductionPanel.ToExecutableFileName("CON"));
+    }
+
+    [Fact]
+    public void UnmodifiedClassicTemplateUsesOriginalLauncher()
+    {
+        LauncherSnapshot snapshot = LauncherTemplateCatalog.Create(LauncherTemplateKind.Classic);
+        Assert.True(LauncherRuntimeHost.UsesOriginalClassicLauncher(snapshot));
+        snapshot.Theme.BackgroundImage = "Assets/custom.png";
+        Assert.False(LauncherRuntimeHost.UsesOriginalClassicLauncher(snapshot));
+        snapshot.Theme.BackgroundImage = string.Empty;
+        snapshot.Theme.LaunchButtonHoverImage = "Assets/hover.png";
+        Assert.False(LauncherRuntimeHost.UsesOriginalClassicLauncher(snapshot));
+    }
+
+    [Fact]
+    public async Task EnabledMicroMustBeReachableBeforeGameLaunch()
+    {
+        int unavailablePort;
+        using (var listener = new TcpListener(IPAddress.Loopback, 0))
+        {
+            listener.Start();
+            unavailablePort = ((IPEndPoint)listener.LocalEndpoint).Port;
+        }
+        var endpoint = new MicroEndpoint { Enabled = true, Address = "127.0.0.1", Port = unavailablePort, User = "player" };
+        Assert.False(await MicroGatewayReadiness.ProbeAsync(endpoint, CancellationToken.None));
+        endpoint.Enabled = false;
+        Assert.True(await MicroGatewayReadiness.ProbeAsync(endpoint, CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task MissingLoginLibrariesAreDownloadedBeforeGameLaunch()
+    {
+        using var scope = new EditorTempScope();
+        string resources = scope.Dir("gateway-resources");
+        foreach (string relative in new[] { "Data/Title.Lib", "Data/ChrSel.Lib", "Data/Prguse.Lib" })
+        {
+            string path = Path.Combine(resources, relative.Replace('/', Path.DirectorySeparatorChar));
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            await File.WriteAllBytesAsync(path, System.Text.Encoding.ASCII.GetBytes("library-" + relative));
+        }
+        int port = FreePort();
+        await using var host = new StaticFileHost(resources, port);
+        await host.StartAsync();
+        string client = scope.Dir("client");
+        var endpoint = new MicroEndpoint { Enabled = true, Address = "127.0.0.1", Port = port, User = "player" };
+        LauncherCoreResource[] manifest = new[] { "Title.Lib", "ChrSel.Lib", "Prguse.Lib" }.Select(file =>
+        {
+            string path = Path.Combine(resources, "Data", file);
+            return new LauncherCoreResource { Path = "Data/" + file, Size = new FileInfo(path).Length, Sha256 = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(path))).ToLowerInvariant() };
+        }).ToArray();
+        Assert.True(await MicroGatewayReadiness.EnsureCoreLibrariesAsync(endpoint, "test-project", client,
+            manifest, null, CancellationToken.None));
+        Assert.All(new[] { "Title.Lib", "ChrSel.Lib", "Prguse.Lib" }, file =>
+            Assert.True(new FileInfo(Path.Combine(client, "Data", file)).Length > 0));
+        Assert.Empty(Directory.EnumerateFiles(client, "*.downloading-*", SearchOption.AllDirectories));
+    }
+
+    [Fact]
+    public async Task ValidLocalLoginLibrariesDoNotRequireRunningMicroGateway()
+    {
+        using var scope = new EditorTempScope();
+        string client = scope.Dir("local-client");
+        var resources = new List<LauncherCoreResource>();
+        foreach (string file in new[] { "Title.Lib", "ChrSel.Lib", "Prguse.Lib" })
+        {
+            string path = Path.Combine(client, "Data", file);
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            File.WriteAllText(path, "local-" + file);
+            resources.Add(new LauncherCoreResource { Path = "Data/" + file, Size = new FileInfo(path).Length, Sha256 = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(path))).ToLowerInvariant() });
+        }
+        var endpoint = new MicroEndpoint { Enabled = true, Address = "127.0.0.1", Port = 1, User = "player" };
+        Assert.True(await MicroGatewayReadiness.EnsureCoreLibrariesAsync(endpoint, "local-project", client, resources, null, CancellationToken.None));
+    }
+
+    [Fact]
+    public void EditorChineseCatalogCoversEveryVisibleChoice()
+    {
+        string[] texts = Enum.GetValues<LauncherTemplateKind>().Select(EditorChineseText.Template)
+            .Concat(Enum.GetValues<ServerListMode>().Select(EditorChineseText.ServerList))
+            .Concat(Enum.GetValues<AnnouncementDisplayMode>().Select(EditorChineseText.Announcement))
+            .Concat(Enum.GetValues<ClientDeliveryMode>().Select(EditorChineseText.Delivery))
+            .Concat(Enum.GetValues<PlayerUpdateMode>().Select(EditorChineseText.Update))
+            .Concat(Enum.GetValues<ServerOperatingStatus>().Select(EditorChineseText.ServerStatus))
+            .Concat(Enum.GetValues<LauncherAction>().Select(EditorChineseText.Action))
+            .Concat(Enum.GetValues<LauncherControlId>().Select(EditorChineseText.Control)).ToArray();
+        Assert.All(texts, text => { Assert.NotEmpty(text); Assert.DoesNotMatch("[A-Za-z]", text); });
+        TypeConverter delivery = TypeDescriptor.GetProperties(typeof(ProjectBrandPropertyView))[nameof(ProjectBrandPropertyView.DeliveryMode)]!.Converter;
+        Assert.Equal("微端按需下载（推荐）", delivery.ConvertToString(ClientDeliveryMode.MicroOnDemand));
+        var boolean = new ChineseBooleanConverter();
+        Assert.Equal("是", boolean.ConvertToString(true)); Assert.Equal("否", boolean.ConvertToString(false));
+    }
+
     [Fact]
     public void ProjectCreationOptionsPersistAllWizardDomains()
     {
@@ -29,12 +161,13 @@ public sealed class LauncherEditorTests
             BackupMicroAddress = "10.0.0.10", BackupMicroPort = 8089, Resolution = 1920, FullScreen = true,
             AnnouncementTitle = "开服公告", AnnouncementSummary = "欢迎", PlayerUpdateMode = PlayerUpdateMode.Required,
             GatewayCacheDirectory = "GatewayCache", GatewayMemoryCacheMb = 256, GatewayDiskCacheMb = 4096,
-            DeliveryMode = ClientDeliveryMode.FullClient,
+            DeliveryMode = ClientDeliveryMode.FullClient, ServerListMode = ServerListMode.Sidebar,
         });
         EditorProject loaded = store.Load(project.Snapshot.ProjectId);
         Assert.Equal("测试公司", loaded.Brand.CompanyName);
         Assert.Equal("10.0.0.8", loaded.Snapshot.Servers[0].Address);
         Assert.Equal(ClientDeliveryMode.FullClient, loaded.DeliveryMode);
+        Assert.Equal(ServerListMode.Sidebar, loaded.Snapshot.Theme.ServerListMode);
         Assert.Equal("10.0.0.10", loaded.Snapshot.DefaultMicro.BackupAddress);
         Assert.Equal(1920, loaded.Snapshot.Defaults.Resolution);
         Assert.Equal("开服公告", loaded.Snapshot.Announcements[0].Title);
@@ -365,6 +498,7 @@ public sealed class LauncherEditorTests
         using var scope = new EditorTempScope();
         var store = new EditorProjectStore(scope.Dir("release-workspace"));
         EditorProject project = store.Create("release-project", "发布项目", LauncherTemplateKind.Compact);
+        AttachLoginResources(project, scope.Dir("release-client"));
         string projectRoot = store.GetProjectDirectory(project.Snapshot.ProjectId);
         string publishRoot = scope.Dir("publish-root");
         ProjectReleaseResult first = ProjectReleasePublisher.Publish(project, projectRoot, publishRoot, "首发");
@@ -434,6 +568,7 @@ public sealed class LauncherEditorTests
         using var scope = new EditorTempScope();
         var store = new EditorProjectStore(scope.Dir("rotation-workspace"));
         EditorProject project = store.Create("rotation-project", "轮换项目", LauncherTemplateKind.Classic);
+        AttachLoginResources(project, scope.Dir("rotation-client"));
         string projectRoot = store.GetProjectDirectory(project.Snapshot.ProjectId), publishRoot = scope.Dir("rotation-publish"), chainRoot = scope.Dir("rotation-chain");
         var anchors = new Dictionary<string, BootstrapManifestTrustedKey>(StringComparer.Ordinal)
         {
@@ -461,6 +596,7 @@ public sealed class LauncherEditorTests
         using var scope = new EditorTempScope();
         var store = new EditorProjectStore(scope.Dir("http-source-workspace"));
         EditorProject project = store.Create("http-source-project", "HTTP 发布源", LauncherTemplateKind.Compact);
+        AttachLoginResources(project, scope.Dir("http-source-client"));
         string projectRoot = store.GetProjectDirectory(project.Snapshot.ProjectId), publishRoot = scope.Dir("http-publish");
         _ = ProjectReleasePublisher.Publish(project, projectRoot, publishRoot, "真实 HTTP 源");
         var keys = new Dictionary<string, BootstrapManifestTrustedKey>(StringComparer.Ordinal)
@@ -481,6 +617,17 @@ public sealed class LauncherEditorTests
     }
 
     private static string Hash(string path) => Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(path)));
+
+    private static void AttachLoginResources(EditorProject project, string clientRoot)
+    {
+        foreach (string file in new[] { "Title.Lib", "ChrSel.Lib", "Prguse.Lib" })
+        {
+            string path = Path.Combine(clientRoot, "Data", file);
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            File.WriteAllText(path, "test-library-" + file);
+        }
+        project.ImportedClientDirectory = clientRoot;
+    }
 
     private static string FindRepositoryRoot(string start)
     {
@@ -519,7 +666,10 @@ public sealed class LauncherEditorTests
                 HttpListenerContext context; try { context = await _listener.GetContextAsync(); } catch { break; }
                 try
                 {
-                    string relative = Uri.UnescapeDataString(context.Request.Url!.AbsolutePath.TrimStart('/')).Replace('/', Path.DirectorySeparatorChar);
+                    string requestPath = context.Request.Url!.AbsolutePath;
+                    string relative = Uri.UnescapeDataString(requestPath.StartsWith("/api/file/", StringComparison.OrdinalIgnoreCase)
+                        ? requestPath["/api/file/".Length..]
+                        : requestPath.TrimStart('/')).Replace('/', Path.DirectorySeparatorChar);
                     string path = Path.GetFullPath(Path.Combine(_root, relative));
                     if (!path.StartsWith(_root + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase) || !File.Exists(path)) { context.Response.StatusCode = 404; }
                     else { byte[] bytes = await File.ReadAllBytesAsync(path); context.Response.ContentLength64 = bytes.Length; await context.Response.OutputStream.WriteAsync(bytes); }
