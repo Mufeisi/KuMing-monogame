@@ -224,14 +224,35 @@ public sealed class LauncherThemeRuntimeTests
         foreach (float scale in new[] { 1f, 1.25f, 1.5f, 2f })
         {
             using Bitmap bitmap = LauncherRuntimeHost.RenderTemplateForEvidence(LauncherTemplateCatalog.Create(kind), scope.Dir("render"), scale);
-            Assert.True(bitmap.Width >= 640 * scale);
-            Assert.True(bitmap.Height >= 420 * scale);
+            if (kind == LauncherTemplateKind.Classic)
+            {
+                Assert.True(bitmap.Width >= 801);
+                Assert.True(bitmap.Height >= 554);
+            }
+            else
+            {
+                Assert.True(bitmap.Width >= 640 * scale);
+                Assert.True(bitmap.Height >= 420 * scale);
+            }
             Color background = bitmap.GetPixel(bitmap.Width / 2, bitmap.Height / 2);
             int differentSamples = 0;
             for (int y = 0; y < bitmap.Height; y += Math.Max(1, bitmap.Height / 20))
             for (int x = 0; x < bitmap.Width; x += Math.Max(1, bitmap.Width / 20))
                 if (bitmap.GetPixel(x, y).ToArgb() != background.ToArgb()) differentSamples++;
             Assert.True(differentSamples >= 10, $"{kind} {scale:P0} 主题没有渲染足够的可见控件");
+        }
+    }
+
+    [Fact]
+    public void ClassicTemplateKeepsLongServerAddressInsideFixedCanvas()
+    {
+        using var scope = new TempScope();
+        LauncherSnapshot snapshot = LauncherTemplateCatalog.Create(LauncherTemplateKind.Classic);
+        snapshot.Servers[0].Address = new string('a', 180) + ".example.test";
+        foreach (int dpi in new[] { 96, 120, 144, 192 })
+        {
+            LauncherDpiLayoutResult result = LauncherRuntimeHost.ValidatePerMonitorDpiForEvidence(snapshot, scope.Dir("long-host"), dpi);
+            Assert.True(result.AllControlsInsideCanvas, result.Details);
         }
     }
 

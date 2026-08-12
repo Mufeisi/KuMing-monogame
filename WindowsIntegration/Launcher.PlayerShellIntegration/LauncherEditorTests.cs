@@ -36,6 +36,16 @@ public sealed class LauncherEditorTests
     }
 
     [Fact]
+    public void ClassicBackgroundIsCenteredWithoutResampling()
+    {
+        using Bitmap originalSize = LauncherForm.BuildClassicBackground(new Size(800, 550));
+        using Bitmap classicCanvas = LauncherForm.BuildClassicBackground(new Size(801, 554));
+        for (int y = 0; y < originalSize.Height; y++)
+            for (int x = 0; x < originalSize.Width; x++)
+                Assert.Equal(originalSize.GetPixel(x, y), classicCanvas.GetPixel(x, y + 2));
+    }
+
+    [Fact]
     public void QuickLauncherNameAlsoControlsGeneratedFileName()
     {
         EditorProject project = new();

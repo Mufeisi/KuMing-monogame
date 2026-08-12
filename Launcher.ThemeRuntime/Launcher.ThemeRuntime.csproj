@@ -22,6 +22,10 @@
     <EmbeddedResource Include="..\Client_VorticeDX11\Resources\Cross_Base.png" LogicalName="Launcher.ThemeRuntime.Classic.Cross_Base.png" />
     <EmbeddedResource Include="..\Client_VorticeDX11\Resources\Cross_Hover.png" LogicalName="Launcher.ThemeRuntime.Classic.Cross_Hover.png" />
     <EmbeddedResource Include="..\Client_VorticeDX11\Resources\Cross_Pressed.png" LogicalName="Launcher.ThemeRuntime.Classic.Cross_Pressed.png" />
+    <EmbeddedResource Include="..\Client_VorticeDX11\Resources\Green Progress.png" LogicalName="Launcher.ThemeRuntime.Classic.Green_Progress.png" />
+    <EmbeddedResource Include="..\Client_VorticeDX11\Resources\Blue Progress.png" LogicalName="Launcher.ThemeRuntime.Classic.Blue_Progress.png" />
+    <EmbeddedResource Include="..\Client_VorticeDX11\Resources\NEW Progress End (Green).png" LogicalName="Launcher.ThemeRuntime.Classic.Green_Progress_End.png" />
+    <EmbeddedResource Include="..\Client_VorticeDX11\Resources\NEW Progress End (Blue).png" LogicalName="Launcher.ThemeRuntime.Classic.Blue_Progress_End.png" />
   </ItemGroup>
   <ItemGroup>
     <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">

@@ -13,21 +13,38 @@ internal sealed class LauncherProgressBar : Control
     public int Value { get => _value; set { _value = Math.Clamp(value, 0, _maximum); Invalidate(); } }
     [System.ComponentModel.Browsable(false), System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
     public Color FillColor { get; set; } = Color.FromArgb(36, 175, 74);
+    [System.ComponentModel.Browsable(false), System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
+    public Image? FillImage { get; set; }
+    [System.ComponentModel.Browsable(false), System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
+    public Image? EndImage { get; set; }
+    [System.ComponentModel.Browsable(false), System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
+    public bool ClassicImageMode { get; set; }
 
     public LauncherProgressBar()
     {
+        SetStyle(ControlStyles.SupportsTransparentBackColor, true);
         DoubleBuffered = true;
         BackColor = Color.FromArgb(5, 12, 18);
     }
 
     protected override void OnPaint(PaintEventArgs e)
     {
-        e.Graphics.Clear(BackColor);
-        int width = Maximum <= 0 ? 0 : (int)Math.Round(ClientSize.Width * (Value / (double)Maximum));
-        if (width > 0) using (var fill = new SolidBrush(FillColor)) e.Graphics.FillRectangle(fill, 1, 1, Math.Max(0, width - 2), Math.Max(0, Height - 2));
-        using var border = new Pen(Color.FromArgb(52, 71, 78));
-        e.Graphics.DrawRectangle(border, 0, 0, Math.Max(0, Width - 1), Math.Max(0, Height - 1));
+        if (!ClassicImageMode) e.Graphics.Clear(BackColor);
+        int maximumFillWidth = ClassicImageMode && FillImage is not null ? Math.Min(FillImage.Width, ClientSize.Width) : ClientSize.Width;
+        int width = Maximum <= 0 ? 0 : (int)Math.Round(maximumFillWidth * (Value / (double)Maximum));
+        if (width > 0)
+        {
+            if (FillImage is not null) e.Graphics.DrawImage(FillImage, new Rectangle(0, 0, width, Math.Min(Height, FillImage.Height)), new Rectangle(0, 0, width, Math.Min(Height, FillImage.Height)), GraphicsUnit.Pixel);
+            else using (var fill = new SolidBrush(FillColor)) e.Graphics.FillRectangle(fill, 1, 1, Math.Max(0, width - 2), Math.Max(0, Height - 2));
+            if (EndImage is not null) e.Graphics.DrawImageUnscaled(EndImage, width, 0);
+        }
+        if (!ClassicImageMode)
+        {
+            using var border = new Pen(Color.FromArgb(52, 71, 78));
+            e.Graphics.DrawRectangle(border, 0, 0, Math.Max(0, Width - 1), Math.Max(0, Height - 1));
+        }
     }
+    protected override void Dispose(bool disposing) { if (disposing) { FillImage?.Dispose(); EndImage?.Dispose(); FillImage = EndImage = null; } base.Dispose(disposing); }
 }
 
 internal sealed class AnnouncementCard : Panel
