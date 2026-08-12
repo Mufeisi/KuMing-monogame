@@ -707,6 +707,11 @@ namespace Launcher
 
             WindowState = FormWindowState.Minimized;
             }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException)
+            {
+                if (!IsDisposed && !Disposing)
+                    MessageBox.Show("启动游戏前写入客户端配置失败：" + ex.Message, "无法启动游戏");
+            }
             finally
             {
                 _launching = false;
