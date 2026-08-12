@@ -1,0 +1,58 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="968df598-0c1c-40fa-938f-1ccd5e279374" name="luo@DESKTOP-4J13TH0 2026-08-11 08:44:47" runUser="DESKTOP-4J13TH0\luo" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-08-11T08:44:47.5656854+08:00" queuing="2026-08-11T08:44:47.5656857+08:00" start="2026-08-11T08:44:44.6435700+08:00" finish="2026-08-11T08:44:48.8612784+08:00" />
+  <TestSettings name="default" id="75f13047-8859-468e-940c-294b4b645629">
+    <Deployment runDeploymentRoot="luo_DESKTOP-4J13TH0_2026-08-11_08_44_47" />
+  </TestSettings>
+  <Results>
+    <UnitTestResult executionId="ac855b4d-2cd9-493f-b4d7-39af960a7ce5" testId="e8c05382-716a-e631-7ae5-9c51cdc4ad7f" testName="Base05.Tests.MicroGatewayCoreTests.独立网关与内置服务端四类协议响应一致且公开目录只读安全" computerName="DESKTOP-4J13TH0" duration="00:00:01.2043309" startTime="2026-08-11T08:44:46.4915400+08:00" endTime="2026-08-11T08:44:47.6789993+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="ac855b4d-2cd9-493f-b4d7-39af960a7ce5" />
+    <UnitTestResult executionId="dd0ae851-9485-45dd-9235-7ac6bc42d1b2" testId="374d7377-fab4-f2dd-4fc8-408ba05d36da" testName="Base05.Tests.MicroGatewayCoreTests.快照和停止覆盖响应体的完整写入周期" computerName="DESKTOP-4J13TH0" duration="00:00:00.0067350" startTime="2026-08-11T08:44:47.7436949+08:00" endTime="2026-08-11T08:44:47.7505259+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="dd0ae851-9485-45dd-9235-7ac6bc42d1b2" />
+    <UnitTestResult executionId="b51f71d8-7b51-4a8e-83cf-3a03ca247bec" testId="34b3af77-4f9d-ec93-1ba4-47ec330165a3" testName="Base05.Tests.MicroGatewayCoreTests.独立核心不引用游戏服务端或Envir程序集" computerName="DESKTOP-4J13TH0" duration="00:00:00.0121770" startTime="2026-08-11T08:44:46.4463320+08:00" endTime="2026-08-11T08:44:46.4707114+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="b51f71d8-7b51-4a8e-83cf-3a03ca247bec" />
+    <UnitTestResult executionId="86fc31fe-48a5-473b-ba5a-aa6c5ad705d2" testId="bae4d887-1171-f685-881c-d7c548e61f7a" testName="Base05.Tests.MicroGatewayCoreTests.资源目录内重解析点不能读取根目录外文件" computerName="DESKTOP-4J13TH0" duration="00:00:00.0623679" startTime="2026-08-11T08:44:47.6806474+08:00" endTime="2026-08-11T08:44:47.7434196+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="86fc31fe-48a5-473b-ba5a-aa6c5ad705d2" />
+    <UnitTestResult executionId="c76ac654-b7a9-4e4b-a800-62854766cdb0" testId="ca2687ce-cc71-b438-44bd-ddcc04cbb175" testName="Base05.Tests.MicroProtocolRegressionTests.现有文件Range图库头单图与声音路由保持客户端协议响应" computerName="DESKTOP-4J13TH0" duration="00:00:01.0306842" startTime="2026-08-11T08:44:47.7532607+08:00" endTime="2026-08-11T08:44:48.7839148+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="c76ac654-b7a9-4e4b-a800-62854766cdb0" />
+  </Results>
+  <TestDefinitions>
+    <UnitTest name="Base05.Tests.MicroGatewayCoreTests.资源目录内重解析点不能读取根目录外文件" storage="d:\chuanqi\kmyq\lyocrystal-main\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="bae4d887-1171-f685-881c-d7c548e61f7a">
+      <Execution id="86fc31fe-48a5-473b-ba5a-aa6c5ad705d2" />
+      <TestMethod codeBase="D:\ChuanQi\Kmyq\LyoCrystal-main\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.MicroGatewayCoreTests" name="资源目录内重解析点不能读取根目录外文件" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.MicroProtocolRegressionTests.现有文件Range图库头单图与声音路由保持客户端协议响应" storage="d:\chuanqi\kmyq\lyocrystal-main\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="ca2687ce-cc71-b438-44bd-ddcc04cbb175">
+      <Execution id="c76ac654-b7a9-4e4b-a800-62854766cdb0" />
+      <TestMethod codeBase="D:\ChuanQi\Kmyq\LyoCrystal-main\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.MicroProtocolRegressionTests" name="现有文件Range图库头单图与声音路由保持客户端协议响应" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.MicroGatewayCoreTests.独立网关与内置服务端四类协议响应一致且公开目录只读安全" storage="d:\chuanqi\kmyq\lyocrystal-main\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="e8c05382-716a-e631-7ae5-9c51cdc4ad7f">
+      <Execution id="ac855b4d-2cd9-493f-b4d7-39af960a7ce5" />
+      <TestMethod codeBase="D:\ChuanQi\Kmyq\LyoCrystal-main\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.MicroGatewayCoreTests" name="独立网关与内置服务端四类协议响应一致且公开目录只读安全" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.MicroGatewayCoreTests.快照和停止覆盖响应体的完整写入周期" storage="d:\chuanqi\kmyq\lyocrystal-main\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="374d7377-fab4-f2dd-4fc8-408ba05d36da">
+      <Execution id="dd0ae851-9485-45dd-9235-7ac6bc42d1b2" />
+      <TestMethod codeBase="D:\ChuanQi\Kmyq\LyoCrystal-main\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.MicroGatewayCoreTests" name="快照和停止覆盖响应体的完整写入周期" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.MicroGatewayCoreTests.独立核心不引用游戏服务端或Envir程序集" storage="d:\chuanqi\kmyq\lyocrystal-main\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="34b3af77-4f9d-ec93-1ba4-47ec330165a3">
+      <Execution id="b51f71d8-7b51-4a8e-83cf-3a03ca247bec" />
+      <TestMethod codeBase="D:\ChuanQi\Kmyq\LyoCrystal-main\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.MicroGatewayCoreTests" name="独立核心不引用游戏服务端或Envir程序集" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestEntries>
+    <TestEntry testId="e8c05382-716a-e631-7ae5-9c51cdc4ad7f" executionId="ac855b4d-2cd9-493f-b4d7-39af960a7ce5" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="374d7377-fab4-f2dd-4fc8-408ba05d36da" executionId="dd0ae851-9485-45dd-9235-7ac6bc42d1b2" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="34b3af77-4f9d-ec93-1ba4-47ec330165a3" executionId="b51f71d8-7b51-4a8e-83cf-3a03ca247bec" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="bae4d887-1171-f685-881c-d7c548e61f7a" executionId="86fc31fe-48a5-473b-ba5a-aa6c5ad705d2" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="ca2687ce-cc71-b438-44bd-ddcc04cbb175" executionId="c76ac654-b7a9-4e4b-a800-62854766cdb0" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+  </TestEntries>
+  <TestLists>
+    <TestList name="列表中未列出的结果" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="所有已加载的结果" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Completed">
+    <Counters total="5" executed="5" passed="5" failed="0" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <Output>
+      <StdOut>[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.0.2+dd36e86129 (64-bit .NET 10.0.4)&#xD;
+[xUnit.net 00:00:00.16]   Discovering: Base05.Tests&#xD;
+[xUnit.net 00:00:00.28]   Discovered:  Base05.Tests&#xD;
+[xUnit.net 00:00:00.31]   Starting:    Base05.Tests&#xD;
+[xUnit.net 00:00:02.69]   Finished:    Base05.Tests&#xD;
+</StdOut>
+    </Output>
+  </ResultSummary>
+</TestRun>

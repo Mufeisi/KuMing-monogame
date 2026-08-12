@@ -12,6 +12,40 @@ public static class PasswordStoragePolicy
 
     public static bool RememberPassword => false;
 
+    public readonly struct LoginCredentials
+    {
+        public LoginCredentials(string accountId, string password, bool rememberPassword = false)
+        {
+            AccountId = accountId ?? string.Empty;
+            Password = password ?? string.Empty;
+            RememberPassword = rememberPassword;
+        }
+
+        public string AccountId { get; }
+        public string Password { get; }
+        public bool RememberPassword { get; }
+    }
+
+    public static LoginCredentials LoadLoginCredentials(InIReader reader, string section, string fallbackAccountId)
+    {
+        if (reader == null)
+            throw new ArgumentNullException(nameof(reader));
+
+        ClearStoredCredentials(reader, section);
+        return new LoginCredentials(
+            reader.ReadString(section, "AccountID", fallbackAccountId ?? string.Empty),
+            string.Empty,
+            RememberPassword);
+    }
+
+    public static LoginCredentials PrepareLoginCredentials(string enteredAccountId, string enteredPassword,
+        string fallbackAccountId, string fallbackPassword)
+    {
+        var accountId = string.IsNullOrWhiteSpace(enteredAccountId) ? fallbackAccountId : enteredAccountId;
+        var password = string.IsNullOrWhiteSpace(enteredPassword) ? fallbackPassword : enteredPassword;
+        return new LoginCredentials(accountId, password, RememberPassword);
+    }
+
     public static int ClearStoredCredentials(InIReader reader, string section)
     {
         if (reader == null)

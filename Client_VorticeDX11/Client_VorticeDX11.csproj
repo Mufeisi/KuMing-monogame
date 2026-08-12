@@ -57,6 +57,14 @@
 
 	<ItemGroup>
 		<Content Include="MIR2.ICO" />
+		<Content Include="launcher-capabilities.json" CopyToOutputDirectory="PreserveNewest" />
+		<Content Include="Launcher\BuiltIn\**\*" CopyToOutputDirectory="PreserveNewest" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+			<_Parameter1>Launcher.RemoteListIntegration.Windows</_Parameter1>
+		</AssemblyAttribute>
 	</ItemGroup>
 
 	<ItemGroup>
@@ -74,6 +82,9 @@
 
 	<ItemGroup>
 		<None Include="..\.editorconfig" Link=".editorconfig" />
+		<None Include="..\THIRD-PARTY-NOTICES.md" Link="THIRD-PARTY-NOTICES.md">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
 	</ItemGroup>
 
 	<ItemGroup>
@@ -94,6 +105,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<ProjectReference Include="..\Launcher.ThemeRuntime\Launcher.ThemeRuntime.csproj" />
 		<ProjectReference Include="..\Shared\Shared.csproj" />
 	</ItemGroup>
 
@@ -116,6 +128,9 @@
 		<None Update="MIR2.ICO">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
+		<None Include="..\Docs\Compliance\SBOM\dependencies.spdx.json" Link="Compliance\SBOM\dependencies.spdx.json" CopyToOutputDirectory="PreserveNewest" />
+		<None Include="..\Docs\Compliance\external-assets.manifest.json" Link="Compliance\external-assets.manifest.json" CopyToOutputDirectory="PreserveNewest" />
+		<None Include="..\Docs\Compliance\Licenses\**\*" Link="Compliance\Licenses\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
 	</ItemGroup>
 
 </Project>

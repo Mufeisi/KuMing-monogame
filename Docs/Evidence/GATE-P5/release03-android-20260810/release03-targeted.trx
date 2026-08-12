@@ -1,0 +1,160 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="f2d5216f-77a0-4811-b0ec-cc240f378f09" name="luo@DESKTOP-4J13TH0 2026-08-10 17:40:37" runUser="DESKTOP-4J13TH0\luo" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-08-10T17:40:37.7916742+08:00" queuing="2026-08-10T17:40:37.7916747+08:00" start="2026-08-10T17:40:36.1410625+08:00" finish="2026-08-10T17:40:50.9884152+08:00" />
+  <TestSettings name="default" id="fcbed66c-f833-4ec1-aa9d-c57b3210fa41">
+    <Deployment runDeploymentRoot="luo_DESKTOP-4J13TH0_2026-08-10_17_40_37" />
+  </TestSettings>
+  <Results>
+    <UnitTestResult executionId="2fa15a90-f522-42a7-a391-7f25b122f4d6" testId="0102632a-6e19-e336-96f0-7d5f2b1366b2" testName="Base05.Tests.Release02PipelineTests.重复回滚不会把失败版本重新切回当前" computerName="DESKTOP-4J13TH0" duration="00:00:02.0040106" startTime="2026-08-10T17:40:37.4396392+08:00" endTime="2026-08-10T17:40:39.4215491+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="2fa15a90-f522-42a7-a391-7f25b122f4d6" />
+    <UnitTestResult executionId="eecc56c1-81b5-46e3-a281-b91ddee39695" testId="04d8d286-5595-e8a1-2a0d-f86c6f6af727" testName="Base05.Tests.Release02PipelineTests.稳定客户端标识真实选择百分之五灰度或健康版本" computerName="DESKTOP-4J13TH0" duration="00:00:01.4840600" startTime="2026-08-10T17:40:40.4575300+08:00" endTime="2026-08-10T17:40:41.9412147+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="eecc56c1-81b5-46e3-a281-b91ddee39695" />
+    <UnitTestResult executionId="5f0dd7e4-661b-47c4-8eee-1377b3c8ca44" testId="7dfede51-a6ea-602f-860d-b0980c369585" testName="Base05.Tests.Release02PipelineTests.损坏的上一版本拒绝回滚" computerName="DESKTOP-4J13TH0" duration="00:00:00.7476698" startTime="2026-08-10T17:40:47.5732577+08:00" endTime="2026-08-10T17:40:48.3209286+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="5f0dd7e4-661b-47c4-8eee-1377b3c8ca44" />
+    <UnitTestResult executionId="28a2fb55-8f2a-4b0d-8573-12ef6f67e0ce" testId="2e4af663-5554-5ed8-ff58-213dfba6f1d0" testName="Base05.Tests.BootstrapManifestSignatureTests.确定性二进制载荷不受资源包JSON顺序影响" computerName="DESKTOP-4J13TH0" duration="00:00:00.0006732" startTime="2026-08-10T17:40:37.7287394+08:00" endTime="2026-08-10T17:40:37.7288213+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="28a2fb55-8f2a-4b0d-8573-12ef6f67e0ce" />
+    <UnitTestResult executionId="bbb17998-5626-4979-91a0-870bfe914eca" testId="4964dd4a-4cfa-7e28-64f2-4febcf82ad10" testName="Base05.Tests.BootstrapManifestSignatureTests.重复包非规范摘要和未知字段均拒绝" computerName="DESKTOP-4J13TH0" duration="00:00:00.0051430" startTime="2026-08-10T17:40:37.6625040+08:00" endTime="2026-08-10T17:40:37.6674524+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="bbb17998-5626-4979-91a0-870bfe914eca" />
+    <UnitTestResult executionId="1a8f6102-7e85-4bf8-92ce-a89fd836c923" testId="56840782-1a01-634d-7821-bad3bf2a8786" testName="Base05.Tests.BootstrapManifestSignatureTests.哈希篡改未知密钥和错误签名均失败关闭" computerName="DESKTOP-4J13TH0" duration="00:00:00.0124484" startTime="2026-08-10T17:40:37.7290727+08:00" endTime="2026-08-10T17:40:37.7291548+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="1a8f6102-7e85-4bf8-92ce-a89fd836c923" />
+    <UnitTestResult executionId="c3b11e81-3953-4002-bb27-90647bfeb0c0" testId="da83e42c-99a5-344f-0888-2b06aac2f68c" testName="Base05.Tests.BootstrapManifestSignatureTests.已签名资源包哈希不可省略且拒绝篡改文件" computerName="DESKTOP-4J13TH0" duration="00:00:00.0067398" startTime="2026-08-10T17:40:37.4929247+08:00" endTime="2026-08-10T17:40:37.4982674+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="c3b11e81-3953-4002-bb27-90647bfeb0c0" />
+    <UnitTestResult executionId="89cf0e55-ac86-4bcb-ad86-d75c96f39564" testId="98e236e8-856e-1781-f970-ae5f54b20d9a" testName="Base05.Tests.Release02PipelineTests.发布观测事件写入即自动触发回滚且事件幂等" computerName="DESKTOP-4J13TH0" duration="00:00:03.7830854" startTime="2026-08-10T17:40:41.9415571+08:00" endTime="2026-08-10T17:40:45.7244580+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="89cf0e55-ac86-4bcb-ad86-d75c96f39564" />
+    <UnitTestResult executionId="93a9c314-b458-427c-950c-ae9a92441a9f" testId="f756a0b8-9647-b32a-ec41-ce0a04b136c7" testName="Base05.Tests.ProductionReleaseSigningTests.Android签名恢复包可跨DPAPI文件往返且错误口令失败关闭" computerName="DESKTOP-4J13TH0" duration="00:00:12.0270436" startTime="2026-08-10T17:40:37.4970769+08:00" endTime="2026-08-10T17:40:49.5239518+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="93a9c314-b458-427c-950c-ae9a92441a9f" />
+    <UnitTestResult executionId="49109b49-d278-4afd-bd3a-26dada575023" testId="2f86225f-6691-a528-71f0-934f4c610214" testName="Base05.Tests.Release02PipelineTests.连续致命崩溃不等待样本量直接回滚" computerName="DESKTOP-4J13TH0" duration="00:00:01.0352644" startTime="2026-08-10T17:40:39.4221854+08:00" endTime="2026-08-10T17:40:40.4570476+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="49109b49-d278-4afd-bd3a-26dada575023" />
+    <UnitTestResult executionId="9c2d4f1b-dcf0-40bb-bc4b-e4bef818c9e4" testId="23d18057-94bb-6f58-fc5e-6fc9f404412e" testName="Base05.Tests.Release02PipelineTests.本地发布网关真实消费灰度选择并在事件到达时自动回滚" computerName="DESKTOP-4J13TH0" duration="00:00:01.6933460" startTime="2026-08-10T17:40:48.3212995+08:00" endTime="2026-08-10T17:40:50.0192780+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="9c2d4f1b-dcf0-40bb-bc4b-e4bef818c9e4" />
+    <UnitTestResult executionId="28046bc9-2898-441d-bf39-2e437b17952e" testId="8a36aa74-9ab1-49c3-9b54-ccc59510e92b" testName="Base05.Tests.ProductionReleaseSigningTests.生产资源公钥与发布记录一致且轮换窗口有效" computerName="DESKTOP-4J13TH0" duration="00:00:00.0085922" startTime="2026-08-10T17:40:49.5252204+08:00" endTime="2026-08-10T17:40:49.5337534+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="28046bc9-2898-441d-bf39-2e437b17952e" />
+    <UnitTestResult executionId="ff9d7504-55b1-458b-b52d-6b6c43c125d1" testId="c8b8a4bd-7963-3ff0-50ea-db3322f81ac9" testName="Base05.Tests.Release02PipelineTests.一键入口固定构建冒烟导出签名与五百分比灰度" computerName="DESKTOP-4J13TH0" duration="00:00:00.0103080" startTime="2026-08-10T17:40:37.3893746+08:00" endTime="2026-08-10T17:40:37.4163820+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="ff9d7504-55b1-458b-b52d-6b6c43c125d1" />
+    <UnitTestResult executionId="49caa831-2127-474d-9589-5aa62ee0f8a8" testId="731e9370-1871-8b78-0bec-f065ef1607d0" testName="Base05.Tests.ProductionReleaseSigningTests.CI只在签名步骤取用独立秘密并清理临时文件" computerName="DESKTOP-4J13TH0" duration="00:00:00.0009253" startTime="2026-08-10T17:40:49.5241897+08:00" endTime="2026-08-10T17:40:49.5250112+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="49caa831-2127-474d-9589-5aa62ee0f8a8" />
+    <UnitTestResult executionId="a7c39ff9-ebd0-46cc-a451-d10d659951d3" testId="d47871e1-47b2-6081-5bbb-326c0640a6e1" testName="Base05.Tests.BootstrapManifestSignatureTests.低序列与同序列不同资源版本均拒绝降级" computerName="DESKTOP-4J13TH0" duration="00:00:00.0076262" startTime="2026-08-10T17:40:37.7281471+08:00" endTime="2026-08-10T17:40:37.7282418+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="a7c39ff9-ebd0-46cc-a451-d10d659951d3" />
+    <UnitTestResult executionId="8fccb6b5-7890-4f89-b63b-78666ce7afdd" testId="edf48457-fbd8-a026-464e-4365407a31fb" testName="Base05.Tests.BootstrapManifestSignatureTests.当前与下一密钥按序列窗口平滑轮换" computerName="DESKTOP-4J13TH0" duration="00:00:00.0151798" startTime="2026-08-10T17:40:37.4984691+08:00" endTime="2026-08-10T17:40:37.5135217+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="8fccb6b5-7890-4f89-b63b-78666ce7afdd" />
+    <UnitTestResult executionId="39199f9d-1e6a-4986-a85a-d15293d950a1" testId="a8f6189e-8504-3e6c-7d59-b7862db74f91" testName="Base05.Tests.ProductionReleaseSigningTests.正式签名索引覆盖全部随包资源并兼容PC与Android" computerName="DESKTOP-4J13TH0" duration="00:00:00.0955247" startTime="2026-08-10T17:40:37.3919471+08:00" endTime="2026-08-10T17:40:37.4968232+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="39199f9d-1e6a-4986-a85a-d15293d950a1" />
+    <UnitTestResult executionId="4b7794b2-e0ed-4f3e-aa9d-2442014d25b8" testId="eea15db8-51a9-2f2b-d40c-f22a2540a81b" testName="Base05.Tests.BootstrapManifestSignatureTests.正式接受存储原子记录最高序列并在重启后拒绝降级" computerName="DESKTOP-4J13TH0" duration="00:00:00.1484729" startTime="2026-08-10T17:40:37.5138004+08:00" endTime="2026-08-10T17:40:37.6621561+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="4b7794b2-e0ed-4f3e-aa9d-2442014d25b8" />
+    <UnitTestResult executionId="ba8baf69-8779-4fa1-84c7-db3d524dbce3" testId="c557dba3-358b-8620-7b48-f6b8ecd0ff0d" testName="Base05.Tests.Release02PipelineTests.达到错误阈值自动切回上一可运行版本" computerName="DESKTOP-4J13TH0" duration="00:00:00.9929224" startTime="2026-08-10T17:40:46.5800961+08:00" endTime="2026-08-10T17:40:47.5729179+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="ba8baf69-8779-4fa1-84c7-db3d524dbce3" />
+    <UnitTestResult executionId="9acaa209-63b3-434a-8ab8-a6e073d06fd6" testId="3cddd58f-9e99-83fc-5faf-6db1d5f9c1c3" testName="Base05.Tests.Release02PipelineTests.启动崩溃率越线时自动回滚" computerName="DESKTOP-4J13TH0" duration="00:00:00.8607824" startTime="2026-08-10T17:40:50.0219518+08:00" endTime="2026-08-10T17:40:50.8827907+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="9acaa209-63b3-434a-8ab8-a6e073d06fd6" />
+    <UnitTestResult executionId="1ca4e5f2-9e08-4fe1-be2e-b2982a2b334b" testId="58e674c8-a428-c31f-1d4a-b2771f2b4309" testName="Base05.Tests.BootstrapManifestSignatureTests.最低兼容版本高于当前客户端时拒绝更新" computerName="DESKTOP-4J13TH0" duration="00:00:00.0900840" startTime="2026-08-10T17:40:37.3920589+08:00" endTime="2026-08-10T17:40:37.4915726+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="1ca4e5f2-9e08-4fe1-be2e-b2982a2b334b" />
+    <UnitTestResult executionId="7e2687c0-c983-4800-9035-7e342282eacb" testId="9f6cc91d-d3c5-35ee-3040-6a5ae6451a09" testName="Base05.Tests.Release02PipelineTests.样本不足时保持灰度且不会伪报全量健康" computerName="DESKTOP-4J13TH0" duration="00:00:00.8552070" startTime="2026-08-10T17:40:45.7252138+08:00" endTime="2026-08-10T17:40:46.5798134+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="7e2687c0-c983-4800-9035-7e342282eacb" />
+  </Results>
+  <TestDefinitions>
+    <UnitTest name="Base05.Tests.Release02PipelineTests.损坏的上一版本拒绝回滚" storage="c:\users\luo\.codex\worktrees\p5-release03-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="7dfede51-a6ea-602f-860d-b0980c369585">
+      <Execution id="5f0dd7e4-661b-47c4-8eee-1377b3c8ca44" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p5-release03-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.Release02PipelineTests" name="损坏的上一版本拒绝回滚" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.Release02PipelineTests.启动崩溃率越线时自动回滚" storage="c:\users\luo\.codex\worktrees\p5-release03-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="3cddd58f-9e99-83fc-5faf-6db1d5f9c1c3">
+      <Execution id="9acaa209-63b3-434a-8ab8-a6e073d06fd6" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p5-release03-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.Release02PipelineTests" name="启动崩溃率越线时自动回滚" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.ProductionReleaseSigningTests.正式签名索引覆盖全部随包资源并兼容PC与Android" storage="c:\users\luo\.codex\worktrees\p5-release03-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="a8f6189e-8504-3e6c-7d59-b7862db74f91">
+      <Execution id="39199f9d-1e6a-4986-a85a-d15293d950a1" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p5-release03-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.ProductionReleaseSigningTests" name="正式签名索引覆盖全部随包资源并兼容PC与Android" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.BootstrapManifestSignatureTests.哈希篡改未知密钥和错误签名均失败关闭" storage="c:\users\luo\.codex\worktrees\p5-release03-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="56840782-1a01-634d-7821-bad3bf2a8786">
+      <Execution id="1a8f6102-7e85-4bf8-92ce-a89fd836c923" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p5-release03-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.BootstrapManifestSignatureTests" name="哈希篡改未知密钥和错误签名均失败关闭" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.BootstrapManifestSignatureTests.正式接受存储原子记录最高序列并在重启后拒绝降级" storage="c:\users\luo\.codex\worktrees\p5-release03-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="eea15db8-51a9-2f2b-d40c-f22a2540a81b">
+      <Execution id="4b7794b2-e0ed-4f3e-aa9d-2442014d25b8" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p5-release03-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.BootstrapManifestSignatureTests" name="正式接受存储原子记录最高序列并在重启后拒绝降级" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.Release02PipelineTests.一键入口固定构建冒烟导出签名与五百分比灰度" storage="c:\users\luo\.codex\worktrees\p5-release03-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="c8b8a4bd-7963-3ff0-50ea-db3322f81ac9">
+      <Execution id="ff9d7504-55b1-458b-b52d-6b6c43c125d1" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p5-release03-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.Release02PipelineTests" name="一键入口固定构建冒烟导出签名与五百分比灰度" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.ProductionReleaseSigningTests.CI只在签名步骤取用独立秘密并清理临时文件" storage="c:\users\luo\.codex\worktrees\p5-release03-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="731e9370-1871-8b78-0bec-f065ef1607d0">
+      <Execution id="49caa831-2127-474d-9589-5aa62ee0f8a8" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p5-release03-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.ProductionReleaseSigningTests" name="CI只在签名步骤取用独立秘密并清理临时文件" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.Release02PipelineTests.稳定客户端标识真实选择百分之五灰度或健康版本" storage="c:\users\luo\.codex\worktrees\p5-release03-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="04d8d286-5595-e8a1-2a0d-f86c6f6af727">
+      <Execution id="eecc56c1-81b5-46e3-a281-b91ddee39695" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p5-release03-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.Release02PipelineTests" name="稳定客户端标识真实选择百分之五灰度或健康版本" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.BootstrapManifestSignatureTests.重复包非规范摘要和未知字段均拒绝" storage="c:\users\luo\.codex\worktrees\p5-release03-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="4964dd4a-4cfa-7e28-64f2-4febcf82ad10">
+      <Execution id="bbb17998-5626-4979-91a0-870bfe914eca" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p5-release03-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.BootstrapManifestSignatureTests" name="重复包非规范摘要和未知字段均拒绝" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.BootstrapManifestSignatureTests.当前与下一密钥按序列窗口平滑轮换" storage="c:\users\luo\.codex\worktrees\p5-release03-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="edf48457-fbd8-a026-464e-4365407a31fb">
+      <Execution id="8fccb6b5-7890-4f89-b63b-78666ce7afdd" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p5-release03-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.BootstrapManifestSignatureTests" name="当前与下一密钥按序列窗口平滑轮换" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.BootstrapManifestSignatureTests.已签名资源包哈希不可省略且拒绝篡改文件" storage="c:\users\luo\.codex\worktrees\p5-release03-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="da83e42c-99a5-344f-0888-2b06aac2f68c">
+      <Execution id="c3b11e81-3953-4002-bb27-90647bfeb0c0" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p5-release03-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.BootstrapManifestSignatureTests" name="已签名资源包哈希不可省略且拒绝篡改文件" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.ProductionReleaseSigningTests.Android签名恢复包可跨DPAPI文件往返且错误口令失败关闭" storage="c:\users\luo\.codex\worktrees\p5-release03-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="f756a0b8-9647-b32a-ec41-ce0a04b136c7">
+      <Execution id="93a9c314-b458-427c-950c-ae9a92441a9f" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p5-release03-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.ProductionReleaseSigningTests" name="Android签名恢复包可跨DPAPI文件往返且错误口令失败关闭" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.Release02PipelineTests.连续致命崩溃不等待样本量直接回滚" storage="c:\users\luo\.codex\worktrees\p5-release03-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="2f86225f-6691-a528-71f0-934f4c610214">
+      <Execution id="49109b49-d278-4afd-bd3a-26dada575023" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p5-release03-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.Release02PipelineTests" name="连续致命崩溃不等待样本量直接回滚" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.Release02PipelineTests.样本不足时保持灰度且不会伪报全量健康" storage="c:\users\luo\.codex\worktrees\p5-release03-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="9f6cc91d-d3c5-35ee-3040-6a5ae6451a09">
+      <Execution id="7e2687c0-c983-4800-9035-7e342282eacb" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p5-release03-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.Release02PipelineTests" name="样本不足时保持灰度且不会伪报全量健康" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.BootstrapManifestSignatureTests.低序列与同序列不同资源版本均拒绝降级" storage="c:\users\luo\.codex\worktrees\p5-release03-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="d47871e1-47b2-6081-5bbb-326c0640a6e1">
+      <Execution id="a7c39ff9-ebd0-46cc-a451-d10d659951d3" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p5-release03-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.BootstrapManifestSignatureTests" name="低序列与同序列不同资源版本均拒绝降级" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.Release02PipelineTests.本地发布网关真实消费灰度选择并在事件到达时自动回滚" storage="c:\users\luo\.codex\worktrees\p5-release03-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="23d18057-94bb-6f58-fc5e-6fc9f404412e">
+      <Execution id="9c2d4f1b-dcf0-40bb-bc4b-e4bef818c9e4" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p5-release03-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.Release02PipelineTests" name="本地发布网关真实消费灰度选择并在事件到达时自动回滚" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.ProductionReleaseSigningTests.生产资源公钥与发布记录一致且轮换窗口有效" storage="c:\users\luo\.codex\worktrees\p5-release03-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="8a36aa74-9ab1-49c3-9b54-ccc59510e92b">
+      <Execution id="28046bc9-2898-441d-bf39-2e437b17952e" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p5-release03-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.ProductionReleaseSigningTests" name="生产资源公钥与发布记录一致且轮换窗口有效" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.Release02PipelineTests.重复回滚不会把失败版本重新切回当前" storage="c:\users\luo\.codex\worktrees\p5-release03-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="0102632a-6e19-e336-96f0-7d5f2b1366b2">
+      <Execution id="2fa15a90-f522-42a7-a391-7f25b122f4d6" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p5-release03-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.Release02PipelineTests" name="重复回滚不会把失败版本重新切回当前" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.BootstrapManifestSignatureTests.最低兼容版本高于当前客户端时拒绝更新" storage="c:\users\luo\.codex\worktrees\p5-release03-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="58e674c8-a428-c31f-1d4a-b2771f2b4309">
+      <Execution id="1ca4e5f2-9e08-4fe1-be2e-b2982a2b334b" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p5-release03-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.BootstrapManifestSignatureTests" name="最低兼容版本高于当前客户端时拒绝更新" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.BootstrapManifestSignatureTests.确定性二进制载荷不受资源包JSON顺序影响" storage="c:\users\luo\.codex\worktrees\p5-release03-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="2e4af663-5554-5ed8-ff58-213dfba6f1d0">
+      <Execution id="28a2fb55-8f2a-4b0d-8573-12ef6f67e0ce" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p5-release03-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.BootstrapManifestSignatureTests" name="确定性二进制载荷不受资源包JSON顺序影响" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.Release02PipelineTests.发布观测事件写入即自动触发回滚且事件幂等" storage="c:\users\luo\.codex\worktrees\p5-release03-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="98e236e8-856e-1781-f970-ae5f54b20d9a">
+      <Execution id="89cf0e55-ac86-4bcb-ad86-d75c96f39564" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p5-release03-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.Release02PipelineTests" name="发布观测事件写入即自动触发回滚且事件幂等" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.Release02PipelineTests.达到错误阈值自动切回上一可运行版本" storage="c:\users\luo\.codex\worktrees\p5-release03-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="c557dba3-358b-8620-7b48-f6b8ecd0ff0d">
+      <Execution id="ba8baf69-8779-4fa1-84c7-db3d524dbce3" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p5-release03-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.Release02PipelineTests" name="达到错误阈值自动切回上一可运行版本" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestEntries>
+    <TestEntry testId="0102632a-6e19-e336-96f0-7d5f2b1366b2" executionId="2fa15a90-f522-42a7-a391-7f25b122f4d6" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="04d8d286-5595-e8a1-2a0d-f86c6f6af727" executionId="eecc56c1-81b5-46e3-a281-b91ddee39695" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="7dfede51-a6ea-602f-860d-b0980c369585" executionId="5f0dd7e4-661b-47c4-8eee-1377b3c8ca44" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="2e4af663-5554-5ed8-ff58-213dfba6f1d0" executionId="28a2fb55-8f2a-4b0d-8573-12ef6f67e0ce" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="4964dd4a-4cfa-7e28-64f2-4febcf82ad10" executionId="bbb17998-5626-4979-91a0-870bfe914eca" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="56840782-1a01-634d-7821-bad3bf2a8786" executionId="1a8f6102-7e85-4bf8-92ce-a89fd836c923" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="da83e42c-99a5-344f-0888-2b06aac2f68c" executionId="c3b11e81-3953-4002-bb27-90647bfeb0c0" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="98e236e8-856e-1781-f970-ae5f54b20d9a" executionId="89cf0e55-ac86-4bcb-ad86-d75c96f39564" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="f756a0b8-9647-b32a-ec41-ce0a04b136c7" executionId="93a9c314-b458-427c-950c-ae9a92441a9f" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="2f86225f-6691-a528-71f0-934f4c610214" executionId="49109b49-d278-4afd-bd3a-26dada575023" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="23d18057-94bb-6f58-fc5e-6fc9f404412e" executionId="9c2d4f1b-dcf0-40bb-bc4b-e4bef818c9e4" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="8a36aa74-9ab1-49c3-9b54-ccc59510e92b" executionId="28046bc9-2898-441d-bf39-2e437b17952e" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="c8b8a4bd-7963-3ff0-50ea-db3322f81ac9" executionId="ff9d7504-55b1-458b-b52d-6b6c43c125d1" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="731e9370-1871-8b78-0bec-f065ef1607d0" executionId="49caa831-2127-474d-9589-5aa62ee0f8a8" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="d47871e1-47b2-6081-5bbb-326c0640a6e1" executionId="a7c39ff9-ebd0-46cc-a451-d10d659951d3" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="edf48457-fbd8-a026-464e-4365407a31fb" executionId="8fccb6b5-7890-4f89-b63b-78666ce7afdd" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="a8f6189e-8504-3e6c-7d59-b7862db74f91" executionId="39199f9d-1e6a-4986-a85a-d15293d950a1" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="eea15db8-51a9-2f2b-d40c-f22a2540a81b" executionId="4b7794b2-e0ed-4f3e-aa9d-2442014d25b8" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="c557dba3-358b-8620-7b48-f6b8ecd0ff0d" executionId="ba8baf69-8779-4fa1-84c7-db3d524dbce3" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="3cddd58f-9e99-83fc-5faf-6db1d5f9c1c3" executionId="9acaa209-63b3-434a-8ab8-a6e073d06fd6" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="58e674c8-a428-c31f-1d4a-b2771f2b4309" executionId="1ca4e5f2-9e08-4fe1-be2e-b2982a2b334b" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="9f6cc91d-d3c5-35ee-3040-6a5ae6451a09" executionId="7e2687c0-c983-4800-9035-7e342282eacb" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+  </TestEntries>
+  <TestLists>
+    <TestList name="列表中未列出的结果" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="所有已加载的结果" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Completed">
+    <Counters total="22" executed="22" passed="22" failed="0" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <Output>
+      <StdOut>[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.0.2+dd36e86129 (64-bit .NET 10.0.4)&#xD;
+[xUnit.net 00:00:00.24]   Discovering: Base05.Tests&#xD;
+[xUnit.net 00:00:00.40]   Discovered:  Base05.Tests&#xD;
+[xUnit.net 00:00:00.45]   Starting:    Base05.Tests&#xD;
+[xUnit.net 00:00:13.99]   Finished:    Base05.Tests&#xD;
+</StdOut>
+    </Output>
+  </ResultSummary>
+</TestRun>

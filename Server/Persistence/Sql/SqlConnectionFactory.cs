@@ -38,7 +38,8 @@ namespace Server.Persistence.Sql
             {
                 DataSource = fullPath,
                 Mode = SqliteOpenMode.ReadWriteCreate,
-                Cache = SqliteCacheMode.Shared,
+                Cache = SqliteCacheMode.Private,
+                DefaultTimeout = 5,
             };
 
             var connection = new SqliteConnection(csb.ToString());

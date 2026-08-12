@@ -15,13 +15,7 @@ namespace Server.Scripting.Ai
 
         public string ResolveApiKey()
         {
-            if (!string.IsNullOrWhiteSpace(ApiKey))
-                return ApiKey.Trim();
-
-            if (string.IsNullOrWhiteSpace(ApiKeyEnvironmentVariable))
-                return string.Empty;
-
-            return Environment.GetEnvironmentVariable(ApiKeyEnvironmentVariable.Trim())?.Trim() ?? string.Empty;
+            return string.IsNullOrWhiteSpace(ApiKey) ? string.Empty : ApiKey.Trim();
         }
 
         public static AiScriptOptions FromSettings()
@@ -33,7 +27,7 @@ namespace Server.Scripting.Ai
                 ApiBaseUrl = Settings.AiScriptsApiBaseUrl,
                 Model = Settings.AiScriptsModel,
                 ApiKey = Settings.AiScriptsApiKey,
-                ApiKeyEnvironmentVariable = Settings.AiScriptsApiKeyEnvironmentVariable,
+                ApiKeyEnvironmentVariable = string.Empty,
                 TimeoutSeconds = Math.Max(1, Settings.AiScriptsTimeoutSeconds),
                 MaxRetries = Math.Max(0, Settings.AiScriptsMaxRetries),
                 RequestsPerMinute = Math.Max(1, Settings.AiScriptsRequestsPerMinute),

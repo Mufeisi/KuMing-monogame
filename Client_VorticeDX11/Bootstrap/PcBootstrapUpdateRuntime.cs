@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
+using Shared.Release;
 
 namespace Client.Bootstrap
 {
@@ -117,6 +118,20 @@ namespace Client.Bootstrap
                         .OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
                         .ToList();
 
+                    if (queue.Packages.Count > 0 &&
+                        !Shared.Security.BootstrapManifestAcceptanceStore.IsAuthorizedUpdateQueue(
+                            PcBootstrapLayout.ManifestSecurityStatePath,
+                            queue.ResourceVersion,
+                            queue.Packages.Select(item => new Shared.Security.BootstrapManifestAuthorizedPackage
+                            {
+                                Name = item.Name,
+                                Sha256 = item.DesiredSha256,
+                            }),
+                            currentClientVersion: PcBootstrapLayout.ClientCompatibilityVersion))
+                    {
+                        return new BootstrapPackageUpdateQueueView();
+                    }
+
                     return queue;
                 }
                 catch (Exception)
@@ -187,6 +202,54 @@ namespace Client.Bootstrap
                     .ToList();
 
                 WriteJsonFileAtomic(PcBootstrapLayout.UpdateQueuePath, queue);
+            }
+        }
+
+        public static IReadOnlyList<TransactionalFileDeploymentEntry> BuildReleaseCommitEntries(
+            BootstrapPackageUpdateQueueView queue,
+            string stagingDirectory)
+        {
+            if (queue == null) throw new ArgumentNullException(nameof(queue));
+            string root = Path.GetFullPath(stagingDirectory ?? string.Empty);
+            Directory.CreateDirectory(root);
+            lock (Gate)
+            {
+                BootstrapPackageVersionsSnapshotView snapshot = LoadInstalledVersions();
+                snapshot.Packages ??= new List<BootstrapPackageVersionEntryView>();
+                string installedAt = DateTime.UtcNow.ToString("o");
+                foreach (BootstrapPackageUpdateEntryView package in queue.Packages ?? new List<BootstrapPackageUpdateEntryView>())
+                {
+                    snapshot.Packages.Add(new BootstrapPackageVersionEntryView
+                    {
+                        Name = (package.Name ?? string.Empty).Trim(),
+                        Sha256 = (package.DesiredSha256 ?? string.Empty).Trim(),
+                        Source = "signed-release",
+                        InstalledAtUtc = installedAt,
+                    });
+                }
+                snapshot.GeneratedAtUtc = installedAt;
+                snapshot.Packages = snapshot.Packages
+                    .Where(item => item != null && !string.IsNullOrWhiteSpace(item.Name))
+                    .GroupBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
+                    .Select(group => group.Last())
+                    .OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+                var emptyQueue = new BootstrapPackageUpdateQueueView
+                {
+                    CreatedAtUtc = installedAt,
+                    ResourceVersion = queue.ResourceVersion ?? string.Empty,
+                    Message = "签名资源版本已整体提交。",
+                    Packages = new List<BootstrapPackageUpdateEntryView>(),
+                };
+                string versionsSource = Path.Combine(root, "BootstrapPackageVersions.json");
+                string queueSource = Path.Combine(root, "BootstrapPackageUpdateQueue.json");
+                File.WriteAllText(versionsSource, JsonSerializer.Serialize(snapshot, JsonWriteOptions), Utf8NoBom);
+                File.WriteAllText(queueSource, JsonSerializer.Serialize(emptyQueue, JsonWriteOptions), Utf8NoBom);
+                return new[]
+                {
+                    new TransactionalFileDeploymentEntry { SourcePath = versionsSource, TargetPath = PcBootstrapLayout.VersionsPath },
+                    new TransactionalFileDeploymentEntry { SourcePath = queueSource, TargetPath = PcBootstrapLayout.UpdateQueuePath },
+                };
             }
         }
 

@@ -1,0 +1,106 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="e2e9d4a4-7dc2-4ef6-b254-d503eb6629f0" name="luo@DESKTOP-4J13TH0 2026-08-10 04:10:08" runUser="DESKTOP-4J13TH0\luo" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-08-10T04:10:08.0223324+08:00" queuing="2026-08-10T04:10:08.0223328+08:00" start="2026-08-10T04:10:06.9567388+08:00" finish="2026-08-10T04:10:08.2777499+08:00" />
+  <TestSettings name="default" id="093c2933-92ef-4b13-bc89-e584e425d4a8">
+    <Deployment runDeploymentRoot="luo_DESKTOP-4J13TH0_2026-08-10_04_10_08" />
+  </TestSettings>
+  <Results>
+    <UnitTestResult executionId="b933149f-7fec-4c8c-a5c9-cfb7138212a8" testId="219e9bdd-41c0-ab4d-ff1a-29cdd4f108b8" testName="Base05.Tests.MySqlSwitchPolicyTests.任一持续门槛达到时进入迁移规划(trigger: &quot;failure&quot;)" computerName="DESKTOP-4J13TH0" duration="00:00:00.0003014" startTime="2026-08-10T04:10:07.8484200+08:00" endTime="2026-08-10T04:10:07.8485085+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="b933149f-7fec-4c8c-a5c9-cfb7138212a8" />
+    <UnitTestResult executionId="887d77cf-b82f-4e3a-9841-fa2a919bbc84" testId="8194d61a-56ee-2721-227a-1675247b0c44" testName="Base05.Tests.MySqlSwitchPolicyTests.可用第二卷时生成授权并允许正式MySQL选择" computerName="DESKTOP-4J13TH0" duration="00:00:00.0773013" startTime="2026-08-10T04:10:08.0974144+08:00" endTime="2026-08-10T04:10:08.1746956+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="887d77cf-b82f-4e3a-9841-fa2a919bbc84" />
+    <UnitTestResult executionId="c1970fd3-8cc1-45c9-9e55-f20c54838a37" testId="a3cdfc16-537d-2f0e-2489-8393541c6897" testName="Base05.Tests.MySqlSwitchPolicyTests.其他SQLite源库不能为当前主库生成授权" computerName="DESKTOP-4J13TH0" duration="00:00:00.0961301" startTime="2026-08-10T04:10:07.8506793+08:00" endTime="2026-08-10T04:10:07.9345585+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="c1970fd3-8cc1-45c9-9e55-f20c54838a37" />
+    <UnitTestResult executionId="cfe025ee-c68b-4b5b-bc17-e2f3cc1f6a07" testId="b39a1487-5528-c537-6a54-982a55d8bc32" testName="Base05.Tests.MySqlSwitchPolicyTests.未达到持续窗口时继续使用SQLite" computerName="DESKTOP-4J13TH0" duration="00:00:00.0009233" startTime="2026-08-10T04:10:07.9421925+08:00" endTime="2026-08-10T04:10:07.9430222+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="cfe025ee-c68b-4b5b-bc17-e2f3cc1f6a07" />
+    <UnitTestResult executionId="2b1d4790-bfc4-4617-bdce-bdd2151f4636" testId="ecd683db-8212-db07-6c77-00f15c65c0cf" testName="Base05.Tests.MySqlSwitchPolicyTests.未触发门槛时拒绝创建迁移备份" computerName="DESKTOP-4J13TH0" duration="00:00:00.0004036" startTime="2026-08-10T04:10:07.9417993+08:00" endTime="2026-08-10T04:10:07.9420433+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="2b1d4790-bfc4-4617-bdce-bdd2151f4636" />
+    <UnitTestResult executionId="f104c026-d96a-42f7-95dd-880f2e88c11f" testId="8ddc91bb-1cc3-cc6c-efc8-c8ca31f3336f" testName="Base05.Tests.MySqlSwitchPolicyTests.缺少异地副本时迁移门禁失败关闭" computerName="DESKTOP-4J13TH0" duration="00:00:00.0265344" startTime="2026-08-10T04:10:08.0709471+08:00" endTime="2026-08-10T04:10:08.0972122+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="f104c026-d96a-42f7-95dd-880f2e88c11f" />
+    <UnitTestResult executionId="6c7d174b-1438-419a-9f98-ca5b386d01d8" testId="8838b3e8-aed7-df65-450c-d350c9a65c31" testName="Base05.Tests.MySqlSwitchPolicyTests.普通JSON不能伪造DPAPI授权" computerName="DESKTOP-4J13TH0" duration="00:00:00.0069699" startTime="2026-08-10T04:10:07.9349409+08:00" endTime="2026-08-10T04:10:07.9416093+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="6c7d174b-1438-419a-9f98-ca5b386d01d8" />
+    <UnitTestResult executionId="d69ca46c-76ec-43f3-b668-77f63875ebc8" testId="deffd72a-47bd-8c00-f2b1-204f652fbfe5" testName="Base05.Tests.MySqlSwitchPolicyTests.任一持续门槛达到时进入迁移规划(trigger: &quot;size&quot;)" computerName="DESKTOP-4J13TH0" duration="00:00:00.0000664" startTime="2026-08-10T04:10:07.8492988+08:00" endTime="2026-08-10T04:10:07.8493455+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="d69ca46c-76ec-43f3-b668-77f63875ebc8" />
+    <UnitTestResult executionId="f9901ea6-0c0e-4bc3-8f85-8d573d649327" testId="79745399-3aa9-01fe-e016-21f5bcc603c7" testName="Base05.Tests.MySqlSwitchPolicyTests.授权后的备份被篡改时正式选择失败关闭" computerName="DESKTOP-4J13TH0" duration="00:00:00.1201021" startTime="2026-08-10T04:10:07.9883690+08:00" endTime="2026-08-10T04:10:08.0705867+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="f9901ea6-0c0e-4bc3-8f85-8d573d649327" />
+    <UnitTestResult executionId="600633f4-c91e-4488-9bdc-b8042cb33b43" testId="5f593db7-d0ec-0f4e-0a60-e1a2be968f10" testName="Base05.Tests.MySqlSwitchPolicyTests.同卷兄弟目录不能冒充异地副本" computerName="DESKTOP-4J13TH0" duration="00:00:00.0353384" startTime="2026-08-10T04:10:08.1748842+08:00" endTime="2026-08-10T04:10:08.2100557+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="600633f4-c91e-4488-9bdc-b8042cb33b43" />
+    <UnitTestResult executionId="6f6689cd-f3f3-4079-bf6a-e8d92b85fe7f" testId="97ead320-7ea5-48a9-acb8-bb33fbe0babf" testName="Base05.Tests.MySqlSwitchPolicyTests.任一持续门槛达到时进入迁移规划(trigger: &quot;online&quot;)" computerName="DESKTOP-4J13TH0" duration="00:00:00.0000660" startTime="2026-08-10T04:10:07.8491462+08:00" endTime="2026-08-10T04:10:07.8491977+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="6f6689cd-f3f3-4079-bf6a-e8d92b85fe7f" />
+    <UnitTestResult executionId="7f0d1195-5181-484d-81fd-04255cbe89b1" testId="220aade1-bf3d-0a4d-1e98-1232dec18c8a" testName="Base05.Tests.MySqlSwitchPolicyTests.未授权时正式MySQL选择失败关闭" computerName="DESKTOP-4J13TH0" duration="00:00:00.0072772" startTime="2026-08-10T04:10:07.9431583+08:00" endTime="2026-08-10T04:10:07.9503715+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="7f0d1195-5181-484d-81fd-04255cbe89b1" />
+    <UnitTestResult executionId="f4a1e76d-fb18-49bb-82a3-f906fed5995a" testId="85d2ea24-7b7e-7da3-d9d8-62c5a86375fe" testName="Base05.Tests.MySqlSwitchPolicyTests.任一持续门槛达到时进入迁移规划(trigger: &quot;latency&quot;)" computerName="DESKTOP-4J13TH0" duration="00:00:00.0108033" startTime="2026-08-10T04:10:07.8169730+08:00" endTime="2026-08-10T04:10:07.8374366+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="f4a1e76d-fb18-49bb-82a3-f906fed5995a" />
+  </Results>
+  <TestDefinitions>
+    <UnitTest name="Base05.Tests.MySqlSwitchPolicyTests.任一持续门槛达到时进入迁移规划(trigger: &quot;size&quot;)" storage="c:\users\luo\.codex\worktrees\p3-db06-mysql-threshold-20260810\tests\base05.tests\bin\debug\net10.0\base05.tests.dll" id="deffd72a-47bd-8c00-f2b1-204f652fbfe5">
+      <Execution id="d69ca46c-76ec-43f3-b668-77f63875ebc8" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p3-db06-mysql-threshold-20260810\Tests\Base05.Tests\bin\Debug\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.MySqlSwitchPolicyTests" name="任一持续门槛达到时进入迁移规划" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.MySqlSwitchPolicyTests.任一持续门槛达到时进入迁移规划(trigger: &quot;failure&quot;)" storage="c:\users\luo\.codex\worktrees\p3-db06-mysql-threshold-20260810\tests\base05.tests\bin\debug\net10.0\base05.tests.dll" id="219e9bdd-41c0-ab4d-ff1a-29cdd4f108b8">
+      <Execution id="b933149f-7fec-4c8c-a5c9-cfb7138212a8" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p3-db06-mysql-threshold-20260810\Tests\Base05.Tests\bin\Debug\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.MySqlSwitchPolicyTests" name="任一持续门槛达到时进入迁移规划" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.MySqlSwitchPolicyTests.任一持续门槛达到时进入迁移规划(trigger: &quot;latency&quot;)" storage="c:\users\luo\.codex\worktrees\p3-db06-mysql-threshold-20260810\tests\base05.tests\bin\debug\net10.0\base05.tests.dll" id="85d2ea24-7b7e-7da3-d9d8-62c5a86375fe">
+      <Execution id="f4a1e76d-fb18-49bb-82a3-f906fed5995a" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p3-db06-mysql-threshold-20260810\Tests\Base05.Tests\bin\Debug\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.MySqlSwitchPolicyTests" name="任一持续门槛达到时进入迁移规划" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.MySqlSwitchPolicyTests.任一持续门槛达到时进入迁移规划(trigger: &quot;online&quot;)" storage="c:\users\luo\.codex\worktrees\p3-db06-mysql-threshold-20260810\tests\base05.tests\bin\debug\net10.0\base05.tests.dll" id="97ead320-7ea5-48a9-acb8-bb33fbe0babf">
+      <Execution id="6f6689cd-f3f3-4079-bf6a-e8d92b85fe7f" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p3-db06-mysql-threshold-20260810\Tests\Base05.Tests\bin\Debug\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.MySqlSwitchPolicyTests" name="任一持续门槛达到时进入迁移规划" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.MySqlSwitchPolicyTests.未达到持续窗口时继续使用SQLite" storage="c:\users\luo\.codex\worktrees\p3-db06-mysql-threshold-20260810\tests\base05.tests\bin\debug\net10.0\base05.tests.dll" id="b39a1487-5528-c537-6a54-982a55d8bc32">
+      <Execution id="cfe025ee-c68b-4b5b-bc17-e2f3cc1f6a07" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p3-db06-mysql-threshold-20260810\Tests\Base05.Tests\bin\Debug\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.MySqlSwitchPolicyTests" name="未达到持续窗口时继续使用SQLite" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.MySqlSwitchPolicyTests.未授权时正式MySQL选择失败关闭" storage="c:\users\luo\.codex\worktrees\p3-db06-mysql-threshold-20260810\tests\base05.tests\bin\debug\net10.0\base05.tests.dll" id="220aade1-bf3d-0a4d-1e98-1232dec18c8a">
+      <Execution id="7f0d1195-5181-484d-81fd-04255cbe89b1" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p3-db06-mysql-threshold-20260810\Tests\Base05.Tests\bin\Debug\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.MySqlSwitchPolicyTests" name="未授权时正式MySQL选择失败关闭" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.MySqlSwitchPolicyTests.可用第二卷时生成授权并允许正式MySQL选择" storage="c:\users\luo\.codex\worktrees\p3-db06-mysql-threshold-20260810\tests\base05.tests\bin\debug\net10.0\base05.tests.dll" id="8194d61a-56ee-2721-227a-1675247b0c44">
+      <Execution id="887d77cf-b82f-4e3a-9841-fa2a919bbc84" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p3-db06-mysql-threshold-20260810\Tests\Base05.Tests\bin\Debug\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.MySqlSwitchPolicyTests" name="可用第二卷时生成授权并允许正式MySQL选择" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.MySqlSwitchPolicyTests.其他SQLite源库不能为当前主库生成授权" storage="c:\users\luo\.codex\worktrees\p3-db06-mysql-threshold-20260810\tests\base05.tests\bin\debug\net10.0\base05.tests.dll" id="a3cdfc16-537d-2f0e-2489-8393541c6897">
+      <Execution id="c1970fd3-8cc1-45c9-9e55-f20c54838a37" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p3-db06-mysql-threshold-20260810\Tests\Base05.Tests\bin\Debug\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.MySqlSwitchPolicyTests" name="其他SQLite源库不能为当前主库生成授权" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.MySqlSwitchPolicyTests.缺少异地副本时迁移门禁失败关闭" storage="c:\users\luo\.codex\worktrees\p3-db06-mysql-threshold-20260810\tests\base05.tests\bin\debug\net10.0\base05.tests.dll" id="8ddc91bb-1cc3-cc6c-efc8-c8ca31f3336f">
+      <Execution id="f104c026-d96a-42f7-95dd-880f2e88c11f" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p3-db06-mysql-threshold-20260810\Tests\Base05.Tests\bin\Debug\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.MySqlSwitchPolicyTests" name="缺少异地副本时迁移门禁失败关闭" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.MySqlSwitchPolicyTests.普通JSON不能伪造DPAPI授权" storage="c:\users\luo\.codex\worktrees\p3-db06-mysql-threshold-20260810\tests\base05.tests\bin\debug\net10.0\base05.tests.dll" id="8838b3e8-aed7-df65-450c-d350c9a65c31">
+      <Execution id="6c7d174b-1438-419a-9f98-ca5b386d01d8" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p3-db06-mysql-threshold-20260810\Tests\Base05.Tests\bin\Debug\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.MySqlSwitchPolicyTests" name="普通JSON不能伪造DPAPI授权" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.MySqlSwitchPolicyTests.未触发门槛时拒绝创建迁移备份" storage="c:\users\luo\.codex\worktrees\p3-db06-mysql-threshold-20260810\tests\base05.tests\bin\debug\net10.0\base05.tests.dll" id="ecd683db-8212-db07-6c77-00f15c65c0cf">
+      <Execution id="2b1d4790-bfc4-4617-bdce-bdd2151f4636" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p3-db06-mysql-threshold-20260810\Tests\Base05.Tests\bin\Debug\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.MySqlSwitchPolicyTests" name="未触发门槛时拒绝创建迁移备份" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.MySqlSwitchPolicyTests.同卷兄弟目录不能冒充异地副本" storage="c:\users\luo\.codex\worktrees\p3-db06-mysql-threshold-20260810\tests\base05.tests\bin\debug\net10.0\base05.tests.dll" id="5f593db7-d0ec-0f4e-0a60-e1a2be968f10">
+      <Execution id="600633f4-c91e-4488-9bdc-b8042cb33b43" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p3-db06-mysql-threshold-20260810\Tests\Base05.Tests\bin\Debug\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.MySqlSwitchPolicyTests" name="同卷兄弟目录不能冒充异地副本" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.MySqlSwitchPolicyTests.授权后的备份被篡改时正式选择失败关闭" storage="c:\users\luo\.codex\worktrees\p3-db06-mysql-threshold-20260810\tests\base05.tests\bin\debug\net10.0\base05.tests.dll" id="79745399-3aa9-01fe-e016-21f5bcc603c7">
+      <Execution id="f9901ea6-0c0e-4bc3-8f85-8d573d649327" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p3-db06-mysql-threshold-20260810\Tests\Base05.Tests\bin\Debug\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.MySqlSwitchPolicyTests" name="授权后的备份被篡改时正式选择失败关闭" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestEntries>
+    <TestEntry testId="219e9bdd-41c0-ab4d-ff1a-29cdd4f108b8" executionId="b933149f-7fec-4c8c-a5c9-cfb7138212a8" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="8194d61a-56ee-2721-227a-1675247b0c44" executionId="887d77cf-b82f-4e3a-9841-fa2a919bbc84" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="a3cdfc16-537d-2f0e-2489-8393541c6897" executionId="c1970fd3-8cc1-45c9-9e55-f20c54838a37" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="b39a1487-5528-c537-6a54-982a55d8bc32" executionId="cfe025ee-c68b-4b5b-bc17-e2f3cc1f6a07" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="ecd683db-8212-db07-6c77-00f15c65c0cf" executionId="2b1d4790-bfc4-4617-bdce-bdd2151f4636" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="8ddc91bb-1cc3-cc6c-efc8-c8ca31f3336f" executionId="f104c026-d96a-42f7-95dd-880f2e88c11f" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="8838b3e8-aed7-df65-450c-d350c9a65c31" executionId="6c7d174b-1438-419a-9f98-ca5b386d01d8" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="deffd72a-47bd-8c00-f2b1-204f652fbfe5" executionId="d69ca46c-76ec-43f3-b668-77f63875ebc8" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="79745399-3aa9-01fe-e016-21f5bcc603c7" executionId="f9901ea6-0c0e-4bc3-8f85-8d573d649327" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="5f593db7-d0ec-0f4e-0a60-e1a2be968f10" executionId="600633f4-c91e-4488-9bdc-b8042cb33b43" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="97ead320-7ea5-48a9-acb8-bb33fbe0babf" executionId="6f6689cd-f3f3-4079-bf6a-e8d92b85fe7f" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="220aade1-bf3d-0a4d-1e98-1232dec18c8a" executionId="7f0d1195-5181-484d-81fd-04255cbe89b1" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="85d2ea24-7b7e-7da3-d9d8-62c5a86375fe" executionId="f4a1e76d-fb18-49bb-82a3-f906fed5995a" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+  </TestEntries>
+  <TestLists>
+    <TestList name="列表中未列出的结果" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="所有已加载的结果" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Completed">
+    <Counters total="13" executed="13" passed="13" failed="0" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <Output>
+      <StdOut>[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.0.2+dd36e86129 (64-bit .NET 10.0.4)&#xD;
+[xUnit.net 00:00:00.12]   Discovering: Base05.Tests&#xD;
+[xUnit.net 00:00:00.20]   Discovered:  Base05.Tests&#xD;
+[xUnit.net 00:00:00.23]   Starting:    Base05.Tests&#xD;
+[xUnit.net 00:00:00.66]   Finished:    Base05.Tests&#xD;
+</StdOut>
+    </Output>
+  </ResultSummary>
+</TestRun>

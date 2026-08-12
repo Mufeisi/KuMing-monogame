@@ -1,0 +1,27 @@
+**********************
+PowerShell transcript start
+Start time: 20260810151454
+Username: DESKTOP-4J13TH0\luo
+RunAs User: DESKTOP-4J13TH0\luo
+Configuration Name:
+Machine: DESKTOP-4J13TH0 (Microsoft Windows NT 10.0.19045.0)
+Host Application: C:\Program Files\PowerShell\7\pwsh.dll -Command try { [Console]::OutputEncoding=[System.Text.Encoding]::UTF8 } catch {}
+$evidence=(Resolve-Path 'Docs\Evidence\GATE-P5\release02-pipeline-20260810').Path; $log=Join-Path $evidence 'mono-shared-build.log'; Start-Transcript -LiteralPath $log -Force | Out-Null; 'COMMAND=dotnet build Client_MonoGame.Shared\Client_MonoGame.Shared.csproj -c Release -f net10.0 --no-restore --nologo'; dotnet build Client_MonoGame.Shared\Client_MonoGame.Shared.csproj -c Release -f net10.0 --no-restore --nologo; $code=$LASTEXITCODE; "EXIT=$code"; Stop-Transcript | Out-Null; exit $code
+Process ID: 23528
+PSVersion: 7.4.7
+PSEdition: Core
+GitCommitId: 7.4.7
+OS: Microsoft Windows 10.0.19045
+Platform: Win32NT
+PSCompatibleVersions: 1.0, 2.0, 3.0, 4.0, 5.0, 5.1, 6.0, 7.0
+PSRemotingProtocolVersion: 2.3
+SerializationVersion: 1.1.0.1
+WSManStackVersion: 3.0
+**********************
+COMMAND=dotnet build Client_MonoGame.Shared\Client_MonoGame.Shared.csproj -c Release -f net10.0 --no-restore --nologo
+
+EXIT=0
+**********************
+PowerShell transcript end
+End time: 20260810151455
+**********************

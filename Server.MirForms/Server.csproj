@@ -71,7 +71,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="log4net" Version="3.0.3" />
+		<PackageReference Include="log4net" Version="3.3.2" />
 		<PackageReference Include="Microsoft.CodeAnalysis" Version="4.12.0" />
 		<PackageReference Include="Microsoft.CodeAnalysis.CSharp.Scripting" Version="4.12.0" />
 		<PackageReference Include="Microsoft.CodeAnalysis.VisualBasic" Version="4.12.0" />
@@ -81,6 +81,15 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<None Include="..\resources.manifest.json" Link="resources.manifest.json">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Include="..\THIRD-PARTY-NOTICES.md" Link="THIRD-PARTY-NOTICES.md">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Include="..\Docs\Compliance\SBOM\dependencies.spdx.json" Link="Compliance\SBOM\dependencies.spdx.json" CopyToOutputDirectory="PreserveNewest" />
+		<None Include="..\Docs\Compliance\external-assets.manifest.json" Link="Compliance\external-assets.manifest.json" CopyToOutputDirectory="PreserveNewest" />
+		<None Include="..\Docs\Compliance\Licenses\**\*" Link="Compliance\Licenses\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
 		<ProjectReference Include="..\Server\Server.Library.csproj" />
 		<ProjectReference Include="..\Shared\Shared.csproj" />
 	</ItemGroup>

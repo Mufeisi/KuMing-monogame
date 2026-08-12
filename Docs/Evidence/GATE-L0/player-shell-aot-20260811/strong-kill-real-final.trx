@@ -1,0 +1,34 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="ccaf9534-f80f-4d56-a104-46508f068b40" name="luo@DESKTOP-4J13TH0 2026-08-11 08:16:09" runUser="DESKTOP-4J13TH0\luo" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-08-11T08:16:09.6584562+08:00" queuing="2026-08-11T08:16:09.6584566+08:00" start="2026-08-11T08:16:04.4687745+08:00" finish="2026-08-11T08:16:09.6638105+08:00" />
+  <TestSettings name="default" id="43ddff0d-5fc0-4215-b523-bcf0edb9a26f">
+    <Deployment runDeploymentRoot="luo_DESKTOP-4J13TH0_2026-08-11_08_16_09" />
+  </TestSettings>
+  <Results>
+    <UnitTestResult executionId="7ebf90b8-9c07-4ae1-9e52-ca58f086cd53" testId="74ab8923-fc25-7d75-b574-18297e00cd74" testName="Launcher.PlayerShellGateL0.Windows.PlayerReplacementStrongKillGateTests.两个真实玩家EXE在三个确定替换点强停后均可恢复" computerName="DESKTOP-4J13TH0" duration="00:00:04.1579720" startTime="2026-08-11T08:16:05.3911813+08:00" endTime="2026-08-11T08:16:09.5618799+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="7ebf90b8-9c07-4ae1-9e52-ca58f086cd53" />
+  </Results>
+  <TestDefinitions>
+    <UnitTest name="Launcher.PlayerShellGateL0.Windows.PlayerReplacementStrongKillGateTests.两个真实玩家EXE在三个确定替换点强停后均可恢复" storage="d:\chuanqi\kmyq\lyocrystal-main\windowsintegration\launcher.playershellgatel0\bin\release\net10.0-windows\launcher.playershellgatel0.windows.dll" id="74ab8923-fc25-7d75-b574-18297e00cd74">
+      <Execution id="7ebf90b8-9c07-4ae1-9e52-ca58f086cd53" />
+      <TestMethod codeBase="D:\ChuanQi\Kmyq\LyoCrystal-main\WindowsIntegration\Launcher.PlayerShellGateL0\bin\Release\net10.0-windows\Launcher.PlayerShellGateL0.Windows.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Launcher.PlayerShellGateL0.Windows.PlayerReplacementStrongKillGateTests" name="两个真实玩家EXE在三个确定替换点强停后均可恢复" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestEntries>
+    <TestEntry testId="74ab8923-fc25-7d75-b574-18297e00cd74" executionId="7ebf90b8-9c07-4ae1-9e52-ca58f086cd53" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+  </TestEntries>
+  <TestLists>
+    <TestList name="列表中未列出的结果" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="所有已加载的结果" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Completed">
+    <Counters total="1" executed="1" passed="1" failed="0" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <Output>
+      <StdOut>[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.0.2+dd36e86129 (64-bit .NET 10.0.4)&#xD;
+[xUnit.net 00:00:00.14]   Discovering: Launcher.PlayerShellGateL0.Windows&#xD;
+[xUnit.net 00:00:00.19]   Discovered:  Launcher.PlayerShellGateL0.Windows&#xD;
+[xUnit.net 00:00:00.22]   Starting:    Launcher.PlayerShellGateL0.Windows&#xD;
+[xUnit.net 00:00:04.44]   Finished:    Launcher.PlayerShellGateL0.Windows&#xD;
+</StdOut>
+    </Output>
+  </ResultSummary>
+</TestRun>

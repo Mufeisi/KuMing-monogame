@@ -1,0 +1,23 @@
+来源根：D:\ChuanQi\Crystal_monogame
+授权依据：项目所有者于 2026-08-10 明确确认该目录内服务器、客户端和资源全部授权给本项目。
+
+Client_VorticeDX11/BootstrapAssets：262 文件，0.13 MiB
+Client_VorticeDX11/Data：1505 文件，6497.34 MiB
+Client_VorticeDX11/Map：2056 文件，1256.93 MiB
+Client_VorticeDX11/Shaders：5 文件
+Client_VorticeDX11/Sound：2193 文件，398.22 MiB
+Server-mono/Data：5 文件，16.19 MiB
+Server-mono/Envir：6221 文件，242.77 MiB
+Server-mono/Maps：1924 文件，1240.24 MiB
+Server-mono/MicroResources：6277 文件，9330.60 MiB
+
+字体元数据：
+- 文件：Client_MonoGame.Shared/Content/hm.ttf
+- 名称：HarmonyOS Sans SC Medium
+- 版本：1.0
+- Copyright 2021 Huawei Device Co., Ltd. All Rights Reserved.
+
+FairyGUI：
+- 仓库路径：Client_MonoGame.Shared/UI/FairyGui/Runtime
+- 上游：https://github.com/fairygui/FairyGUI-monogame
+- 许可证：MIT，Copyright (c) 2018 FairyGUI

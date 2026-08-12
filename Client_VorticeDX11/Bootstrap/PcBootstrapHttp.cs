@@ -8,13 +8,13 @@ using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Shared.Security;
 
 namespace Client.Bootstrap
 {
     internal static class PcBootstrapHttp
     {
         private static readonly UTF8Encoding Utf8NoBom = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false);
-        private static readonly JsonSerializerOptions JsonReadOptions = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
         private static readonly JsonSerializerOptions JsonWriteOptions = new JsonSerializerOptions { WriteIndented = true };
 
         private static HttpClient _httpClient;
@@ -85,7 +85,25 @@ namespace Client.Bootstrap
                     return null;
 
                 json = json.TrimStart('\uFEFF'); // tolerate UTF-8 BOM
-                return JsonSerializer.Deserialize<PcBootstrapPackageIndexView>(json, JsonReadOptions);
+                BootstrapSignedManifest signed = BootstrapManifestAcceptanceStore.VerifyAndAccept(
+                    json,
+                    PcBootstrapLayout.ManifestSecurityStatePath,
+                    currentClientVersion: PcBootstrapLayout.ClientCompatibilityVersion);
+                return new PcBootstrapPackageIndexView
+                {
+                    GeneratedAtUtc = signed.GeneratedAtUtc,
+                    ResourceVersion = signed.ResourceVersion,
+                    Packages = signed.Packages.ConvertAll(package => new PcBootstrapPackageIndexPackageView
+                    {
+                        Name = package.Name,
+                        Sha256 = package.Sha256,
+                        Size = package.Size,
+                    }),
+                };
+            }
+            catch (InvalidDataException)
+            {
+                throw;
             }
             catch (Exception ex)
             {
@@ -156,6 +174,21 @@ namespace Client.Bootstrap
 
             PcBootstrapPreLoginUpdateService.TryAppendLog($"OK | VerifySha256 | Pack={packageName} | Sha256={actual}");
             return true;
+        }
+
+        public static bool VerifyZipSha256(string packageName, string localZipPath, string expectedSha256)
+        {
+            try
+            {
+                string actual = BootstrapSignedPackageHashPolicy.VerifyFile(localZipPath, expectedSha256);
+                PcBootstrapPreLoginUpdateService.TryAppendLog($"OK | VerifySha256 | Pack={packageName} | Sha256={actual}");
+                return true;
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                PcBootstrapPreLoginUpdateService.TryAppendLog($"FAIL | VerifySha256 | Pack={packageName} | Error={ex.Message}");
+                return false;
+            }
         }
 
         public static string ComputeSha256LowerHex(string filePath)

@@ -2,6 +2,7 @@ using System.Drawing;
 ﻿using Server.MirEnvir;
 using Server.MirDatabase;
 using Server.Scripting;
+using Server.Operations;
 
 namespace Server.MirObjects
 {
@@ -555,6 +556,16 @@ namespace Server.MirObjects
 
         public void Process()
         {
+            if (Envir.KillSwitches?.IsEnabled(KillSwitchFeature.Activities) == false)
+            {
+                if (WarIsOn)
+                {
+                    WarIsOn = false;
+                    foreach (PlayerObject player in Envir.Players)
+                        player.BroadcastInfo();
+                }
+                return;
+            }
             if (ScheduleTimer < Envir.Time) AutoSchedule();
             if (WarIsOn && (GameType == ConquestGame.争夺国王 || GameType == ConquestGame.经典模式 || GameType == ConquestGame.征服模式)) ScorePoints();
         }
@@ -997,6 +1008,8 @@ namespace Server.MirObjects
 
         public void StartWar(ConquestGame type)
         {
+            if (Envir.KillSwitches?.IsEnabled(KillSwitchFeature.Activities) == false) return;
+
             int previousState = WarIsOn ? 1 : 0;
             int requestedState = 1;
             bool executedLegacy = false;

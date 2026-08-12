@@ -2,9 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using Microsoft.Xna.Framework;
+using Shared.Release;
 
 namespace MonoShare
 {
@@ -617,6 +619,15 @@ namespace MonoShare
             bool restrictToPendingPackages = false,
             bool rollbackOnFailure = false)
         {
+            if (overwrite && rollbackOnFailure)
+            {
+                return TryApplyPackageBundleTransactionally(
+                    sourceDirectory,
+                    installManifestBundle,
+                    hydrateInstalledPackages,
+                    restrictToPendingPackages);
+            }
+
             string normalizedSourceDirectory = string.IsNullOrWhiteSpace(sourceDirectory)
                 ? string.Empty
                 : Path.GetFullPath(sourceDirectory);
@@ -705,6 +716,231 @@ namespace MonoShare
                 processPendingRequests: true);
 
             return result;
+        }
+
+        private static BootstrapPackageApplyBundleResultView TryApplyPackageBundleTransactionally(
+            string sourceDirectory,
+            bool installManifestBundle,
+            bool hydrateInstalledPackages,
+            bool restrictToPendingPackages)
+        {
+            string normalizedSourceDirectory = string.IsNullOrWhiteSpace(sourceDirectory)
+                ? string.Empty
+                : Path.GetFullPath(sourceDirectory);
+            if (string.IsNullOrWhiteSpace(normalizedSourceDirectory) || !Directory.Exists(normalizedSourceDirectory))
+                throw new DirectoryNotFoundException("源目录不存在，无法执行事务资源更新。");
+
+            List<TransactionalFileDeploymentEntry> entries = BuildTransactionalBundleEntries(
+                normalizedSourceDirectory,
+                installManifestBundle,
+                hydrateInstalledPackages,
+                restrictToPendingPackages);
+            if (entries.Count == 0)
+                throw new InvalidDataException("资源包预检后没有可事务发布的文件。");
+
+            TransactionalFileDeployment.Apply(
+                Path.Combine(ClientResourceLayout.RuntimeRoot, "ReleaseTransactions"),
+                new[] { ClientResourceLayout.ClientRoot },
+                entries,
+                verifyAfterPublish: () =>
+                {
+                    return entries.All(entry => TransactionalFilesMatch(entry.SourcePath, entry.TargetPath));
+                });
+            ClientResourceLayout.ReloadBootstrapMetadata();
+            BootstrapPackageRuntimeOverview overview = LoadOverview(
+                refreshState: true,
+                reloadBootstrapMetadata: false,
+                processPendingRequests: true);
+            return new BootstrapPackageApplyBundleResultView
+            {
+                SourceDirectory = normalizedSourceDirectory,
+                SourceDirectoryExists = true,
+                Completed = true,
+                RollbackRequested = true,
+                CandidatePackageNames = BuildBundleDeclaredPackages(normalizedSourceDirectory, installManifestBundle)
+                    .Packs.Select(pack => pack.Name).OrderBy(name => name, StringComparer.OrdinalIgnoreCase).ToList(),
+                Overview = overview,
+            };
+        }
+
+        public static BootstrapPackageApplyBundleResultView TryApplyPackageBundleSetTransactionally(
+            IEnumerable<string> sourceDirectories,
+            IEnumerable<string> requiredPackageNames)
+        {
+            List<string> sources = (sourceDirectories ?? Array.Empty<string>())
+                .Where(path => !string.IsNullOrWhiteSpace(path))
+                .Select(Path.GetFullPath)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+            if (sources.Count == 0 || sources.Any(path => !Directory.Exists(path)))
+                throw new DirectoryNotFoundException("整版事务的源目录不完整。");
+            string manifestSource = sources.FirstOrDefault(path =>
+                TryResolveManifestBundleFile(path, "bootstrap-packages.json", out _)) ?? sources[0];
+            BootstrapPackageManifestView declared = BuildBundleDeclaredPackages(manifestSource, installManifestBundle: true);
+            Dictionary<string, BootstrapPackageManifestPackView> byName = declared.Packs
+                .Where(pack => !string.IsNullOrWhiteSpace(pack?.Name))
+                .ToDictionary(pack => pack.Name, NormalizeDeclaredPack, StringComparer.OrdinalIgnoreCase);
+            List<string> required = (requiredPackageNames ?? Array.Empty<string>())
+                .Where(name => !string.IsNullOrWhiteSpace(name))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(name => name, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+            var entries = new Dictionary<string, TransactionalFileDeploymentEntry>(StringComparer.OrdinalIgnoreCase);
+            AddManifestTransactionalEntries(entries, manifestSource);
+            foreach (string packageName in required)
+            {
+                if (!byName.TryGetValue(packageName, out BootstrapPackageManifestPackView pack))
+                    throw new InvalidDataException("签名队列分包未在入站 manifest 中声明：" + packageName);
+                foreach (string asset in pack.Assets)
+                {
+                    string source = sources.Select(path =>
+                    {
+                        TryResolveIncomingPackageAssetPath(path, pack.Name, asset, out string found);
+                        return found;
+                    }).FirstOrDefault(path => !string.IsNullOrWhiteSpace(path));
+                    if (string.IsNullOrWhiteSpace(source))
+                        throw new FileNotFoundException("整版事务缺少清单声明文件：" + pack.Name + "/" + asset);
+                    AddTransactionalEntry(entries, source, BuildInstalledPackageAssetPath(pack, asset));
+                    // Mir2Config.ini 是用户运行时配置；远端资源版只能更新包内基线，不能覆盖已保存服务器/仓库设置。
+                    if (!string.Equals(asset.Replace('\\', '/').TrimStart('/'), "Mir2Config.ini", StringComparison.OrdinalIgnoreCase) &&
+                        ClientResourceLayout.TryResolveBootstrapAssetTargetPath(asset, out string hydratedTarget))
+                        AddTransactionalEntry(entries, source, hydratedTarget);
+                }
+            }
+            string transactionRoot = Path.Combine(ClientResourceLayout.RuntimeRoot, "ReleaseTransactions");
+            string stateStagingDirectory = Path.Combine(transactionRoot, "state-" + Guid.NewGuid().ToString("N"));
+            try
+            {
+                foreach (TransactionalFileDeploymentEntry stateEntry in
+                         BootstrapPackageUpdateRuntime.BuildReleaseCommitEntries(required, stateStagingDirectory))
+                {
+                    AddTransactionalEntry(entries, stateEntry.SourcePath, stateEntry.TargetPath);
+                }
+                TransactionalFileDeployment.Apply(
+                    transactionRoot,
+                    new[] { ClientResourceLayout.ClientRoot },
+                    entries.Values,
+                    () => entries.Values.All(entry => TransactionalFilesMatch(entry.SourcePath, entry.TargetPath)));
+            }
+            finally
+            {
+                try { if (Directory.Exists(stateStagingDirectory)) Directory.Delete(stateStagingDirectory, recursive: true); }
+                catch { }
+            }
+            ClientResourceLayout.ReloadBootstrapMetadata();
+            return new BootstrapPackageApplyBundleResultView
+            {
+                SourceDirectory = string.Join(";", sources),
+                SourceDirectoryExists = true,
+                Completed = true,
+                RollbackRequested = true,
+                CandidatePackageNames = required,
+                Overview = LoadOverview(refreshState: true, reloadBootstrapMetadata: false, processPendingRequests: true),
+            };
+        }
+
+        private static void AddManifestTransactionalEntries(
+            IDictionary<string, TransactionalFileDeploymentEntry> entries,
+            string sourceDirectory)
+        {
+            if (TryResolveManifestBundleFile(sourceDirectory, "bootstrap-packages.json", out string rootManifest))
+                AddTransactionalEntry(entries, rootManifest, ClientResourceLayout.RuntimePackageManifestPath);
+            if (TryResolveManifestBundleFile(sourceDirectory, "bootstrap-assets.txt", out string assetManifest))
+                AddTransactionalEntry(entries, assetManifest, ClientResourceLayout.RuntimeBootstrapAssetManifestPath);
+            foreach (string directory in EnumerateManifestBundleDirectories(sourceDirectory))
+                foreach (string manifest in Directory.GetFiles(directory, "*.json", SearchOption.TopDirectoryOnly))
+                    AddTransactionalEntry(entries, manifest, Path.Combine(ClientResourceLayout.RuntimePackageManifestDirectory, Path.GetFileName(manifest)));
+        }
+
+        private static List<TransactionalFileDeploymentEntry> BuildTransactionalBundleEntries(
+            string sourceDirectory,
+            bool installManifestBundle,
+            bool hydrateInstalledPackages,
+            bool restrictToPendingPackages)
+        {
+            var byTarget = new Dictionary<string, TransactionalFileDeploymentEntry>(StringComparer.OrdinalIgnoreCase);
+            if (installManifestBundle)
+            {
+                AddManifestTransactionalEntries(byTarget, sourceDirectory);
+            }
+
+            BootstrapPackageManifestView declared = BuildBundleDeclaredPackages(sourceDirectory, installManifestBundle);
+            List<string> preferred = restrictToPendingPackages
+                ? GetAllPendingPackageNames(packageName: null).ToList()
+                : new List<string>();
+            List<string> candidates = DetectBundlePackageNames(sourceDirectory, declared, preferred);
+            Dictionary<string, BootstrapPackageManifestPackView> declaredByName = declared.Packs
+                .Where(pack => !string.IsNullOrWhiteSpace(pack?.Name))
+                .GroupBy(pack => pack.Name, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(group => group.Key, group => group.Last(), StringComparer.OrdinalIgnoreCase);
+
+            foreach (string packageName in candidates)
+            {
+                if (!declaredByName.TryGetValue(packageName, out BootstrapPackageManifestPackView pack))
+                    continue;
+                pack = NormalizeDeclaredPack(pack);
+                foreach (string asset in pack.Assets)
+                {
+                    if (!TryResolveIncomingPackageAssetPath(sourceDirectory, pack.Name, asset, out string sourcePath))
+                        throw new FileNotFoundException("事务资源版本缺少清单声明文件：" + pack.Name + "/" + asset);
+                    AddTransactionalEntry(byTarget, sourcePath, BuildInstalledPackageAssetPath(pack, asset));
+                    if (hydrateInstalledPackages && ClientResourceLayout.TryResolveBootstrapAssetTargetPath(asset, out string hydratedTarget))
+                        AddTransactionalEntry(byTarget, sourcePath, hydratedTarget);
+                }
+            }
+            return byTarget.Values.OrderBy(entry => entry.TargetPath, StringComparer.OrdinalIgnoreCase).ToList();
+        }
+
+        private static BootstrapPackageManifestView BuildBundleDeclaredPackages(string sourceDirectory, bool installManifestBundle)
+        {
+            if (!installManifestBundle || !TryResolveManifestBundleFile(sourceDirectory, "bootstrap-packages.json", out string rootManifest))
+                return LoadDeclaredPackages(reloadBootstrapMetadata: false);
+            BootstrapPackageManifestView manifest = JsonSerializer.Deserialize<BootstrapPackageManifestView>(
+                File.ReadAllText(rootManifest), JsonOptions) ?? throw new InvalidDataException("入站 bootstrap manifest 为空。");
+            manifest.Packs ??= new List<BootstrapPackageManifestPackView>();
+            var packs = manifest.Packs
+                .Where(pack => !string.IsNullOrWhiteSpace(pack?.Name))
+                .ToDictionary(pack => pack.Name, NormalizeDeclaredPack, StringComparer.OrdinalIgnoreCase);
+            foreach (string directory in EnumerateManifestBundleDirectories(sourceDirectory))
+            {
+                foreach (string path in Directory.GetFiles(directory, "*.json", SearchOption.TopDirectoryOnly))
+                {
+                    if (!TryLoadPackManifest(path, out BootstrapPackageManifestPackView pack) || string.IsNullOrWhiteSpace(pack?.Name))
+                        throw new InvalidDataException("入站分包 manifest 无效：" + path);
+                    packs[pack.Name] = packs.TryGetValue(pack.Name, out BootstrapPackageManifestPackView existing)
+                        ? MergeDeclaredPack(existing, pack)
+                        : NormalizeDeclaredPack(pack);
+                }
+            }
+            manifest.Packs = packs.Values.OrderBy(pack => pack.Name, StringComparer.OrdinalIgnoreCase).ToList();
+            return manifest;
+        }
+
+        private static void AddTransactionalEntry(
+            IDictionary<string, TransactionalFileDeploymentEntry> entries,
+            string sourcePath,
+            string targetPath)
+        {
+            string source = Path.GetFullPath(sourcePath);
+            string target = Path.GetFullPath(targetPath);
+            if (entries.TryGetValue(target, out TransactionalFileDeploymentEntry existing))
+            {
+                if (!string.Equals(existing.SourcePath, source, StringComparison.OrdinalIgnoreCase))
+                    throw new InvalidDataException("多个资源文件映射到同一事务目标：" + target);
+                return;
+            }
+            entries[target] = new TransactionalFileDeploymentEntry { SourcePath = source, TargetPath = target };
+        }
+
+        private static bool TransactionalFilesMatch(string sourcePath, string targetPath)
+        {
+            if (!File.Exists(sourcePath) || !File.Exists(targetPath)) return false;
+            if (new FileInfo(sourcePath).Length != new FileInfo(targetPath).Length) return false;
+            using SHA256 sourceHash = SHA256.Create();
+            using SHA256 targetHash = SHA256.Create();
+            using FileStream source = File.OpenRead(sourcePath);
+            using FileStream target = File.OpenRead(targetPath);
+            return CryptographicOperations.FixedTimeEquals(sourceHash.ComputeHash(source), targetHash.ComputeHash(target));
         }
 
         public static BootstrapPackageBundlePreviewView PreviewPackageBundleFromDirectory(

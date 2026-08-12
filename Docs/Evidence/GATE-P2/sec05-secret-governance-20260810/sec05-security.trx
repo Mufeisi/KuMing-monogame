@@ -1,0 +1,263 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="f3d66d13-010d-4cef-abfc-127b34a75f18" name="luo@DESKTOP-4J13TH0 2026-08-10 01:02:28" runUser="DESKTOP-4J13TH0\luo" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-08-10T01:02:28.7137424+08:00" queuing="2026-08-10T01:02:28.7137427+08:00" start="2026-08-10T01:02:22.3682672+08:00" finish="2026-08-10T01:02:53.0019564+08:00" />
+  <TestSettings name="default" id="a54c6816-345e-4355-8c6f-d82f4904f778">
+    <Deployment runDeploymentRoot="luo_DESKTOP-4J13TH0_2026-08-10_01_02_28" />
+  </TestSettings>
+  <Results>
+    <UnitTestResult executionId="9d207931-a56f-41fd-aab7-30be380f4101" testId="ad9a542f-39d3-c434-77e2-0d96dcdcf7d2" testName="Base05.Tests.ServerLifecycleSmokeTests.真实Server回环V1路径完成KeepAlive" computerName="DESKTOP-4J13TH0" duration="00:00:05.1322143" startTime="2026-08-10T01:02:28.9484844+08:00" endTime="2026-08-10T01:02:34.0802870+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="9d207931-a56f-41fd-aab7-30be380f4101" />
+    <UnitTestResult executionId="51e58da9-20cf-492a-b7c1-5a10cf64f2db" testId="ea87e41d-8d2f-9c0f-959a-624e12b8b781" testName="Base05.Tests.TlsTransportTests.临时证书SslStream握手并完成现有Packet往返" computerName="DESKTOP-4J13TH0" duration="00:00:00.1469034" startTime="2026-08-10T01:02:50.6833288+08:00" endTime="2026-08-10T01:02:50.8302298+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="51e58da9-20cf-492a-b7c1-5a10cf64f2db" />
+    <UnitTestResult executionId="b018dc52-1394-467f-8454-eea6401152c6" testId="21c55acd-263c-2691-c3f6-ea287eb41501" testName="Base05.Tests.TlsTransportTests.无证书或过期证书拒绝启动" computerName="DESKTOP-4J13TH0" duration="00:00:00.1092997" startTime="2026-08-10T01:02:50.8318268+08:00" endTime="2026-08-10T01:02:50.9411140+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="b018dc52-1394-467f-8454-eea6401152c6" />
+    <UnitTestResult executionId="cf57b7df-05b3-43b3-8c0e-3c2b4cfe9eeb" testId="22678f19-f1cc-fd11-52a6-f5dc3a6052d7" testName="Base05.Tests.AdminSecurityTests.真实管理端点拒绝缺失错误及越权凭据" computerName="DESKTOP-4J13TH0" duration="00:00:01.0641801" startTime="2026-08-10T01:02:51.8629204+08:00" endTime="2026-08-10T01:02:52.9274183+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="cf57b7df-05b3-43b3-8c0e-3c2b4cfe9eeb" />
+    <UnitTestResult executionId="1d60604d-687b-4538-9316-00d2ee0b3cc4" testId="66141843-9aa9-a625-f4b9-c6ae5a1b9881" testName="Base05.Tests.TlsTransportTests.TLS连接失败提示包含排障线索" computerName="DESKTOP-4J13TH0" duration="00:00:00.0010516" startTime="2026-08-10T01:02:51.6799171+08:00" endTime="2026-08-10T01:02:51.6809222+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="1d60604d-687b-4538-9316-00d2ee0b3cc4" />
+    <UnitTestResult executionId="03ecba15-bae2-4ba8-a114-be3bd384302d" testId="2f2b326a-cd17-27e0-2b64-725d585b819c" testName="Base05.Tests.ProductionSecurityTests.历史INI秘密键可严格删除且保留非秘密配置" computerName="DESKTOP-4J13TH0" duration="00:00:00.0065433" startTime="2026-08-10T01:02:51.8370301+08:00" endTime="2026-08-10T01:02:51.8434797+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="03ecba15-bae2-4ba8-a114-be3bd384302d" />
+    <UnitTestResult executionId="0b05c937-3479-4699-aaa9-1452c71565be" testId="c19d57b1-3892-fd7a-3e34-765ccbc4e228" testName="Base05.Tests.TlsTransportTests.旧TLS代次释放不修改新代计数" computerName="DESKTOP-4J13TH0" duration="00:00:00.0016414" startTime="2026-08-10T01:02:51.6771526+08:00" endTime="2026-08-10T01:02:51.6787316+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="0b05c937-3479-4699-aaa9-1452c71565be" />
+    <UnitTestResult executionId="f370202d-22a2-4d64-8ec4-7d724e81e8b2" testId="ed5f7810-32ea-e240-387b-8e4de8cc5c72" testName="Base05.Tests.TlsTransportTests.非回环默认拒绝明文监听而回环或显式开发开关允许" computerName="DESKTOP-4J13TH0" duration="00:00:00.0031510" startTime="2026-08-10T01:02:51.5736709+08:00" endTime="2026-08-10T01:02:51.5767691+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="f370202d-22a2-4d64-8ec4-7d724e81e8b2" />
+    <UnitTestResult executionId="39e4532c-04a8-49de-840d-223bf433cd60" testId="8a183943-6145-fd43-1af5-d5a3a7fc3fe2" testName="Base05.Tests.ProductionSecurityTests.Envir在创建工作线程前拒绝正式服弱配置" computerName="DESKTOP-4J13TH0" duration="00:00:00.0004051" startTime="2026-08-10T01:02:51.8072566+08:00" endTime="2026-08-10T01:02:51.8076016+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="39e4532c-04a8-49de-840d-223bf433cd60" />
+    <UnitTestResult executionId="7d19684e-6903-4095-bda4-2ad777b261b3" testId="286184d1-6853-d753-fb1b-fd6e23e3d185" testName="Base05.Tests.TlsTransportTests.客户端拒绝过期证书" computerName="DESKTOP-4J13TH0" duration="00:00:00.1061106" startTime="2026-08-10T01:02:51.6813955+08:00" endTime="2026-08-10T01:02:51.7874058+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="7d19684e-6903-4095-bda4-2ad777b261b3" />
+    <UnitTestResult executionId="95ee4cbd-e772-490f-8a74-b9b0721c693a" testId="13125056-3686-08ca-418c-8a1bc6dbaac6" testName="Base05.Tests.ServerLifecycleSmokeTests.真实ServerMaxUser与MaxIP准入在同一临界区生效" computerName="DESKTOP-4J13TH0" duration="00:00:10.5062443" startTime="2026-08-10T01:02:39.5740314+08:00" endTime="2026-08-10T01:02:50.0802275+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="95ee4cbd-e772-490f-8a74-b9b0721c693a" />
+    <UnitTestResult executionId="129dab79-43db-4ad3-beeb-3abc4a16d4df" testId="df8f203c-9695-fbdb-b2f4-aeed8bebaed9" testName="Base05.Tests.TlsTransportTests.证书密码只从受保护存储读取而不改写证书文件" computerName="DESKTOP-4J13TH0" duration="00:00:00.0976061" startTime="2026-08-10T01:02:50.9423309+08:00" endTime="2026-08-10T01:02:51.0388443+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="129dab79-43db-4ad3-beeb-3abc4a16d4df" />
+    <UnitTestResult executionId="d5f12dea-7160-44c7-9c95-84fe8b4d13d3" testId="3716e1ac-3210-dcb4-0e0f-81276bb98363" testName="Base05.Tests.ProductionSecurityTests.CI短暂导入后立即清除环境变量并应用秘密" computerName="DESKTOP-4J13TH0" duration="00:00:00.0035359" startTime="2026-08-10T01:02:51.8077113+08:00" endTime="2026-08-10T01:02:51.8112191+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="d5f12dea-7160-44c7-9c95-84fe8b4d13d3" />
+    <UnitTestResult executionId="fc59a83e-d917-4973-b8b7-89d2a3ffabf5" testId="913c3bb3-893f-0227-3c5d-ec0a0ce8a459" testName="Base05.Tests.TlsTransportTests.TLS监听存在时网络绑定状态为真" computerName="DESKTOP-4J13TH0" duration="00:00:00.0027175" startTime="2026-08-10T01:02:50.0851579+08:00" endTime="2026-08-10T01:02:50.0871915+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="fc59a83e-d917-4973-b8b7-89d2a3ffabf5" />
+    <UnitTestResult executionId="1ee0af2e-0178-46bf-bf06-c5962c4671d6" testId="5ec33cf0-0ef2-b5c0-1b1b-5fd9da53245e" testName="Base05.Tests.ServerLifecycleSmokeTests.真实Server停止重启取消旧TLS握手代次" computerName="DESKTOP-4J13TH0" duration="00:00:05.2353068" startTime="2026-08-10T01:02:34.3376414+08:00" endTime="2026-08-10T01:02:39.5733351+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="1ee0af2e-0178-46bf-bf06-c5962c4671d6" />
+    <UnitTestResult executionId="e9e87428-17fb-4e9b-b9ba-0b6a24c7ee14" testId="39617192-7186-fb87-e4c7-9febb962cb3e" testName="Base05.Tests.TlsTransportTests.客户端拒绝不受信任证书" computerName="DESKTOP-4J13TH0" duration="00:00:00.1905836" startTime="2026-08-10T01:02:51.0390156+08:00" endTime="2026-08-10T01:02:51.2298486+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="e9e87428-17fb-4e9b-b9ba-0b6a24c7ee14" />
+    <UnitTestResult executionId="ce4ca7a6-82ed-4cc0-8dd4-5aa1e7ec1a95" testId="83b200c1-d086-d079-2aa0-bfa32db43f21" testName="Base05.Tests.TlsTransportTests.客户端拒绝错误主机名" computerName="DESKTOP-4J13TH0" duration="00:00:00.1894877" startTime="2026-08-10T01:02:50.4925052+08:00" endTime="2026-08-10T01:02:50.6828633+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="ce4ca7a6-82ed-4cc0-8dd4-5aa1e7ec1a95" />
+    <UnitTestResult executionId="0cc984df-5b24-41f3-988e-da520ba0c4a2" testId="72c02dd2-4165-4749-da55-971b717220e2" testName="Base05.Tests.TlsTransportTests.TLS异步握手支持取消并释放慢连接" computerName="DESKTOP-4J13TH0" duration="00:00:00.2112377" startTime="2026-08-10T01:02:50.0874481+08:00" endTime="2026-08-10T01:02:50.2996760+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="0cc984df-5b24-41f3-988e-da520ba0c4a2" />
+    <UnitTestResult executionId="9dab77a3-10f8-44f3-969e-332da7523296" testId="c63acc6b-85ad-cfb9-6342-0fb769fa6dc7" testName="Base05.Tests.AdminSecurityTests.独立令牌映射角色且操作员不能执行高权限操作" computerName="DESKTOP-4J13TH0" duration="00:00:00.0042148" startTime="2026-08-10T01:02:51.8586768+08:00" endTime="2026-08-10T01:02:51.8628258+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="9dab77a3-10f8-44f3-969e-332da7523296" />
+    <UnitTestResult executionId="7943a715-39c4-4936-93ce-a25695e01076" testId="c0ee9917-f5d0-b443-7105-6560bca45411" testName="Base05.Tests.TlsTransportTests.客户端SPKI固定值严格校验并支持双固定值轮换" computerName="DESKTOP-4J13TH0" duration="00:00:00.1872997" startTime="2026-08-10T01:02:50.3001571+08:00" endTime="2026-08-10T01:02:50.4871988+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="7943a715-39c4-4936-93ce-a25695e01076" />
+    <UnitTestResult executionId="d95f12c9-3019-4cb7-ba54-133289535004" testId="8d473a93-78c3-c419-5854-54467669bbdd" testName="Base05.Tests.ServerLifecycleSmokeTests.真实Server错误PFX密码失败后修正可重启" computerName="DESKTOP-4J13TH0" duration="00:00:00.2339197" startTime="2026-08-10T01:02:34.0811128+08:00" endTime="2026-08-10T01:02:34.3146096+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="d95f12c9-3019-4cb7-ba54-133289535004" />
+    <UnitTestResult executionId="b35fe704-0531-4547-b3f7-aab32bb54c17" testId="bc2d0b1c-79de-2ca7-2276-c0271bf358e5" testName="Base05.Tests.TlsTransportTests.非回环地址禁止V1且回环允许开发连接" computerName="DESKTOP-4J13TH0" duration="00:00:00.0010110" startTime="2026-08-10T01:02:51.6788682+08:00" endTime="2026-08-10T01:02:51.6798123+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="b35fe704-0531-4547-b3f7-aab32bb54c17" />
+    <UnitTestResult executionId="f20f774e-c259-4119-844d-0e7074b2dcfd" testId="9cf54a0b-dab8-add8-8e9a-3d1f0b60d1e9" testName="Base05.Tests.ServerLifecycleSmokeTests.真实Server端口占用失败释放后可重启" computerName="DESKTOP-4J13TH0" duration="00:00:00.2699538" startTime="2026-08-10T01:02:28.6995921+08:00" endTime="2026-08-10T01:02:28.9474770+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="f20f774e-c259-4119-844d-0e7074b2dcfd" />
+    <UnitTestResult executionId="86ea6381-dd08-45d7-b457-45bc1260c21a" testId="a17bcd6d-3680-f3b3-ab3f-14350a5860c8" testName="Base05.Tests.ProductionSecurityTests.正式启动策略拒绝默认口令公网明文管理与缺失秘密" computerName="DESKTOP-4J13TH0" duration="00:00:00.0135446" startTime="2026-08-10T01:02:51.7935469+08:00" endTime="2026-08-10T01:02:51.8071208+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="86ea6381-dd08-45d7-b457-45bc1260c21a" />
+    <UnitTestResult executionId="194130dd-bc71-4eff-88da-e3ff4dc1ad8c" testId="7ae1b15f-f628-45f7-cd37-a8e54c9a758c" testName="Base05.Tests.TlsTransportTests.客户端TLS失败探针区分端点吊销与证书验证" computerName="DESKTOP-4J13TH0" duration="00:00:00.0026583" startTime="2026-08-10T01:02:51.5709041+08:00" endTime="2026-08-10T01:02:51.5735433+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="194130dd-bc71-4eff-88da-e3ff4dc1ad8c" />
+    <UnitTestResult executionId="edf90481-7074-47ae-af9b-00f3467d6542" testId="a77e0108-8dda-7656-9d32-fbcec5aea725" testName="Base05.Tests.TlsTransportTests.停止网络取消TLS握手代次且不改动旧代计数" computerName="DESKTOP-4J13TH0" duration="00:00:00.0035875" startTime="2026-08-10T01:02:50.4888584+08:00" endTime="2026-08-10T01:02:50.4923980+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="edf90481-7074-47ae-af9b-00f3467d6542" />
+    <UnitTestResult executionId="9fc8bc69-efe3-4c86-8ea9-ea3d221d3144" testId="bf732b4b-7058-8d2f-70cd-63e9284f76f8" testName="Base05.Tests.TlsTransportTests.慢TLS握手不阻塞第二个合法握手" computerName="DESKTOP-4J13TH0" duration="00:00:00.3403088" startTime="2026-08-10T01:02:51.2300112+08:00" endTime="2026-08-10T01:02:51.5707557+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="9fc8bc69-efe3-4c86-8ea9-ea3d221d3144" />
+    <UnitTestResult executionId="0f376b04-6b1b-4761-9c4b-4b1870ed2d8b" testId="c7ff7162-1582-5a76-58b9-4c29816eabcb" testName="Base05.Tests.ProductionSecurityTests.完整受保护配置覆盖运行时明文占位并通过门禁" computerName="DESKTOP-4J13TH0" duration="00:00:00.0255355" startTime="2026-08-10T01:02:51.8113211+08:00" endTime="2026-08-10T01:02:51.8368405+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="0f376b04-6b1b-4761-9c4b-4b1870ed2d8b" />
+    <UnitTestResult executionId="5d2d3983-59a1-4fc8-bc99-ba5d357b31b1" testId="c7c32ec9-b74f-05ad-a67b-7907d9018c6d" testName="Base05.Tests.ProductionSecurityTests.DPAPI受保护存储往返且文件不含明文" computerName="DESKTOP-4J13TH0" duration="00:00:00.0063246" startTime="2026-08-10T01:02:51.8436153+08:00" endTime="2026-08-10T01:02:51.8498862+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="5d2d3983-59a1-4fc8-bc99-ba5d357b31b1" />
+    <UnitTestResult executionId="f78017a4-6cb3-4940-922b-f56cf54ebb19" testId="3d021102-1249-1c1c-5e78-448b6ed2f1ef" testName="Base05.Tests.ServerLifecycleSmokeTests.真实ServerTLS路径完成KeepAlive" computerName="DESKTOP-4J13TH0" duration="00:00:05.5128218" startTime="2026-08-10T01:02:23.1497388+08:00" endTime="2026-08-10T01:02:28.6749025+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="f78017a4-6cb3-4940-922b-f56cf54ebb19" />
+    <UnitTestResult executionId="b0ad0d21-c969-4418-81a0-bbe038cb7865" testId="e7ef547b-60a6-53fa-3277-d57a3d86a3e7" testName="Base05.Tests.TlsTransportTests.TLS配置表单策略仅在启用时要求有效端口与现有证书文件" computerName="DESKTOP-4J13TH0" duration="00:00:00.1001174" startTime="2026-08-10T01:02:51.5768861+08:00" endTime="2026-08-10T01:02:51.6770018+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="b0ad0d21-c969-4418-81a0-bbe038cb7865" />
+    <UnitTestResult executionId="83318eac-b3c7-4f06-8772-6c4ceb4efecd" testId="babaa9f6-2c3b-5e04-d2d6-4823df78cc5d" testName="Base05.Tests.TlsTransportTests.停止网络同时释放V1和V2监听器" computerName="DESKTOP-4J13TH0" duration="00:00:00.0014568" startTime="2026-08-10T01:02:50.4873474+08:00" endTime="2026-08-10T01:02:50.4887440+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="83318eac-b3c7-4f06-8772-6c4ceb4efecd" />
+    <UnitTestResult executionId="a0c9faf9-fb9e-48e4-8b98-e33f2fc48b08" testId="113ec4a1-8150-2174-d6e1-3e8869b4821f" testName="Base05.Tests.ServerLifecycleSmokeTests.Minimal_server_start_stop_is_isolated_and_repeatable" computerName="DESKTOP-4J13TH0" duration="00:00:00.0082674" startTime="2026-08-10T01:02:34.3152386+08:00" endTime="2026-08-10T01:02:34.3229762+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="a0c9faf9-fb9e-48e4-8b98-e33f2fc48b08" />
+    <UnitTestResult executionId="5f404148-1003-4f7d-b138-5c5be043cb95" testId="d6fe1e6b-883b-2d05-22ca-16451d531a9e" testName="Base05.Tests.AdminSecurityTests.管理监听仅允许回环明文或内网HTTPS" computerName="DESKTOP-4J13TH0" duration="00:00:00.0026938" startTime="2026-08-10T01:02:51.8501780+08:00" endTime="2026-08-10T01:02:51.8529051+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="5f404148-1003-4f7d-b138-5c5be043cb95" />
+    <UnitTestResult executionId="9c1a8625-ac4d-4941-870e-3e060e0029d7" testId="e5f87a27-58f6-7cde-cb47-8dca800c9c81" testName="Base05.Tests.TlsTransportTests.TLS端口必须有效且不能与V1冲突" computerName="DESKTOP-4J13TH0" duration="00:00:00.0012966" startTime="2026-08-10T01:02:50.8303891+08:00" endTime="2026-08-10T01:02:50.8317142+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="9c1a8625-ac4d-4941-870e-3e060e0029d7" />
+    <UnitTestResult executionId="08ca2d84-3cc0-4b22-9cd0-bb7308069ad8" testId="f5ca7763-3671-3918-36b8-bb7fd994cbf8" testName="Base05.Tests.TlsTransportTests.客户端TLS策略要求目标主机并默认严格校验证书" computerName="DESKTOP-4J13TH0" duration="00:00:00.0038277" startTime="2026-08-10T01:02:51.7875549+08:00" endTime="2026-08-10T01:02:51.7913295+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="08ca2d84-3cc0-4b22-9cd0-bb7308069ad8" />
+    <UnitTestResult executionId="1afc53b0-00a3-442d-b34f-435bbc1af1ef" testId="5908d694-6774-0663-776e-45b113d73c7c" testName="Base05.Tests.AdminSecurityTests.管理审计只记录动作角色来源与结果" computerName="DESKTOP-4J13TH0" duration="00:00:00.0055750" startTime="2026-08-10T01:02:51.8534257+08:00" endTime="2026-08-10T01:02:51.8585535+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="1afc53b0-00a3-442d-b34f-435bbc1af1ef" />
+    <UnitTestResult executionId="0029ccc6-16c2-4172-a4f5-1ef739aada8e" testId="a00821e8-4766-239a-5a5e-bb2909bc922a" testName="Base05.Tests.ServerLifecycleSmokeTests.无游戏监听器启动失败后可重试且不进入Ready" computerName="DESKTOP-4J13TH0" duration="00:00:00.0143450" startTime="2026-08-10T01:02:34.3232803+08:00" endTime="2026-08-10T01:02:34.3374208+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="0029ccc6-16c2-4172-a4f5-1ef739aada8e" />
+  </Results>
+  <TestDefinitions>
+    <UnitTest name="Base05.Tests.TlsTransportTests.TLS监听存在时网络绑定状态为真" storage="c:\users\luo\.codex\worktrees\p2-sec05-secret-governance-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="913c3bb3-893f-0227-3c5d-ec0a0ce8a459">
+      <Execution id="fc59a83e-d917-4973-b8b7-89d2a3ffabf5" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p2-sec05-secret-governance-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.TlsTransportTests" name="TLS监听存在时网络绑定状态为真" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.TlsTransportTests.TLS端口必须有效且不能与V1冲突" storage="c:\users\luo\.codex\worktrees\p2-sec05-secret-governance-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="e5f87a27-58f6-7cde-cb47-8dca800c9c81">
+      <Execution id="9c1a8625-ac4d-4941-870e-3e060e0029d7" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p2-sec05-secret-governance-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.TlsTransportTests" name="TLS端口必须有效且不能与V1冲突" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.TlsTransportTests.非回环地址禁止V1且回环允许开发连接" storage="c:\users\luo\.codex\worktrees\p2-sec05-secret-governance-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="bc2d0b1c-79de-2ca7-2276-c0271bf358e5">
+      <Execution id="b35fe704-0531-4547-b3f7-aab32bb54c17" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p2-sec05-secret-governance-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.TlsTransportTests" name="非回环地址禁止V1且回环允许开发连接" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.ServerLifecycleSmokeTests.Minimal_server_start_stop_is_isolated_and_repeatable" storage="c:\users\luo\.codex\worktrees\p2-sec05-secret-governance-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="113ec4a1-8150-2174-d6e1-3e8869b4821f">
+      <Execution id="a0c9faf9-fb9e-48e4-8b98-e33f2fc48b08" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p2-sec05-secret-governance-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.ServerLifecycleSmokeTests" name="Minimal_server_start_stop_is_isolated_and_repeatable" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.TlsTransportTests.无证书或过期证书拒绝启动" storage="c:\users\luo\.codex\worktrees\p2-sec05-secret-governance-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="21c55acd-263c-2691-c3f6-ea287eb41501">
+      <Execution id="b018dc52-1394-467f-8454-eea6401152c6" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p2-sec05-secret-governance-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.TlsTransportTests" name="无证书或过期证书拒绝启动" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.AdminSecurityTests.真实管理端点拒绝缺失错误及越权凭据" storage="c:\users\luo\.codex\worktrees\p2-sec05-secret-governance-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="22678f19-f1cc-fd11-52a6-f5dc3a6052d7">
+      <Execution id="cf57b7df-05b3-43b3-8c0e-3c2b4cfe9eeb" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p2-sec05-secret-governance-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.AdminSecurityTests" name="真实管理端点拒绝缺失错误及越权凭据" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.TlsTransportTests.停止网络取消TLS握手代次且不改动旧代计数" storage="c:\users\luo\.codex\worktrees\p2-sec05-secret-governance-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="a77e0108-8dda-7656-9d32-fbcec5aea725">
+      <Execution id="edf90481-7074-47ae-af9b-00f3467d6542" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p2-sec05-secret-governance-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.TlsTransportTests" name="停止网络取消TLS握手代次且不改动旧代计数" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.TlsTransportTests.旧TLS代次释放不修改新代计数" storage="c:\users\luo\.codex\worktrees\p2-sec05-secret-governance-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="c19d57b1-3892-fd7a-3e34-765ccbc4e228">
+      <Execution id="0b05c937-3479-4699-aaa9-1452c71565be" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p2-sec05-secret-governance-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.TlsTransportTests" name="旧TLS代次释放不修改新代计数" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.TlsTransportTests.证书密码只从受保护存储读取而不改写证书文件" storage="c:\users\luo\.codex\worktrees\p2-sec05-secret-governance-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="df8f203c-9695-fbdb-b2f4-aeed8bebaed9">
+      <Execution id="129dab79-43db-4ad3-beeb-3abc4a16d4df" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p2-sec05-secret-governance-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.TlsTransportTests" name="证书密码只从受保护存储读取而不改写证书文件" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.ServerLifecycleSmokeTests.无游戏监听器启动失败后可重试且不进入Ready" storage="c:\users\luo\.codex\worktrees\p2-sec05-secret-governance-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="a00821e8-4766-239a-5a5e-bb2909bc922a">
+      <Execution id="0029ccc6-16c2-4172-a4f5-1ef739aada8e" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p2-sec05-secret-governance-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.ServerLifecycleSmokeTests" name="无游戏监听器启动失败后可重试且不进入Ready" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.TlsTransportTests.客户端TLS失败探针区分端点吊销与证书验证" storage="c:\users\luo\.codex\worktrees\p2-sec05-secret-governance-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="7ae1b15f-f628-45f7-cd37-a8e54c9a758c">
+      <Execution id="194130dd-bc71-4eff-88da-e3ff4dc1ad8c" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p2-sec05-secret-governance-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.TlsTransportTests" name="客户端TLS失败探针区分端点吊销与证书验证" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.ServerLifecycleSmokeTests.真实Server错误PFX密码失败后修正可重启" storage="c:\users\luo\.codex\worktrees\p2-sec05-secret-governance-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="8d473a93-78c3-c419-5854-54467669bbdd">
+      <Execution id="d95f12c9-3019-4cb7-ba54-133289535004" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p2-sec05-secret-governance-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.ServerLifecycleSmokeTests" name="真实Server错误PFX密码失败后修正可重启" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.TlsTransportTests.客户端拒绝过期证书" storage="c:\users\luo\.codex\worktrees\p2-sec05-secret-governance-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="286184d1-6853-d753-fb1b-fd6e23e3d185">
+      <Execution id="7d19684e-6903-4095-bda4-2ad777b261b3" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p2-sec05-secret-governance-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.TlsTransportTests" name="客户端拒绝过期证书" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.ProductionSecurityTests.历史INI秘密键可严格删除且保留非秘密配置" storage="c:\users\luo\.codex\worktrees\p2-sec05-secret-governance-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="2f2b326a-cd17-27e0-2b64-725d585b819c">
+      <Execution id="03ecba15-bae2-4ba8-a114-be3bd384302d" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p2-sec05-secret-governance-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.ProductionSecurityTests" name="历史INI秘密键可严格删除且保留非秘密配置" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.TlsTransportTests.TLS配置表单策略仅在启用时要求有效端口与现有证书文件" storage="c:\users\luo\.codex\worktrees\p2-sec05-secret-governance-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="e7ef547b-60a6-53fa-3277-d57a3d86a3e7">
+      <Execution id="b0ad0d21-c969-4418-81a0-bbe038cb7865" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p2-sec05-secret-governance-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.TlsTransportTests" name="TLS配置表单策略仅在启用时要求有效端口与现有证书文件" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.ProductionSecurityTests.完整受保护配置覆盖运行时明文占位并通过门禁" storage="c:\users\luo\.codex\worktrees\p2-sec05-secret-governance-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="c7ff7162-1582-5a76-58b9-4c29816eabcb">
+      <Execution id="0f376b04-6b1b-4761-9c4b-4b1870ed2d8b" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p2-sec05-secret-governance-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.ProductionSecurityTests" name="完整受保护配置覆盖运行时明文占位并通过门禁" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.TlsTransportTests.临时证书SslStream握手并完成现有Packet往返" storage="c:\users\luo\.codex\worktrees\p2-sec05-secret-governance-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="ea87e41d-8d2f-9c0f-959a-624e12b8b781">
+      <Execution id="51e58da9-20cf-492a-b7c1-5a10cf64f2db" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p2-sec05-secret-governance-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.TlsTransportTests" name="临时证书SslStream握手并完成现有Packet往返" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.TlsTransportTests.客户端拒绝不受信任证书" storage="c:\users\luo\.codex\worktrees\p2-sec05-secret-governance-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="39617192-7186-fb87-e4c7-9febb962cb3e">
+      <Execution id="e9e87428-17fb-4e9b-b9ba-0b6a24c7ee14" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p2-sec05-secret-governance-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.TlsTransportTests" name="客户端拒绝不受信任证书" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.ProductionSecurityTests.正式启动策略拒绝默认口令公网明文管理与缺失秘密" storage="c:\users\luo\.codex\worktrees\p2-sec05-secret-governance-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="a17bcd6d-3680-f3b3-ab3f-14350a5860c8">
+      <Execution id="86ea6381-dd08-45d7-b457-45bc1260c21a" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p2-sec05-secret-governance-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.ProductionSecurityTests" name="正式启动策略拒绝默认口令公网明文管理与缺失秘密" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.ServerLifecycleSmokeTests.真实Server端口占用失败释放后可重启" storage="c:\users\luo\.codex\worktrees\p2-sec05-secret-governance-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="9cf54a0b-dab8-add8-8e9a-3d1f0b60d1e9">
+      <Execution id="f20f774e-c259-4119-844d-0e7074b2dcfd" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p2-sec05-secret-governance-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.ServerLifecycleSmokeTests" name="真实Server端口占用失败释放后可重启" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.TlsTransportTests.客户端TLS策略要求目标主机并默认严格校验证书" storage="c:\users\luo\.codex\worktrees\p2-sec05-secret-governance-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="f5ca7763-3671-3918-36b8-bb7fd994cbf8">
+      <Execution id="08ca2d84-3cc0-4b22-9cd0-bb7308069ad8" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p2-sec05-secret-governance-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.TlsTransportTests" name="客户端TLS策略要求目标主机并默认严格校验证书" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.AdminSecurityTests.独立令牌映射角色且操作员不能执行高权限操作" storage="c:\users\luo\.codex\worktrees\p2-sec05-secret-governance-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="c63acc6b-85ad-cfb9-6342-0fb769fa6dc7">
+      <Execution id="9dab77a3-10f8-44f3-969e-332da7523296" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p2-sec05-secret-governance-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.AdminSecurityTests" name="独立令牌映射角色且操作员不能执行高权限操作" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.ServerLifecycleSmokeTests.真实Server停止重启取消旧TLS握手代次" storage="c:\users\luo\.codex\worktrees\p2-sec05-secret-governance-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="5ec33cf0-0ef2-b5c0-1b1b-5fd9da53245e">
+      <Execution id="1ee0af2e-0178-46bf-bf06-c5962c4671d6" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p2-sec05-secret-governance-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.ServerLifecycleSmokeTests" name="真实Server停止重启取消旧TLS握手代次" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.ServerLifecycleSmokeTests.真实Server回环V1路径完成KeepAlive" storage="c:\users\luo\.codex\worktrees\p2-sec05-secret-governance-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="ad9a542f-39d3-c434-77e2-0d96dcdcf7d2">
+      <Execution id="9d207931-a56f-41fd-aab7-30be380f4101" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p2-sec05-secret-governance-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.ServerLifecycleSmokeTests" name="真实Server回环V1路径完成KeepAlive" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.ProductionSecurityTests.Envir在创建工作线程前拒绝正式服弱配置" storage="c:\users\luo\.codex\worktrees\p2-sec05-secret-governance-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="8a183943-6145-fd43-1af5-d5a3a7fc3fe2">
+      <Execution id="39e4532c-04a8-49de-840d-223bf433cd60" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p2-sec05-secret-governance-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.ProductionSecurityTests" name="Envir在创建工作线程前拒绝正式服弱配置" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.ServerLifecycleSmokeTests.真实ServerTLS路径完成KeepAlive" storage="c:\users\luo\.codex\worktrees\p2-sec05-secret-governance-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="3d021102-1249-1c1c-5e78-448b6ed2f1ef">
+      <Execution id="f78017a4-6cb3-4940-922b-f56cf54ebb19" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p2-sec05-secret-governance-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.ServerLifecycleSmokeTests" name="真实ServerTLS路径完成KeepAlive" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.AdminSecurityTests.管理监听仅允许回环明文或内网HTTPS" storage="c:\users\luo\.codex\worktrees\p2-sec05-secret-governance-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="d6fe1e6b-883b-2d05-22ca-16451d531a9e">
+      <Execution id="5f404148-1003-4f7d-b138-5c5be043cb95" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p2-sec05-secret-governance-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.AdminSecurityTests" name="管理监听仅允许回环明文或内网HTTPS" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.TlsTransportTests.客户端SPKI固定值严格校验并支持双固定值轮换" storage="c:\users\luo\.codex\worktrees\p2-sec05-secret-governance-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="c0ee9917-f5d0-b443-7105-6560bca45411">
+      <Execution id="7943a715-39c4-4936-93ce-a25695e01076" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p2-sec05-secret-governance-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.TlsTransportTests" name="客户端SPKI固定值严格校验并支持双固定值轮换" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.ProductionSecurityTests.DPAPI受保护存储往返且文件不含明文" storage="c:\users\luo\.codex\worktrees\p2-sec05-secret-governance-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="c7c32ec9-b74f-05ad-a67b-7907d9018c6d">
+      <Execution id="5d2d3983-59a1-4fc8-bc99-ba5d357b31b1" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p2-sec05-secret-governance-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.ProductionSecurityTests" name="DPAPI受保护存储往返且文件不含明文" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.TlsTransportTests.客户端拒绝错误主机名" storage="c:\users\luo\.codex\worktrees\p2-sec05-secret-governance-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="83b200c1-d086-d079-2aa0-bfa32db43f21">
+      <Execution id="ce4ca7a6-82ed-4cc0-8dd4-5aa1e7ec1a95" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p2-sec05-secret-governance-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.TlsTransportTests" name="客户端拒绝错误主机名" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.TlsTransportTests.TLS连接失败提示包含排障线索" storage="c:\users\luo\.codex\worktrees\p2-sec05-secret-governance-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="66141843-9aa9-a625-f4b9-c6ae5a1b9881">
+      <Execution id="1d60604d-687b-4538-9316-00d2ee0b3cc4" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p2-sec05-secret-governance-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.TlsTransportTests" name="TLS连接失败提示包含排障线索" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.TlsTransportTests.停止网络同时释放V1和V2监听器" storage="c:\users\luo\.codex\worktrees\p2-sec05-secret-governance-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="babaa9f6-2c3b-5e04-d2d6-4823df78cc5d">
+      <Execution id="83318eac-b3c7-4f06-8772-6c4ceb4efecd" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p2-sec05-secret-governance-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.TlsTransportTests" name="停止网络同时释放V1和V2监听器" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.ServerLifecycleSmokeTests.真实ServerMaxUser与MaxIP准入在同一临界区生效" storage="c:\users\luo\.codex\worktrees\p2-sec05-secret-governance-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="13125056-3686-08ca-418c-8a1bc6dbaac6">
+      <Execution id="95ee4cbd-e772-490f-8a74-b9b0721c693a" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p2-sec05-secret-governance-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.ServerLifecycleSmokeTests" name="真实ServerMaxUser与MaxIP准入在同一临界区生效" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.ProductionSecurityTests.CI短暂导入后立即清除环境变量并应用秘密" storage="c:\users\luo\.codex\worktrees\p2-sec05-secret-governance-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="3716e1ac-3210-dcb4-0e0f-81276bb98363">
+      <Execution id="d5f12dea-7160-44c7-9c95-84fe8b4d13d3" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p2-sec05-secret-governance-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.ProductionSecurityTests" name="CI短暂导入后立即清除环境变量并应用秘密" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.TlsTransportTests.TLS异步握手支持取消并释放慢连接" storage="c:\users\luo\.codex\worktrees\p2-sec05-secret-governance-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="72c02dd2-4165-4749-da55-971b717220e2">
+      <Execution id="0cc984df-5b24-41f3-988e-da520ba0c4a2" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p2-sec05-secret-governance-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.TlsTransportTests" name="TLS异步握手支持取消并释放慢连接" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.TlsTransportTests.非回环默认拒绝明文监听而回环或显式开发开关允许" storage="c:\users\luo\.codex\worktrees\p2-sec05-secret-governance-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="ed5f7810-32ea-e240-387b-8e4de8cc5c72">
+      <Execution id="f370202d-22a2-4d64-8ec4-7d724e81e8b2" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p2-sec05-secret-governance-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.TlsTransportTests" name="非回环默认拒绝明文监听而回环或显式开发开关允许" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.TlsTransportTests.慢TLS握手不阻塞第二个合法握手" storage="c:\users\luo\.codex\worktrees\p2-sec05-secret-governance-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="bf732b4b-7058-8d2f-70cd-63e9284f76f8">
+      <Execution id="9fc8bc69-efe3-4c86-8ea9-ea3d221d3144" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p2-sec05-secret-governance-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.TlsTransportTests" name="慢TLS握手不阻塞第二个合法握手" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.AdminSecurityTests.管理审计只记录动作角色来源与结果" storage="c:\users\luo\.codex\worktrees\p2-sec05-secret-governance-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="5908d694-6774-0663-776e-45b113d73c7c">
+      <Execution id="1afc53b0-00a3-442d-b34f-435bbc1af1ef" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p2-sec05-secret-governance-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.AdminSecurityTests" name="管理审计只记录动作角色来源与结果" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestEntries>
+    <TestEntry testId="ad9a542f-39d3-c434-77e2-0d96dcdcf7d2" executionId="9d207931-a56f-41fd-aab7-30be380f4101" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="ea87e41d-8d2f-9c0f-959a-624e12b8b781" executionId="51e58da9-20cf-492a-b7c1-5a10cf64f2db" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="21c55acd-263c-2691-c3f6-ea287eb41501" executionId="b018dc52-1394-467f-8454-eea6401152c6" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="22678f19-f1cc-fd11-52a6-f5dc3a6052d7" executionId="cf57b7df-05b3-43b3-8c0e-3c2b4cfe9eeb" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="66141843-9aa9-a625-f4b9-c6ae5a1b9881" executionId="1d60604d-687b-4538-9316-00d2ee0b3cc4" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="2f2b326a-cd17-27e0-2b64-725d585b819c" executionId="03ecba15-bae2-4ba8-a114-be3bd384302d" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="c19d57b1-3892-fd7a-3e34-765ccbc4e228" executionId="0b05c937-3479-4699-aaa9-1452c71565be" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="ed5f7810-32ea-e240-387b-8e4de8cc5c72" executionId="f370202d-22a2-4d64-8ec4-7d724e81e8b2" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="8a183943-6145-fd43-1af5-d5a3a7fc3fe2" executionId="39e4532c-04a8-49de-840d-223bf433cd60" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="286184d1-6853-d753-fb1b-fd6e23e3d185" executionId="7d19684e-6903-4095-bda4-2ad777b261b3" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="13125056-3686-08ca-418c-8a1bc6dbaac6" executionId="95ee4cbd-e772-490f-8a74-b9b0721c693a" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="df8f203c-9695-fbdb-b2f4-aeed8bebaed9" executionId="129dab79-43db-4ad3-beeb-3abc4a16d4df" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="3716e1ac-3210-dcb4-0e0f-81276bb98363" executionId="d5f12dea-7160-44c7-9c95-84fe8b4d13d3" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="913c3bb3-893f-0227-3c5d-ec0a0ce8a459" executionId="fc59a83e-d917-4973-b8b7-89d2a3ffabf5" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="5ec33cf0-0ef2-b5c0-1b1b-5fd9da53245e" executionId="1ee0af2e-0178-46bf-bf06-c5962c4671d6" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="39617192-7186-fb87-e4c7-9febb962cb3e" executionId="e9e87428-17fb-4e9b-b9ba-0b6a24c7ee14" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="83b200c1-d086-d079-2aa0-bfa32db43f21" executionId="ce4ca7a6-82ed-4cc0-8dd4-5aa1e7ec1a95" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="72c02dd2-4165-4749-da55-971b717220e2" executionId="0cc984df-5b24-41f3-988e-da520ba0c4a2" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="c63acc6b-85ad-cfb9-6342-0fb769fa6dc7" executionId="9dab77a3-10f8-44f3-969e-332da7523296" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="c0ee9917-f5d0-b443-7105-6560bca45411" executionId="7943a715-39c4-4936-93ce-a25695e01076" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="8d473a93-78c3-c419-5854-54467669bbdd" executionId="d95f12c9-3019-4cb7-ba54-133289535004" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="bc2d0b1c-79de-2ca7-2276-c0271bf358e5" executionId="b35fe704-0531-4547-b3f7-aab32bb54c17" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="9cf54a0b-dab8-add8-8e9a-3d1f0b60d1e9" executionId="f20f774e-c259-4119-844d-0e7074b2dcfd" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="a17bcd6d-3680-f3b3-ab3f-14350a5860c8" executionId="86ea6381-dd08-45d7-b457-45bc1260c21a" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="7ae1b15f-f628-45f7-cd37-a8e54c9a758c" executionId="194130dd-bc71-4eff-88da-e3ff4dc1ad8c" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="a77e0108-8dda-7656-9d32-fbcec5aea725" executionId="edf90481-7074-47ae-af9b-00f3467d6542" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="bf732b4b-7058-8d2f-70cd-63e9284f76f8" executionId="9fc8bc69-efe3-4c86-8ea9-ea3d221d3144" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="c7ff7162-1582-5a76-58b9-4c29816eabcb" executionId="0f376b04-6b1b-4761-9c4b-4b1870ed2d8b" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="c7c32ec9-b74f-05ad-a67b-7907d9018c6d" executionId="5d2d3983-59a1-4fc8-bc99-ba5d357b31b1" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="3d021102-1249-1c1c-5e78-448b6ed2f1ef" executionId="f78017a4-6cb3-4940-922b-f56cf54ebb19" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="e7ef547b-60a6-53fa-3277-d57a3d86a3e7" executionId="b0ad0d21-c969-4418-81a0-bbe038cb7865" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="babaa9f6-2c3b-5e04-d2d6-4823df78cc5d" executionId="83318eac-b3c7-4f06-8772-6c4ceb4efecd" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="113ec4a1-8150-2174-d6e1-3e8869b4821f" executionId="a0c9faf9-fb9e-48e4-8b98-e33f2fc48b08" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="d6fe1e6b-883b-2d05-22ca-16451d531a9e" executionId="5f404148-1003-4f7d-b138-5c5be043cb95" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="e5f87a27-58f6-7cde-cb47-8dca800c9c81" executionId="9c1a8625-ac4d-4941-870e-3e060e0029d7" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="f5ca7763-3671-3918-36b8-bb7fd994cbf8" executionId="08ca2d84-3cc0-4b22-9cd0-bb7308069ad8" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="5908d694-6774-0663-776e-45b113d73c7c" executionId="1afc53b0-00a3-442d-b34f-435bbc1af1ef" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="a00821e8-4766-239a-5a5e-bb2909bc922a" executionId="0029ccc6-16c2-4172-a4f5-1ef739aada8e" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+  </TestEntries>
+  <TestLists>
+    <TestList name="列表中未列出的结果" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="所有已加载的结果" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Completed">
+    <Counters total="38" executed="38" passed="38" failed="0" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <Output>
+      <StdOut>[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.0.2+dd36e86129 (64-bit .NET 10.0.4)&#xD;
+[xUnit.net 00:00:00.11]   Discovering: Base05.Tests&#xD;
+[xUnit.net 00:00:00.18]   Discovered:  Base05.Tests&#xD;
+[xUnit.net 00:00:00.22]   Starting:    Base05.Tests&#xD;
+��ʱ����Ŀ¼����ʧ�ܣ�����·����C:\Users\luo\AppData\Local\Temp\lyocrystal-c3-5655196d21ac4530aea7054ee04b3a8f��IOException��&#xD;
+��ʱ����Ŀ¼����ʧ�ܣ�����·����C:\Users\luo\AppData\Local\Temp\lyocrystal-c3-feea6bcb49414259a3f093cfa4fb59ab��IOException��&#xD;
+��ʱ����Ŀ¼����ʧ�ܣ�����·����C:\Users\luo\AppData\Local\Temp\lyocrystal-c3-d10a9ca8fcf74975a309bd610042e478��IOException��&#xD;
+��ʱ����Ŀ¼����ʧ�ܣ�����·����C:\Users\luo\AppData\Local\Temp\lyocrystal-c3-e35a43e032174215bb2532eb8231c2c2��IOException��&#xD;
+��ʱ����Ŀ¼����ʧ�ܣ�����·����C:\Users\luo\AppData\Local\Temp\lyocrystal-c3-696d9672f3d243578cbf56c6224863f8��IOException��&#xD;
+��ʱ����Ŀ¼����ʧ�ܣ�����·����C:\Users\luo\AppData\Local\Temp\lyocrystal-c3-aad4ad6877c245c69af3d03927f77054��IOException��&#xD;
+��ʱ����Ŀ¼����ʧ�ܣ�����·����C:\Users\luo\AppData\Local\Temp\lyocrystal-c3-e6d9cfcdc4934c95857da5f3c1c10900��IOException��&#xD;
+[xUnit.net 00:00:30.02]   Finished:    Base05.Tests&#xD;
+</StdOut>
+    </Output>
+  </ResultSummary>
+</TestRun>

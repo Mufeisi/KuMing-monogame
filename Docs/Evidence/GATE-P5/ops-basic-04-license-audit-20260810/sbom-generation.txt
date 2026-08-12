@@ -1,0 +1,23 @@
+工具：Microsoft.Sbom.DotNetTool 4.1.5
+格式：SPDX 2.2
+包名/版本：LyoCrystal 2026.08.10
+BuildDrop：独立临时目录中的 6 个真实 Release 工件
+BuildComponentPath：仓库工作树
+结果：Success
+
+检测：
+- unique components：221
+- packages written：218
+- files written：6
+- relationships：988
+- package metadata entries：217
+- licenses detected：204/221
+- API exceptions：0
+- metadata exceptions：0
+
+最终工件：Docs/Compliance/SBOM/manifest.spdx.json
+
+随包依赖清单：Docs/Compliance/SBOM/dependencies.spdx.json
+- 从同一份生产依赖图派生：218 个包、0 个二进制文件、988 条关系
+- 根包为 `filesAnalyzed=false`，不含文件校验码、`hasFiles` 或悬空文件引用
+- 发布侧车保留 6 个最终工件 SHA-256；依赖清单进入四端发布物，不包含自身或 APK 文件哈希

@@ -279,7 +279,7 @@ namespace Server.Library.Utils
             try
             {
                 if (requestId <= 20)
-                    TryAppendRuntimeLog($"Request #{requestId}: {request.HttpMethod} {request.RawUrl} host={request.UserHostName} remote={request.RemoteEndPoint}");
+                    TryAppendRuntimeLog($"Request #{requestId}: {request.HttpMethod} {request.Url?.AbsolutePath} remote={request.RemoteEndPoint}");
 
                 if (requestId <= 5)
                     TryAppendRuntimeLog($"Request #{requestId}: handler begin");

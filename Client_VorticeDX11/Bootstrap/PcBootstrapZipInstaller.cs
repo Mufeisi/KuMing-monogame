@@ -1,7 +1,10 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Security.Cryptography;
+using Shared.Release;
 
 namespace Client.Bootstrap
 {
@@ -28,6 +31,43 @@ namespace Client.Bootstrap
 
         public static int InstallExtractedPackageToClient(string stagingRoot, string packageName)
         {
+            return InstallExtractedPackagesToClient(new[] { new KeyValuePair<string, string>(packageName, stagingRoot) }, null);
+        }
+
+        public static int InstallExtractedPackagesToClient(
+            IEnumerable<KeyValuePair<string, string>> packages,
+            IEnumerable<TransactionalFileDeploymentEntry> additionalEntries)
+        {
+            var entries = new Dictionary<string, TransactionalFileDeploymentEntry>(StringComparer.OrdinalIgnoreCase);
+            foreach (KeyValuePair<string, string> package in packages ?? Array.Empty<KeyValuePair<string, string>>())
+            {
+                foreach (TransactionalFileDeploymentEntry entry in BuildDeploymentEntries(package.Value, package.Key))
+                {
+                    if (entries.TryGetValue(entry.TargetPath, out TransactionalFileDeploymentEntry existing) &&
+                        !FilesMatch(existing.SourcePath, entry.SourcePath))
+                    {
+                        throw new InvalidDataException("不同资源包包含内容不一致的同一目标文件：" + entry.TargetPath);
+                    }
+                    entries[entry.TargetPath] = entry;
+                }
+            }
+            foreach (TransactionalFileDeploymentEntry entry in additionalEntries ?? Array.Empty<TransactionalFileDeploymentEntry>())
+            {
+                if (entries.ContainsKey(entry.TargetPath)) throw new InvalidDataException("发布状态文件与资源目标冲突：" + entry.TargetPath);
+                entries[entry.TargetPath] = entry;
+            }
+            if (entries.Count == 0) throw new InvalidDataException("资源版本没有可安装文件。");
+            string clientRoot = PcBootstrapLayout.ClientRoot;
+            TransactionalFileDeploymentResult deployed = TransactionalFileDeployment.Apply(
+                Path.Combine(PcBootstrapLayout.BundleStagingRoot, "Transactions"),
+                new[] { clientRoot },
+                entries.Values,
+                verifyAfterPublish: () => entries.Values.All(entry => FilesMatch(entry.SourcePath, entry.TargetPath)));
+            return deployed.PublishedFileCount;
+        }
+
+        public static IReadOnlyList<TransactionalFileDeploymentEntry> BuildDeploymentEntries(string stagingRoot, string packageName)
+        {
             if (string.IsNullOrWhiteSpace(stagingRoot) || !Directory.Exists(stagingRoot))
                 throw new DirectoryNotFoundException("staging 目录不存在。");
 
@@ -35,8 +75,8 @@ namespace Client.Bootstrap
             if (!Directory.Exists(packRoot))
                 throw new DirectoryNotFoundException($"未检测到分包根目录：{packRoot}");
 
+            var entries = new List<TransactionalFileDeploymentEntry>();
             string clientRoot = PcBootstrapLayout.ClientRoot;
-            int installed = 0;
 
             foreach (string sourcePath in Directory.GetFiles(packRoot, "*", SearchOption.AllDirectories))
             {
@@ -56,15 +96,30 @@ namespace Client.Bootstrap
                 if (!destPath.StartsWith(clientRoot, StringComparison.OrdinalIgnoreCase))
                     continue;
 
-                string destDir = Path.GetDirectoryName(destPath);
-                if (!string.IsNullOrWhiteSpace(destDir))
-                    Directory.CreateDirectory(destDir);
-
-                File.Copy(sourcePath, destPath, overwrite: true);
-                installed++;
+                entries.Add(new TransactionalFileDeploymentEntry
+                {
+                    SourcePath = sourcePath,
+                    TargetPath = destPath,
+                });
             }
 
-            return installed;
+            if (entries.Count == 0)
+                throw new InvalidDataException("资源包没有可安装文件。");
+
+            return entries;
+        }
+
+        private static bool FilesMatch(string sourcePath, string targetPath)
+        {
+            if (!File.Exists(sourcePath) || !File.Exists(targetPath)) return false;
+            if (new FileInfo(sourcePath).Length != new FileInfo(targetPath).Length) return false;
+            using SHA256 sourceHash = SHA256.Create();
+            using SHA256 targetHash = SHA256.Create();
+            using FileStream source = File.OpenRead(sourcePath);
+            using FileStream target = File.OpenRead(targetPath);
+            return CryptographicOperations.FixedTimeEquals(
+                sourceHash.ComputeHash(source),
+                targetHash.ComputeHash(target));
         }
 
         private static void SafeExtractZip(string zipPath, string destinationDirectory)

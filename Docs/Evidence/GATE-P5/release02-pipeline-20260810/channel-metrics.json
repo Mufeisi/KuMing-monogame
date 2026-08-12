@@ -1,0 +1,14 @@
+{
+    "Format":  "lyocrystal-release-metrics-v1",
+    "ReleaseId":  "release02-20260810-r3",
+    "UpdateAttempts":  0,
+    "UpdateFailures":  0,
+    "Launches":  2,
+    "Crashes":  0,
+    "ConsecutiveFatalCrashes":  0,
+    "SeenEventIds":  [
+                         "release02-proof-healthy-001",
+                         "release02-proof-auth-002"
+                     ],
+    "UpdatedUtc":  "2026-08-10T07:12:23.9208124Z"
+}

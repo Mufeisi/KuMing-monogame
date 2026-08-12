@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Shared\Shared.csproj" />
+    <ProjectReference Include="..\Launcher.PlayerShell.Core\Launcher.PlayerShell.Core.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="..\Client_VorticeDX11\Resources\pfffft.png" LogicalName="Launcher.ThemeRuntime.Classic.pfffft.png" />
+    <EmbeddedResource Include="..\Client_VorticeDX11\Resources\Launch_Base1.png" LogicalName="Launcher.ThemeRuntime.Classic.Launch_Base.png" />
+    <EmbeddedResource Include="..\Client_VorticeDX11\Resources\Launch_Hover.png" LogicalName="Launcher.ThemeRuntime.Classic.Launch_Hover.png" />
+    <EmbeddedResource Include="..\Client_VorticeDX11\Resources\Launch_Pressed.png" LogicalName="Launcher.ThemeRuntime.Classic.Launch_Pressed.png" />
+    <EmbeddedResource Include="..\Client_VorticeDX11\Resources\Config_Base.png" LogicalName="Launcher.ThemeRuntime.Classic.Config_Base.png" />
+    <EmbeddedResource Include="..\Client_VorticeDX11\Resources\Config_Hover.png" LogicalName="Launcher.ThemeRuntime.Classic.Config_Hover.png" />
+    <EmbeddedResource Include="..\Client_VorticeDX11\Resources\Config_Pressed.png" LogicalName="Launcher.ThemeRuntime.Classic.Config_Pressed.png" />
+    <EmbeddedResource Include="..\Client_VorticeDX11\Resources\Cross_Base.png" LogicalName="Launcher.ThemeRuntime.Classic.Cross_Base.png" />
+    <EmbeddedResource Include="..\Client_VorticeDX11\Resources\Cross_Hover.png" LogicalName="Launcher.ThemeRuntime.Classic.Cross_Hover.png" />
+    <EmbeddedResource Include="..\Client_VorticeDX11\Resources\Cross_Pressed.png" LogicalName="Launcher.ThemeRuntime.Classic.Cross_Pressed.png" />
+    <EmbeddedResource Include="..\Client_VorticeDX11\Resources\Green Progress.png" LogicalName="Launcher.ThemeRuntime.Classic.Green_Progress.png" />
+    <EmbeddedResource Include="..\Client_VorticeDX11\Resources\Blue Progress.png" LogicalName="Launcher.ThemeRuntime.Classic.Blue_Progress.png" />
+    <EmbeddedResource Include="..\Client_VorticeDX11\Resources\NEW Progress End (Green).png" LogicalName="Launcher.ThemeRuntime.Classic.Green_Progress_End.png" />
+    <EmbeddedResource Include="..\Client_VorticeDX11\Resources\NEW Progress End (Blue).png" LogicalName="Launcher.ThemeRuntime.Classic.Blue_Progress_End.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+      <_Parameter1>Launcher.PlayerShellIntegration.Windows</_Parameter1>
+    </AssemblyAttribute>
+  </ItemGroup>
+</Project>

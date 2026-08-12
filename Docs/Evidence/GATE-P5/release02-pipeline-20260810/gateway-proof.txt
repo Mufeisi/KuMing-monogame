@@ -1,0 +1,48 @@
+﻿**********************
+Windows PowerShell transcript start
+Start time: 20260810151151
+Username: DESKTOP-4J13TH0\luo
+RunAs User: DESKTOP-4J13TH0\luo
+Configuration Name:
+Machine: DESKTOP-4J13TH0 (Microsoft Windows NT 10.0.19045.0)
+Host Application: C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\.release02-gateway-proof.ps1
+Process ID: 22780
+PSVersion: 5.1.19041.6693
+PSEdition: Desktop
+PSCompatibleVersions: 1.0, 2.0, 3.0, 4.0, 5.0, 5.1.19041.6693
+BuildVersion: 10.0.19041.6693
+CLRVersion: 4.0.30319.42000
+WSManStackVersion: 3.0
+PSRemotingProtocolVersion: 2.3
+SerializationVersion: 1.1.0.1
+**********************
+CLIENT_ID=proof-canary-9
+BUCKET=4
+{"Format":"lyocrystal-release-selection-v1","ReleaseId":"release02-20260810-r3","CurrentReleaseId":"release02-20260810-r3","RolloutPercent":5,"ArtifactBasePath":"/releases/release02-20260810-r3/","ResourceRepositoryPath":"/releases/release02-20260810-r3/resources/"}
+DOWNLOAD_URL=http://127.0.0.1:18443/releases/release02-20260810-r3/resources/Packages/bootstrap-package-index.signed.json
+DOWNLOAD_BYTES=40851
+DOWNLOAD_SHA256=01490772C6CF3F0C448B2D0B3B636F19B4E2B5875AF0A244067467C044014D49
+PS>TerminatingError(Invoke-WebRequest): "{"error":"发布观测事件鉴权失败。"}"
+UNAUTHENTICATED_STATUS=401
+{"Accepted":true,"CurrentReleaseId":"release02-20260810-r3","Status":"CanaryObserving"}
+{"Accepted":true,"CurrentReleaseId":"release02-20260810-r3","Status":"CanaryObserving"}
+PS>TerminatingError(Invoke-WebRequest): "{"error":"事件 ReleaseId 不是当前灰度版本。"}"
+OLD_RELEASE_STATUS=400
+{
+    "Format":  "lyocrystal-release-metrics-v1",
+    "ReleaseId":  "release02-20260810-r3",
+    "UpdateAttempts":  0,
+    "UpdateFailures":  0,
+    "Launches":  2,
+    "Crashes":  0,
+    "ConsecutiveFatalCrashes":  0,
+    "SeenEventIds":  [
+                         "release02-proof-healthy-001",
+                         "release02-proof-auth-002"
+                     ],
+    "UpdatedUtc":  "2026-08-10T07:12:23.9208124Z"
+}
+**********************
+Windows PowerShell transcript end
+End time: 20260810151224
+**********************

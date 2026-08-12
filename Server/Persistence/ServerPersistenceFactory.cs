@@ -36,9 +36,15 @@ namespace Server.Persistence
             {
                 DatabaseProviderKind.Legacy => new LegacyServerPersistence(),
                 DatabaseProviderKind.Sqlite => new SqlServerPersistence(DatabaseProviderKind.Sqlite),
-                DatabaseProviderKind.MySql => new SqlServerPersistence(DatabaseProviderKind.MySql),
+                DatabaseProviderKind.MySql => CreateAuthorizedMySql(),
                 _ => new LegacyServerPersistence(),
             };
+        }
+
+        private static IServerPersistence CreateAuthorizedMySql()
+        {
+            MySqlSwitchPolicy.EnsureProviderSelectionAuthorized();
+            return new SqlServerPersistence(DatabaseProviderKind.MySql);
         }
     }
 }

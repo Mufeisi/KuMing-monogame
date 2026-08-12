@@ -381,6 +381,7 @@ namespace Launcher
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "启动器";
             this.TransparencyKey = System.Drawing.Color.Black;
+            this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.AMain_FormClosing);
             this.FormClosed += new System.Windows.Forms.FormClosedEventHandler(this.AMain_FormClosed);
             this.Load += new System.EventHandler(this.AMain_Load);
             this.Click += new System.EventHandler(this.AMain_Click);
@@ -421,4 +422,3 @@ namespace Launcher
         private Microsoft.Web.WebView2.WinForms.WebView2 Main_browser;
     }
 }
-

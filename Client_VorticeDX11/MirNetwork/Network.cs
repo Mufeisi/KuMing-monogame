@@ -97,7 +97,8 @@ namespace Client.MirNetwork
             try
             {
                 var state = (Client: client, Generation: generation, UseTls: useTls,
-                    Port: activePort, Host: Settings.IPAddress, ServerName: Settings.TlsServerName);
+                    Port: activePort, Host: Settings.IPAddress, ServerName: Settings.TlsServerName,
+                    SpkiSha256Pins: Settings.TlsSpkiSha256Pins);
                 EnqueuePacketTraceLine($"[{CMain.Now:yyyy-MM-dd HH:mm:ss.fff}] CONNECT Attempt={ConnectAttempt} Host={Settings.IPAddress}:{activePort}");
                 client.BeginConnect(Settings.IPAddress, activePort, Connection, state);
             }
@@ -106,7 +107,8 @@ namespace Client.MirNetwork
 
         private static async void Connection(IAsyncResult result)
         {
-            var state = ((TcpClient Client, int Generation, bool UseTls, int Port, string Host, string ServerName))result.AsyncState;
+            var state = ((TcpClient Client, int Generation, bool UseTls, int Port, string Host,
+                string ServerName, string SpkiSha256Pins))result.AsyncState;
             Stream stream = null;
             SslStream ssl = null;
             bool adopted = false;
@@ -127,7 +129,8 @@ namespace Client.MirNetwork
                 {
                     ssl = new SslStream(stream, leaveInnerStreamOpen: false);
                     using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-                    await ssl.AuthenticateAsClientAsync(TlsClientPolicy.CreateOptions(state.ServerName), timeout.Token);
+                    await ssl.AuthenticateAsClientAsync(
+                        TlsClientPolicy.CreateOptions(state.ServerName, state.SpkiSha256Pins), timeout.Token);
                     stream = ssl;
                 }
                 lock (_connectionGate)

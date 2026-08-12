@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
+using Shared.Release;
 
 namespace MonoShare
 {
@@ -15,6 +16,7 @@ namespace MonoShare
         private static readonly JsonSerializerOptions JsonWriteOptions = new JsonSerializerOptions { WriteIndented = true };
 
         public const string PackageIndexFileName = "bootstrap-package-index.json";
+        public const string SignedPackageIndexFileName = "bootstrap-package-index.signed.json";
         public const string BundleDownloadMetaFileName = "bundle-download-meta.json";
 
         public static BootstrapPackageUpdateQueueView LoadUpdateQueue()
@@ -38,6 +40,20 @@ namespace MonoShare
                         .Select(group => group.Last())
                         .OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
                         .ToList();
+
+                    if (queue.Packages.Count > 0 &&
+                        !Shared.Security.BootstrapManifestAcceptanceStore.IsAuthorizedUpdateQueue(
+                            ClientResourceLayout.ManifestSecurityStatePath,
+                            queue.ResourceVersion,
+                            queue.Packages.Select(item => new Shared.Security.BootstrapManifestAuthorizedPackage
+                            {
+                                Name = item.Name,
+                                Sha256 = item.DesiredSha256,
+                            }),
+                            currentClientVersion: ClientResourceLayout.BootstrapClientCompatibilityVersion))
+                    {
+                        return new BootstrapPackageUpdateQueueView();
+                    }
 
                     return queue;
                 }
@@ -73,6 +89,82 @@ namespace MonoShare
 
             desiredSha256 = (match?.DesiredSha256 ?? string.Empty).Trim();
             return !string.IsNullOrWhiteSpace(desiredSha256);
+        }
+
+        public static IReadOnlyList<TransactionalFileDeploymentEntry> BuildReleaseCommitEntries(
+            IEnumerable<string> requiredPackageNames,
+            string stagingDirectory)
+        {
+            if (string.IsNullOrWhiteSpace(stagingDirectory))
+                throw new ArgumentException("整版状态暂存目录不能为空。", nameof(stagingDirectory));
+
+            lock (Gate)
+            {
+                BootstrapPackageUpdateQueueView queue = LoadUpdateQueue();
+                string[] required = (requiredPackageNames ?? Array.Empty<string>())
+                    .Where(name => !string.IsNullOrWhiteSpace(name))
+                    .Select(name => name.Trim())
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .OrderBy(name => name, StringComparer.OrdinalIgnoreCase)
+                    .ToArray();
+                string[] queued = (queue.Packages ?? new List<BootstrapPackageUpdateEntryView>())
+                    .Where(item => item != null && !string.IsNullOrWhiteSpace(item.Name))
+                    .Select(item => item.Name.Trim())
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .OrderBy(name => name, StringComparer.OrdinalIgnoreCase)
+                    .ToArray();
+                if (!required.SequenceEqual(queued, StringComparer.OrdinalIgnoreCase))
+                    throw new InvalidDataException("整版事务包集合与当前签名更新队列不一致。");
+
+                BootstrapPackageVersionsSnapshotView snapshot = LoadInstalledVersions();
+                snapshot.Packages ??= new List<BootstrapPackageVersionEntryView>();
+                string now = DateTime.UtcNow.ToString("o");
+                foreach (BootstrapPackageUpdateEntryView update in queue.Packages)
+                {
+                    BootstrapPackageVersionEntryView existing = snapshot.Packages.LastOrDefault(item =>
+                        string.Equals(item?.Name, update.Name, StringComparison.OrdinalIgnoreCase));
+                    if (existing == null)
+                    {
+                        snapshot.Packages.Add(new BootstrapPackageVersionEntryView
+                        {
+                            Name = update.Name.Trim(),
+                            Sha256 = (update.DesiredSha256 ?? string.Empty).Trim(),
+                            Source = "signed-release",
+                            InstalledAtUtc = now,
+                        });
+                    }
+                    else
+                    {
+                        existing.Sha256 = (update.DesiredSha256 ?? string.Empty).Trim();
+                        existing.Source = "signed-release";
+                        existing.InstalledAtUtc = now;
+                    }
+                }
+                snapshot.GeneratedAtUtc = now;
+                snapshot.Packages = snapshot.Packages
+                    .Where(item => item != null && !string.IsNullOrWhiteSpace(item.Name))
+                    .GroupBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
+                    .Select(group => group.Last())
+                    .OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+
+                var completedQueue = new BootstrapPackageUpdateQueueView
+                {
+                    CreatedAtUtc = now,
+                    ResourceVersion = queue.ResourceVersion ?? string.Empty,
+                    Packages = new List<BootstrapPackageUpdateEntryView>(),
+                };
+                Directory.CreateDirectory(stagingDirectory);
+                string versionsSource = Path.Combine(stagingDirectory, "BootstrapPackageVersions.json");
+                string queueSource = Path.Combine(stagingDirectory, "BootstrapPackageUpdateQueue.json");
+                WriteJsonFileAtomic(versionsSource, snapshot);
+                WriteJsonFileAtomic(queueSource, completedQueue);
+                return new[]
+                {
+                    new TransactionalFileDeploymentEntry { SourcePath = versionsSource, TargetPath = ClientResourceLayout.PackageVersionsPath },
+                    new TransactionalFileDeploymentEntry { SourcePath = queueSource, TargetPath = ClientResourceLayout.PackageUpdateQueuePath },
+                };
+            }
         }
 
         public static void ReplaceUpdateQueue(string resourceVersion, IEnumerable<BootstrapPackageUpdateEntryView> packages)

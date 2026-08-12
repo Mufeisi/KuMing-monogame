@@ -44,5 +44,9 @@
 
   <ItemGroup>
     <MonoGameContentReference Include="Content\Content.mgcb" />
+    <MauiAsset Include="..\THIRD-PARTY-NOTICES.md" LogicalName="THIRD-PARTY-NOTICES.md" />
+    <MauiAsset Include="..\Docs\Compliance\SBOM\dependencies.spdx.json" LogicalName="Compliance/SBOM/dependencies.spdx.json" />
+    <MauiAsset Include="..\Docs\Compliance\external-assets.manifest.json" LogicalName="Compliance/external-assets.manifest.json" />
+    <MauiAsset Include="..\Docs\Compliance\Licenses\**\*" LogicalName="Compliance/Licenses/%(RecursiveDir)%(Filename)%(Extension)" />
   </ItemGroup>
 </Project>

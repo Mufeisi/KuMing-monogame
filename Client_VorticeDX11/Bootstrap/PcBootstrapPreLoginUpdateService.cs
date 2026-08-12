@@ -176,113 +176,63 @@ namespace Client.Bootstrap
                     remoteSizeByName = null;
                 }
 
-                var updatedPackages = new List<string>();
+                var preparedPackages = new List<KeyValuePair<string, string>>();
+                var temporaryFiles = new List<string>();
+                var temporaryDirectories = new List<string>();
                 int maxRetries = Math.Max(0, Settings.BootstrapRetryCount);
-
-                foreach (BootstrapPackageUpdateEntryView entry in queue.Packages.ToList())
+                try
                 {
-                    cancellationToken.ThrowIfCancellationRequested();
-
-                    string packageName = (entry?.Name ?? string.Empty).Trim();
-                    if (string.IsNullOrWhiteSpace(packageName))
-                        continue;
-
-                    string desiredSha = (entry?.DesiredSha256 ?? string.Empty).Trim();
-                    if (string.IsNullOrWhiteSpace(desiredSha))
+                    foreach (BootstrapPackageUpdateEntryView entry in queue.Packages.ToList())
                     {
-                        TryAppendLog($"SKIP | Pack={packageName} | Reason=DesiredSha256Empty");
-                        PcBootstrapUpdateRuntime.RemovePackagesFromUpdateQueue(new[] { packageName });
-                        continue;
-                    }
-
-                    string zipUrl = PcBootstrapHttp.BuildRemotePackageZipUrl(repositoryRoot, packageName);
-                    long expectedSize = 0;
-                    if (remoteSizeByName != null && remoteSizeByName.TryGetValue(packageName, out long size))
-                        expectedSize = Math.Max(0, size);
-
-                    Exception lastError = null;
-                    for (int attempt = 0; attempt <= maxRetries; attempt++)
-                    {
-                        try
+                        cancellationToken.ThrowIfCancellationRequested();
+                        string packageName = (entry?.Name ?? string.Empty).Trim();
+                        string desiredSha = (entry?.DesiredSha256 ?? string.Empty).Trim();
+                        if (string.IsNullOrWhiteSpace(packageName) || string.IsNullOrWhiteSpace(desiredSha))
+                            throw new InvalidDataException("签名更新队列包含空包名或空摘要，拒绝部分提交。");
+                        string zipUrl = PcBootstrapHttp.BuildRemotePackageZipUrl(repositoryRoot, packageName);
+                        long expectedSize = remoteSizeByName != null && remoteSizeByName.TryGetValue(packageName, out long size)
+                            ? Math.Max(0, size)
+                            : 0;
+                        for (int attempt = 0; attempt <= maxRetries; attempt++)
                         {
-                            string attemptTag = attempt == 0 ? "first" : $"retry-{attempt}";
-                            TryAppendLog($"INFO | Pack={packageName} | Stage=Start | Attempt={attemptTag} | Url={zipUrl}");
-
-                            progress?.Report(new PcBootstrapProgress
+                            try
                             {
-                                Stage = "prepare",
-                                PackageName = packageName,
-                                Message = $"准备更新：{packageName}",
-                            });
-
-                            string localZipPath = await PcBootstrapHttp.DownloadPackageZipAsync(
-                                packageName,
-                                zipUrl,
-                                expectedSize,
-                                useMicroAuth,
-                                progress,
-                                cancellationToken);
-
-                            if (!PcBootstrapHttp.VerifyZipSha256IfEnabled(packageName, localZipPath, desiredSha))
-                            {
-                                TryDeleteFile(localZipPath);
-                                throw new InvalidDataException("SHA256 校验失败。");
+                                string localZipPath = await PcBootstrapHttp.DownloadPackageZipAsync(
+                                    packageName, zipUrl, expectedSize, useMicroAuth, progress, cancellationToken);
+                                temporaryFiles.Add(localZipPath);
+                                if (!PcBootstrapHttp.VerifyZipSha256(packageName, localZipPath, desiredSha))
+                                    throw new InvalidDataException("SHA256 校验失败。");
+                                string stagingRoot = PcBootstrapZipInstaller.ExtractZipToStaging(localZipPath, packageName);
+                                temporaryDirectories.Add(stagingRoot);
+                                preparedPackages.Add(new KeyValuePair<string, string>(packageName, stagingRoot));
+                                break;
                             }
-
-                            progress?.Report(new PcBootstrapProgress
+                            catch (Exception ex)
                             {
-                                Stage = "extract",
-                                PackageName = packageName,
-                                Message = $"解压中：{packageName}",
-                            });
-
-                            string stagingRoot = PcBootstrapZipInstaller.ExtractZipToStaging(localZipPath, packageName);
-
-                            progress?.Report(new PcBootstrapProgress
-                            {
-                                Stage = "install",
-                                PackageName = packageName,
-                                Message = $"安装中：{packageName}",
-                            });
-
-                            int installedFiles = PcBootstrapZipInstaller.InstallExtractedPackageToClient(stagingRoot, packageName);
-
-                            TryAppendLog($"OK | Pack={packageName} | InstalledFiles={installedFiles}");
-
-                            PcBootstrapUpdateRuntime.UpsertInstalledVersion(packageName, desiredSha, source: "download");
-                            PcBootstrapUpdateRuntime.RemovePackagesFromUpdateQueue(new[] { packageName });
-
-                            updatedPackages.Add(packageName);
-
-                            TryDeleteDirectory(stagingRoot);
-                            TryDeleteFile(localZipPath);
-
-                            break;
-                        }
-                        catch (Exception ex)
-                        {
-                            lastError = ex;
-                            TryAppendLog($"FAIL | Pack={packageName} | Attempt={attempt} | Error={ex.Message}");
-
-                            if (attempt >= maxRetries)
-                                throw;
-
-                            int backoffSeconds = Math.Clamp(2 + attempt * 2, 2, 30);
-                            await Task.Delay(TimeSpan.FromSeconds(backoffSeconds), cancellationToken);
+                                TryAppendLog($"FAIL | Pack={packageName} | Attempt={attempt} | Error={ex.Message}");
+                                if (attempt >= maxRetries) throw;
+                                await Task.Delay(TimeSpan.FromSeconds(Math.Clamp(2 + attempt * 2, 2, 30)), cancellationToken);
+                            }
                         }
                     }
+                    string stateStaging = Path.Combine(PcBootstrapLayout.BundleStagingRoot, "release-state-" + Guid.NewGuid().ToString("N"));
+                    temporaryDirectories.Add(stateStaging);
+                    var stateEntries = PcBootstrapUpdateRuntime.BuildReleaseCommitEntries(queue, stateStaging);
+                    int installedFiles = PcBootstrapZipInstaller.InstallExtractedPackagesToClient(preparedPackages, stateEntries);
+                    var updatedPackages = queue.Packages.Select(item => item.Name).ToList();
+                    TryAppendLog($"OK | ResourceVersion={queue.ResourceVersion} | Packages={updatedPackages.Count} | InstalledFiles={installedFiles}");
+                    return new PcBootstrapApplyResultView
+                    {
+                        Completed = true, ResourceVersion = queue.ResourceVersion ?? string.Empty,
+                        UpdatedPackageCount = updatedPackages.Count, UpdatedPackages = updatedPackages,
+                        Message = $"已原子更新 {updatedPackages.Count} 个资源包。",
+                    };
                 }
-
-                return new PcBootstrapApplyResultView
+                finally
                 {
-                    Completed = true,
-                    Skipped = false,
-                    Failed = false,
-                    ResourceVersion = queue.ResourceVersion ?? string.Empty,
-                    UpdatedPackageCount = updatedPackages.Count,
-                    UpdatedPackages = updatedPackages,
-                    Message = updatedPackages.Count == 0 ? "资源已是最新。" : $"已更新 {updatedPackages.Count} 个资源包。",
-                };
+                    foreach (string directory in temporaryDirectories) TryDeleteDirectory(directory);
+                    foreach (string file in temporaryFiles) TryDeleteFile(file);
+                }
             }
             catch (OperationCanceledException)
             {

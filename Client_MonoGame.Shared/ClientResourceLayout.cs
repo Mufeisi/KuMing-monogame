@@ -6,6 +6,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.Xna.Framework;
+using Shared.Release;
 
 namespace MonoShare
 {
@@ -74,6 +75,8 @@ namespace MonoShare
         public static string PackageStateSnapshotPath => Path.Combine(RuntimeRoot, "BootstrapPackageState.json");
         public static string PackageUpdateQueuePath => Path.Combine(RuntimeRoot, "BootstrapPackageUpdateQueue.json");
         public static string PackageVersionsPath => Path.Combine(RuntimeRoot, "BootstrapPackageVersions.json");
+        public static string ManifestSecurityStatePath => Path.Combine(RuntimeRoot, "BootstrapManifestSecurityState.json");
+        public static Version BootstrapClientCompatibilityVersion { get; } = new Version(2, 0, 0);
         public static string PackageDiagnosticsReportPath => Path.Combine(RuntimeRoot, "BootstrapPackageDiagnostics.txt");
         public static string BundleInboxRoot => Path.Combine(CacheRoot, "BundleInbox");
         public static string BundleInboxProcessedRoot => Path.Combine(BundleInboxRoot, "Processed");
@@ -158,6 +161,10 @@ namespace MonoShare
             {
                 Directory.CreateDirectory(directories[i]);
             }
+
+            TransactionalFileDeployment.RecoverIncomplete(
+                Path.Combine(RuntimeRoot, "ReleaseTransactions"),
+                new[] { ClientRoot });
         }
 
         public static void EnsureCoreBootstrapAssetsAvailable()
@@ -351,6 +358,79 @@ namespace MonoShare
                 return;
 
             candidates.Sort(StringComparer.OrdinalIgnoreCase);
+
+            if (updatePackages.Count > 0)
+            {
+                var signedBundles = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                var rejectedBundles = new List<string>();
+                foreach (string directory in candidates)
+                {
+                    if (BootstrapPackageUpdateRuntime.TryReadBundleDownloadMeta(directory, out BundleDownloadMetaView meta) &&
+                        !string.IsNullOrWhiteSpace(meta?.PackageName) && updatePackages.Contains(meta.PackageName))
+                    {
+                        if (BootstrapPackageUpdateRuntime.TryGetUpdateDesiredSha256(meta.PackageName, out string desiredSha256) &&
+                            string.Equals((meta.Sha256 ?? string.Empty).Trim(), desiredSha256, StringComparison.OrdinalIgnoreCase))
+                        {
+                            signedBundles[meta.PackageName] = directory;
+                        }
+                        else
+                        {
+                            rejectedBundles.Add(directory);
+                        }
+                    }
+                }
+                foreach (string rejected in rejectedBundles)
+                {
+                    var rejectedResult = new BootstrapPackageApplyBundleResultView
+                    {
+                        SourceDirectory = rejected,
+                        SourceDirectoryExists = true,
+                        ErrorMessage = "Bundle 摘要与当前签名更新队列不一致。",
+                    };
+                    TryWriteBundleInboxApplyResult(rejected, rejectedResult);
+                    TryAppendBundleInboxLog(rejected, rejectedResult);
+                    TryMoveBundleInboxDirectory(rejected, BundleInboxFailedRoot, "signed-hash-mismatch");
+                    candidates.Remove(rejected);
+                }
+                if (updatePackages.All(signedBundles.ContainsKey))
+                {
+                    List<string> releaseDirectories = updatePackages.Select(name => signedBundles[name]).ToList();
+                    BootstrapPackageApplyBundleResultView releaseResult;
+                    try
+                    {
+                        releaseResult = BootstrapPackageRuntime.TryApplyPackageBundleSetTransactionally(
+                            releaseDirectories,
+                            updatePackages);
+                    }
+                    catch (Exception ex)
+                    {
+                        releaseResult = new BootstrapPackageApplyBundleResultView
+                        {
+                            SourceDirectory = string.Join(";", releaseDirectories),
+                            SourceDirectoryExists = true,
+                            ErrorMessage = ex.Message,
+                        };
+                    }
+                    foreach (string directory in releaseDirectories)
+                    {
+                        TryWriteBundleInboxApplyResult(directory, releaseResult);
+                        TryAppendBundleInboxLog(directory, releaseResult);
+                        if (releaseResult.Completed)
+                        {
+                            TryMoveBundleInboxDirectory(directory, BundleInboxProcessedRoot, "release-applied");
+                        }
+                        else
+                        {
+                            TryMoveBundleInboxDirectory(directory, BundleInboxFailedRoot, "release-failed");
+                        }
+                        candidates.Remove(directory);
+                    }
+                }
+
+                // 签名更新是整版事务：全集未到齐时必须继续等待，不能落入下方的旧单包兼容路径。
+                // 否则第一包会提前发布，后续失败将留下混合资源版本。
+                return;
+            }
 
             for (int i = 0; i < candidates.Count; i++)
             {

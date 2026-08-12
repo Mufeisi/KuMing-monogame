@@ -7,14 +7,28 @@ using System.Security.Cryptography.X509Certificates;
 using System.Reflection;
 using Server.MirEnvir;
 using Server.MirNetwork;
+using Server.Security;
 using Shared.Security;
 using Xunit;
 
 namespace Base05.Tests;
 
 [Collection("TLS环境")]
-public sealed class TlsTransportTests
+public sealed class TlsTransportTests : IDisposable
 {
+    private readonly string _secretRoot = CreateTempDirectory();
+    private readonly IDisposable _secretScope;
+
+    public TlsTransportTests()
+    {
+        _secretScope = ProtectedSecretStore.UseTestRoot(_secretRoot);
+    }
+
+    public void Dispose()
+    {
+        _secretScope.Dispose();
+        Directory.Delete(_secretRoot, true);
+    }
     [Fact]
     public void 非回环默认拒绝明文监听而回环或显式开发开关允许()
     {
@@ -127,6 +141,37 @@ public sealed class TlsTransportTests
     }
 
     [Fact]
+    public void TLS配置表单策略仅在启用时要求有效端口与现有证书文件()
+    {
+        TlsTransportPolicy.ValidateConfiguration(false, 7000, 0, string.Empty);
+        Assert.Throws<InvalidOperationException>(() =>
+            TlsTransportPolicy.ValidateConfiguration(false, 0, 0, string.Empty));
+
+        Assert.Throws<InvalidOperationException>(() =>
+            TlsTransportPolicy.ValidateConfiguration(true, 7000, 7000, "server.pfx"));
+        Assert.Throws<InvalidOperationException>(() =>
+            TlsTransportPolicy.ValidateConfiguration(true, 7000, 7001, string.Empty));
+        Assert.Throws<FileNotFoundException>(() =>
+            TlsTransportPolicy.ValidateConfiguration(true, 7000, 7001, Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".pfx")));
+
+        string path = Path.GetTempFileName();
+        try
+        {
+            using var certificate = CreateCertificate("localhost", DateTimeOffset.UtcNow.AddDays(-1), DateTimeOffset.UtcNow.AddDays(1));
+            File.WriteAllBytes(path, certificate.Export(X509ContentType.Pkcs12, string.Empty));
+            TlsTransportPolicy.ValidateConfiguration(true, 7000, 7001, path);
+
+            File.WriteAllText(path, "not-a-pfx");
+            Assert.Throws<CryptographicException>(() =>
+                TlsTransportPolicy.ValidateConfiguration(true, 7000, 7001, path));
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
     public void 客户端TLS策略要求目标主机并默认严格校验证书()
     {
         Assert.Throws<ArgumentException>(() => TlsClientPolicy.CreateOptions(string.Empty));
@@ -139,11 +184,47 @@ public sealed class TlsTransportTests
     }
 
     [Fact]
+    public void 客户端SPKI固定值严格校验并支持双固定值轮换()
+    {
+        using var current = CreateCertificate("localhost", DateTimeOffset.UtcNow.AddMinutes(-1), DateTimeOffset.UtcNow.AddHours(1));
+        using var next = CreateCertificate("localhost", DateTimeOffset.UtcNow.AddMinutes(-1), DateTimeOffset.UtcNow.AddHours(2));
+        using var unexpected = CreateCertificate("localhost", DateTimeOffset.UtcNow.AddMinutes(-1), DateTimeOffset.UtcNow.AddHours(3));
+        string currentPin = TlsClientPolicy.ComputeSpkiSha256Pin(current);
+        string nextPin = TlsClientPolicy.ComputeSpkiSha256Pin(next);
+        var options = TlsClientPolicy.CreateOptions("localhost", $"{currentPin};{nextPin}");
+        RemoteCertificateValidationCallback callback = options.RemoteCertificateValidationCallback!;
+
+        Assert.True(callback(null!, current, null!, SslPolicyErrors.None));
+        Assert.True(callback(null!, next, null!, SslPolicyErrors.None));
+        Assert.False(callback(null!, unexpected, null!, SslPolicyErrors.None));
+        Assert.False(callback(null!, current, null!, SslPolicyErrors.RemoteCertificateNameMismatch));
+
+        Assert.Throws<ArgumentException>(() => TlsClientPolicy.CreateOptions("localhost", "sha1/invalid"));
+        Assert.Throws<ArgumentException>(() => TlsClientPolicy.CreateOptions("localhost", "sha256/not-base64"));
+        Assert.Throws<ArgumentException>(() => TlsClientPolicy.CreateOptions("localhost", "sha256/AA=="));
+        Assert.Throws<ArgumentException>(() => TlsClientPolicy.CreateOptions("localhost", new string(' ', 1025)));
+        Assert.Throws<ArgumentException>(() => TlsClientPolicy.CreateOptions("localhost",
+            string.Join(';', Enumerable.Repeat(currentPin, 5))));
+    }
+
+    [Fact]
+    public void 客户端TLS失败探针区分端点吊销与证书验证()
+    {
+        Assert.StartsWith("网络端点;", TlsClientPolicy.ClassifyFailure(new SocketException()));
+        Assert.StartsWith("握手超时;", TlsClientPolicy.ClassifyFailure(new OperationCanceledException()));
+        Assert.StartsWith("在线吊销检查;", TlsClientPolicy.ClassifyFailure(
+            new AuthenticationException("certificate revocation check failed")));
+        Assert.StartsWith("证书链或域名;", TlsClientPolicy.ClassifyFailure(
+            new AuthenticationException("certificate name mismatch")));
+    }
+
+    [Fact]
     public void TLS连接失败提示包含排障线索()
     {
         string message = TlsClientPolicy.FormatFailure(new AuthenticationException("test"), "game.example", 7001);
         Assert.Contains("系统时间", message);
         Assert.Contains("TlsServerName", message);
+        Assert.Contains("TlsSpkiSha256Pins", message);
         Assert.Contains("证书 SAN", message);
         Assert.Contains("证书链和有效期", message);
     }
@@ -237,7 +318,8 @@ public sealed class TlsTransportTests
             using var client = new TcpClient();
             await client.ConnectAsync(IPAddress.Loopback, ((IPEndPoint)listener.LocalEndpoint).Port);
             using var ssl = new SslStream(client.GetStream(), false);
-            var options = TlsClientPolicy.CreateOptions("localhost");
+            var options = TlsClientPolicy.CreateOptions(
+                "localhost", TlsClientPolicy.ComputeSpkiSha256Pin(certificate));
             options.CertificateChainPolicy = new X509ChainPolicy
             {
                 TrustMode = X509ChainTrustMode.CustomRootTrust,
@@ -287,25 +369,23 @@ public sealed class TlsTransportTests
     }
 
     [Fact]
-    public void 证书密码只从运行时环境读取而不写入配置()
+    public void 证书密码只从受保护存储读取而不改写证书文件()
     {
         string directory = CreateTempDirectory();
         string path = Path.Combine(directory, "protected-server.pfx");
         const string password = "stage-a-test-password";
-        string previous = Environment.GetEnvironmentVariable(TlsTransportPolicy.CertificatePasswordEnvironmentVariable);
         try
         {
             using var source = CreateCertificate("localhost", DateTimeOffset.UtcNow.AddMinutes(-1), DateTimeOffset.UtcNow.AddHours(1));
             File.WriteAllBytes(path, source.Export(X509ContentType.Pfx, password));
             byte[] beforeLoad = File.ReadAllBytes(path);
-            Environment.SetEnvironmentVariable(TlsTransportPolicy.CertificatePasswordEnvironmentVariable, password);
+            ProtectedSecretStore.Write(ProtectedSecretStore.TlsCertificatePassword, password);
             using var certificate = TlsTransportPolicy.LoadServerCertificate(path);
             Assert.True(certificate.HasPrivateKey);
             Assert.Equal(beforeLoad, File.ReadAllBytes(path));
         }
         finally
         {
-            Environment.SetEnvironmentVariable(TlsTransportPolicy.CertificatePasswordEnvironmentVariable, previous);
             Directory.Delete(directory, true);
         }
     }

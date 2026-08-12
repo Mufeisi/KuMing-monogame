@@ -1,0 +1,19 @@
+{
+  "solution": {
+    "path": "Legend of Mir.sln",
+    "projects": [
+      "Shared\\Shared.csproj",
+      "Launcher.PlayerShell.Core\\Launcher.PlayerShell.Core.csproj",
+      "Launcher.PlayerShell\\Launcher.PlayerShell.csproj",
+      "Launcher.ThemeRuntime\\Launcher.ThemeRuntime.csproj",
+      "Launcher.Editor\\Launcher.Editor.csproj",
+      "MicroGateway.Core\\MicroGateway.Core.csproj",
+      "MicroGateway.App\\MicroGateway.App.csproj",
+      "Tools\\LauncherPlayerPackager\\LauncherPlayerPackager.csproj",
+      "WindowsIntegration\\Launcher.PlayerShellGateL0\\Launcher.PlayerShellGateL0.Windows.csproj",
+      "WindowsIntegration\\Launcher.PlayerShellIntegration\\Launcher.PlayerShellIntegration.Windows.csproj",
+      "WindowsIntegration\\Launcher.PlayerShellReplacementWorker\\Launcher.PlayerShellReplacementWorker.csproj",
+      "WindowsIntegration\\Launcher.RemoteListIntegration\\Launcher.RemoteListIntegration.Windows.csproj"
+    ]
+  }
+}

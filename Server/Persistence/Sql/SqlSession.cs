@@ -10,6 +10,7 @@ namespace Server.Persistence.Sql
 {
     public sealed class SqlSession : IDisposable
     {
+        internal const int SqliteBusyTimeoutMilliseconds = 5000;
         private readonly int _commandTimeoutSeconds;
         private readonly int _maxRetries;
         private readonly int _baseRetryDelayMs;
@@ -105,11 +106,28 @@ namespace Server.Persistence.Sql
         {
             if (Provider == DatabaseProviderKind.Sqlite)
             {
-                using var cmd = Connection.CreateCommand();
-                cmd.CommandText = "PRAGMA foreign_keys = ON;";
-                cmd.CommandTimeout = _commandTimeoutSeconds;
-                cmd.ExecuteNonQuery();
+                ExecuteSqlitePragma("PRAGMA foreign_keys = ON;");
+                ExecuteSqlitePragma($"PRAGMA busy_timeout = {SqliteBusyTimeoutMilliseconds};");
+                if (!string.Equals(ExecuteSqliteScalar("PRAGMA journal_mode;"), "wal", StringComparison.OrdinalIgnoreCase))
+                    ExecuteSqlitePragma("PRAGMA journal_mode = WAL;");
+                ExecuteSqlitePragma("PRAGMA synchronous = FULL;");
             }
+        }
+
+        private string ExecuteSqliteScalar(string commandText)
+        {
+            using var cmd = Connection.CreateCommand();
+            cmd.CommandText = commandText;
+            cmd.CommandTimeout = _commandTimeoutSeconds;
+            return Convert.ToString(cmd.ExecuteScalar());
+        }
+
+        private void ExecuteSqlitePragma(string commandText)
+        {
+            using var cmd = Connection.CreateCommand();
+            cmd.CommandText = commandText;
+            cmd.CommandTimeout = _commandTimeoutSeconds;
+            cmd.ExecuteNonQuery();
         }
 
         public void BeginTransaction(IsolationLevel? isolationLevel = null)

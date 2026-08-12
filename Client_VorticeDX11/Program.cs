@@ -1,6 +1,9 @@
 ﻿using Client.Resolution;
 using Client.Bootstrap;
+using Client.Diagnostics;
 using Launcher;
+using Launcher.Remote;
+using Launcher.ThemeRuntime;
 using System;
 using System.Diagnostics;
 using System.IO;
@@ -8,6 +11,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading;
+using System.Drawing.Imaging;
 
 namespace Client
 {
@@ -22,7 +26,25 @@ namespace Client
         [STAThread]
         private static void Main(string[] args)
         {
+            AppDomain.CurrentDomain.UnhandledException += (_, eventArgs) =>
+                PcCrashDiagnostics.Capture(eventArgs.ExceptionObject as Exception ??
+                    new InvalidOperationException("PC 客户端发生未知未处理异常"));
             bool runPreLoginUpdateCli = args.Any(item => string.Equals(item, "--prelogin-update-cli", StringComparison.OrdinalIgnoreCase));
+            bool gameInstance = GameLaunchArguments.TryParse(args, out GameLaunchOptions launchOptions);
+            bool gameInstanceRequested = args.Any(item => string.Equals(item, "--game-instance", StringComparison.OrdinalIgnoreCase));
+            bool legacyLauncher = args.Any(item => string.Equals(item, "--legacy-launcher", StringComparison.OrdinalIgnoreCase));
+            int renderIndex = Array.FindIndex(args, item => string.Equals(item, "--theme-render-smoke", StringComparison.OrdinalIgnoreCase));
+            if (renderIndex >= 0 && renderIndex + 1 < args.Length)
+            {
+                Environment.Exit(RenderThemeEvidence(args[renderIndex + 1]));
+                return;
+            }
+            int classicRenderIndex = Array.FindIndex(args, item => string.Equals(item, "--native-classic-render-smoke", StringComparison.OrdinalIgnoreCase));
+            if (classicRenderIndex >= 0 && classicRenderIndex + 1 < args.Length)
+            {
+                Environment.Exit(RenderNativeClassicEvidence(args[classicRenderIndex + 1]));
+                return;
+            }
 
             if (args.Length > 0)
             {
@@ -45,16 +67,36 @@ namespace Client
 
             try
             {
+                if (gameInstanceRequested && !gameInstance)
+                    throw new ArgumentException("游戏子进程启动参数不完整或无效");
+
                 Client.Utils.ResolutionTrace.StartSession("Client Startup");
                 System.Windows.Forms.Application.SetHighDpiMode(System.Windows.Forms.HighDpiMode.PerMonitorV2);
 
-                if (UpdatePatcher()) return;
+                if (!gameInstance && UpdatePatcher()) return;
 
                 if (RuntimePolicyHelper.LegacyV2RuntimeEnabledSuccessfully == true) { }
 
                 Packet.IsServer = false;
                 Settings.Load();
+                if (gameInstance)
+                {
+                    string microBaseUrl = launchOptions.MicroEnabled
+                        ? new UriBuilder(Uri.UriSchemeHttp, launchOptions.MicroAddress, launchOptions.MicroPort, "api/").Uri.AbsoluteUri
+                        : string.Empty;
+                    string microBackupBaseUrl = launchOptions.MicroEnabled && !string.IsNullOrWhiteSpace(launchOptions.MicroBackupAddress)
+                        ? new UriBuilder(Uri.UriSchemeHttp, launchOptions.MicroBackupAddress, launchOptions.MicroBackupPort, "api/").Uri.AbsoluteUri
+                        : string.Empty;
+                    Settings.ApplyGameEndpointOverride(launchOptions.ServerAddress, launchOptions.ServerPort, microBaseUrl, microBackupBaseUrl);
+                }
                 Client.Utils.ResolutionTrace.LogClientState("Program.Main", "After Settings.Load");
+
+                if (!gameInstance && !legacyLauncher)
+                {
+                    RunThemeLauncher();
+                    Settings.Save();
+                    return;
+                }
 
                 System.Windows.Forms.Application.EnableVisualStyles();
                 System.Windows.Forms.Application.SetCompatibleTextRenderingDefault(false);
@@ -63,17 +105,24 @@ namespace Client
                 Client.Utils.ResolutionTrace.LogClientState("Program.Main", "After CheckResolutionSetting");
 
                 Launch = false;
-                if (Settings.P_Patcher)
+                if (gameInstance)
+                    Launch = true;
+                else if (Settings.P_Patcher)
                     System.Windows.Forms.Application.Run(PForm = new AMain());
                 else
                     Launch = true;
 
                 if (Launch)
                 {
-                    TryRunPcPreLoginUpdate();
+                    // 玩家入口载荷已经包含启动核心；游戏实例不得被普通资源包更新阻断。
+                    if (!gameInstance) TryRunPcPreLoginUpdate();
                     System.Windows.Forms.Application.Run(Form = new CMain());
                 }
 
+                if (gameInstance)
+                {
+                    Settings.ClearGameEndpointOverride();
+                }
                 Settings.Save();
 
                 if (Restart)
@@ -84,7 +133,75 @@ namespace Client
             catch (Exception ex)
             {
                 CMain.SaveError(ex.ToString());
+                PcCrashDiagnostics.Capture(ex);
             }
+        }
+
+        private static int RenderThemeEvidence(string outputDirectory)
+        {
+            string root = Path.GetFullPath(outputDirectory);
+            Directory.CreateDirectory(root);
+            foreach (LauncherTemplateKind kind in Enum.GetValues<LauncherTemplateKind>())
+            foreach (int dpi in new[] { 100, 125, 150, 200 })
+            {
+                using Bitmap bitmap = LauncherRuntimeHost.RenderTemplateForEvidence(LauncherTemplateCatalog.Create(kind), root, dpi / 100f);
+                bitmap.Save(Path.Combine(root, $"{kind.ToString().ToLowerInvariant()}-{dpi}.png"), ImageFormat.Png);
+            }
+            return Directory.EnumerateFiles(root, "*.png").Count() == 12 ? 0 : 2;
+        }
+
+        private static void RunThemeLauncher()
+        {
+            string clientDirectory = AppContext.BaseDirectory;
+            LauncherRuntimeHost.Run(clientDirectory, (executableDirectory, resourceDirectory, server, micro, _) =>
+            {
+                string selectedClient = Path.Combine(executableDirectory, "Client.exe");
+                var start = new ProcessStartInfo(selectedClient) { WorkingDirectory = resourceDirectory, UseShellExecute = false };
+                foreach (string argument in GameProcessLaunchArguments.Create(server, micro, ClientCapabilityProbe.Detect(executableDirectory))) start.ArgumentList.Add(argument);
+                using Process? game = Process.Start(start);
+                string sourcePlayer = Environment.GetEnvironmentVariable("LYOCRYSTAL_PLAYER_SOURCE_EXECUTABLE") ?? string.Empty;
+                if (game is not null && !string.IsNullOrWhiteSpace(sourcePlayer))
+                {
+                    try { Launcher.PlayerShell.PlayerGameSessionMarker.Record(sourcePlayer, game); }
+                    catch { try { game.Kill(entireProcessTree: true); } catch { } throw; }
+                }
+            }, RunOriginalClassicLauncher);
+        }
+
+        private static int RenderNativeClassicEvidence(string outputPath)
+        {
+            System.Windows.Forms.Application.SetHighDpiMode(System.Windows.Forms.HighDpiMode.PerMonitorV2);
+            System.Windows.Forms.Application.EnableVisualStyles();
+            LauncherSnapshot snapshot = LauncherTemplateCatalog.Create(LauncherTemplateKind.Classic);
+            snapshot.ProjectName = "酷明传奇";
+            snapshot.TaskbarName = "酷明传奇";
+            using var form = new AMain(snapshot, AppContext.BaseDirectory, AppContext.BaseDirectory);
+            using var bitmap = new Bitmap(form.Width, form.Height, PixelFormat.Format32bppArgb);
+            form.DrawToBitmap(bitmap, new Rectangle(Point.Empty, bitmap.Size));
+            Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(outputPath))!);
+            bitmap.Save(outputPath, ImageFormat.Png);
+            return form.ClientSize == new Size(801, 554) && form.Text == "酷明传奇" ? 0 : 2;
+        }
+
+        private static void RunOriginalClassicLauncher(LoadedLauncherSnapshot loaded, string executableDirectory, string resourceDirectory)
+        {
+            Directory.SetCurrentDirectory(resourceDirectory);
+            Settings.P_Patcher = false;
+            Settings.P_ServerListUrl = string.Empty;
+            Settings.P_BrowserAddress = string.Empty;
+            Settings.P_ServerName = loaded.Snapshot.ProjectName;
+            LauncherServer first = loaded.Snapshot.Servers[0];
+            Settings.IPAddress = first.Address;
+            Settings.Port = first.Port;
+            MicroEndpoint micro = first.MicroOverride ?? loaded.Snapshot.DefaultMicro;
+            Settings.MicroBaseUrl = micro.Enabled
+                ? new UriBuilder(Uri.UriSchemeHttp, micro.Address, micro.Port, "api/").Uri.AbsoluteUri
+                : string.Empty;
+            System.Windows.Forms.Application.EnableVisualStyles();
+            System.Windows.Forms.Application.SetCompatibleTextRenderingDefault(false);
+            using var form = new AMain(loaded.Snapshot, executableDirectory, resourceDirectory);
+            Program.PForm = form;
+            System.Windows.Forms.Application.Run(form);
         }
 
         private static int RunPreLoginUpdateCli(string[] args)

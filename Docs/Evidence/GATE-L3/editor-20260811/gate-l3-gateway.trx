@@ -1,0 +1,52 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="eac38b29-d490-4eff-bc23-27813201feda" name="luo@DESKTOP-4J13TH0 2026-08-11 13:35:51" runUser="DESKTOP-4J13TH0\luo" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-08-11T13:35:51.6563273+08:00" queuing="2026-08-11T13:35:51.6563277+08:00" start="2026-08-11T13:35:49.4520673+08:00" finish="2026-08-11T13:35:52.0192989+08:00" />
+  <TestSettings name="default" id="38fc70d4-eb62-465f-bb3a-0182114a6e36">
+    <Deployment runDeploymentRoot="luo_DESKTOP-4J13TH0_2026-08-11_13_35_51" />
+  </TestSettings>
+  <Results>
+    <UnitTestResult executionId="3103522f-d2d5-484c-b700-70270569d45d" testId="34b3af77-4f9d-ec93-1ba4-47ec330165a3" testName="Base05.Tests.MicroGatewayCoreTests.独立核心不引用游戏服务端或Envir程序集" computerName="DESKTOP-4J13TH0" duration="00:00:00.0119088" startTime="2026-08-11T13:35:50.5854305+08:00" endTime="2026-08-11T13:35:50.6116519+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="3103522f-d2d5-484c-b700-70270569d45d" />
+    <UnitTestResult executionId="03e6446a-5ed2-4e0b-84c7-5115b096e563" testId="bae4d887-1171-f685-881c-d7c548e61f7a" testName="Base05.Tests.MicroGatewayCoreTests.资源目录内重解析点不能读取根目录外文件" computerName="DESKTOP-4J13TH0" duration="00:00:00.0703117" startTime="2026-08-11T13:35:51.8539911+08:00" endTime="2026-08-11T13:35:51.9250031+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="03e6446a-5ed2-4e0b-84c7-5115b096e563" />
+    <UnitTestResult executionId="3e08623d-4ffb-4835-805c-a887580227e4" testId="e8c05382-716a-e631-7ae5-9c51cdc4ad7f" testName="Base05.Tests.MicroGatewayCoreTests.独立网关与内置服务端四类协议响应一致且公开目录只读安全" computerName="DESKTOP-4J13TH0" duration="00:00:01.2369058" startTime="2026-08-11T13:35:50.6304067+08:00" endTime="2026-08-11T13:35:51.8524210+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="3e08623d-4ffb-4835-805c-a887580227e4" />
+    <UnitTestResult executionId="0be434a9-1920-4101-be96-48032373befc" testId="374d7377-fab4-f2dd-4fc8-408ba05d36da" testName="Base05.Tests.MicroGatewayCoreTests.快照和停止覆盖响应体的完整写入周期" computerName="DESKTOP-4J13TH0" duration="00:00:00.0067232" startTime="2026-08-11T13:35:51.9252845+08:00" endTime="2026-08-11T13:35:51.9322966+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="0be434a9-1920-4101-be96-48032373befc" />
+  </Results>
+  <TestDefinitions>
+    <UnitTest name="Base05.Tests.MicroGatewayCoreTests.资源目录内重解析点不能读取根目录外文件" storage="d:\chuanqi\kmyq\lyocrystal-main\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="bae4d887-1171-f685-881c-d7c548e61f7a">
+      <Execution id="03e6446a-5ed2-4e0b-84c7-5115b096e563" />
+      <TestMethod codeBase="D:\ChuanQi\Kmyq\LyoCrystal-main\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.MicroGatewayCoreTests" name="资源目录内重解析点不能读取根目录外文件" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.MicroGatewayCoreTests.独立网关与内置服务端四类协议响应一致且公开目录只读安全" storage="d:\chuanqi\kmyq\lyocrystal-main\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="e8c05382-716a-e631-7ae5-9c51cdc4ad7f">
+      <Execution id="3e08623d-4ffb-4835-805c-a887580227e4" />
+      <TestMethod codeBase="D:\ChuanQi\Kmyq\LyoCrystal-main\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.MicroGatewayCoreTests" name="独立网关与内置服务端四类协议响应一致且公开目录只读安全" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.MicroGatewayCoreTests.快照和停止覆盖响应体的完整写入周期" storage="d:\chuanqi\kmyq\lyocrystal-main\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="374d7377-fab4-f2dd-4fc8-408ba05d36da">
+      <Execution id="0be434a9-1920-4101-be96-48032373befc" />
+      <TestMethod codeBase="D:\ChuanQi\Kmyq\LyoCrystal-main\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.MicroGatewayCoreTests" name="快照和停止覆盖响应体的完整写入周期" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.MicroGatewayCoreTests.独立核心不引用游戏服务端或Envir程序集" storage="d:\chuanqi\kmyq\lyocrystal-main\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="34b3af77-4f9d-ec93-1ba4-47ec330165a3">
+      <Execution id="3103522f-d2d5-484c-b700-70270569d45d" />
+      <TestMethod codeBase="D:\ChuanQi\Kmyq\LyoCrystal-main\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.MicroGatewayCoreTests" name="独立核心不引用游戏服务端或Envir程序集" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestEntries>
+    <TestEntry testId="34b3af77-4f9d-ec93-1ba4-47ec330165a3" executionId="3103522f-d2d5-484c-b700-70270569d45d" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="bae4d887-1171-f685-881c-d7c548e61f7a" executionId="03e6446a-5ed2-4e0b-84c7-5115b096e563" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="e8c05382-716a-e631-7ae5-9c51cdc4ad7f" executionId="3e08623d-4ffb-4835-805c-a887580227e4" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="374d7377-fab4-f2dd-4fc8-408ba05d36da" executionId="0be434a9-1920-4101-be96-48032373befc" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+  </TestEntries>
+  <TestLists>
+    <TestList name="列表中未列出的结果" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="所有已加载的结果" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Completed">
+    <Counters total="4" executed="4" passed="4" failed="0" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <Output>
+      <StdOut>[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.0.2+dd36e86129 (64-bit .NET 10.0.4)&#xD;
+[xUnit.net 00:00:00.18]   Discovering: Base05.Tests&#xD;
+[xUnit.net 00:00:00.31]   Discovered:  Base05.Tests&#xD;
+[xUnit.net 00:00:00.35]   Starting:    Base05.Tests&#xD;
+[xUnit.net 00:00:01.74]   Finished:    Base05.Tests&#xD;
+</StdOut>
+    </Output>
+  </ResultSummary>
+</TestRun>

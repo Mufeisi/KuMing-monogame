@@ -1,0 +1,207 @@
+name: RELEASE-01 protected signing
+
+on:
+  workflow_dispatch:
+    inputs:
+      sequence:
+        description: 资源索引单调序列
+        required: true
+        type: number
+      resource_key_id:
+        description: 资源签名 Key ID
+        required: true
+        type: choice
+        default: resource-2026-a
+        options:
+          - resource-2026-a
+          - resource-2026-b
+      minimum_client_version:
+        description: 资源最低客户端版本
+        required: true
+        default: 1.0.0
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  sign:
+    name: Separate resource and APK signing keys
+    runs-on: windows-latest
+    timeout-minutes: 60
+    environment: production-signing
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup stable .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Setup Java for Android signing
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Install Android workload
+        shell: pwsh
+        run: dotnet workload install maui-android
+
+      - name: Restore signing and Android projects
+        shell: pwsh
+        run: |
+          dotnet restore Tools/ReleaseSigningTool/ReleaseSigningTool.csproj --verbosity minimal
+          dotnet restore Client_MonoGame.Android/Client_MonoGame.Android.csproj --verbosity minimal
+
+      - name: Validate and normalize release inputs without secrets
+        shell: pwsh
+        env:
+          INPUT_SEQUENCE: ${{ inputs.sequence }}
+          INPUT_MINIMUM_CLIENT_VERSION: ${{ inputs.minimum_client_version }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          [long]$sequence = 0
+          if (-not [long]::TryParse($env:INPUT_SEQUENCE, [Globalization.NumberStyles]::None, [Globalization.CultureInfo]::InvariantCulture, [ref]$sequence) -or $sequence -le 0) {
+            throw '资源索引序列必须是正整数。'
+          }
+          [Version]$minimumVersion = $null
+          if (-not [Version]::TryParse($env:INPUT_MINIMUM_CLIENT_VERSION, [ref]$minimumVersion)) {
+            throw '最低客户端版本无效。'
+          }
+          "RELEASE_SEQUENCE=$($sequence.ToString([Globalization.CultureInfo]::InvariantCulture))" >> $env:GITHUB_ENV
+          "RELEASE_MINIMUM_CLIENT_VERSION=$($minimumVersion.ToString())" >> $env:GITHUB_ENV
+
+      - name: Reject missing or reused secret material
+        shell: pwsh
+        env:
+          APK_KEYSTORE_BASE64: ${{ secrets.LYOCRYSTAL_ANDROID_KEYSTORE_BASE64 }}
+          RESOURCE_KEY_A_BASE64: ${{ secrets.LYOCRYSTAL_RESOURCE_KEY_A_PKCS8_BASE64 }}
+          RESOURCE_KEY_B_BASE64: ${{ secrets.LYOCRYSTAL_RESOURCE_KEY_B_PKCS8_BASE64 }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if ([string]::IsNullOrWhiteSpace($env:APK_KEYSTORE_BASE64) -or
+              [string]::IsNullOrWhiteSpace($env:RESOURCE_KEY_A_BASE64) -or
+              [string]::IsNullOrWhiteSpace($env:RESOURCE_KEY_B_BASE64)) {
+            throw 'production-signing 环境缺少 APK 或资源签名秘密。'
+          }
+          $apk = [Convert]::FromBase64String($env:APK_KEYSTORE_BASE64)
+          $keyA = [Convert]::FromBase64String($env:RESOURCE_KEY_A_BASE64)
+          $keyB = [Convert]::FromBase64String($env:RESOURCE_KEY_B_BASE64)
+          try {
+            $apkHash = [Security.Cryptography.SHA256]::HashData($apk)
+            $aHash = [Security.Cryptography.SHA256]::HashData($keyA)
+            $bHash = [Security.Cryptography.SHA256]::HashData($keyB)
+            if ([Security.Cryptography.CryptographicOperations]::FixedTimeEquals($apkHash, $aHash) -or
+                [Security.Cryptography.CryptographicOperations]::FixedTimeEquals($apkHash, $bHash) -or
+                [Security.Cryptography.CryptographicOperations]::FixedTimeEquals($aHash, $bHash)) {
+              throw 'APK 与资源签名秘密必须是三份不同材料。'
+            }
+          }
+          finally {
+            [Security.Cryptography.CryptographicOperations]::ZeroMemory($apk)
+            [Security.Cryptography.CryptographicOperations]::ZeroMemory($keyA)
+            [Security.Cryptography.CryptographicOperations]::ZeroMemory($keyB)
+          }
+
+      - name: Decode temporary APK keystore
+        shell: pwsh
+        env:
+          APK_KEYSTORE_BASE64: ${{ secrets.LYOCRYSTAL_ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          $bytes = [Convert]::FromBase64String($env:APK_KEYSTORE_BASE64)
+          try {
+            [IO.File]::WriteAllBytes((Join-Path $env:RUNNER_TEMP 'lyocrystal-release.keystore'), $bytes)
+          }
+          finally {
+            [Security.Cryptography.CryptographicOperations]::ZeroMemory($bytes)
+          }
+
+      - name: Sign resource index with current key
+        if: inputs.resource_key_id == 'resource-2026-a'
+        shell: pwsh
+        env:
+          LYOCRYSTAL_RESOURCE_SIGNING_PRIVATE_KEY_BASE64: ${{ secrets.LYOCRYSTAL_RESOURCE_KEY_A_PKCS8_BASE64 }}
+        run: >-
+          dotnet run --project Tools/ReleaseSigningTool/ReleaseSigningTool.csproj
+          --configuration Release --no-restore --
+          sign-resource-index
+          Client_MonoGame.Shared/BootstrapAssets/bootstrap-package-index.json
+          ${{ runner.temp }}/bootstrap-package-index.signed.json
+          resource-2026-a
+          $env:RELEASE_SEQUENCE
+          $env:RELEASE_MINIMUM_CLIENT_VERSION
+          -
+
+      - name: Sign resource index with next key
+        if: inputs.resource_key_id == 'resource-2026-b'
+        shell: pwsh
+        env:
+          LYOCRYSTAL_RESOURCE_SIGNING_PRIVATE_KEY_BASE64: ${{ secrets.LYOCRYSTAL_RESOURCE_KEY_B_PKCS8_BASE64 }}
+        run: >-
+          dotnet run --project Tools/ReleaseSigningTool/ReleaseSigningTool.csproj
+          --configuration Release --no-restore --
+          sign-resource-index
+          Client_MonoGame.Shared/BootstrapAssets/bootstrap-package-index.json
+          ${{ runner.temp }}/bootstrap-package-index.signed.json
+          resource-2026-b
+          $env:RELEASE_SEQUENCE
+          $env:RELEASE_MINIMUM_CLIENT_VERSION
+          -
+
+      - name: Verify resource index against compiled trust table
+        shell: pwsh
+        run: >-
+          dotnet run --project Tools/ReleaseSigningTool/ReleaseSigningTool.csproj
+          --configuration Release --no-restore --
+          verify-resource-index
+          ${{ runner.temp }}/bootstrap-package-index.signed.json
+          $env:RELEASE_MINIMUM_CLIENT_VERSION
+
+      - name: Publish independently signed Android APK
+        shell: pwsh
+        env:
+          LYOCRYSTAL_APK_STORE_PASSWORD: ${{ secrets.LYOCRYSTAL_ANDROID_STORE_PASSWORD }}
+          LYOCRYSTAL_APK_KEY_PASSWORD: ${{ secrets.LYOCRYSTAL_ANDROID_KEY_PASSWORD }}
+          LYOCRYSTAL_APK_KEY_ALIAS: ${{ secrets.LYOCRYSTAL_ANDROID_KEY_ALIAS }}
+        run: >-
+          dotnet publish Client_MonoGame.Android/Client_MonoGame.Android.csproj
+          -f net10.0-android -c Release -r android-arm64 --no-restore
+          -p:MobileBootstrapAssetMode=Micro
+          -p:AndroidPackageFormat=apk
+          -p:ArchiveOnBuild=false
+          -p:RunAOTCompilation=true
+          -p:PublishTrimmed=true
+          -p:AndroidKeyStore=true
+          -p:AndroidSigningKeyStore=${{ runner.temp }}/lyocrystal-release.keystore
+          -p:AndroidSigningKeyAlias=$env:LYOCRYSTAL_APK_KEY_ALIAS
+          -p:AndroidSigningStorePass=env:LYOCRYSTAL_APK_STORE_PASSWORD
+          -p:AndroidSigningKeyPass=env:LYOCRYSTAL_APK_KEY_PASSWORD
+          --verbosity minimal
+
+      - name: Verify APK signature
+        shell: pwsh
+        run: |
+          $apks = @(Get-ChildItem 'Client_MonoGame.Android/bin/Release/net10.0-android/android-arm64/publish' -Filter '*-Signed.apk' -File)
+          $signer = Get-ChildItem $env:ANDROID_HOME -Filter 'apksigner*' -File -Recurse | Sort-Object FullName -Descending | Select-Object -First 1
+          if ($apks.Count -ne 1 -or $null -eq $signer) { throw "签名 APK 数量必须为 1 且必须存在 apksigner；APK 数量=$($apks.Count)。" }
+          & $signer.FullName verify --verbose --print-certs $apks[0].FullName
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Upload signed artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-01-signed-artifacts
+          path: |
+            ${{ runner.temp }}/bootstrap-package-index.signed.json
+            Client_MonoGame.Android/bin/Release/net10.0-android/android-arm64/publish/*-Signed.apk
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Remove temporary signing material
+        if: always()
+        shell: pwsh
+        run: |
+          Remove-Item -LiteralPath (Join-Path $env:RUNNER_TEMP 'lyocrystal-release.keystore') -Force -ErrorAction SilentlyContinue
+          Remove-Item -LiteralPath (Join-Path $env:RUNNER_TEMP 'bootstrap-package-index.signed.json') -Force -ErrorAction SilentlyContinue

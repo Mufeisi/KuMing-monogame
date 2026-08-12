@@ -1,0 +1,93 @@
+[2026-08-10 17:32:16] 启动：Platform=Unix ClientRoot=/data/user/0/com.lommir.client.monogame.android/files RuntimeRoot=/data/user/0/com.lommir.client.monogame.android/files/Cache/Mobile/Runtime
+[2026-08-10 17:32:24] 启动：Platform=Unix ClientRoot=/data/user/0/com.lommir.client.monogame.android/files RuntimeRoot=/data/user/0/com.lommir.client.monogame.android/files/Cache/Mobile/Runtime
+[2026-08-10 17:32:27] FairyGUI: SafeArea(Overlay) px=0,0,1334,750 scaleFactor=1 -> ui=0,0,1334,750
+[2026-08-10 17:32:27] FairyGUI: Stage 初始化完成（移动端 UI 接入 POC）
+[2026-08-10 17:32:28] FairyGUI: 预登录更新阶段等待默认 FGUI 包资源同步，fui-retro=declared (hydrated=0/30, staged=0)，缺少探针=BaseRes_fui.bytes, UIRes_fui.bytes, Font_fui.bytes 等
+[2026-08-10 17:32:28] FairyGUI: SafeArea(Overlay) px=0,0,1520,855 scaleFactor=1 -> ui=0,0,1520,855
+[2026-08-10 17:32:39] 启动：Platform=Unix ClientRoot=/data/user/0/com.lommir.client.monogame.android/files RuntimeRoot=/data/user/0/com.lommir.client.monogame.android/files/Cache/Mobile/Runtime
+[2026-08-10 17:32:42] FairyGUI: SafeArea(Overlay) px=0,0,1334,750 scaleFactor=1 -> ui=0,0,1334,750
+[2026-08-10 17:32:42] FairyGUI: Stage 初始化完成（移动端 UI 接入 POC）
+[2026-08-10 17:32:42] FairyGUI: 预登录更新阶段等待默认 FGUI 包资源同步，fui-retro=declared (hydrated=0/30, staged=0)，缺少探针=BaseRes_fui.bytes, UIRes_fui.bytes, Font_fui.bytes 等
+[2026-08-10 17:32:42] FairyGUI: SafeArea(Overlay) px=0,0,1520,855 scaleFactor=1 -> ui=0,0,1520,855
+[2026-08-10 17:32:48] FairyGUI: 预登录更新阶段等待默认 FGUI 包资源同步，fui-retro=declared (hydrated=0/30, staged=0)，缺少探针=BaseRes_fui.bytes, UIRes_fui.bytes, Font_fui.bytes 等
+[2026-08-10 17:32:54] FairyGUI: 预登录更新阶段等待默认 FGUI 包资源同步，fui-retro=declared (hydrated=0/30, staged=0)，缺少探针=UIRes_fui.bytes, FormId_fui.bytes, Sounds_fui.bytes 等
+[2026-08-10 17:32:55] FairyGUI: 预登录更新阶段等待默认 FGUI 包资源同步，fui-retro=declared (hydrated=0/30, staged=0)，缺少探针=UIRes_fui.bytes, UI_fui.bytes, 自定义组件_fui.bytes
+[2026-08-10 17:32:56] FairyGUI: publish 包加载完成（复古）
+[2026-08-10 17:32:56] FairyGUI: 已导出包组件清单到 /data/user/0/com.lommir.client.monogame.android/files/Cache/Mobile/Runtime/FairyGui-PackageComponentList.txt
+[2026-08-10 17:32:56] FairyGUI: DoubleDJoystick 动效绑定等待主界面创建（稍后自动重试）。
+[2026-08-10 17:32:56] FairyGUI: MobileMainHud 后台预取启动，Pkg=UIRes Atlases=11
+[2026-08-10 17:32:57] FairyGUI: MobileMainHud 后台字节预取 1/11 file=UIRes_atlas0
+[2026-08-10 17:32:57] FairyGUI: MobileMainHud 后台字节预取 2/11 file=UIRes_atlas0_1
+[2026-08-10 17:32:57] FairyGUI: MobileMainHud 后台字节预取 3/11 file=UIRes_atlas0_2
+[2026-08-10 17:32:57] FairyGUI: MobileMainHud 后台字节预取 4/11 file=UIRes_atlas0_3
+[2026-08-10 17:32:57] FairyGUI: MobileMainHud 后台字节预取 5/11 file=UIRes_atlas0_4
+[2026-08-10 17:32:57] FairyGUI: MobileMainHud 后台字节预取 6/11 file=UIRes_atlas0_5
+[2026-08-10 17:32:57] FairyGUI: MobileMainHud 后台字节预取 7/11 file=UIRes_atlas0_6
+[2026-08-10 17:32:57] FairyGUI: MobileMainHud 后台字节预取 8/11 file=UIRes_atlas0_7
+[2026-08-10 17:32:57] FairyGUI: MobileMainHud 贴图预热 1/11 file=UIRes_atlas0 Ms=678
+[2026-08-10 17:32:57] FairyGUI: MobileMainHud 后台字节预取 9/11 file=UIRes_atlas0_8
+[2026-08-10 17:32:57] FairyGUI: MobileMainHud 后台字节预取 10/11 file=UIRes_atlas0_9
+[2026-08-10 17:32:57] FairyGUI: MobileMainHud 后台字节预取 11/11 file=UIRes_atlas0_10
+[2026-08-10 17:32:57] FairyGUI: MobileMainHud 后台字节预取完成，Pkg=UIRes Atlases=11 TotalMs=754
+[2026-08-10 17:32:58] FairyGUI: MobileMainHud 贴图预热 2/11 file=UIRes_atlas0_1 Ms=964
+[2026-08-10 17:32:59] FairyGUI: MobileMainHud 贴图预热 3/11 file=UIRes_atlas0_2 Ms=608
+[2026-08-10 17:33:00] FairyGUI: MobileMainHud 贴图预热 4/11 file=UIRes_atlas0_3 Ms=972
+[2026-08-10 17:33:02] FairyGUI: DoubleDJoystick 动效绑定等待主界面创建（稍后自动重试）。
+[2026-08-10 17:33:02] ClientVersionHash=aab3d05182c67c2f8bf22eef1016dd8f Source=/system/bin/app_process64
+[2026-08-10 17:33:03] FairyGUI: MobileMainHud 贴图预热 5/11 file=UIRes_atlas0_4 Ms=516
+[2026-08-10 17:33:03] 握手通过：ClientVersion=OK，已进入登录界面。
+[2026-08-10 17:33:04] FairyGUI: MobileMainHud 贴图预热 6/11 file=UIRes_atlas0_5 Ms=715
+[2026-08-10 17:33:04] FairyGUI: MobileMainHud 贴图预热 7/11 file=UIRes_atlas0_6 Ms=515
+[2026-08-10 17:33:05] FairyGUI: MobileMainHud 贴图预热 8/11 file=UIRes_atlas0_7 Ms=520
+[2026-08-10 17:33:05] FairyGUI: MobileMainHud 贴图预热 9/11 file=UIRes_atlas0_8 Ms=587
+[2026-08-10 17:33:05] FairyGUI: DoubleDJoystick 动效绑定等待主界面创建（稍后自动重试）。
+[2026-08-10 17:33:06] FairyGUI: MobileMainHud 贴图预热 10/11 file=UIRes_atlas0_9 Ms=428
+[2026-08-10 17:33:06] FairyGUI: MobileMainHud 贴图预热 11/11 file=UIRes_atlas0_10 Ms=307
+[2026-08-10 17:33:06] FairyGUI: MobileMainHud 贴图预热完成，Pkg=UIRes Atlases=11 TotalMs=9479
+[2026-08-10 17:33:09] FairyGUI: DoubleDJoystick 动效绑定等待主界面创建（稍后自动重试）。
+[2026-08-10 17:33:12] FairyGUI: DoubleDJoystick 动效绑定等待主界面创建（稍后自动重试）。
+[2026-08-10 17:33:15] FairyGUI: DoubleDJoystick 动效绑定等待主界面创建（稍后自动重试）。
+[2026-08-10 17:34:38] FairyGUI: DoubleDJoystick 动效绑定等待主界面创建（稍后自动重试）。
+[2026-08-10 17:34:38] FairyGUI: SafeArea(Overlay) px=0,0,1600,900 scaleFactor=1 -> ui=0,0,1600,900
+[2026-08-10 17:34:38] ClientVersionHash=aab3d05182c67c2f8bf22eef1016dd8f Source=/system/bin/app_process64
+[2026-08-10 17:34:38] 握手通过：ClientVersion=OK，已进入登录界面。
+[2026-08-10 17:34:41] FairyGUI: DoubleDJoystick 动效绑定等待主界面创建（稍后自动重试）。
+[2026-08-10 17:39:11] 启动：Platform=Unix ClientRoot=/data/user/0/com.lommir.client.monogame.android/files RuntimeRoot=/data/user/0/com.lommir.client.monogame.android/files/Cache/Mobile/Runtime
+[2026-08-10 17:39:14] FairyGUI: SafeArea(Overlay) px=0,0,1334,750 scaleFactor=1 -> ui=0,0,1334,750
+[2026-08-10 17:39:14] FairyGUI: Stage 初始化完成（移动端 UI 接入 POC）
+[2026-08-10 17:39:14] FairyGUI: publish 包加载完成（复古）
+[2026-08-10 17:39:14] FairyGUI: 已导出包组件清单到 /data/user/0/com.lommir.client.monogame.android/files/Cache/Mobile/Runtime/FairyGui-PackageComponentList.txt
+[2026-08-10 17:39:14] FairyGUI: SafeArea(Overlay) px=0,0,1520,855 scaleFactor=1 -> ui=0,0,1520,855
+[2026-08-10 17:39:14] FairyGUI: DoubleDJoystick 动效绑定等待主界面创建（稍后自动重试）。
+[2026-08-10 17:39:14] FairyGUI: MobileMainHud 后台预取启动，Pkg=UIRes Atlases=11
+[2026-08-10 17:39:14] FairyGUI: MobileMainHud 后台字节预取 1/11 file=UIRes_atlas0
+[2026-08-10 17:39:14] FairyGUI: MobileMainHud 后台字节预取 2/11 file=UIRes_atlas0_1
+[2026-08-10 17:39:14] FairyGUI: MobileMainHud 后台字节预取 3/11 file=UIRes_atlas0_2
+[2026-08-10 17:39:14] FairyGUI: MobileMainHud 后台字节预取 4/11 file=UIRes_atlas0_3
+[2026-08-10 17:39:14] FairyGUI: MobileMainHud 后台字节预取 5/11 file=UIRes_atlas0_4
+[2026-08-10 17:39:15] FairyGUI: MobileMainHud 后台字节预取 6/11 file=UIRes_atlas0_5
+[2026-08-10 17:39:15] FairyGUI: MobileMainHud 后台字节预取 7/11 file=UIRes_atlas0_6
+[2026-08-10 17:39:15] FairyGUI: MobileMainHud 后台字节预取 8/11 file=UIRes_atlas0_7
+[2026-08-10 17:39:15] FairyGUI: MobileMainHud 贴图预热 1/11 file=UIRes_atlas0 Ms=712
+[2026-08-10 17:39:15] FairyGUI: MobileMainHud 后台字节预取 9/11 file=UIRes_atlas0_8
+[2026-08-10 17:39:15] FairyGUI: MobileMainHud 后台字节预取 10/11 file=UIRes_atlas0_9
+[2026-08-10 17:39:15] FairyGUI: MobileMainHud 后台字节预取 11/11 file=UIRes_atlas0_10
+[2026-08-10 17:39:15] FairyGUI: MobileMainHud 后台字节预取完成，Pkg=UIRes Atlases=11 TotalMs=0
+[2026-08-10 17:39:20] FairyGUI: DoubleDJoystick 动效绑定等待主界面创建（稍后自动重试）。
+[2026-08-10 17:39:20] FairyGUI: SafeArea(Overlay) px=0,0,1600,900 scaleFactor=1 -> ui=0,0,1600,900
+[2026-08-10 17:39:21] FairyGUI: MobileMainHud 贴图预热 2/11 file=UIRes_atlas0_1 Ms=811
+[2026-08-10 17:39:23] ClientVersionHash=aab3d05182c67c2f8bf22eef1016dd8f Source=/system/bin/app_process64
+[2026-08-10 17:39:23] FairyGUI: MobileMainHud 贴图预热 3/11 file=UIRes_atlas0_2 Ms=616
+[2026-08-10 17:39:23] FairyGUI: DoubleDJoystick 动效绑定等待主界面创建（稍后自动重试）。
+[2026-08-10 17:39:23] 握手通过：ClientVersion=OK，已进入登录界面。
+[2026-08-10 17:39:24] FairyGUI: MobileMainHud 贴图预热 4/11 file=UIRes_atlas0_3 Ms=651
+[2026-08-10 17:39:24] FairyGUI: MobileMainHud 贴图预热 5/11 file=UIRes_atlas0_4 Ms=452
+[2026-08-10 17:39:25] FairyGUI: MobileMainHud 贴图预热 6/11 file=UIRes_atlas0_5 Ms=592
+[2026-08-10 17:39:26] FairyGUI: MobileMainHud 贴图预热 7/11 file=UIRes_atlas0_6 Ms=485
+[2026-08-10 17:39:26] FairyGUI: MobileMainHud 贴图预热 8/11 file=UIRes_atlas0_7 Ms=580
+[2026-08-10 17:39:27] FairyGUI: MobileMainHud 贴图预热 9/11 file=UIRes_atlas0_8 Ms=569
+[2026-08-10 17:39:27] FairyGUI: MobileMainHud 贴图预热 10/11 file=UIRes_atlas0_9 Ms=395
+[2026-08-10 17:39:27] FairyGUI: DoubleDJoystick 动效绑定等待主界面创建（稍后自动重试）。
+[2026-08-10 17:39:27] FairyGUI: MobileMainHud 贴图预热 11/11 file=UIRes_atlas0_10 Ms=295
+[2026-08-10 17:39:27] FairyGUI: MobileMainHud 贴图预热完成，Pkg=UIRes Atlases=11 TotalMs=13389
+[2026-08-10 17:39:30] FairyGUI: DoubleDJoystick 动效绑定等待主界面创建（稍后自动重试）。

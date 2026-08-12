@@ -1,0 +1,17 @@
+<Project>
+  <PropertyGroup>
+    <!-- 现有工程可显式覆盖；新增工程默认采用现代 C# 安全基线。 -->
+    <Nullable Condition="'$(Nullable)' == ''">enable</Nullable>
+    <ImplicitUsings Condition="'$(ImplicitUsings)' == ''">enable</ImplicitUsings>
+    <LangVersion Condition="'$(LangVersion)' == ''">latestMajor</LangVersion>
+
+    <!-- 保证同一源码和工具链产生可重复程序集；CI 构建同时规范化源码路径。 -->
+    <Deterministic>true</Deterministic>
+    <ContinuousIntegrationBuild Condition="'$(CI)' == 'true'">true</ContinuousIntegrationBuild>
+
+    <!-- 全仓库测试工程的统一工具链版本。 -->
+    <TestSdkVersion>17.11.1</TestSdkVersion>
+    <XunitVersion>2.9.2</XunitVersion>
+    <XunitRunnerVisualStudioVersion>3.0.2</XunitRunnerVisualStudioVersion>
+  </PropertyGroup>
+</Project>

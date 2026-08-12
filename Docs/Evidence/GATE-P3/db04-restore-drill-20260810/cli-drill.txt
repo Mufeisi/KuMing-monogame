@@ -1,0 +1,28 @@
+日期：2026-08-10
+平台：Windows / .NET 10 Release
+正式入口：Server.MirForms/bin/Release/Server.dll --restore-sqlite
+
+DB-03 备份：
+- C: 本地副本与 D: 异卷副本均为 675840 字节。
+- 两份 SHA-256 均为 99BCCCC54FA82C56C8B632A3E49D3055F0A074621EF764C62FE0FB9F5FE2D69C。
+- BACKUP_SUCCESS_UTC=2026-08-09T20:26:31.5793573Z，integrity_check=ok。
+
+强停：
+- PID=1156，故障前已提交账号 GOLD=777。
+- 主库、4152 字节 WAL、32768 字节 SHM 均存在。
+- FAULT_UTC=2026-08-09T20:26:31.8819988Z。
+- 执行 Stop-Process -Id 1156 -Force 后进程退出。
+
+正式恢复：
+- RESTORE_START_UTC=2026-08-09T20:26:31.9043925Z。
+- 正式 CLI 退出码=0，内部恢复耗时=101ms。
+- 恢复后 integrity_check=ok；账号 GOLD=100；角色等级=38；行会金币=4567；商品文件=16 字节；攻城 Owner=43001、Gold=8910；宿主 SERVICE_STATE=Ready。
+- READY_UTC=2026-08-09T20:26:32.5067024Z。
+
+可复算结果：
+- RPO=303ms。
+- 恢复命令开始到 Ready：UTC 端点差=602.31ms，保守上取整 RTO=603ms；进程内 Stopwatch=600ms。
+- 故障到 Ready=625ms。
+- 门槛 RPO≤300000ms、RTO≤1800000ms，结论通过。
+
+完整命令、PID、文件清单、哈希、stdout/stderr 与退出码见 raw-powershell-transcript.txt。

@@ -7,21 +7,39 @@ using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using Server;
 using Server.MirEnvir;
+using Server.MirDatabase;
 using Server.MirNetwork;
+using Server.Persistence;
+using Server.Persistence.Sql;
+using Server.Security;
 using Shared.Security;
 using Xunit;
 
 namespace Base05.Tests;
 
 [Collection("TLS环境")]
-public sealed class ServerLifecycleSmokeTests
+public sealed class ServerLifecycleSmokeTests : IDisposable
 {
+    private readonly string _secretRoot = Path.Combine(Path.GetTempPath(), "LyoCrystalLifecycleSecrets-" + Guid.NewGuid().ToString("N"));
+    private readonly IDisposable _secretScope;
+
+    public ServerLifecycleSmokeTests()
+    {
+        _secretScope = ProtectedSecretStore.UseTestRoot(_secretRoot);
+    }
+
+    public void Dispose()
+    {
+        _secretScope.Dispose();
+        if (Directory.Exists(_secretRoot)) Directory.Delete(_secretRoot, true);
+    }
     [Fact]
     public void Minimal_server_start_stop_is_isolated_and_repeatable()
     {
         var envir = new Envir();
         var options = new EnvirStartOptions
         {
+            EnforceProductionSecurity = false,
             LoadResources = false,
             BindNetwork = false,
             StartScripts = false,
@@ -56,6 +74,223 @@ public sealed class ServerLifecycleSmokeTests
     }
 
     [Fact]
+    public void Sqlite关服先在主线程捕获四个最终快照并排空写队列()
+    {
+        bool oldBlockShutdown = Settings.BlockShutdownOnSaveFailures;
+        var persistence = new ShutdownRecordingPersistence();
+        var envir = new Envir();
+        typeof(Envir).GetField("_persistence", BindingFlags.Instance | BindingFlags.NonPublic)!
+            .SetValue(envir, persistence);
+        int callerThreadId = Environment.CurrentManagedThreadId;
+
+        try
+        {
+            Settings.BlockShutdownOnSaveFailures = false;
+            envir.Start(new EnvirStartOptions
+            {
+                EnforceProductionSecurity = false,
+                LoadResources = false,
+                BindNetwork = false,
+                StartScripts = false,
+                StartHttp = false,
+                SaveOnStop = true,
+                Multithreaded = false,
+            });
+            Assert.True(SpinWait.SpinUntil(
+                () => envir.StartState is EnvirStartState.Ready or EnvirStartState.Failed,
+                TimeSpan.FromSeconds(2)));
+            Assert.Equal(EnvirStartState.Ready, envir.StartState);
+
+            envir.Stop();
+
+            Assert.Equal(new[] { "Accounts", "Guilds", "Goods", "Conquests", "Drain" }, persistence.Events);
+            Assert.DoesNotContain(callerThreadId, persistence.SaveThreadIds);
+            Assert.Single(persistence.SaveThreadIds.Distinct());
+            Assert.False(envir.Running);
+        }
+        finally
+        {
+            Settings.BlockShutdownOnSaveFailures = oldBlockShutdown;
+            envir.Stop();
+        }
+    }
+
+    [Fact]
+    public void Sqlite最终保存连续失败时取消关服恢复成功后允许重试()
+    {
+        bool oldBlockShutdown = Settings.BlockShutdownOnSaveFailures;
+        int oldThreshold = Settings.BlockShutdownOnSaveFailuresThreshold;
+        var persistence = new ShutdownRecordingPersistence { FailAccounts = true };
+        var envir = new Envir();
+        typeof(Envir).GetField("_persistence", BindingFlags.Instance | BindingFlags.NonPublic)!
+            .SetValue(envir, persistence);
+
+        try
+        {
+            Settings.BlockShutdownOnSaveFailures = true;
+            Settings.BlockShutdownOnSaveFailuresThreshold = 1;
+            envir.Start(new EnvirStartOptions
+            {
+                EnforceProductionSecurity = false,
+                LoadResources = false,
+                BindNetwork = false,
+                StartScripts = false,
+                StartHttp = false,
+                SaveOnStop = true,
+                Multithreaded = false,
+            });
+            Assert.True(SpinWait.SpinUntil(
+                () => envir.StartState is EnvirStartState.Ready or EnvirStartState.Failed,
+                TimeSpan.FromSeconds(2)));
+            Assert.Equal(EnvirStartState.Ready, envir.StartState);
+
+            envir.Stop();
+
+            Assert.True(envir.Running);
+
+            persistence.FailAccounts = false;
+            SqlSaveResilience.ReportSuccess(DatabaseProviderKind.Sqlite, SqlSaveDomain.Accounts);
+            envir.Stop();
+            Assert.False(envir.Running);
+        }
+        finally
+        {
+            persistence.FailAccounts = false;
+            SqlSaveResilience.ReportSuccess(DatabaseProviderKind.Sqlite, SqlSaveDomain.Accounts);
+            Settings.BlockShutdownOnSaveFailures = oldBlockShutdown;
+            Settings.BlockShutdownOnSaveFailuresThreshold = oldThreshold;
+            envir.Stop();
+        }
+    }
+
+    [Fact]
+    public void Sqlite最终保存已排空时资源清理不再追加商品保存()
+    {
+        var persistence = new ShutdownRecordingPersistence();
+        var envir = new Envir();
+        Type envirType = typeof(Envir);
+        envirType.GetField("_persistence", BindingFlags.Instance | BindingFlags.NonPublic)!
+            .SetValue(envir, persistence);
+        envirType.GetField("_shutdownSavePrepared", BindingFlags.Instance | BindingFlags.NonPublic)!
+            .SetValue(envir, 1);
+
+        envirType.GetMethod("StopEnvir", BindingFlags.Instance | BindingFlags.NonPublic)!
+            .Invoke(envir, null);
+
+        Assert.Empty(persistence.Events);
+    }
+
+    [Fact]
+    public async Task Sqlite关服排空期间入队的旧主线程工作被取消且重启不执行()
+    {
+        bool oldBlockShutdown = Settings.BlockShutdownOnSaveFailures;
+        var persistence = new ShutdownRecordingPersistence { BlockDrain = true };
+        var envir = new Envir();
+        typeof(Envir).GetField("_persistence", BindingFlags.Instance | BindingFlags.NonPublic)!
+            .SetValue(envir, persistence);
+        bool staleWorkExecuted = false;
+
+        try
+        {
+            Settings.BlockShutdownOnSaveFailures = false;
+            envir.Start(CreateSqliteShutdownTestOptions(saveOnStop: true));
+            Assert.True(SpinWait.SpinUntil(() => envir.StartState == EnvirStartState.Ready, TimeSpan.FromSeconds(2)));
+
+            Task stop = Task.Run(envir.Stop);
+            Assert.True(persistence.DrainStarted.Wait(TimeSpan.FromSeconds(5)));
+            Task<bool> staleWork = Task.Run(() => envir.InvokeOnMainThread(() =>
+            {
+                staleWorkExecuted = true;
+                return true;
+            }));
+            Assert.True(SpinWait.SpinUntil(() => envir.PendingMainThreadWorkCount == 1, TimeSpan.FromSeconds(5)));
+
+            persistence.ReleaseDrain.Set();
+            await stop.WaitAsync(TimeSpan.FromSeconds(5));
+            Assert.False(await staleWork.WaitAsync(TimeSpan.FromSeconds(5)));
+            Assert.False(staleWorkExecuted);
+
+            persistence.BlockDrain = false;
+            envir.Start(CreateSqliteShutdownTestOptions(saveOnStop: false));
+            Assert.True(SpinWait.SpinUntil(() => envir.StartState == EnvirStartState.Ready, TimeSpan.FromSeconds(2)));
+            await Task.Delay(50);
+            Assert.False(staleWorkExecuted);
+        }
+        finally
+        {
+            persistence.ReleaseDrain.Set();
+            Settings.BlockShutdownOnSaveFailures = oldBlockShutdown;
+            envir.Stop();
+        }
+    }
+
+    private static EnvirStartOptions CreateSqliteShutdownTestOptions(bool saveOnStop)
+    {
+        return new EnvirStartOptions
+        {
+            EnforceProductionSecurity = false,
+            LoadResources = false,
+            BindNetwork = false,
+            StartScripts = false,
+            StartHttp = false,
+            SaveOnStop = saveOnStop,
+            Multithreaded = false,
+        };
+    }
+
+    private sealed class ShutdownRecordingPersistence : IServerPersistence, IPendingSaveCoordinator
+    {
+        private readonly List<string> _events = new();
+        private readonly List<int> _saveThreadIds = new();
+
+        public DatabaseProviderKind Provider => DatabaseProviderKind.Sqlite;
+        public IReadOnlyList<string> Events => _events;
+        public IReadOnlyList<int> SaveThreadIds => _saveThreadIds;
+        public bool FailAccounts { get; set; }
+        public bool BlockDrain { get; set; }
+        public ManualResetEventSlim DrainStarted { get; } = new(false);
+        public ManualResetEventSlim ReleaseDrain { get; } = new(false);
+
+        public bool LoadWorld(Envir envir) => true;
+        public void SaveWorld(Envir envir) { }
+        public void LoadAccounts(Envir envir) { }
+        public void BeginSaveAccounts(Envir envir) { }
+        public void SaveAccounts(Envir envir)
+        {
+            Record("Accounts");
+            if (FailAccounts)
+            {
+                SqlSaveResilience.ReportFailure(
+                    DatabaseProviderKind.Sqlite,
+                    SqlSaveDomain.Accounts,
+                    new IOException("测试最终保存失败"),
+                    operation: "ShutdownTest");
+            }
+        }
+        public void LoadGuilds(Envir envir) { }
+        public void SaveGuilds(Envir envir, bool forced) => Record("Guilds");
+        public void SaveGoods(Envir envir, bool forced) => Record("Goods");
+        public void LoadConquests(Envir envir) { }
+        public void SaveConquests(Envir envir, bool forced) => Record("Conquests");
+        public void SaveArchivedCharacter(Envir envir, CharacterInfo info) { }
+        public CharacterInfo GetArchivedCharacter(Envir envir, string name) => null;
+
+        public void DrainPendingSaves()
+        {
+            _events.Add("Drain");
+            if (!BlockDrain) return;
+            DrainStarted.Set();
+            Assert.True(ReleaseDrain.Wait(TimeSpan.FromSeconds(5)));
+        }
+
+        private void Record(string name)
+        {
+            _events.Add(name);
+            _saveThreadIds.Add(Environment.CurrentManagedThreadId);
+        }
+    }
+
+    [Fact]
     public void 无游戏监听器启动失败后可重试且不进入Ready()
     {
         string oldAddress = Settings.IPAddress;
@@ -64,6 +299,7 @@ public sealed class ServerLifecycleSmokeTests
         var envir = new Envir();
         var failOptions = new EnvirStartOptions
         {
+            EnforceProductionSecurity = false,
             LoadResources = false,
             BindNetwork = true,
             StartScripts = false,
@@ -84,6 +320,7 @@ public sealed class ServerLifecycleSmokeTests
             envir.Stop();
             envir.Start(new EnvirStartOptions
             {
+                EnforceProductionSecurity = false,
                 LoadResources = false,
                 BindNetwork = false,
                 StartScripts = false,
@@ -229,7 +466,6 @@ public sealed class ServerLifecycleSmokeTests
         private readonly string _oldSqlitePath;
         private readonly bool _oldAutoApply;
         private readonly bool _oldAutoImport;
-        private readonly string _oldPassword;
         private readonly bool _oldPacketDirection;
         private readonly ushort _oldMaxUser;
         private readonly ushort _oldMaxIP;
@@ -255,7 +491,6 @@ public sealed class ServerLifecycleSmokeTests
             _oldSqlitePath = Settings.SqlitePath;
             _oldAutoApply = Settings.AutoApplySchemaOnStartup;
             _oldAutoImport = Settings.AutoImportLegacyOnEmpty;
-            _oldPassword = Environment.GetEnvironmentVariable(TlsTransportPolicy.CertificatePasswordEnvironmentVariable);
             _oldPacketDirection = Packet.IsServer;
             _oldMaxUser = Settings.MaxUser;
             _oldMaxIP = Settings.MaxIP;
@@ -281,6 +516,7 @@ public sealed class ServerLifecycleSmokeTests
 
         public EnvirStartOptions StartOptions => new EnvirStartOptions
         {
+            EnforceProductionSecurity = false,
             LoadResources = false,
             BindNetwork = true,
             StartScripts = false,
@@ -291,7 +527,7 @@ public sealed class ServerLifecycleSmokeTests
 
         public void SetCertificatePassword(string password)
         {
-            Environment.SetEnvironmentVariable(TlsTransportPolicy.CertificatePasswordEnvironmentVariable, password);
+            ProtectedSecretStore.Write(ProtectedSecretStore.TlsCertificatePassword, password);
         }
 
         public void Start() => ServerEnvironment.Start(StartOptions);
@@ -320,7 +556,6 @@ public sealed class ServerLifecycleSmokeTests
         public void Dispose()
         {
             ServerEnvironment.Stop();
-            Environment.SetEnvironmentVariable(TlsTransportPolicy.CertificatePasswordEnvironmentVariable, _oldPassword);
             Packet.IsServer = _oldPacketDirection;
             Settings.IPAddress = _oldAddress;
             Settings.Port = _oldPort;

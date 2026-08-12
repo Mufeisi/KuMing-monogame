@@ -1,0 +1,30 @@
+# 默认所有者；新增目录在获得独立维护人前必须继承该审查责任。
+* @Mufeisi
+
+# 工程规范、代码托管和自动化门禁。
+/AGENTS.md @Mufeisi
+/CONTRIBUTING.md @Mufeisi
+/.github/ @Mufeisi
+/Docs/工程开发规范.md @Mufeisi
+/Docs/工程治理实施路线.md @Mufeisi
+
+# 高风险边界：协议、服务端状态、数据库迁移、安全与发布。
+/Shared/ @Mufeisi
+/Server/ @Mufeisi
+/Tools/SchemaMigrator/ @Mufeisi
+/Tools/ProtocolManifestGenerator/ @Mufeisi
+/Docs/SEC-* @Mufeisi
+/Docs/DB-* @Mufeisi
+/Docs/RELEASE-* @Mufeisi
+/Docs/ReleaseKeys/ @Mufeisi
+
+# 客户端运行时、渲染与移动平台发布。
+/Client_VorticeDX11/ @Mufeisi
+/Client_MonoGame.Shared/ @Mufeisi
+/Client_MonoGame.Android/ @Mufeisi
+/Client_MonoGame.iOS/ @Mufeisi
+
+# 玩家入口、微端和正式发布链。
+/Launcher.*/ @Mufeisi
+/MicroGateway.*/ @Mufeisi
+/Build/ @Mufeisi

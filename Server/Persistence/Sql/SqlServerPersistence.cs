@@ -1,11 +1,14 @@
 using System;
+using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Reflection;
 using System.Text;
+using System.Threading;
 using Server.MirDatabase;
 using Server.MirEnvir;
 using Server.MirObjects;
+using Shared.Diagnostics;
 
 namespace Server.Persistence.Sql
 {
@@ -13,7 +16,7 @@ namespace Server.Persistence.Sql
     /// SQL 持久化入口（SQLite/MySQL）。
     /// 当前阶段：仅用于把调用链切换到“持久化层”，具体各域表结构与加载/保存闭环将按升级计划逐步落地。
     /// </summary>
-    public sealed class SqlServerPersistence : IServerPersistence
+    public sealed class SqlServerPersistence : IServerPersistence, IPendingSaveCoordinator
     {
         private const string LegacyDomainWorld = "world";
 
@@ -575,10 +578,17 @@ namespace Server.Persistence.Sql
         private readonly DatabaseProviderKind _provider;
         private readonly SqlDatabaseOptions _databaseOptions;
         private readonly ISchemaMigrator _schemaMigrator;
+        private readonly SqliteSingleWriter _sqliteWriter;
         private readonly object _initGate = new object();
         private bool _initialized;
+        private long _nextSaveGeneration;
+        private int _lastSnapshotCaptureThreadId;
 
         public DatabaseProviderKind Provider => _provider;
+        internal long LastIssuedSaveGeneration => Interlocked.Read(ref _nextSaveGeneration);
+        internal int LastSnapshotCaptureThreadId => Volatile.Read(ref _lastSnapshotCaptureThreadId);
+        internal int SqliteWriterThreadId => _sqliteWriter?.WorkerThreadId ?? 0;
+        internal long GetLastCommittedGeneration(SqlSaveDomain domain) => _sqliteWriter?.GetLastCommittedGeneration(domain) ?? 0;
 
         public SqlServerPersistence(DatabaseProviderKind provider)
             : this(provider, CreateOptionsFromSettings())
@@ -599,8 +609,64 @@ namespace Server.Persistence.Sql
 
             _provider = provider;
             _databaseOptions = databaseOptions;
+            _sqliteWriter = provider == DatabaseProviderKind.Sqlite ? new SqliteSingleWriter() : null;
 
             _schemaMigrator = new SchemaMigrator(SchemaMigrator.CreateDefaultMigrations(), commandTimeoutSeconds: _databaseOptions.CommandTimeoutSeconds);
+        }
+
+        void IPendingSaveCoordinator.DrainPendingSaves()
+        {
+            _sqliteWriter?.Drain();
+        }
+
+        private void RunSaveWithSnapshot<TSnapshot>(
+            SqlSaveDomain domain,
+            Func<TSnapshot> snapshotFactory,
+            Action<SqlSession, TSnapshot> work,
+            bool coalescePending = true)
+        {
+            var runner = new SqlDomainTransactionRunner(_provider, _databaseOptions);
+            if (_provider != DatabaseProviderKind.Sqlite)
+            {
+                runner.RunWithSnapshot(domain, snapshotFactory, work);
+                return;
+            }
+
+            TSnapshot snapshot;
+            long generation = Interlocked.Increment(ref _nextSaveGeneration);
+            int captureThreadId = Environment.CurrentManagedThreadId;
+            long snapshotStart = Stopwatch.GetTimestamp();
+            try
+            {
+                snapshot = snapshotFactory();
+                Volatile.Write(ref _lastSnapshotCaptureThreadId, captureThreadId);
+                PerformanceMetrics.RecordDuration(
+                    PerformanceMetricKind.SaveSnapshotCapture,
+                    Stopwatch.GetTimestamp() - snapshotStart);
+            }
+            catch (Exception ex)
+            {
+                PerformanceMetrics.RecordDuration(
+                    PerformanceMetricKind.SaveSnapshotCapture,
+                    Stopwatch.GetTimestamp() - snapshotStart);
+                PerformanceMetrics.Increment(PerformanceMetricKind.SaveFailure);
+                MessageQueue.Instance.Enqueue($"[SQL:{_provider}] {domain} 快照构建失败：{ex}");
+                SqlSaveResilience.ReportFailure(
+                    _provider,
+                    domain,
+                    ex,
+                    operation: "SqlServerPersistence.Snapshot",
+                    transient: SqlTransientDetector.IsTransient(_provider, ex),
+                    attempts: 0);
+                return;
+            }
+
+            var immutableSnapshot = new ImmutableSaveSnapshot<TSnapshot>(generation, captureThreadId, snapshot);
+            _sqliteWriter.Enqueue(
+                domain,
+                immutableSnapshot.Generation,
+                () => immutableSnapshot.Commit(payload => runner.RunCapturedSnapshot(domain, payload, work).Success),
+                coalescePending);
         }
 
         private static SqlDatabaseOptions CreateOptionsFromSettings()
@@ -1291,7 +1357,9 @@ namespace Server.Persistence.Sql
                         AccountId = account.Index,
                         AccountName = account.AccountID ?? string.Empty,
                         PasswordHash = account.Password ?? string.Empty,
-                        PasswordSalt = account.Salt ?? Array.Empty<byte>(),
+                        PasswordSalt = account.Salt == null
+                            ? Array.Empty<byte>()
+                            : (byte[])account.Salt.Clone(),
                         RequirePasswordChange = account.RequirePasswordChange ? 1 : 0,
                         UserName = account.UserName ?? string.Empty,
                         BirthUtcMs = ToUtcMs(account.BirthDate),
@@ -6130,17 +6198,15 @@ namespace Server.Persistence.Sql
 
             try
             {
-                var runner = new SqlDomainTransactionRunner(_provider, _databaseOptions);
-
                 if (Settings.WorldLegacyBlobWriteEnabled)
                 {
-                    runner.RunWithSnapshot(
+                    RunSaveWithSnapshot(
                         domain: SqlSaveDomain.World,
                         snapshotFactory: () => envir.Legacy_SaveDBToBytes(),
                         work: (session, payload) => UpsertLegacyBlob(session, LegacyDomainWorld, payload));
                 }
 
-                runner.RunWithSnapshot(
+                RunSaveWithSnapshot(
                     domain: SqlSaveDomain.WorldRelations,
                     snapshotFactory: () => SqlWorldRelationsStore.Capture(envir),
                     work: (session, snapshot) => SqlWorldRelationsStore.ReplaceAll(session, snapshot));
@@ -6536,8 +6602,7 @@ namespace Server.Persistence.Sql
 
             try
             {
-                var runner = new SqlDomainTransactionRunner(_provider, _databaseOptions);
-                runner.RunWithSnapshot(
+                RunSaveWithSnapshot(
                     domain: SqlSaveDomain.Accounts,
                     snapshotFactory: () =>
                     {
@@ -6703,8 +6768,7 @@ namespace Server.Persistence.Sql
 
             EnsureInitialized();
 
-            var runner = new SqlDomainTransactionRunner(_provider, _databaseOptions);
-            runner.RunWithSnapshot(
+            RunSaveWithSnapshot(
                 domain: SqlSaveDomain.Guilds,
                 snapshotFactory: () => CaptureGuildLegacyFiles(envir),
                 work: (session, snapshot) => ReplaceLegacyFiles(session, LegacyFilesDomainGuilds, snapshot));
@@ -6716,8 +6780,7 @@ namespace Server.Persistence.Sql
 
             EnsureInitialized();
 
-            var runner = new SqlDomainTransactionRunner(_provider, _databaseOptions);
-            runner.RunWithSnapshot(
+            RunSaveWithSnapshot(
                 domain: SqlSaveDomain.Goods,
                 snapshotFactory: () => CaptureGoodsLegacyFiles(envir, forced),
                 work: (session, snapshot) => ReplaceLegacyFiles(session, LegacyFilesDomainGoods, snapshot));
@@ -6775,8 +6838,7 @@ namespace Server.Persistence.Sql
 
             EnsureInitialized();
 
-            var runner = new SqlDomainTransactionRunner(_provider, _databaseOptions);
-            runner.RunWithSnapshot(
+            RunSaveWithSnapshot(
                 domain: SqlSaveDomain.Conquests,
                 snapshotFactory: () => CaptureConquestLegacyFiles(envir),
                 work: (session, snapshot) => ReplaceLegacyFiles(session, LegacyFilesDomainConquests, snapshot));
@@ -6789,40 +6851,30 @@ namespace Server.Persistence.Sql
 
             EnsureInitialized();
 
-            var now = envir.Now;
-            var relativePath = $"{info.Name}{now:_MMddyyyy_HHmmss}.MirCA";
-            var payload = Array.Empty<byte>();
-
             try
             {
-                using var ms = new MemoryStream();
-                using (var writer = new BinaryWriter(ms))
-                {
-                    writer.Write(Envir.Version);
-                    writer.Write(Envir.CustomVersion);
-                    info.Save(writer);
-                    writer.Flush();
-                }
-
-                payload = ms.ToArray();
-            }
-            catch (Exception ex)
-            {
-                MessageQueue.Instance.EnqueueDebugging($"[SQL:{_provider}] Archive payload 序列化失败：{ex}");
-                return;
-            }
-
-            try
-            {
-                var runner = new SqlDomainTransactionRunner(_provider, _databaseOptions);
-                runner.RunWithSnapshot(
+                RunSaveWithSnapshot(
                     domain: SqlSaveDomain.Archive,
-                    snapshotFactory: () => new LegacyFileRow
+                    snapshotFactory: () =>
                     {
-                        RelativePath = relativePath,
-                        Payload = payload,
+                        var now = envir.Now;
+                        using var ms = new MemoryStream();
+                        using (var writer = new BinaryWriter(ms))
+                        {
+                            writer.Write(Envir.Version);
+                            writer.Write(Envir.CustomVersion);
+                            info.Save(writer);
+                            writer.Flush();
+                        }
+
+                        return new LegacyFileRow
+                        {
+                            RelativePath = $"{info.Name}{now:_MMddyyyy_HHmmss}.MirCA",
+                            Payload = ms.ToArray(),
+                        };
                     },
-                    work: (session, row) => UpsertLegacyFile(session, LegacyFilesDomainArchive, row));
+                    work: (session, row) => UpsertLegacyFile(session, LegacyFilesDomainArchive, row),
+                    coalescePending: false);
             }
             catch (Exception ex)
             {

@@ -1,0 +1,23 @@
+PC_COMPLIANCE=True
+路径：Client_VorticeDX11/bin/Release/THIRD-PARTY-NOTICES.md
+Compliance：17 个文件（依赖 SPDX、外部资源清单、许可证/NOTICE/EULA、许可证索引与 217 包实际归属表）
+
+SERVER_COMPLIANCE=True
+路径：Server.MirForms/bin/Release/THIRD-PARTY-NOTICES.md
+Compliance：17 个文件（依赖 SPDX、外部资源清单、许可证/NOTICE/EULA、许可证索引与 217 包实际归属表）
+
+ANDROID_APK_COMPLIANCE=True
+APK：Client_MonoGame.Android/bin/Release/net10.0-android/android-arm64/com.lommir.client.monogame.android-Signed.apk
+条目：assets/THIRD-PARTY-NOTICES.md 与 assets/Compliance 下 17 个文件
+
+IOS_MAUI_ASSET_COMPLIANCE=True
+条目：THIRD-PARTY-NOTICES.md、Compliance/SBOM/dependencies.spdx.json、Compliance/external-assets.manifest.json 与 Compliance/Licenses 下 15 个文件
+验证命令：dotnet msbuild Client_MonoGame.iOS/Client_MonoGame.iOS.csproj -getItem:MauiAsset -p:TargetFramework=net10.0-ios -nologo
+
+发布侧车 SHA-256 复算：6/6 匹配
+- Client.exe：c8dcacdd21834b2ee9c5e0ce8f72ad325173e57385ce21ed669c47a5d9168e5f
+- Client.dll：704c7947d52be3aba53e411f33dca40b5628950ccc0271b5a2fe8881b7327b1a
+- Server.exe：f959a5bae9db2f8e7cf63569f496abdb72eda643de65babdcc803f4e428f1ebe
+- Server.dll：cebe6735a78888731d4e2e7f9cddd16d42c554ca4ea52c8facf06b4ab98925ee
+- Server.Library.dll：59ba1438256893a8ff663d9f8a6c764750114f0c72f8ecd4347bd5bebc7e2318
+- com.lommir.client.monogame.android-Signed.apk：d240171f7a5ab3e882e9281a587847d4934c14cd9e26d7497278a7dc969c8ebd

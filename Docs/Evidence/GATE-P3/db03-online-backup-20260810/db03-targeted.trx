@@ -1,0 +1,166 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="b807a04e-e1f5-489d-9831-5e80b1014ac8" name="luo@DESKTOP-4J13TH0 2026-08-10 03:16:38" runUser="DESKTOP-4J13TH0\luo" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-08-10T03:16:38.3906756+08:00" queuing="2026-08-10T03:16:38.3906763+08:00" start="2026-08-10T03:16:36.9074162+08:00" finish="2026-08-10T03:16:41.0520919+08:00" />
+  <TestSettings name="default" id="a06c7f8c-4c7a-4e26-8915-c9a313f4f6cf">
+    <Deployment runDeploymentRoot="luo_DESKTOP-4J13TH0_2026-08-10_03_16_38" />
+  </TestSettings>
+  <Results>
+    <UnitTestResult executionId="2afbba23-e3c6-423e-8374-24f6e992717b" testId="a038dc4b-e361-c1c4-1449-e6a1516dd348" testName="Base05.Tests.ProductionSecurityTests.正式服SQLite拒绝关闭备份或缺少异地目录" computerName="DESKTOP-4J13TH0" duration="00:00:00.0048505" startTime="2026-08-10T03:16:40.9537691+08:00" endTime="2026-08-10T03:16:40.9585227+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="2afbba23-e3c6-423e-8374-24f6e992717b" />
+    <UnitTestResult executionId="86c43b79-e8e2-49cd-a3fd-45a6746acb88" testId="d6fe1e6b-883b-2d05-22ca-16451d531a9e" testName="Base05.Tests.AdminSecurityTests.管理监听仅允许回环明文或内网HTTPS" computerName="DESKTOP-4J13TH0" duration="00:00:00.0068087" startTime="2026-08-10T03:16:38.6168354+08:00" endTime="2026-08-10T03:16:38.6235540+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="86c43b79-e8e2-49cd-a3fd-45a6746acb88" />
+    <UnitTestResult executionId="127dc229-f1c9-403d-b232-92537acf6d93" testId="919559d0-3e75-c39e-b695-08ce2452fef0" testName="Base05.Tests.SqliteBackupServiceTests.自动保留仅删除受管备份且本地与异地各保留最新数量" computerName="DESKTOP-4J13TH0" duration="00:00:00.1075158" startTime="2026-08-10T03:16:37.9817847+08:00" endTime="2026-08-10T03:16:38.0885546+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="127dc229-f1c9-403d-b232-92537acf6d93" />
+    <UnitTestResult executionId="71c53ef7-6d6d-4381-a185-547c5a91793a" testId="ca638db3-333b-c262-a420-ffb2aa8f3f53" testName="Base05.Tests.SqliteBackupServiceTests.损坏副本被完整性检查拒绝且失败状态跨服务实例保留" computerName="DESKTOP-4J13TH0" duration="00:00:00.0296802" startTime="2026-08-10T03:16:38.0887695+08:00" endTime="2026-08-10T03:16:38.1183439+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="71c53ef7-6d6d-4381-a185-547c5a91793a" />
+    <UnitTestResult executionId="e64608c6-f3c9-44c9-9671-8a2d28063fdb" testId="d295eb31-92dc-c1b3-6506-885504452127" testName="Base05.Tests.SqliteBackupServiceTests.在线备份只包含已提交状态并生成通过完整性检查的本地与异地副本" computerName="DESKTOP-4J13TH0" duration="00:00:00.0600066" startTime="2026-08-10T03:16:38.1936326+08:00" endTime="2026-08-10T03:16:38.2535073+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="e64608c6-f3c9-44c9-9671-8a2d28063fdb" />
+    <UnitTestResult executionId="151a1e5a-6a5b-48a4-bcae-6073844cf5ea" testId="b789395b-3de1-5bde-a2b6-29364d4d2d50" testName="Base05.Tests.SqliteBackupServiceTests.备份目录拒绝根目录及本地异地嵌套配置" computerName="DESKTOP-4J13TH0" duration="00:00:00.0061520" startTime="2026-08-10T03:16:37.8063282+08:00" endTime="2026-08-10T03:16:37.8221008+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="151a1e5a-6a5b-48a4-bcae-6073844cf5ea" />
+    <UnitTestResult executionId="6fcff9c4-8256-4893-b7db-718e21b61d2b" testId="563e2439-6144-b7f3-43aa-a3d80cbec343" testName="Base05.Tests.SqliteBackupServiceTests.保留清理失败时状态仍指向本次已验证副本" computerName="DESKTOP-4J13TH0" duration="00:00:00.0749976" startTime="2026-08-10T03:16:38.1185476+08:00" endTime="2026-08-10T03:16:38.1934174+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="6fcff9c4-8256-4893-b7db-718e21b61d2b" />
+    <UnitTestResult executionId="79697fca-cbfc-453e-b3e8-bfa672d403c3" testId="22678f19-f1cc-fd11-52a6-f5dc3a6052d7" testName="Base05.Tests.AdminSecurityTests.真实管理端点拒绝缺失错误及越权凭据" computerName="DESKTOP-4J13TH0" duration="00:00:01.0812483" startTime="2026-08-10T03:16:38.6529736+08:00" endTime="2026-08-10T03:16:39.7442856+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="79697fca-cbfc-453e-b3e8-bfa672d403c3" />
+    <UnitTestResult executionId="1fde871d-2feb-434c-b5b2-7fced7a5e0af" testId="30b1f8ad-9b51-d81f-3275-fed61f747379" testName="Base05.Tests.SqliteBackupServiceTests.正式异地门禁拒绝同卷兄弟目录并在可用第二卷执行真实复制" computerName="DESKTOP-4J13TH0" duration="00:00:00.2742917" startTime="2026-08-10T03:16:38.3565622+08:00" endTime="2026-08-10T03:16:38.5932938+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="1fde871d-2feb-434c-b5b2-7fced7a5e0af" />
+    <UnitTestResult executionId="2243f6a3-0bb5-4e01-8aca-cf381f7a0807" testId="6c974134-fe8a-6eb5-3cd3-87faa8a9ec4d" testName="Base05.Tests.SqliteBackupAdminTests.管理员可一键触发备份且操作员只能查询持久状态" computerName="DESKTOP-4J13TH0" duration="00:00:01.1431186" startTime="2026-08-10T03:16:39.7530308+08:00" endTime="2026-08-10T03:16:40.8966415+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="2243f6a3-0bb5-4e01-8aca-cf381f7a0807" />
+    <UnitTestResult executionId="389cf973-c2ff-472c-91b0-02398e8d17a3" testId="c7ff7162-1582-5a76-58b9-4c29816eabcb" testName="Base05.Tests.ProductionSecurityTests.完整受保护配置覆盖运行时明文占位并通过门禁" computerName="DESKTOP-4J13TH0" duration="00:00:00.0171303" startTime="2026-08-10T03:16:40.9586656+08:00" endTime="2026-08-10T03:16:40.9757596+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="389cf973-c2ff-472c-91b0-02398e8d17a3" />
+    <UnitTestResult executionId="6aa24abe-95e3-454e-aa3c-a6d52b5666de" testId="8a183943-6145-fd43-1af5-d5a3a7fc3fe2" testName="Base05.Tests.ProductionSecurityTests.Envir在创建工作线程前拒绝正式服弱配置" computerName="DESKTOP-4J13TH0" duration="00:00:00.0204388" startTime="2026-08-10T03:16:40.9278524+08:00" endTime="2026-08-10T03:16:40.9476682+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="6aa24abe-95e3-454e-aa3c-a6d52b5666de" />
+    <UnitTestResult executionId="5a34cce4-b785-41b2-8a04-641ec39ffd7a" testId="915d5683-19b0-20da-3727-1efec6064ba4" testName="Base05.Tests.SqliteBackupServiceTests.损坏状态文件恢复为失败且目录文件冲突阻止服务构造" computerName="DESKTOP-4J13TH0" duration="00:00:00.0199984" startTime="2026-08-10T03:16:38.5937952+08:00" endTime="2026-08-10T03:16:38.6134433+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="5a34cce4-b785-41b2-8a04-641ec39ffd7a" />
+    <UnitTestResult executionId="fb671f8b-36f9-4257-b050-2dfdda4c2678" testId="c63acc6b-85ad-cfb9-6342-0fb769fa6dc7" testName="Base05.Tests.AdminSecurityTests.独立令牌映射角色且操作员不能执行高权限操作" computerName="DESKTOP-4J13TH0" duration="00:00:00.0047348" startTime="2026-08-10T03:16:38.6480051+08:00" endTime="2026-08-10T03:16:38.6525396+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="fb671f8b-36f9-4257-b050-2dfdda4c2678" />
+    <UnitTestResult executionId="2634419c-0387-4fe3-9cd4-17b6f2f97b5e" testId="0a59a76e-0168-3c6d-060f-4627710e70a8" testName="Base05.Tests.SqliteBackupServiceTests.自动服务启动后立即生成首份备份" computerName="DESKTOP-4J13TH0" duration="00:00:00.0455577" startTime="2026-08-10T03:16:38.2608661+08:00" endTime="2026-08-10T03:16:38.3063162+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="2634419c-0387-4fe3-9cd4-17b6f2f97b5e" />
+    <UnitTestResult executionId="f8fc36ec-6326-4c34-bec6-1cb0354ed275" testId="2d196359-20a0-fa97-6ef7-6f87679a2f3d" testName="Base05.Tests.SqliteBackupServiceTests.异地复制失败时保留已验证本地副本并持久化失败状态" computerName="DESKTOP-4J13TH0" duration="00:00:00.1582645" startTime="2026-08-10T03:16:37.8351248+08:00" endTime="2026-08-10T03:16:37.9809702+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="f8fc36ec-6326-4c34-bec6-1cb0354ed275" />
+    <UnitTestResult executionId="f63d6de8-82be-49b3-9a60-5e6bad9076be" testId="a17bcd6d-3680-f3b3-ab3f-14350a5860c8" testName="Base05.Tests.ProductionSecurityTests.正式启动策略拒绝默认口令公网明文管理与缺失秘密" computerName="DESKTOP-4J13TH0" duration="00:00:00.0271503" startTime="2026-08-10T03:16:40.8995725+08:00" endTime="2026-08-10T03:16:40.9275327+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="f63d6de8-82be-49b3-9a60-5e6bad9076be" />
+    <UnitTestResult executionId="0943afc8-836c-4439-b54a-eec8e670d135" testId="64c3a094-a0b2-3afd-4180-59c08c09c8f2" testName="Base05.Tests.SqliteBackupServiceTests.状态文件中的未完成备份在重启后标记为失败" computerName="DESKTOP-4J13TH0" duration="00:00:00.0124402" startTime="2026-08-10T03:16:38.3065140+08:00" endTime="2026-08-10T03:16:38.3188419+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="0943afc8-836c-4439-b54a-eec8e670d135" />
+    <UnitTestResult executionId="a966657e-014a-4456-8905-50d6902d034a" testId="3716e1ac-3210-dcb4-0e0f-81276bb98363" testName="Base05.Tests.ProductionSecurityTests.CI短暂导入后立即清除环境变量并应用秘密" computerName="DESKTOP-4J13TH0" duration="00:00:00.0057956" startTime="2026-08-10T03:16:40.9479604+08:00" endTime="2026-08-10T03:16:40.9535734+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="a966657e-014a-4456-8905-50d6902d034a" />
+    <UnitTestResult executionId="b30bce84-53d1-48ea-9c43-d694cf11892b" testId="633704c3-e4a1-b9b4-9624-f80074018452" testName="Base05.Tests.SqliteBackupServiceTests.探针无法删除时服务构造失败关闭且不遗留探针" computerName="DESKTOP-4J13TH0" duration="00:00:00.0070829" startTime="2026-08-10T03:16:38.2537016+08:00" endTime="2026-08-10T03:16:38.2606650+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="b30bce84-53d1-48ea-9c43-d694cf11892b" />
+    <UnitTestResult executionId="42e7bace-53ee-443a-9458-a078ff3e33d5" testId="c7c32ec9-b74f-05ad-a67b-7907d9018c6d" testName="Base05.Tests.ProductionSecurityTests.DPAPI受保护存储往返且文件不含明文" computerName="DESKTOP-4J13TH0" duration="00:00:00.0050303" startTime="2026-08-10T03:16:40.9797950+08:00" endTime="2026-08-10T03:16:40.9847834+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="42e7bace-53ee-443a-9458-a078ff3e33d5" />
+    <UnitTestResult executionId="9a7e9a3c-18b4-40d7-a782-1f6eafc163e0" testId="5908d694-6774-0663-776e-45b113d73c7c" testName="Base05.Tests.AdminSecurityTests.管理审计只记录动作角色来源与结果" computerName="DESKTOP-4J13TH0" duration="00:00:00.0240035" startTime="2026-08-10T03:16:38.6237974+08:00" endTime="2026-08-10T03:16:38.6477229+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="9a7e9a3c-18b4-40d7-a782-1f6eafc163e0" />
+    <UnitTestResult executionId="d6aafc85-e9a8-4ff0-85bd-414eae52b359" testId="2f2b326a-cd17-27e0-2b64-725d585b819c" testName="Base05.Tests.ProductionSecurityTests.历史INI秘密键可严格删除且保留非秘密配置" computerName="DESKTOP-4J13TH0" duration="00:00:00.0038154" startTime="2026-08-10T03:16:40.9759291+08:00" endTime="2026-08-10T03:16:40.9796724+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="d6aafc85-e9a8-4ff0-85bd-414eae52b359" />
+  </Results>
+  <TestDefinitions>
+    <UnitTest name="Base05.Tests.SqliteBackupServiceTests.正式异地门禁拒绝同卷兄弟目录并在可用第二卷执行真实复制" storage="c:\users\luo\.codex\worktrees\p3-db03-online-backup-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="30b1f8ad-9b51-d81f-3275-fed61f747379">
+      <Execution id="1fde871d-2feb-434c-b5b2-7fced7a5e0af" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p3-db03-online-backup-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.SqliteBackupServiceTests" name="正式异地门禁拒绝同卷兄弟目录并在可用第二卷执行真实复制" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.ProductionSecurityTests.DPAPI受保护存储往返且文件不含明文" storage="c:\users\luo\.codex\worktrees\p3-db03-online-backup-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="c7c32ec9-b74f-05ad-a67b-7907d9018c6d">
+      <Execution id="42e7bace-53ee-443a-9458-a078ff3e33d5" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p3-db03-online-backup-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.ProductionSecurityTests" name="DPAPI受保护存储往返且文件不含明文" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.ProductionSecurityTests.正式启动策略拒绝默认口令公网明文管理与缺失秘密" storage="c:\users\luo\.codex\worktrees\p3-db03-online-backup-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="a17bcd6d-3680-f3b3-ab3f-14350a5860c8">
+      <Execution id="f63d6de8-82be-49b3-9a60-5e6bad9076be" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p3-db03-online-backup-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.ProductionSecurityTests" name="正式启动策略拒绝默认口令公网明文管理与缺失秘密" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.AdminSecurityTests.真实管理端点拒绝缺失错误及越权凭据" storage="c:\users\luo\.codex\worktrees\p3-db03-online-backup-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="22678f19-f1cc-fd11-52a6-f5dc3a6052d7">
+      <Execution id="79697fca-cbfc-453e-b3e8-bfa672d403c3" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p3-db03-online-backup-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.AdminSecurityTests" name="真实管理端点拒绝缺失错误及越权凭据" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.ProductionSecurityTests.Envir在创建工作线程前拒绝正式服弱配置" storage="c:\users\luo\.codex\worktrees\p3-db03-online-backup-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="8a183943-6145-fd43-1af5-d5a3a7fc3fe2">
+      <Execution id="6aa24abe-95e3-454e-aa3c-a6d52b5666de" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p3-db03-online-backup-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.ProductionSecurityTests" name="Envir在创建工作线程前拒绝正式服弱配置" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.SqliteBackupServiceTests.在线备份只包含已提交状态并生成通过完整性检查的本地与异地副本" storage="c:\users\luo\.codex\worktrees\p3-db03-online-backup-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="d295eb31-92dc-c1b3-6506-885504452127">
+      <Execution id="e64608c6-f3c9-44c9-9671-8a2d28063fdb" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p3-db03-online-backup-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.SqliteBackupServiceTests" name="在线备份只包含已提交状态并生成通过完整性检查的本地与异地副本" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.SqliteBackupServiceTests.保留清理失败时状态仍指向本次已验证副本" storage="c:\users\luo\.codex\worktrees\p3-db03-online-backup-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="563e2439-6144-b7f3-43aa-a3d80cbec343">
+      <Execution id="6fcff9c4-8256-4893-b7db-718e21b61d2b" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p3-db03-online-backup-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.SqliteBackupServiceTests" name="保留清理失败时状态仍指向本次已验证副本" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.SqliteBackupServiceTests.损坏副本被完整性检查拒绝且失败状态跨服务实例保留" storage="c:\users\luo\.codex\worktrees\p3-db03-online-backup-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="ca638db3-333b-c262-a420-ffb2aa8f3f53">
+      <Execution id="71c53ef7-6d6d-4381-a185-547c5a91793a" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p3-db03-online-backup-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.SqliteBackupServiceTests" name="损坏副本被完整性检查拒绝且失败状态跨服务实例保留" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.ProductionSecurityTests.正式服SQLite拒绝关闭备份或缺少异地目录" storage="c:\users\luo\.codex\worktrees\p3-db03-online-backup-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="a038dc4b-e361-c1c4-1449-e6a1516dd348">
+      <Execution id="2afbba23-e3c6-423e-8374-24f6e992717b" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p3-db03-online-backup-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.ProductionSecurityTests" name="正式服SQLite拒绝关闭备份或缺少异地目录" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.ProductionSecurityTests.CI短暂导入后立即清除环境变量并应用秘密" storage="c:\users\luo\.codex\worktrees\p3-db03-online-backup-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="3716e1ac-3210-dcb4-0e0f-81276bb98363">
+      <Execution id="a966657e-014a-4456-8905-50d6902d034a" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p3-db03-online-backup-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.ProductionSecurityTests" name="CI短暂导入后立即清除环境变量并应用秘密" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.SqliteBackupServiceTests.备份目录拒绝根目录及本地异地嵌套配置" storage="c:\users\luo\.codex\worktrees\p3-db03-online-backup-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="b789395b-3de1-5bde-a2b6-29364d4d2d50">
+      <Execution id="151a1e5a-6a5b-48a4-bcae-6073844cf5ea" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p3-db03-online-backup-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.SqliteBackupServiceTests" name="备份目录拒绝根目录及本地异地嵌套配置" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.SqliteBackupServiceTests.状态文件中的未完成备份在重启后标记为失败" storage="c:\users\luo\.codex\worktrees\p3-db03-online-backup-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="64c3a094-a0b2-3afd-4180-59c08c09c8f2">
+      <Execution id="0943afc8-836c-4439-b54a-eec8e670d135" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p3-db03-online-backup-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.SqliteBackupServiceTests" name="状态文件中的未完成备份在重启后标记为失败" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.SqliteBackupAdminTests.管理员可一键触发备份且操作员只能查询持久状态" storage="c:\users\luo\.codex\worktrees\p3-db03-online-backup-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="6c974134-fe8a-6eb5-3cd3-87faa8a9ec4d">
+      <Execution id="2243f6a3-0bb5-4e01-8aca-cf381f7a0807" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p3-db03-online-backup-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.SqliteBackupAdminTests" name="管理员可一键触发备份且操作员只能查询持久状态" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.AdminSecurityTests.管理审计只记录动作角色来源与结果" storage="c:\users\luo\.codex\worktrees\p3-db03-online-backup-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="5908d694-6774-0663-776e-45b113d73c7c">
+      <Execution id="9a7e9a3c-18b4-40d7-a782-1f6eafc163e0" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p3-db03-online-backup-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.AdminSecurityTests" name="管理审计只记录动作角色来源与结果" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.ProductionSecurityTests.历史INI秘密键可严格删除且保留非秘密配置" storage="c:\users\luo\.codex\worktrees\p3-db03-online-backup-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="2f2b326a-cd17-27e0-2b64-725d585b819c">
+      <Execution id="d6aafc85-e9a8-4ff0-85bd-414eae52b359" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p3-db03-online-backup-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.ProductionSecurityTests" name="历史INI秘密键可严格删除且保留非秘密配置" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.AdminSecurityTests.管理监听仅允许回环明文或内网HTTPS" storage="c:\users\luo\.codex\worktrees\p3-db03-online-backup-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="d6fe1e6b-883b-2d05-22ca-16451d531a9e">
+      <Execution id="86c43b79-e8e2-49cd-a3fd-45a6746acb88" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p3-db03-online-backup-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.AdminSecurityTests" name="管理监听仅允许回环明文或内网HTTPS" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.SqliteBackupServiceTests.损坏状态文件恢复为失败且目录文件冲突阻止服务构造" storage="c:\users\luo\.codex\worktrees\p3-db03-online-backup-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="915d5683-19b0-20da-3727-1efec6064ba4">
+      <Execution id="5a34cce4-b785-41b2-8a04-641ec39ffd7a" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p3-db03-online-backup-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.SqliteBackupServiceTests" name="损坏状态文件恢复为失败且目录文件冲突阻止服务构造" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.SqliteBackupServiceTests.自动保留仅删除受管备份且本地与异地各保留最新数量" storage="c:\users\luo\.codex\worktrees\p3-db03-online-backup-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="919559d0-3e75-c39e-b695-08ce2452fef0">
+      <Execution id="127dc229-f1c9-403d-b232-92537acf6d93" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p3-db03-online-backup-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.SqliteBackupServiceTests" name="自动保留仅删除受管备份且本地与异地各保留最新数量" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.SqliteBackupServiceTests.自动服务启动后立即生成首份备份" storage="c:\users\luo\.codex\worktrees\p3-db03-online-backup-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="0a59a76e-0168-3c6d-060f-4627710e70a8">
+      <Execution id="2634419c-0387-4fe3-9cd4-17b6f2f97b5e" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p3-db03-online-backup-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.SqliteBackupServiceTests" name="自动服务启动后立即生成首份备份" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.ProductionSecurityTests.完整受保护配置覆盖运行时明文占位并通过门禁" storage="c:\users\luo\.codex\worktrees\p3-db03-online-backup-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="c7ff7162-1582-5a76-58b9-4c29816eabcb">
+      <Execution id="389cf973-c2ff-472c-91b0-02398e8d17a3" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p3-db03-online-backup-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.ProductionSecurityTests" name="完整受保护配置覆盖运行时明文占位并通过门禁" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.AdminSecurityTests.独立令牌映射角色且操作员不能执行高权限操作" storage="c:\users\luo\.codex\worktrees\p3-db03-online-backup-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="c63acc6b-85ad-cfb9-6342-0fb769fa6dc7">
+      <Execution id="fb671f8b-36f9-4257-b050-2dfdda4c2678" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p3-db03-online-backup-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.AdminSecurityTests" name="独立令牌映射角色且操作员不能执行高权限操作" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.SqliteBackupServiceTests.探针无法删除时服务构造失败关闭且不遗留探针" storage="c:\users\luo\.codex\worktrees\p3-db03-online-backup-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="633704c3-e4a1-b9b4-9624-f80074018452">
+      <Execution id="b30bce84-53d1-48ea-9c43-d694cf11892b" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p3-db03-online-backup-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.SqliteBackupServiceTests" name="探针无法删除时服务构造失败关闭且不遗留探针" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.SqliteBackupServiceTests.异地复制失败时保留已验证本地副本并持久化失败状态" storage="c:\users\luo\.codex\worktrees\p3-db03-online-backup-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="2d196359-20a0-fa97-6ef7-6f87679a2f3d">
+      <Execution id="f8fc36ec-6326-4c34-bec6-1cb0354ed275" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p3-db03-online-backup-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.SqliteBackupServiceTests" name="异地复制失败时保留已验证本地副本并持久化失败状态" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestEntries>
+    <TestEntry testId="a038dc4b-e361-c1c4-1449-e6a1516dd348" executionId="2afbba23-e3c6-423e-8374-24f6e992717b" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="d6fe1e6b-883b-2d05-22ca-16451d531a9e" executionId="86c43b79-e8e2-49cd-a3fd-45a6746acb88" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="919559d0-3e75-c39e-b695-08ce2452fef0" executionId="127dc229-f1c9-403d-b232-92537acf6d93" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="ca638db3-333b-c262-a420-ffb2aa8f3f53" executionId="71c53ef7-6d6d-4381-a185-547c5a91793a" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="d295eb31-92dc-c1b3-6506-885504452127" executionId="e64608c6-f3c9-44c9-9671-8a2d28063fdb" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="b789395b-3de1-5bde-a2b6-29364d4d2d50" executionId="151a1e5a-6a5b-48a4-bcae-6073844cf5ea" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="563e2439-6144-b7f3-43aa-a3d80cbec343" executionId="6fcff9c4-8256-4893-b7db-718e21b61d2b" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="22678f19-f1cc-fd11-52a6-f5dc3a6052d7" executionId="79697fca-cbfc-453e-b3e8-bfa672d403c3" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="30b1f8ad-9b51-d81f-3275-fed61f747379" executionId="1fde871d-2feb-434c-b5b2-7fced7a5e0af" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="6c974134-fe8a-6eb5-3cd3-87faa8a9ec4d" executionId="2243f6a3-0bb5-4e01-8aca-cf381f7a0807" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="c7ff7162-1582-5a76-58b9-4c29816eabcb" executionId="389cf973-c2ff-472c-91b0-02398e8d17a3" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="8a183943-6145-fd43-1af5-d5a3a7fc3fe2" executionId="6aa24abe-95e3-454e-aa3c-a6d52b5666de" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="915d5683-19b0-20da-3727-1efec6064ba4" executionId="5a34cce4-b785-41b2-8a04-641ec39ffd7a" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="c63acc6b-85ad-cfb9-6342-0fb769fa6dc7" executionId="fb671f8b-36f9-4257-b050-2dfdda4c2678" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="0a59a76e-0168-3c6d-060f-4627710e70a8" executionId="2634419c-0387-4fe3-9cd4-17b6f2f97b5e" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="2d196359-20a0-fa97-6ef7-6f87679a2f3d" executionId="f8fc36ec-6326-4c34-bec6-1cb0354ed275" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="a17bcd6d-3680-f3b3-ab3f-14350a5860c8" executionId="f63d6de8-82be-49b3-9a60-5e6bad9076be" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="64c3a094-a0b2-3afd-4180-59c08c09c8f2" executionId="0943afc8-836c-4439-b54a-eec8e670d135" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="3716e1ac-3210-dcb4-0e0f-81276bb98363" executionId="a966657e-014a-4456-8905-50d6902d034a" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="633704c3-e4a1-b9b4-9624-f80074018452" executionId="b30bce84-53d1-48ea-9c43-d694cf11892b" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="c7c32ec9-b74f-05ad-a67b-7907d9018c6d" executionId="42e7bace-53ee-443a-9458-a078ff3e33d5" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="5908d694-6774-0663-776e-45b113d73c7c" executionId="9a7e9a3c-18b4-40d7-a782-1f6eafc163e0" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="2f2b326a-cd17-27e0-2b64-725d585b819c" executionId="d6aafc85-e9a8-4ff0-85bd-414eae52b359" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+  </TestEntries>
+  <TestLists>
+    <TestList name="列表中未列出的结果" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="所有已加载的结果" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Completed">
+    <Counters total="23" executed="23" passed="23" failed="0" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <Output>
+      <StdOut>[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.0.2+dd36e86129 (64-bit .NET 10.0.4)&#xD;
+[xUnit.net 00:00:00.13]   Discovering: Base05.Tests&#xD;
+[xUnit.net 00:00:00.21]   Discovered:  Base05.Tests&#xD;
+[xUnit.net 00:00:00.24]   Starting:    Base05.Tests&#xD;
+[xUnit.net 00:00:03.45]   Finished:    Base05.Tests&#xD;
+</StdOut>
+    </Output>
+  </ResultSummary>
+</TestRun>

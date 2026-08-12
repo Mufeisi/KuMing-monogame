@@ -12,6 +12,12 @@ public static class SensitiveIniSanitizer
 {
     public static void Sanitize(string fileName)
     {
+        Sanitize(fileName, out _);
+    }
+
+    public static void Sanitize(string fileName, out string legacyMicroCode)
+    {
+        legacyMicroCode = string.Empty;
         if (string.IsNullOrWhiteSpace(fileName))
             throw new ArgumentException("配置文件路径不能为空。", nameof(fileName));
 
@@ -72,9 +78,12 @@ public static class SensitiveIniSanitizer
 
             var separator = line.IndexOf('=');
             var key = separator > 0 ? line.Substring(0, separator) : string.Empty;
-            if ((section == "Game" || section == "Launcher")
-                && (key == "Password" || key == "RememberPassword"))
+            if (((section == "Game" || section == "Launcher")
+                    && (key == "Password" || key == "RememberPassword"))
+                || (section == "Micro" && key == "Code"))
             {
+                if (section == "Micro" && key == "Code" && separator >= 0)
+                    legacyMicroCode = line.Substring(separator + 1).Trim();
                 lines.RemoveAt(i);
                 removed = true;
                 continue;

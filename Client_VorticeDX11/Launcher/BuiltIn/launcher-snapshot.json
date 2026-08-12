@@ -1,0 +1,56 @@
+{
+  "Format": "lyocrystal-launcher-snapshot-v1",
+  "ProjectId": "lyocrystal-default",
+  "ProjectName": "LyoCrystal 经典启动器",
+  "RemoteReleaseBaseUrl": "",
+  "Theme": {
+    "Template": 0,
+    "ServerListMode": 0,
+    "CanvasWidth": 900,
+    "CanvasHeight": 600,
+    "AccentColor": "#D8A73A",
+    "BackgroundImage": "",
+    "LaunchButtonImage": ""
+  },
+  "Servers": [
+    {
+      "Id": "local-default",
+      "Group": "默认分组",
+      "Name": "默认区服",
+      "Address": "127.0.0.1",
+      "Port": 7000,
+      "Status": 0,
+      "MicroOverride": null
+    }
+  ],
+  "Announcements": [
+    {
+      "Title": "欢迎使用 LyoCrystal",
+      "Summary": "当前使用 EXE 内嵌最低可用配置；GM 发布远程签名版本后会自动更新。",
+      "Date": "",
+      "Image": "",
+      "ExternalUrl": ""
+    }
+  ],
+  "Defaults": {
+    "Resolution": 1024,
+    "FullScreen": false,
+    "Borderless": true,
+    "FpsCap": true,
+    "MaxFps": 100,
+    "Volume": 100,
+    "MusicVolume": 100,
+    "TopMost": true,
+    "AutoStart": false,
+    "AdvancedLogs": false,
+    "MicroCacheLimitMb": 2048
+  },
+  "DefaultMicro": {
+    "Enabled": false,
+    "Address": "127.0.0.1",
+    "Port": 8080,
+    "BackupAddress": "",
+    "BackupPort": 0,
+    "User": ""
+  }
+}

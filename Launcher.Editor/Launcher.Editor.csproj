@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <AssemblyName>LyoCrystal.LauncherEditor</AssemblyName>
+    <RootNamespace>LyoCrystal.LauncherEditor</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Launcher.PlayerShell.Core\Launcher.PlayerShell.Core.csproj" />
+    <ProjectReference Include="..\Launcher.ThemeRuntime\Launcher.ThemeRuntime.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+      <_Parameter1>Launcher.PlayerShellIntegration.Windows</_Parameter1>
+    </AssemblyAttribute>
+  </ItemGroup>
+  <ItemGroup Condition="'$(GatewayTemplateZip)' != '' and Exists('$(GatewayTemplateZip)')">
+    <EmbeddedResource Include="$(GatewayTemplateZip)" LogicalName="LyoCrystal.LauncherEditor.MicroGateway.zip" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(PlayerShellTemplate)' != '' and Exists('$(PlayerShellTemplate)')">
+    <EmbeddedResource Include="$(PlayerShellTemplate)" LogicalName="LyoCrystal.LauncherEditor.PlayerShell.exe" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(PlayerPayloadZip)' != '' and Exists('$(PlayerPayloadZip)')">
+    <EmbeddedResource Include="$(PlayerPayloadZip)" LogicalName="LyoCrystal.LauncherEditor.PlayerPayload.zip" />
+  </ItemGroup>
+</Project>

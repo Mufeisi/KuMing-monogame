@@ -37,4 +37,9 @@ namespace Server.Persistence
 
         CharacterInfo GetArchivedCharacter(Envir envir, string name);
     }
+
+    internal interface IPendingSaveCoordinator
+    {
+        void DrainPendingSaves();
+    }
 }

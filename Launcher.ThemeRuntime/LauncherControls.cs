@@ -1,0 +1,106 @@
+using System.Diagnostics;
+using System.Drawing.Imaging;
+
+namespace Launcher.ThemeRuntime;
+
+internal sealed class LauncherProgressBar : Control
+{
+    private int _maximum = 100;
+    private int _value;
+    [System.ComponentModel.Browsable(false), System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
+    public int Maximum { get => _maximum; set { _maximum = Math.Max(1, value); _value = Math.Min(_value, _maximum); Invalidate(); } }
+    [System.ComponentModel.Browsable(false), System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
+    public int Value { get => _value; set { _value = Math.Clamp(value, 0, _maximum); Invalidate(); } }
+    [System.ComponentModel.Browsable(false), System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
+    public Color FillColor { get; set; } = Color.FromArgb(36, 175, 74);
+    [System.ComponentModel.Browsable(false), System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
+    public Image? FillImage { get; set; }
+    [System.ComponentModel.Browsable(false), System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
+    public Image? EndImage { get; set; }
+    [System.ComponentModel.Browsable(false), System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
+    public bool ClassicImageMode { get; set; }
+
+    public LauncherProgressBar()
+    {
+        SetStyle(ControlStyles.SupportsTransparentBackColor, true);
+        DoubleBuffered = true;
+        BackColor = Color.FromArgb(5, 12, 18);
+    }
+
+    protected override void OnPaint(PaintEventArgs e)
+    {
+        if (!ClassicImageMode) e.Graphics.Clear(BackColor);
+        int maximumFillWidth = ClassicImageMode && FillImage is not null ? Math.Min(FillImage.Width, ClientSize.Width) : ClientSize.Width;
+        int width = Maximum <= 0 ? 0 : (int)Math.Round(maximumFillWidth * (Value / (double)Maximum));
+        if (width > 0)
+        {
+            if (FillImage is not null) e.Graphics.DrawImage(FillImage, new Rectangle(0, 0, width, Math.Min(Height, FillImage.Height)), new Rectangle(0, 0, width, Math.Min(Height, FillImage.Height)), GraphicsUnit.Pixel);
+            else using (var fill = new SolidBrush(FillColor)) e.Graphics.FillRectangle(fill, 1, 1, Math.Max(0, width - 2), Math.Max(0, Height - 2));
+            if (EndImage is not null) e.Graphics.DrawImageUnscaled(EndImage, width, 0);
+        }
+        if (!ClassicImageMode)
+        {
+            using var border = new Pen(Color.FromArgb(52, 71, 78));
+            e.Graphics.DrawRectangle(border, 0, 0, Math.Max(0, Width - 1), Math.Max(0, Height - 1));
+        }
+    }
+    protected override void Dispose(bool disposing) { if (disposing) { FillImage?.Dispose(); EndImage?.Dispose(); FillImage = EndImage = null; } base.Dispose(disposing); }
+}
+
+internal sealed class AnnouncementCard : Panel
+{
+    private Image? _ownedImage;
+    public AnnouncementCard(LauncherAnnouncement item, string assetRoot)
+    {
+        Padding = new Padding(10); BackColor = Color.FromArgb(38, 42, 55); Margin = new Padding(0, 0, 0, 8);
+        var title = new Label { Text = item.Title, Font = new Font(SystemFonts.MessageBoxFont ?? Control.DefaultFont, FontStyle.Bold), AutoSize = true, ForeColor = Color.White };
+        string imagePath = LauncherSnapshotValidator.ResolveAsset(assetRoot, item.Image);
+        int textLeft = 10;
+        if (!string.IsNullOrEmpty(imagePath))
+        {
+            using Image source = Image.FromFile(imagePath);
+            _ownedImage = new Bitmap(source);
+            Controls.Add(new PictureBox { Image = _ownedImage, SizeMode = PictureBoxSizeMode.Zoom, Location = new Point(8, 8), Size = new Size(82, 60) });
+            textLeft = 100;
+            title.Location = new Point(textLeft, 10);
+        }
+        var summary = new Label { Text = item.Summary, AutoEllipsis = true, ForeColor = Color.Gainsboro, Location = new Point(textLeft, 36), Width = 520 };
+        var date = new Label { Text = item.Date, AutoSize = true, ForeColor = Color.Silver, Anchor = AnchorStyles.Top | AnchorStyles.Right, Location = new Point(Width - 120, 10) };
+        Controls.AddRange(new Control[] { title, summary, date });
+        if (!string.IsNullOrWhiteSpace(item.ExternalUrl)) { Cursor = Cursors.Hand; Click += (_, _) => Process.Start(new ProcessStartInfo(item.ExternalUrl) { UseShellExecute = true })?.Dispose(); }
+    }
+    protected override void Dispose(bool disposing) { if (disposing) { _ownedImage?.Dispose(); _ownedImage = null; } base.Dispose(disposing); }
+}
+
+internal sealed class ImageStateButton : Button
+{
+    [System.ComponentModel.Browsable(false)]
+    [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
+    public Image? BaseImage { get; set; }
+    [System.ComponentModel.Browsable(false)]
+    [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
+    public Image? HoverImage { get; set; }
+    [System.ComponentModel.Browsable(false)]
+    [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
+    public Image? PressedImage { get; set; }
+    [System.ComponentModel.Browsable(false)]
+    [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
+    public Image? DisabledImage { get; set; }
+    protected override void OnPaint(PaintEventArgs e)
+    {
+        if (BaseImage is null) { base.OnPaint(e); return; }
+        bool inside = ClientRectangle.Contains(PointToClient(Cursor.Position));
+        bool pressed = Enabled && MouseButtons == MouseButtons.Left && inside;
+        Image image = !Enabled && DisabledImage is not null ? DisabledImage : pressed && PressedImage is not null ? PressedImage : Enabled && inside && HoverImage is not null ? HoverImage : BaseImage;
+        bool customState = image != BaseImage;
+        ColorMatrix matrix = customState ? new ColorMatrix() : Enabled
+            ? (pressed ? Matrix(.82f) : inside ? Matrix(1.08f) : new ColorMatrix())
+            : new ColorMatrix(new[] { new float[] {.3f,.3f,.3f,0,0},new float[] {.3f,.3f,.3f,0,0},new float[] {.3f,.3f,.3f,0,0},new float[] {0,0,0,.55f,0},new float[] {0,0,0,0,1} });
+        using var attributes = new ImageAttributes();
+        attributes.SetColorMatrix(matrix);
+        e.Graphics.DrawImage(image, ClientRectangle, 0, 0, image.Width, image.Height, GraphicsUnit.Pixel, attributes);
+        TextRenderer.DrawText(e.Graphics, Text, Font, ClientRectangle, ForeColor, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
+    }
+    private static ColorMatrix Matrix(float value) => new(new[] { new float[] {value,0,0,0,0},new float[] {0,value,0,0,0},new float[] {0,0,value,0,0},new float[] {0,0,0,1,0},new float[] {0,0,0,0,1} });
+    protected override void Dispose(bool disposing) { if (disposing) { BaseImage?.Dispose(); HoverImage?.Dispose(); PressedImage?.Dispose(); DisabledImage?.Dispose(); BaseImage = HoverImage = PressedImage = DisabledImage = null; } base.Dispose(disposing); }
+}

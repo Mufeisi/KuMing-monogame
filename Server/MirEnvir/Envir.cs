@@ -6,6 +6,8 @@ using Server.MirObjects;
 using Server.MirObjects.Monsters;
 using Server.Persistence;
 using Server.Persistence.Sql;
+using Server.Operations;
+using Server.Security;
 using Server.Scripting;
 using System.Collections.Concurrent;
 using System.Diagnostics;
@@ -69,6 +71,8 @@ namespace Server.MirEnvir
         public bool StartHttp { get; init; } = true;
         public bool SaveOnStop { get; init; } = true;
         public bool Multithreaded { get; init; } = true;
+        public bool EnforceProductionSecurity { get; init; } = true;
+        internal Func<long> ElapsedMillisecondsProvider { get; init; }
 
         internal static EnvirStartOptions FromSettings()
         {
@@ -92,6 +96,9 @@ namespace Server.MirEnvir
         public ScriptManager CSharpScripts { get; } = new ScriptManager();
 
         private IServerPersistence? _persistence;
+        internal SqliteBackupService SqliteBackup { get; private set; }
+        internal KillSwitchService KillSwitches { get; private set; }
+        private bool _basicOperationsMetricsSession;
 
         private IServerPersistence Persistence => _persistence ??= ServerPersistenceFactory.CreateFromSettings();
 
@@ -175,6 +182,10 @@ namespace Server.MirEnvir
         public RespawnTimer RespawnTick = new RespawnTimer();
 
         private int _autoSaveRequested;
+        private int _shutdownSavePrepared;
+        private int _shutdownNetworkStopped;
+        private LoginProtectionOptions _loginProtectionOptions;
+        private LoginProtection _loginProtection;
 
         private static List<string> DisabledCharNames = new List<string>();
         private static List<string> LineMessages = new List<string>();
@@ -241,11 +252,13 @@ namespace Server.MirEnvir
             public Exception Exception;
             public ManualResetEventSlim Done { get; } = new ManualResetEventSlim(initialState: false);
             public abstract void Execute();
+            public abstract bool TryCancel();
         }
 
         private sealed class MainThreadWorkItem<T> : MainThreadWorkItem
         {
             private readonly Func<T> _func;
+            private int _state;
             public T Result;
 
             public MainThreadWorkItem(Func<T> func)
@@ -255,6 +268,12 @@ namespace Server.MirEnvir
 
             public override void Execute()
             {
+                if (Interlocked.CompareExchange(ref _state, 1, 0) != 0)
+                {
+                    Done.Set();
+                    return;
+                }
+
                 try
                 {
                     Result = _func();
@@ -265,13 +284,25 @@ namespace Server.MirEnvir
                 }
                 finally
                 {
+                    Volatile.Write(ref _state, 2);
                     Done.Set();
                 }
+            }
+
+            public override bool TryCancel()
+            {
+                if (Interlocked.CompareExchange(ref _state, 2, 0) != 0)
+                    return false;
+
+                Done.Set();
+                return true;
             }
         }
 
         private int _mainThreadId;
+        private readonly object _mainThreadQueueGate = new object();
         private readonly ConcurrentQueue<MainThreadWorkItem> _mainThreadQueue = new ConcurrentQueue<MainThreadWorkItem>();
+        internal int PendingMainThreadWorkCount => _mainThreadQueue.Count;
 
         public bool IsMainThread
         {
@@ -284,21 +315,37 @@ namespace Server.MirEnvir
 
         public T InvokeOnMainThread<T>(Func<T> func, int timeoutMs = 5000)
         {
+            return InvokeOnMainThread(func, timeoutMs, true);
+        }
+
+        internal T InvokeOnMainThread<T>(Func<T> func, int timeoutMs, bool allowInlineWithoutMainThread)
+        {
             if (func == null) throw new ArgumentNullException(nameof(func));
 
             if (IsMainThread) return func();
 
-            // 主线程尚未建立（或服务已停止）时，避免死锁：直接返回默认值或执行。
-            if (Volatile.Read(ref _mainThreadId) == 0) return func();
-            if (!Running) return default;
-
+            // 普通启动辅助调用在主线程尚未建立时仍可沿用内联行为；
+            // 账户事务必须显式禁止内联，避免停服竞态把写操作落到调用线程。
+            if (Volatile.Read(ref _mainThreadId) == 0)
+                return allowInlineWithoutMainThread ? func() : default;
             var item = new MainThreadWorkItem<T>(func);
-            _mainThreadQueue.Enqueue(item);
+            lock (_mainThreadQueueGate)
+            {
+                if (!Running) return default;
+                _mainThreadQueue.Enqueue(item);
+            }
 
             if (!item.Done.Wait(timeoutMs))
             {
-                MessageQueue.Enqueue($"[Scripts] 投递到主线程执行超时（{timeoutMs}ms）。");
-                return default;
+                if (item.TryCancel())
+                {
+                    MessageQueue.Enqueue($"[Scripts] 投递到主线程执行超时并已取消（{timeoutMs}ms）。");
+                    return default;
+                }
+
+                // 已经在主线程开始执行的工作不能安全撤销；等待其完成并返回真实结果，
+                // 避免调用方先收到失败、账户事务随后又延迟提交。
+                item.Done.Wait();
             }
 
             if (item.Exception != null) throw item.Exception;
@@ -316,6 +363,27 @@ namespace Server.MirEnvir
             {
                 if (!_mainThreadQueue.TryDequeue(out var item)) return;
                 item.Execute();
+                if (!Running) return;
+            }
+        }
+
+        private void FreezeAndCancelPendingMainThreadWork()
+        {
+            lock (_mainThreadQueueGate)
+            {
+                Running = false;
+                while (_mainThreadQueue.TryDequeue(out MainThreadWorkItem pending))
+                    pending.TryCancel();
+            }
+        }
+
+        private void PrepareMainThreadQueueForStart()
+        {
+            lock (_mainThreadQueueGate)
+            {
+                while (_mainThreadQueue.TryDequeue(out MainThreadWorkItem stale))
+                    stale.TryCancel();
+                Running = true;
             }
         }
 
@@ -803,6 +871,93 @@ namespace Server.MirEnvir
             }
         }
 
+        private void QueueFinalPersistenceSave()
+        {
+            SaveAccounts();
+            SaveGuilds(true);
+            SaveGoods(true);
+            SaveConquests(true);
+            if (Persistence is IPendingSaveCoordinator coordinator)
+                coordinator.DrainPendingSaves();
+        }
+
+        private bool PrepareSqliteShutdownSave(EnvirStartOptions options)
+        {
+            try
+            {
+                string blockedReason = null;
+                bool completed = InvokeOnMainThread(
+                    () =>
+                    {
+                        try
+                        {
+                            if (options.BindNetwork && Interlocked.CompareExchange(ref _shutdownNetworkStopped, 1, 0) == 0)
+                                StopNetwork();
+
+                            QueueFinalPersistenceSave();
+
+                            if (SqlSaveResilience.ShouldBlockShutdown(out blockedReason))
+                            {
+                                ResumeNetworkAfterBlockedShutdown(options);
+                                return false;
+                            }
+
+                            Interlocked.Exchange(ref _shutdownSavePrepared, 1);
+                            // 网络断开产生的登出状态已进入最终快照；冻结后取消余下队列项，禁止重启时执行旧代工作。
+                            FreezeAndCancelPendingMainThreadWork();
+                            return true;
+                        }
+                        catch
+                        {
+                            ResumeNetworkAfterBlockedShutdown(options);
+                            throw;
+                        }
+                    },
+                    timeoutMs: 180000,
+                    allowInlineWithoutMainThread: false);
+                if (!completed)
+                {
+                    MessageQueue.Enqueue(string.IsNullOrWhiteSpace(blockedReason)
+                        ? "[SAVE:Sqlite] 关服前最终保存未能在主线程完成，已取消本次关服。"
+                        : "[SAVE:Sqlite] 已阻止关服：" + blockedReason);
+                    return false;
+                }
+                return true;
+            }
+            catch (Exception ex)
+            {
+                MessageQueue.Enqueue("[SAVE:Sqlite] 关服前最终保存异常，已取消本次关服：" + ex);
+                return false;
+            }
+        }
+
+        private void ResumeNetworkAfterBlockedShutdown(EnvirStartOptions options)
+        {
+            if (!options.BindNetwork || Volatile.Read(ref _shutdownNetworkStopped) == 0)
+                return;
+
+            try
+            {
+                StartNetwork(reloadPersistence: false);
+                Interlocked.Exchange(ref _shutdownNetworkStopped, 0);
+                MessageQueue.Enqueue("[SAVE:Sqlite] 最终保存未通过，游戏监听已恢复，未重新加载持久化状态。");
+            }
+            catch (Exception ex)
+            {
+                try
+                {
+                    StopNetwork();
+                }
+                catch (Exception cleanupEx)
+                {
+                    MessageQueue.Enqueue("[SAVE:Sqlite] 清理未完整恢复的游戏监听失败：" + cleanupEx);
+                }
+
+                Interlocked.Exchange(ref _shutdownNetworkStopped, 1);
+                MessageQueue.Enqueue("[SAVE:Sqlite] 最终保存未通过且游戏监听恢复失败，请修复存储或监听配置后重试关服：" + ex);
+            }
+        }
+
         private void RecordPerformanceNetworkSnapshot()
         {
             if (!PerformanceMetrics.Enabled) return;
@@ -840,11 +995,16 @@ namespace Server.MirEnvir
             try
             {
                 PerformanceMetrics.TryConfigureFromEnvironment(out _);
+                if (options.StartHttp && Settings.StartHTTPService && !PerformanceMetrics.Enabled)
+                {
+                    PerformanceMetrics.StartSession("server-operations");
+                    _basicOperationsMetricsSession = true;
+                }
                 Volatile.Write(ref _mainThreadId, Thread.CurrentThread.ManagedThreadId);
-                Time = Stopwatch.ElapsedMilliseconds;
+                Time = options.ElapsedMillisecondsProvider?.Invoke() ?? Stopwatch.ElapsedMilliseconds;
 
                 var conTime = Time;
-                var saveTime = Time + Settings.SaveDelay * Settings.Minute;
+                var saveTime = ProductionRpoPolicy.GetNextAutoSaveDeadline(Time, Settings.SaveDelay);
                 var userTime = Time + Settings.Minute * 5;
                 var lineMessageTime = Time + Settings.Minute * Settings.LineMessageTimer;
                 var processTime = Time + 1000;
@@ -856,6 +1016,9 @@ namespace Server.MirEnvir
                 var metricsNetworkSampleTime = Time;
 
                 LinkedListNode<MapObject> current = null;
+
+                if (options.LoadResources)
+                    KillSwitches = new KillSwitchService();
 
                 if (options.Multithreaded)
                 {
@@ -881,6 +1044,13 @@ namespace Server.MirEnvir
                         Stop();
                         return;
                     }
+
+                    if (Settings.SqliteBackupEnabled &&
+                        Settings.DatabaseProvider.Equals("Sqlite", StringComparison.OrdinalIgnoreCase))
+                    {
+                        SqliteBackup = new SqliteBackupService(SqliteBackupOptions.FromSettings());
+                        SqliteBackup.StartAutomatic();
+                    }
                 }
 
                 if (options.Multithreaded)
@@ -898,7 +1068,7 @@ namespace Server.MirEnvir
                     StartNetwork();
                 if (options.StartHttp && Settings.StartHTTPService)
                 {
-                    http = new HttpServer();
+                    http = new HttpServer(SqliteBackup, killSwitches: KillSwitches);
                     http.Start();
                 }
 
@@ -910,7 +1080,7 @@ namespace Server.MirEnvir
                         using var performanceCpuScope = PerformanceMetrics.Begin(PerformanceMetricKind.Cpu);
                         using var performanceUpdateScope = PerformanceMetrics.Begin(PerformanceMetricKind.Update);
 
-                        Time = Stopwatch.ElapsedMilliseconds;
+                        Time = options.ElapsedMillisecondsProvider?.Invoke() ?? Stopwatch.ElapsedMilliseconds;
                         if (PerformanceMetrics.Enabled && Time >= metricsRuntimeSampleTime)
                         {
                             metricsRuntimeSampleTime = Time + 1000;
@@ -924,6 +1094,8 @@ namespace Server.MirEnvir
                             RecordPerformanceNetworkSnapshot();
                         }
                         ProcessMainThreadQueue();
+                        if (!Running)
+                            break;
 
                         if (Time >= processTime)
                         {
@@ -1020,7 +1192,7 @@ namespace Server.MirEnvir
 
                         if (options.SaveOnStop && (Time >= saveTime || forceAutoSave))
                         {
-                            saveTime = Time + Settings.SaveDelay * Settings.Minute;
+                            saveTime = ProductionRpoPolicy.GetNextAutoSaveDeadline(Time, Settings.SaveDelay);
                             TryAutoSave(SqlSaveDomain.Accounts, BeginSaveAccounts);
                             TryAutoSave(SqlSaveDomain.Guilds, () => SaveGuilds());
                             TryAutoSave(SqlSaveDomain.Goods, () => SaveGoods());
@@ -1069,20 +1241,19 @@ namespace Server.MirEnvir
                     MessageQueue.Enqueue($"[内循环错误 线程 {line}]" + ex);
                 }
 
-                if (options.BindNetwork)
+                if (options.BindNetwork && Interlocked.Exchange(ref _shutdownNetworkStopped, 0) == 0)
                     StopNetwork();
                 if (options.LoadResources)
                     StopEnvir();
                 if (options.SaveOnStop)
                 {
-                    SaveAccounts();
-                    SaveGuilds(true);
-                    SaveConquests(true);
+                    if (Interlocked.Exchange(ref _shutdownSavePrepared, 0) == 0)
+                        QueueFinalPersistenceSave();
                 }
             }
             catch (Exception ex)
             {
-                Running = false;
+                FreezeAndCancelPendingMainThreadWork();
                 if (StartState == EnvirStartState.Starting)
                     MarkStartupFailed(ex);
 
@@ -1128,6 +1299,15 @@ namespace Server.MirEnvir
 
                 MessageQueue.Enqueue($"[外循环错误 线程 {line}]" + ex);
             }
+
+            try
+            {
+                SqliteBackup?.Dispose();
+            }
+            catch
+            {
+            }
+            SqliteBackup = null;
 
             Volatile.Write(ref _mainThreadId, 0);
             _thread = null;
@@ -3646,8 +3826,13 @@ namespace Server.MirEnvir
             if (options == null) throw new ArgumentNullException(nameof(options));
 
             _startOptions = options;
+            Interlocked.Exchange(ref _shutdownSavePrepared, 0);
+            Interlocked.Exchange(ref _shutdownNetworkStopped, 0);
             Volatile.Write(ref _startFailure, null);
             Volatile.Write(ref _startState, (int)EnvirStartState.Starting);
+
+            if (options.EnforceProductionSecurity)
+                ProductionSecurityPolicy.ValidateAndApply();
 
             if (options.StartScripts && Settings.CSharpScriptsEnabled)
             {
@@ -3672,7 +3857,7 @@ namespace Server.MirEnvir
                 }
             }
 
-            Running = true;
+            PrepareMainThreadQueueForStart();
 
             _thread = new Thread(WorkLoop) { IsBackground = true };
             _thread.Start();
@@ -3680,7 +3865,15 @@ namespace Server.MirEnvir
         }
         public void Stop()
         {
-            Running = false;
+            var options = _startOptions ?? EnvirStartOptions.FromSettings();
+            if (Running &&
+                StartState == EnvirStartState.Ready &&
+                options.SaveOnStop &&
+                Persistence.Provider == DatabaseProviderKind.Sqlite &&
+                !PrepareSqliteShutdownSave(options))
+                return;
+
+            FreezeAndCancelPendingMainThreadWork();
 
             try
             {
@@ -3726,6 +3919,15 @@ namespace Server.MirEnvir
         {
             if (!PerformanceMetrics.Enabled)
                 return;
+
+            if (_basicOperationsMetricsSession)
+            {
+                PerformanceMetrics.FreezeSession();
+                PerformanceMetrics.Configure(enabled: false);
+                _basicOperationsMetricsSession = false;
+                MessageQueue.EnqueueDebugging($"[运维] {phase}：已结束基础监控指标会话。");
+                return;
+            }
 
             if (PerformanceMetrics.TryStopAndWriteConfiguredSnapshot(out _, out var error))
             {
@@ -4335,7 +4537,7 @@ namespace Server.MirEnvir
 
             MessageQueue.Enqueue("正在部署游戏环境......");
         }
-        private void StartNetwork()
+        private void StartNetwork(bool reloadPersistence = true)
         {
             var generation = new TlsGenerationState(Interlocked.Increment(ref _tlsGenerationId));
             var previousGeneration = Interlocked.Exchange(ref _tlsGeneration, generation);
@@ -4355,17 +4557,21 @@ namespace Server.MirEnvir
             _tlsCertificate?.Dispose();
             _tlsCertificate = null;
 
-            LoadAccounts();
-
-            LoadGuilds();
-
-            LoadConquests();
+            if (reloadPersistence)
+            {
+                LoadAccounts();
+                LoadGuilds();
+                LoadConquests();
+            }
 
             bool gameListenerStarted = false;
+            TlsTransportPolicy.ValidateConfiguration(
+                Settings.TlsEnabled,
+                Settings.Port,
+                Settings.TlsPort,
+                Settings.TlsCertificatePath);
             if (Settings.TlsEnabled)
             {
-                TlsTransportPolicy.ValidateTlsPorts(Settings.Port, Settings.TlsPort);
-
                 _tlsCertificate = TlsTransportPolicy.LoadServerCertificate(Settings.TlsCertificatePath);
                 generation.Certificate = _tlsCertificate;
                 _tlsListener = CreateStartedListener(listenAddress, Settings.TlsPort, "TLS游戏端口");
@@ -4397,7 +4603,9 @@ namespace Server.MirEnvir
 
         private void StopEnvir()
         {
-            SaveGoods(true);
+            // SQLite 正常关服已经在主线程捕获并排空最终 Goods 快照；资源清理阶段不得在排空后追加写入。
+            if (Volatile.Read(ref _shutdownSavePrepared) == 0)
+                SaveGoods(true);
 
             MapList.Clear();
             StartPoints.Clear();
@@ -4772,7 +4980,8 @@ namespace Server.MirEnvir
 
         public void NewAccount(ClientPackets.NewAccount p, MirConnection c)
         {
-            if (!Settings.AllowNewAccount)
+            if (!Settings.AllowNewAccount ||
+                KillSwitches?.IsEnabled(KillSwitchFeature.HighRiskOperations) == false)
             {
                 c.Enqueue(new ServerPackets.NewAccount { Result = 0 });
                 return;
@@ -4856,7 +5065,8 @@ namespace Server.MirEnvir
 
         public int HTTPNewAccount(ClientPackets.NewAccount p, string ip)
         {
-            if (!Settings.AllowNewAccount)
+            if (!Settings.AllowNewAccount ||
+                KillSwitches?.IsEnabled(KillSwitchFeature.HighRiskOperations) == false)
             {
                 return 0;
             }
@@ -4905,7 +5115,8 @@ namespace Server.MirEnvir
 
         public void ChangePassword(ClientPackets.ChangePassword p, MirConnection c)
         {
-            if (!Settings.AllowChangePassword)
+            if (!Settings.AllowChangePassword ||
+                KillSwitches?.IsEnabled(KillSwitchFeature.HighRiskOperations) == false)
             {
                 c.Enqueue(new ServerPackets.ChangePassword { Result = 0 });
                 return;
@@ -4967,14 +5178,25 @@ namespace Server.MirEnvir
                 return;
             }
 
+            var protection = GetLoginProtection();
+            var protectionNow = Now.ToUniversalTime();
+            var attempt = protection.TryBegin(p.AccountID, c.IPAddress, protectionNow);
+            if (!attempt.Allowed)
+            {
+                EnqueueLoginProtectionDenied(c, attempt);
+                return;
+            }
+
             if (!AccountIDReg.IsMatch(p.AccountID))
             {
+                if (RecordLoginFailure(null, p.AccountID, c.IPAddress, protectionNow, c)) return;
                 c.Enqueue(new ServerPackets.Login { Result = 1 });
                 return;
             }
 
             if (!PasswordReg.IsMatch(p.Password))
             {
+                if (RecordLoginFailure(null, p.AccountID, c.IPAddress, protectionNow, c)) return;
                 c.Enqueue(new ServerPackets.Login { Result = 2 });
                 return;
             }
@@ -4982,6 +5204,7 @@ namespace Server.MirEnvir
 
             if (account == null)
             {
+                if (RecordLoginFailure(null, p.AccountID, c.IPAddress, protectionNow, c)) return;
                 c.Enqueue(new ServerPackets.Login { Result = 3 });
                 return;
             }
@@ -5004,24 +5227,13 @@ namespace Server.MirEnvir
 
             if (VerifyAccountPassword(account, p.Password) == Utils.PasswordVerificationResult.Invalid)
             {
-                if (account.WrongPasswordCount++ >= 5)
-                {
-                    account.Banned = true;
-                    account.BanReason = "错误登录次数太多";
-                    account.ExpiryDate = Now.AddMinutes(2);
-
-                    c.Enqueue(new ServerPackets.LoginBanned
-                    {
-                        Reason = account.BanReason,
-                        ExpiryDate = account.ExpiryDate
-                    });
-                    return;
-                }
-
+                account.WrongPasswordCount++;
+                if (RecordLoginFailure(account, p.AccountID, c.IPAddress, protectionNow, c)) return;
                 c.Enqueue(new ServerPackets.Login { Result = 4 });
                 return;
             }
             account.WrongPasswordCount = 0;
+            protection.RecordSuccess(p.AccountID, c.IPAddress, protectionNow);
 
             if (account.RequirePasswordChange)
             {
@@ -5048,18 +5260,51 @@ namespace Server.MirEnvir
 
         public int HTTPLogin(string AccountID, string Password)
         {
+            return HTTPLogin(AccountID, Password, 5000);
+        }
+
+        internal int HTTPLogin(string AccountID, string Password, int mainThreadTimeoutMs)
+        {
+            return HTTPLogin(AccountID, Password, Settings.HTTPTrustedIPAddress, mainThreadTimeoutMs);
+        }
+
+        internal int HTTPLogin(string AccountID, string Password, string sourceIpAddress, int mainThreadTimeoutMs)
+        {
+            if (!IsMainThread)
+            {
+                if (Volatile.Read(ref _mainThreadId) == 0 || !Running)
+                    return 0;
+
+                return InvokeOnMainThread(
+                    () => HTTPLoginOnMainThread(AccountID, Password, sourceIpAddress),
+                    mainThreadTimeoutMs,
+                    allowInlineWithoutMainThread: false);
+            }
+
+            return HTTPLoginOnMainThread(AccountID, Password, sourceIpAddress);
+        }
+
+        private int HTTPLoginOnMainThread(string AccountID, string Password, string sourceIpAddress)
+        {
             if (!Settings.AllowLogin)
             {
                 return 0;
             }
 
+            var protection = GetLoginProtection();
+            var protectionNow = Now.ToUniversalTime();
+            if (!protection.TryBegin(AccountID, sourceIpAddress, protectionNow).Allowed)
+                return 5;
+
             if (!AccountIDReg.IsMatch(AccountID))
             {
+                RecordLoginFailure(null, AccountID, sourceIpAddress, protectionNow, null);
                 return 1;
             }
 
             if (!PasswordReg.IsMatch(Password))
             {
+                RecordLoginFailure(null, AccountID, sourceIpAddress, protectionNow, null);
                 return 2;
             }
 
@@ -5067,32 +5312,121 @@ namespace Server.MirEnvir
 
             if (account == null)
             {
+                RecordLoginFailure(null, AccountID, sourceIpAddress, protectionNow, null);
                 return 3;
             }
 
-            if (account.Banned)
+            var result = ExecuteHttpLoginTransaction(account, () =>
             {
-                if (account.ExpiryDate > Now)
+                if (account.Banned)
                 {
-                    return 4;
+                    if (account.ExpiryDate > Now)
+                    {
+                        return 4;
+                    }
+                    account.Banned = false;
                 }
-                account.Banned = false;
-            }
-            account.BanReason = string.Empty;
-            account.ExpiryDate = DateTime.MinValue;
-            if (VerifyAccountPassword(account, Password) == Utils.PasswordVerificationResult.Invalid)
+                account.BanReason = string.Empty;
+                account.ExpiryDate = DateTime.MinValue;
+                if (VerifyAccountPasswordOnMainThread(account, Password) == Utils.PasswordVerificationResult.Invalid)
+                {
+                    return 6;
+                }
+                return 7;
+            });
+
+            if (result == 6)
             {
-                if (account.WrongPasswordCount++ >= 5)
-                {
-                    account.Banned = true;
-                    account.BanReason = "登录错误次数太多";
-                    account.ExpiryDate = Now.AddMinutes(2);
-                    return 5;
-                }
-                return 6;
+                account.WrongPasswordCount++;
+                return RecordLoginFailure(account, AccountID, sourceIpAddress, protectionNow, null) ? 5 : 6;
             }
-            account.WrongPasswordCount = 0;
-            return 7;
+
+            if (result == 7)
+            {
+                account.WrongPasswordCount = 0;
+                protection.RecordSuccess(AccountID, sourceIpAddress, protectionNow);
+            }
+
+            return result;
+        }
+
+        private LoginProtection GetLoginProtection()
+        {
+            var options = LoginProtectionOptions.FromSettings();
+            if (_loginProtection == null || !Equals(_loginProtectionOptions, options))
+            {
+                _loginProtectionOptions = options;
+                _loginProtection = new LoginProtection(options);
+            }
+
+            return _loginProtection;
+        }
+
+        private bool RecordLoginFailure(
+            AccountInfo account,
+            string accountId,
+            string ipAddress,
+            DateTime utcNow,
+            MirConnection connection)
+        {
+            var decision = GetLoginProtection().RecordFailure(accountId, ipAddress, utcNow);
+            if (decision.IpBlocked)
+            {
+                IPBlocks[ipAddress] = decision.IpBlockedUntilUtc.ToLocalTime();
+                MessageQueue.Enqueue(ipAddress + " 已被登录防护临时封禁");
+            }
+
+            if (decision.AccountBlocked && account != null)
+            {
+                account.Banned = true;
+                account.BanReason = "登录失败次数过多";
+                account.ExpiryDate = decision.AccountBlockedUntilUtc.ToLocalTime();
+                RequestAutoSave();
+            }
+
+            if (!decision.AccountBlocked && !decision.IpBlocked) return false;
+            if (connection != null) EnqueueLoginProtectionDenied(connection, decision);
+            return true;
+        }
+
+        private static void EnqueueLoginProtectionDenied(MirConnection connection, LoginProtectionDecision decision)
+        {
+            connection.Enqueue(new ServerPackets.LoginBanned
+            {
+                Reason = decision.IpBlocked ? "来源地址登录失败次数过多" :
+                    decision.AccountBlocked ? "账号登录失败次数过多" :
+                    decision.IpRateLimited ? "来源地址登录请求过于频繁" :
+                    decision.AccountRateLimited ? "账号登录请求过于频繁" : "登录失败退避中",
+                ExpiryDate = decision.RetryAfterUtc.ToLocalTime()
+            });
+        }
+
+        internal int ExecuteHttpLoginTransaction(AccountInfo account, Func<int> action)
+        {
+            if (account == null) throw new ArgumentNullException(nameof(account));
+            if (action == null) throw new ArgumentNullException(nameof(action));
+
+            var password = account.Password;
+            var salt = account.Salt == null ? Array.Empty<byte>() : (byte[])account.Salt.Clone();
+            var banned = account.Banned;
+            var banReason = account.BanReason;
+            var expiryDate = account.ExpiryDate;
+            var wrongPasswordCount = account.WrongPasswordCount;
+            var autoSaveRequested = Volatile.Read(ref _autoSaveRequested);
+            try
+            {
+                return action();
+            }
+            catch
+            {
+                account.SetPasswordHashAndSalt(password, salt);
+                account.Banned = banned;
+                account.BanReason = banReason;
+                account.ExpiryDate = expiryDate;
+                account.WrongPasswordCount = wrongPasswordCount;
+                Interlocked.Exchange(ref _autoSaveRequested, autoSaveRequested);
+                throw;
+            }
         }
 
         public void NewCharacter(ClientPackets.NewCharacter p, MirConnection c, bool IsGm)

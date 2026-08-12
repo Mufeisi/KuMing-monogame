@@ -8,6 +8,8 @@ using System.Net.Http.Headers;
 using System.Net.Http.Handlers;
 using Client.Utils;
 using Shared.Security;
+using Launcher.Remote;
+using Launcher.ThemeRuntime;
 
 namespace Launcher
 {
@@ -27,6 +29,7 @@ namespace Launcher
         public Thread _workThread;
 
         private bool dragging = false;
+        private bool _launching;
         private Point dragCursorPoint;
         private Point dragFormPoint;
 
@@ -34,6 +37,20 @@ namespace Launcher
 
         private bool Restart = false;
         private bool _patchCredentialFailureReported;
+        private readonly ComboBox _serverComboBox = new();
+        private readonly Label _serverStatusLabel = new();
+        private RemoteLaunchManifest _launchManifest;
+        private LauncherStateStore _launcherStateStore;
+        private GameInstanceManager _gameInstanceManager;
+        private LaunchManifestSource _serverListSource;
+        private string _serverListOriginUrl;
+        private string _configuredPatchHost;
+        private string _configuredPatchFileName;
+        private readonly CancellationTokenSource _lifetimeCancellation = new();
+        private bool _serverListReady;
+        private readonly LauncherSnapshot _nativeSnapshot;
+        private readonly string _nativeExecutableDirectory;
+        private readonly string _nativeResourceDirectory;
 
         public AMain()
         {
@@ -41,6 +58,57 @@ namespace Launcher
 
             BackColor = Color.FromArgb(1, 0, 0);
             TransparencyKey = Color.FromArgb(1, 0, 0);
+
+            _serverComboBox.DropDownStyle = ComboBoxStyle.DropDownList;
+            _serverComboBox.Enabled = false;
+            _serverComboBox.Location = new Point(373, 471);
+            _serverComboBox.Size = new Size(230, 25);
+            _serverComboBox.TabIndex = 33;
+            _serverComboBox.SelectedIndexChanged += ServerComboBox_SelectedIndexChanged;
+            Controls.Add(_serverComboBox);
+
+            _serverStatusLabel.BackColor = Color.Transparent;
+            _serverStatusLabel.ForeColor = Color.Gray;
+            _serverStatusLabel.Location = new Point(373, 525);
+            _serverStatusLabel.Size = new Size(230, 22);
+            _serverStatusLabel.TextAlign = ContentAlignment.MiddleLeft;
+            _serverStatusLabel.TabIndex = 34;
+            Controls.Add(_serverStatusLabel);
+        }
+
+        public AMain(LauncherSnapshot snapshot, string executableDirectory, string resourceDirectory) : this()
+        {
+            _nativeSnapshot = snapshot ?? throw new ArgumentNullException(nameof(snapshot));
+            _nativeExecutableDirectory = Path.GetFullPath(executableDirectory);
+            _nativeResourceDirectory = Path.GetFullPath(resourceDirectory);
+            Text = string.IsNullOrWhiteSpace(snapshot.TaskbarName) ? snapshot.ProjectName : snapshot.TaskbarName;
+            AutoScaleMode = AutoScaleMode.None;
+            ClientSize = new Size(801, 554);
+            _serverComboBox.Location = new Point(67, 431);
+            _serverComboBox.Size = new Size(150, 25);
+            _serverStatusLabel.Location = new Point(220, 431);
+            _serverStatusLabel.Size = new Size(180, 20);
+            _serverStatusLabel.ForeColor = Color.LimeGreen;
+            foreach (LauncherServer server in snapshot.Servers.Where(server => server.Status != ServerOperatingStatus.Hidden))
+            {
+                MicroEndpoint micro = server.MicroOverride ?? snapshot.DefaultMicro;
+                _serverComboBox.Items.Add(new ServerEntry(server.Name, server.Address, server.Port, micro.Enabled,
+                    micro.Enabled ? micro.Address : string.Empty, micro.Enabled ? micro.Port : 0,
+                    micro.Enabled ? micro.BackupAddress : string.Empty, micro.Enabled ? micro.BackupPort : 0, micro.User));
+            }
+            if (_serverComboBox.Items.Count > 0) _serverComboBox.SelectedIndex = 0;
+            _serverComboBox.Enabled = _serverComboBox.Items.Count > 1;
+            _serverListReady = _serverComboBox.Items.Count > 0;
+            UpdateNativeEndpointLabel();
+            Name_label.Text = snapshot.ProjectName;
+            Name_label.Visible = true;
+            CurrentFile_label.Text = "数据更新";
+            CurrentFile_label.Visible = true;
+            ProgressCurrent_pb.Width = 550;
+            TotalProg_pb.Width = 550;
+            CurrentPercent_label.Text = "100%";
+            TotalPercent_label.Text = "100%";
+            Launch_pb.Enabled = true;
         }
 
         public static void SaveError(string ex)
@@ -413,13 +481,13 @@ namespace Launcher
             };
         }
 
-        private void AMain_Load(object sender, EventArgs e)
+        private async void AMain_Load(object sender, EventArgs e)
         {
-            var envir = CoreWebView2Environment.CreateAsync(null, Settings.ResourcePath).Result;
-            Main_browser.EnsureCoreWebView2Async(envir);
-
             if (Settings.P_BrowserAddress != "")
             {
+                var envir = await CoreWebView2Environment.CreateAsync(null, Settings.ResourcePath);
+                await Main_browser.EnsureCoreWebView2Async(envir);
+                if (IsDisposed) return;
                 if (Uri.IsWellFormedUriString(Settings.P_BrowserAddress, UriKind.Absolute))
                 {
                     Main_browser.NavigationCompleted += Main_browser_NavigationCompleted;
@@ -431,11 +499,11 @@ namespace Launcher
                 }
             }
 
-            RepairOldFiles();
+            if (_nativeSnapshot == null) RepairOldFiles();
 
-            Launch_pb.Enabled = false;
-            ProgressCurrent_pb.Width = 5;
-            TotalProg_pb.Width = 5;
+            Launch_pb.Enabled = _nativeSnapshot != null;
+            ProgressCurrent_pb.Width = _nativeSnapshot != null ? 550 : 5;
+            TotalProg_pb.Width = _nativeSnapshot != null ? 550 : 5;
             Version_label.Text = string.Format("版本: {0}.{1}.{2}", Globals.ProductCodename, Settings.UseTestConfig ? "Debug" : "Release", Application.ProductVersion);
 
             if (Settings.P_ServerName != String.Empty)
@@ -444,8 +512,137 @@ namespace Launcher
                 Name_label.Text = Settings.P_ServerName;
             }
 
-            _workThread = new Thread(Start) { IsBackground = true };
-            _workThread.Start();
+            try
+            {
+                await LoadServerListAsync(_lifetimeCancellation.Token);
+            }
+            catch (OperationCanceledException)
+            {
+                return;
+            }
+            catch (Exception ex)
+            {
+                SaveError("加载区服列表失败：" + ex);
+                if (!IsDisposed) MessageBox.Show("区服列表和本地保底配置均不可用，请检查 Mir2Config.ini。", "启动器配置错误");
+                return;
+            }
+
+            string effectivePatchUrl = RemotePatchPolicy.ResolvePatchUrl(
+                _serverListSource,
+                _serverListOriginUrl,
+                _launchManifest.PatchUrl);
+            if (!string.IsNullOrEmpty(_launchManifest.PatchUrl) && string.IsNullOrEmpty(effectivePatchUrl))
+            {
+                SaveError("远程补丁已停用：区服清单和补丁地址必须同时使用 HTTPS。HTTP 区服列表仍可正常使用。");
+                _serverStatusLabel.Text += " · 未启用远程补丁";
+            }
+
+            if (string.IsNullOrEmpty(effectivePatchUrl))
+            {
+                Completed = true;
+                Launch_pb.Enabled = _gameInstanceManager.ActiveCount < _launchManifest.MaxInstances;
+            }
+            else
+            {
+                _configuredPatchHost = Settings.P_Host;
+                _configuredPatchFileName = Settings.P_PatchFileName;
+                Settings.P_Host = effectivePatchUrl;
+                Settings.P_PatchFileName = "PList.gz";
+                _workThread = new Thread(Start) { IsBackground = true };
+                _workThread.Start();
+            }
+        }
+
+        private async Task LoadServerListAsync(CancellationToken cancellationToken)
+        {
+            string cacheRoot = Path.Combine(Application.StartupPath, "Cache", "Launcher");
+            _launcherStateStore = new LauncherStateStore(cacheRoot);
+
+            if (_nativeSnapshot != null)
+            {
+                _launchManifest = CreateNativeManifest(_nativeSnapshot);
+                _serverListSource = LaunchManifestSource.Local;
+                _serverListOriginUrl = string.Empty;
+                _gameInstanceManager = new GameInstanceManager(_launchManifest.MaxInstances, Settings.UseTestConfig, _nativeExecutableDirectory, _nativeResourceDirectory, _nativeSnapshot.ProjectId, _nativeSnapshot.LoginCoreResources);
+                _gameInstanceManager.ActiveCountChanged += GameInstanceManager_ActiveCountChanged;
+                _serverComboBox.Items.Clear();
+                foreach (ServerEntry server in _launchManifest.Servers) _serverComboBox.Items.Add(server);
+                _serverComboBox.SelectedIndex = 0;
+                _serverListReady = true;
+                UpdateNativeEndpointLabel();
+                return;
+            }
+
+            using var httpClient = new HttpClient();
+            var loader = new RemoteLaunchManifestLoader(httpClient, cacheRoot, TimeSpan.FromSeconds(5));
+            LaunchManifestLoadResult result = await loader.LoadAsync(
+                Settings.P_ServerListUrl,
+                () => RemoteLaunchManifest.CreateLocalFallback(
+                    Settings.P_ServerName,
+                    Settings.IPAddress,
+                    Settings.UseTlsV2 ? Settings.TlsPort : Settings.Port,
+                    Settings.P_Host,
+                    Settings.MicroBaseUrl),
+                cancellationToken);
+            _launchManifest = result.Manifest;
+            _serverListSource = result.Source;
+            _serverListOriginUrl = result.ListUrl;
+            _gameInstanceManager = new GameInstanceManager(_launchManifest.MaxInstances, Settings.UseTestConfig);
+            _gameInstanceManager.ActiveCountChanged += GameInstanceManager_ActiveCountChanged;
+
+            _serverComboBox.Items.Clear();
+            foreach (ServerEntry server in _launchManifest.Servers) _serverComboBox.Items.Add(server);
+
+            string lastServerName = await _launcherStateStore.LoadLastServerNameAsync(cancellationToken);
+            int selectedIndex = _launchManifest.Servers.ToList().FindIndex(server =>
+                string.Equals(server.Name, lastServerName, StringComparison.OrdinalIgnoreCase));
+            _serverComboBox.SelectedIndex = selectedIndex >= 0 ? selectedIndex : 0;
+            _serverListReady = true;
+
+            _serverStatusLabel.Text = result.Source switch
+            {
+                LaunchManifestSource.Remote => $"远程列表 · 最多 {_launchManifest.MaxInstances} 开",
+                LaunchManifestSource.Cache => $"缓存列表 · 最多 {_launchManifest.MaxInstances} 开",
+                _ => "本地配置 · 最多 1 开",
+            };
+            if (!string.IsNullOrEmpty(result.Warning)) SaveError(result.Warning);
+        }
+
+        private static RemoteLaunchManifest CreateNativeManifest(LauncherSnapshot snapshot)
+        {
+            var servers = snapshot.Servers.Where(server => server.Status != ServerOperatingStatus.Hidden).Select(server =>
+            {
+                MicroEndpoint micro = server.MicroOverride ?? snapshot.DefaultMicro;
+                return new ServerEntry(server.Name, server.Address, server.Port, micro.Enabled,
+                    micro.Enabled ? micro.Address : string.Empty, micro.Enabled ? micro.Port : 0,
+                    micro.Enabled ? micro.BackupAddress : string.Empty, micro.Enabled ? micro.BackupPort : 0, micro.User);
+            }).ToArray();
+            if (servers.Length == 0) throw new InvalidDataException("经典启动器没有可显示区服");
+            return RemoteLaunchManifest.CreateTrustedLocal(1, string.Empty, servers);
+        }
+
+        private async void ServerComboBox_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (!_serverListReady || _serverComboBox.SelectedItem is not ServerEntry server) return;
+            if (_nativeSnapshot != null) UpdateNativeEndpointLabel();
+            if (_launcherStateStore == null) return;
+            try
+            {
+                await _launcherStateStore.SaveLastServerNameAsync(server.Name, _lifetimeCancellation.Token);
+            }
+            catch (OperationCanceledException)
+            {
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                SaveError("保存上次选择的区服失败：" + ex.Message);
+            }
+        }
+
+        private void UpdateNativeEndpointLabel()
+        {
+            if (_nativeSnapshot != null && _serverComboBox.SelectedItem is ServerEntry selected)
+                _serverStatusLabel.Text = selected.ServerAddress + ":" + selected.ServerPort;
         }
 
         private void Main_browser_NavigationCompleted(object sender, CoreWebView2NavigationCompletedEventArgs e)
@@ -453,17 +650,102 @@ namespace Launcher
             if (Main_browser.Source.AbsolutePath != "blank") Main_browser.Visible = true;
         }
 
-        private void Launch_pb_Click(object sender, EventArgs e)
+        private async void Launch_pb_Click(object sender, EventArgs e)
         {
-            Launch();
+            await LaunchAsync();
         }
 
-        private void Launch()
+        private async Task LaunchAsync()
         {
+            if (_launching) return;
+            _launching = true;
+            try
+            {
             if (ConfigForm.Visible) ConfigForm.Visible = false;
+            if (_serverComboBox.SelectedItem is not ServerEntry server) return;
 
-            Program.Launch = true;
-            Close();
+            if (_nativeSnapshot != null)
+            {
+                MicroEndpoint micro = new()
+                {
+                    Enabled = server.MicroEnabled,
+                    Address = server.MicroAddress,
+                    Port = server.MicroPort,
+                    BackupAddress = server.MicroBackupAddress,
+                    BackupPort = server.MicroBackupPort,
+                    User = server.MicroUser,
+                };
+                Launch_pb.Enabled = false;
+                bool ready;
+                try
+                {
+                    ready = await MicroGatewayReadiness.EnsureCoreLibrariesAsync(micro, _nativeSnapshot.ProjectId, _nativeResourceDirectory, _nativeSnapshot.LoginCoreResources, null, _lifetimeCancellation.Token);
+                }
+                catch (OperationCanceledException) when (_lifetimeCancellation.IsCancellationRequested)
+                {
+                    return;
+                }
+                if (!ready)
+                {
+                    MessageBox.Show("当前区服的微端尚未就绪，且本地登录资源未通过验证。", "无法启动游戏");
+                    return;
+                }
+                ClientSettingsWriter.ValidateWritableDirectory(_nativeResourceDirectory);
+                if (!ClientSelection.IsCompatible(_nativeExecutableDirectory) || !ClientSelection.IsTrustedResourceDirectory(_nativeResourceDirectory, _nativeSnapshot.LoginCoreResources))
+                {
+                    MessageBox.Show("客户端入口或本地资源已发生变化，请重新选择客户端。", "无法启动游戏");
+                    return;
+                }
+                ClientSettingsWriter.WriteMicroIdentity(_nativeResourceDirectory, _nativeSnapshot.ProjectId, server.MicroUser);
+            }
+
+            if (!_gameInstanceManager.TryStart(server, out string error))
+            {
+                MessageBox.Show(error, "无法启动游戏");
+                return;
+            }
+
+            WindowState = FormWindowState.Minimized;
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException)
+            {
+                if (!IsDisposed && !Disposing)
+                    MessageBox.Show("启动游戏前写入客户端配置失败：" + ex.Message, "无法启动游戏");
+            }
+            finally
+            {
+                _launching = false;
+                if (!IsDisposed && !Disposing)
+                    Launch_pb.Enabled = Completed && _gameInstanceManager.ActiveCount < _launchManifest.MaxInstances;
+            }
+        }
+
+        private void GameInstanceManager_ActiveCountChanged(object sender, EventArgs e)
+        {
+            if (InvokeRequired)
+            {
+                BeginInvoke(new Action(() => GameInstanceManager_ActiveCountChanged(sender, e)));
+                return;
+            }
+
+            _serverStatusLabel.Text = _gameInstanceManager.ActiveCount >= _launchManifest.MaxInstances
+                ? $"已达到多开上限（{_gameInstanceManager.ActiveCount}/{_launchManifest.MaxInstances}）"
+                : $"游戏运行 {_gameInstanceManager.ActiveCount}/{_launchManifest.MaxInstances}";
+            Launch_pb.Enabled = Completed && _gameInstanceManager.ActiveCount < _launchManifest.MaxInstances;
+            if (_gameInstanceManager.ActiveCount == 0 && WindowState == FormWindowState.Minimized)
+            {
+                WindowState = FormWindowState.Normal;
+                Activate();
+            }
+        }
+
+        private void AMain_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            if (_gameInstanceManager?.ActiveCount > 0)
+            {
+                e.Cancel = true;
+                WindowState = FormWindowState.Minimized;
+            }
         }
 
         private void Close_pb_Click(object sender, EventArgs e)
@@ -593,6 +875,7 @@ namespace Launcher
                     TotalPercent_label.Text = "100%";
                     InterfaceTimer.Enabled = false;
                     Launch_pb.Enabled = true;
+                    _serverComboBox.Enabled = true;
                     if (ErrorFound) MessageBox.Show("一个或多个文件下载失败，请检查错误", "下载失败");
                     ErrorFound = false;
 
@@ -611,7 +894,7 @@ namespace Launcher
 
                     if (Settings.P_AutoStart)
                     {
-                        Launch();
+                        _ = LaunchAsync();
                     }
                     return;
                 }
@@ -702,10 +985,17 @@ namespace Launcher
 
         private void AMain_FormClosed(object sender, FormClosedEventArgs e)
         {
+            _lifetimeCancellation.Cancel();
+            if (_configuredPatchHost != null)
+            {
+                Settings.P_Host = _configuredPatchHost;
+                Settings.P_PatchFileName = _configuredPatchFileName;
+            }
             MoveOldFilesToCurrent();
 
             Launch_pb?.Dispose();
             Close_pb?.Dispose();
+            _lifetimeCancellation.Dispose();
         }
 
         private static string[] suffixes = new[] { " B", " KB", " MB", " GB", " TB", " PB" };

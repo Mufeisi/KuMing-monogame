@@ -1,0 +1,169 @@
+**********************
+PowerShell transcript start
+Start time: 20260810042630
+Username: DESKTOP-4J13TH0\luo
+RunAs User: DESKTOP-4J13TH0\luo
+Configuration Name:
+Machine: DESKTOP-4J13TH0 (Microsoft Windows NT 10.0.19045.0)
+Host Application: C:\Program Files\PowerShell\7\pwsh.dll -Command try { [Console]::OutputEncoding=[System.Text.Encoding]::UTF8 } catch {}
+& 'TestResults\DB04-run-real-drill.ps1'
+Process ID: 10792
+PSVersion: 7.4.7
+PSEdition: Core
+GitCommitId: 7.4.7
+OS: Microsoft Windows 10.0.19045
+Platform: Win32NT
+PSCompatibleVersions: 1.0, 2.0, 3.0, 4.0, 5.0, 5.1, 6.0, 7.0
+PSRemotingProtocolVersion: 2.3
+SerializationVersion: 1.1.0.1
+WSManStackVersion: 3.0
+**********************
+Transcript started, output file is C:\Users\luo\.codex\worktrees\p3-db04-restore-drill-20260810\Docs\Evidence\GATE-P3\db04-restore-drill-20260810\raw-powershell-transcript.txt
+DRILL_START_UTC=2026-08-09T20:26:30.8243937+00:00
+WORKSPACE=C:\Users\luo\.codex\worktrees\p3-db04-restore-drill-20260810
+RUN_ROOT=C:\Users\luo\.codex\worktrees\p3-db04-restore-drill-20260810\TestResults\DB04-real-drill-9d67c0b55cfc4aee9dfe6fcae144e44c
+OFFSITE_ROOT=D:\LyoCrystalDb04RealDrill\9d67c0b55cfc4aee9dfe6fcae144e44c
+HELPER=C:\Users\luo\.codex\worktrees\p3-db04-restore-drill-20260810\TestResults\DB04-drill-generator\bin\Release\net10.0\Base05.Tests.dll
+FORMAL_SERVER=C:\Users\luo\.codex\worktrees\p3-db04-restore-drill-20260810\Server.MirForms\bin\Release\Server.dll
+
+Name Root                                     Used         Free
+---- ----                                     ----         ----
+C    C:\                              343328026624 168449409024
+D    D:\                              627891396608 396316741632
+Temp C:\Users\luo\AppData\Local\Temp\ 343328026624 168449409024
+
+COMMAND=dotnet <helper> prepare <run-root> <different-volume-offsite-root>
+PREPARED_UTC=2026-08-09T20:26:31.5807297+00:00
+LIVE=C:\Users\luo\.codex\worktrees\p3-db04-restore-drill-20260810\TestResults\DB04-real-drill-9d67c0b55cfc4aee9dfe6fcae144e44c\live\server.db
+BACKUP_LOCAL=C:\Users\luo\.codex\worktrees\p3-db04-restore-drill-20260810\TestResults\DB04-real-drill-9d67c0b55cfc4aee9dfe6fcae144e44c\backup-local\lyocrystal-sqlite-20260809-202631-548-000001-ab38577c348643f1bca3425b6b767555.db
+BACKUP_OFFSITE=D:\LyoCrystalDb04RealDrill\9d67c0b55cfc4aee9dfe6fcae144e44c\backup-offsite\lyocrystal-sqlite-20260809-202631-548-000001-ab38577c348643f1bca3425b6b767555.db
+BACKUP_SUCCESS_UTC=2026-08-09T20:26:31.5793573+00:00
+BACKUP_DURATION_MS=31
+BACKUP_INTEGRITY=ok
+PREPARE_EXIT_CODE=0
+BACKUP_FILES_BEFORE_FAULT=
+
+FullName         : C:\Users\luo\.codex\worktrees\p3-db04-restore-drill-20260810\TestResults\DB04-real-drill-9d67c0b55cf
+                   c4aee9dfe6fcae144e44c\live\server.db
+Length           : 675840
+LastWriteTimeUtc : 2026/8/9 20:26:31
+
+FullName         : C:\Users\luo\.codex\worktrees\p3-db04-restore-drill-20260810\TestResults\DB04-real-drill-9d67c0b55cf
+                   c4aee9dfe6fcae144e44c\backup-local\lyocrystal-sqlite-20260809-202631-548-000001-ab38577c348643f1bca3
+                   425b6b767555.db
+Length           : 675840
+LastWriteTimeUtc : 2026/8/9 20:26:31
+
+FullName         : D:\LyoCrystalDb04RealDrill\9d67c0b55cfc4aee9dfe6fcae144e44c\backup-offsite\lyocrystal-sqlite-2026080
+                   9-202631-548-000001-ab38577c348643f1bca3425b6b767555.db
+Length           : 675840
+LastWriteTimeUtc : 2026/8/9 20:26:31
+
+
+Path : C:\Users\luo\.codex\worktrees\p3-db04-restore-drill-20260810\TestResults\DB04-real-drill-9d67c0b55cfc4aee9dfe6fc
+       ae144e44c\live\server.db
+Hash : 8CD4C484055A1DE627010ED13972CFC84BA1732D88E45026305F9D6C3AA006DF
+
+Path : C:\Users\luo\.codex\worktrees\p3-db04-restore-drill-20260810\TestResults\DB04-real-drill-9d67c0b55cfc4aee9dfe6fc
+       ae144e44c\backup-local\lyocrystal-sqlite-20260809-202631-548-000001-ab38577c348643f1bca3425b6b767555.db
+Hash : 99BCCCC54FA82C56C8B632A3E49D3055F0A074621EF764C62FE0FB9F5FE2D69C
+
+Path : D:\LyoCrystalDb04RealDrill\9d67c0b55cfc4aee9dfe6fcae144e44c\backup-offsite\lyocrystal-sqlite-20260809-202631-548
+       -000001-ab38577c348643f1bca3425b6b767555.db
+Hash : 99BCCCC54FA82C56C8B632A3E49D3055F0A074621EF764C62FE0FB9F5FE2D69C
+
+COMMAND=Start-Process dotnet <helper> mutate-hold <live-db>
+HOLD_PROCESS_PID=1156
+MUTATION_COMMITTED_UTC=2026-08-09T20:26:31.8506709+00:00
+MUTATION_GOLD=777
+READY
+LIVE_FILES_BEFORE_FORCE_STOP=
+
+FullName         : C:\Users\luo\.codex\worktrees\p3-db04-restore-drill-20260810\TestResults\DB04-real-drill-9d67c0b55cf
+                   c4aee9dfe6fcae144e44c\live\server.db
+Length           : 675840
+LastWriteTimeUtc : 2026/8/9 20:26:31
+
+FullName         : C:\Users\luo\.codex\worktrees\p3-db04-restore-drill-20260810\TestResults\DB04-real-drill-9d67c0b55cf
+                   c4aee9dfe6fcae144e44c\live\server.db-wal
+Length           : 4152
+LastWriteTimeUtc : 2026/8/9 20:26:31
+
+FullName         : C:\Users\luo\.codex\worktrees\p3-db04-restore-drill-20260810\TestResults\DB04-real-drill-9d67c0b55cf
+                   c4aee9dfe6fcae144e44c\live\server.db-shm
+Length           : 32768
+LastWriteTimeUtc : 2026/8/9 20:26:31
+
+FAULT_UTC=2026-08-09T20:26:31.8819988+00:00
+COMMAND=Stop-Process -Id 1156 -Force
+HOLD_PROCESS_EXITED=True
+LIVE_FILES_AFTER_FORCE_STOP=
+
+FullName         : C:\Users\luo\.codex\worktrees\p3-db04-restore-drill-20260810\TestResults\DB04-real-drill-9d67c0b55cf
+                   c4aee9dfe6fcae144e44c\live\server.db
+Length           : 675840
+LastWriteTimeUtc : 2026/8/9 20:26:31
+
+FullName         : C:\Users\luo\.codex\worktrees\p3-db04-restore-drill-20260810\TestResults\DB04-real-drill-9d67c0b55cf
+                   c4aee9dfe6fcae144e44c\live\server.db-wal
+Length           : 4152
+LastWriteTimeUtc : 2026/8/9 20:26:31
+
+FullName         : C:\Users\luo\.codex\worktrees\p3-db04-restore-drill-20260810\TestResults\DB04-real-drill-9d67c0b55cf
+                   c4aee9dfe6fcae144e44c\live\server.db-shm
+Length           : 32768
+LastWriteTimeUtc : 2026/8/9 20:26:31
+
+
+Path : C:\Users\luo\.codex\worktrees\p3-db04-restore-drill-20260810\TestResults\DB04-real-drill-9d67c0b55cfc4aee9dfe6fc
+       ae144e44c\live\server.db
+Hash : 8CD4C484055A1DE627010ED13972CFC84BA1732D88E45026305F9D6C3AA006DF
+
+Path : C:\Users\luo\.codex\worktrees\p3-db04-restore-drill-20260810\TestResults\DB04-real-drill-9d67c0b55cfc4aee9dfe6fc
+       ae144e44c\live\server.db-wal
+Hash : B61A0843BF5BF25149879A3C1E8DC43DA956CFC2A2907C43B9A480D89A20DEE9
+
+Path : C:\Users\luo\.codex\worktrees\p3-db04-restore-drill-20260810\TestResults\DB04-real-drill-9d67c0b55cfc4aee9dfe6fc
+       ae144e44c\live\server.db-shm
+Hash : E68D6075A029E8602F059259C10069AD5513E4115B55FD8C4CAB9916DF874F76
+
+RESTORE_START_UTC=2026-08-09T20:26:31.9043925+00:00
+COMMAND=dotnet <formal-Server.dll> --restore-sqlite <DB03-local-backup> --target <live-db>
+SQLite恢复成功：目标=C:\Users\luo\.codex\worktrees\p3-db04-restore-drill-20260810\TestResults\DB04-real-drill-9d67c0b55cfc4aee9dfe6fcae144e44c\live\server.db；耗时=101ms；回滚=C:\Users\luo\.codex\worktrees\p3-db04-restore-drill-20260810\TestResults\DB04-real-drill-9d67c0b55cfc4aee9dfe6fcae144e44c\live\server.db.pre-restore-20260809202632022-512f0a0f
+RESTORE_CLI_EXIT_CODE=0
+COMMAND=dotnet <helper> verify <restored-live-db> <isolated-output-root>
+VERIFIED_UTC=2026-08-09T20:26:32.4217316+00:00
+INTEGRITY=ok
+ACCOUNT=db04-account;GOLD=100
+CHARACTER=DB04Character;LEVEL=38
+GUILD=DB04Guild;GOLD=4567
+CONQUEST=DB04Conquest;OWNER=43001;GOLD=8910
+GOODS=C:\Users\luo\.codex\worktrees\p3-db04-restore-drill-20260810\TestResults\DB04-real-drill-9d67c0b55cfc4aee9dfe6fcae144e44c\verify-output\Envir\Goods\45001.msd;BYTES=16
+SERVICE_STATE=Ready
+VERIFY_EXIT_CODE=0
+RESTORED_FILE=
+
+FullName         : C:\Users\luo\.codex\worktrees\p3-db04-restore-drill-20260810\TestResults\DB04-real-drill-9d67c0b55cf
+                   c4aee9dfe6fcae144e44c\live\server.db
+Length           : 684032
+LastWriteTimeUtc : 2026/8/9 20:26:32
+
+
+Path : C:\Users\luo\.codex\worktrees\p3-db04-restore-drill-20260810\TestResults\DB04-real-drill-9d67c0b55cfc4aee9dfe6fc
+       ae144e44c\live\server.db
+Hash : A07F83B2AD63382B701089A406F5CD4E14269E637B44A4EF3CB6A7245C83A3A1
+
+Path : C:\Users\luo\.codex\worktrees\p3-db04-restore-drill-20260810\TestResults\DB04-real-drill-9d67c0b55cfc4aee9dfe6fc
+       ae144e44c\backup-local\lyocrystal-sqlite-20260809-202631-548-000001-ab38577c348643f1bca3425b6b767555.db
+Hash : 99BCCCC54FA82C56C8B632A3E49D3055F0A074621EF764C62FE0FB9F5FE2D69C
+
+READY_UTC=2026-08-09T20:26:32.5067024+00:00
+RPO_MILLISECONDS=303
+RTO_RESTORE_TO_READY_MILLISECONDS=600
+RTO_FAULT_TO_READY_MILLISECONDS=625
+DATA_LOSS_PROOF=故障前已提交 GOLD=777；恢复后 GOLD=100，恢复点为最后成功 DB03 备份
+DRILL_RESULT=PASS
+**********************
+PowerShell transcript end
+End time: 20260810042632
+**********************

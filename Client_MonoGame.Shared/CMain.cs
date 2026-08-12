@@ -162,6 +162,7 @@ namespace MonoShare
             private const int MobileLogMaxLinesPerFlush = 200;
 
             private static readonly object _mobileLogWriterGate = new object();
+            private static readonly object _mobileLogFlushGate = new object();
             private static bool _mobileLogWriterStarted;
             private static readonly AutoResetEvent _mobileLogWakeup = new AutoResetEvent(false);
             private static readonly ConcurrentQueue<string> _mobileRuntimeLogQueue = new ConcurrentQueue<string>();
@@ -1787,6 +1788,8 @@ namespace MonoShare
 	                    try
 	                    {
 	                        SaveError($"UnhandledException: {args.ExceptionObject}");
+	                        MobileCrashDiagnostics.Capture(args.ExceptionObject as Exception ??
+	                            new InvalidOperationException("移动客户端发生未知未处理异常"));
 	                    }
 	                    catch
 	                    {
@@ -1865,35 +1868,53 @@ namespace MonoShare
 
             private static bool FlushMobileLogQueue(ConcurrentQueue<string> queue, ref int counter, string logPath)
             {
-                if (queue == null || queue.IsEmpty)
-                    return false;
-
-                var builder = new StringBuilder(4 * 1024);
-                int flushed = 0;
-
-                while (flushed < MobileLogMaxLinesPerFlush && queue.TryDequeue(out string line))
+                lock (_mobileLogFlushGate)
                 {
-                    Interlocked.Decrement(ref counter);
-                    builder.AppendLine(line);
-                    flushed++;
-                }
+                    if (queue == null || queue.IsEmpty)
+                        return false;
 
-                if (flushed <= 0)
-                    return false;
+                    var builder = new StringBuilder(4 * 1024);
+                    int flushed = 0;
 
-                try
-                {
-                    lock (_errorLogLock)
+                    while (flushed < MobileLogMaxLinesPerFlush && queue.TryDequeue(out string line))
                     {
-                        Directory.CreateDirectory(Path.GetDirectoryName(logPath) ?? ClientResourceLayout.RuntimeRoot);
-                        File.AppendAllText(logPath, builder.ToString(), Utf8NoBom);
+                        Interlocked.Decrement(ref counter);
+                        builder.AppendLine(line);
+                        flushed++;
                     }
+
+                    if (flushed <= 0)
+                        return false;
+
+                    try
+                    {
+                        lock (_errorLogLock)
+                        {
+                            Directory.CreateDirectory(Path.GetDirectoryName(logPath) ?? ClientResourceLayout.RuntimeRoot);
+                            File.AppendAllText(logPath, builder.ToString(), Utf8NoBom);
+                        }
+                    }
+                    catch
+                    {
+                    }
+
+                    return true;
                 }
-                catch
+            }
+
+            internal static void FlushCrashDiagnosticLogs()
+            {
+                for (int i = 0; i < 20 && FlushMobileLogQueue(
+                         _mobileRuntimeLogQueue, ref _mobileRuntimeLogQueueCount,
+                         Path.Combine(ClientResourceLayout.RuntimeRoot, "MobileRuntime.log")); i++)
                 {
                 }
 
-                return true;
+                for (int i = 0; i < 20 && FlushMobileLogQueue(
+                         _mobileErrorLogQueue, ref _mobileErrorLogQueueCount,
+                         Path.Combine(ClientResourceLayout.RuntimeRoot, "MobileErrors.log")); i++)
+                {
+                }
             }
 	    }
 }

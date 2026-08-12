@@ -1,0 +1,222 @@
+**********************
+PowerShell transcript start
+Start time: 20260810173208
+Username: DESKTOP-4J13TH0\luo
+RunAs User: DESKTOP-4J13TH0\luo
+Configuration Name:
+Machine: DESKTOP-4J13TH0 (Microsoft Windows NT 10.0.19045.0)
+Host Application: C:\Program Files\PowerShell\7\pwsh.dll -Command try { [Console]::OutputEncoding=[System.Text.Encoding]::UTF8 } catch {}
+& 'C:\Users\luo\AppData\Local\Temp\release03-device-resume.ps1'
+Process ID: 12368
+PSVersion: 7.4.7
+PSEdition: Core
+GitCommitId: 7.4.7
+OS: Microsoft Windows 10.0.19045
+Platform: Win32NT
+PSCompatibleVersions: 1.0, 2.0, 3.0, 4.0, 5.0, 5.1, 6.0, 7.0
+PSRemotingProtocolVersion: 2.3
+SerializationVersion: 1.1.0.1
+WSManStackVersion: 3.0
+**********************
+START_UTC=2026-08-10T09:32:08.8803325Z
+COMMAND: adb devices -l
+
+EXIT=0
+COMMAND: adb shell getprop ro.product.model
+
+EXIT=0
+COMMAND: adb shell getprop ro.build.version.sdk
+
+EXIT=0
+COMMAND: adb shell getprop ro.product.cpu.abilist
+
+EXIT=0
+COMMAND: adb shell am force-stop com.lommir.client.monogame.android
+
+EXIT=0
+COMMAND: adb shell pm clear com.lommir.client.monogame.android
+
+EXIT=0
+COMMAND: adb reverse tcp:7000 tcp:7000
+
+EXIT=0
+COMMAND: adb reverse tcp:7777 tcp:7777
+
+EXIT=0
+COMMAND: adb reverse tcp:18443 tcp:18444
+
+EXIT=0
+COMMAND: adb shell am start -W -n com.lommir.client.monogame.android/crc648e1c27e8d74093fe.MainActivity
+
+EXIT=0
+COMMAND: adb shell sed -i 's|^PackageRepo=.*|PackageRepo=http://127.0.0.1:18443/releases/release02-20260810-r3/resources/|' '/data/user/0/com.lommir.client.monogame.android/files/Cache/Mobile/Runtime/Mir2Config.ini'
+
+EXIT=0
+COMMAND: adb shell chown 10052:10052 '/data/user/0/com.lommir.client.monogame.android/files/Cache/Mobile/Runtime/Mir2Config.ini'
+
+EXIT=0
+COMMAND: adb shell am force-stop com.lommir.client.monogame.android
+
+EXIT=0
+COMMAND: adb shell am start -W -n com.lommir.client.monogame.android/crc648e1c27e8d74093fe.MainActivity
+
+EXIT=0
+PART_BEFORE_INTERRUPT_PATH=/data/user/0/com.lommir.client.monogame.android/files/Cache/Mobile/Downloads/Packages/core-startup.zip.part
+PART_BEFORE_INTERRUPT_BYTES=1638400
+COMMAND: adb reverse --remove tcp:18443
+
+EXIT=0
+COMMAND: adb shell am force-stop com.lommir.client.monogame.android
+
+EXIT=0
+PART_WHILE_STOPPED_BYTES=7995392
+COMMAND: adb reverse tcp:18443 tcp:18444
+
+EXIT=0
+COMMAND: adb shell am start -W -n com.lommir.client.monogame.android/crc648e1c27e8d74093fe.MainActivity
+
+EXIT=0
+PART_AFTER_RESTART_BYTES=36896768
+**********************
+PowerShell transcript start
+Start time: 20260810173437
+Username: DESKTOP-4J13TH0\luo
+RunAs User: DESKTOP-4J13TH0\luo
+Configuration Name:
+Machine: DESKTOP-4J13TH0 (Microsoft Windows NT 10.0.19045.0)
+Host Application: C:\Program Files\PowerShell\7\pwsh.dll -Command try { [Console]::OutputEncoding=[System.Text.Encoding]::UTF8 } catch {}
+& 'C:\Users\luo\AppData\Local\Temp\release03-device-finalize.ps1'; Get-Item Docs/Evidence/GATE-P5/release03-android-20260810/device-resume-transcript.txt | Select-Object Length
+Process ID: 22284
+PSVersion: 7.4.7
+PSEdition: Core
+GitCommitId: 7.4.7
+OS: Microsoft Windows 10.0.19045
+Platform: Win32NT
+PSCompatibleVersions: 1.0, 2.0, 3.0, 4.0, 5.0, 5.1, 6.0, 7.0
+PSRemotingProtocolVersion: 2.3
+SerializationVersion: 1.1.0.1
+WSManStackVersion: 3.0
+**********************
+CONTINUE_UTC=2026-08-10T09:34:37.9010249Z
+COMMAND: curl.exe -H Range:bytes=5-14 <signed-index>
+
+EXIT=0
+COMMAND: adb reverse tcp:7000 tcp:7000
+
+EXIT=0
+COMMAND: adb reverse tcp:7777 tcp:7777
+
+EXIT=0
+COMMAND: adb reverse tcp:18443 tcp:18444
+
+EXIT=0
+COMMAND: adb shell am start -W -n com.lommir.client.monogame.android/crc648e1c27e8d74093fe.MainActivity
+
+EXIT=0
+COMMAND: adb shell cat '/data/user/0/com.lommir.client.monogame.android/files/Cache/Mobile/Runtime/BootstrapDownloadState.json'
+
+EXIT=0
+COMMAND: adb shell cat '/data/user/0/com.lommir.client.monogame.android/files/Cache/Mobile/Runtime/BootstrapPackageUpdateQueue.json'
+
+EXIT=0
+COMMAND: adb shell cat '/data/user/0/com.lommir.client.monogame.android/files/Cache/Mobile/Runtime/BootstrapPackageVersions.json'
+
+EXIT=0
+COMMAND: adb shell find '/data/user/0/com.lommir.client.monogame.android/files/Cache/Mobile/BundleInbox/Processed' -mindepth 1 -maxdepth 1 -type d -print | sort
+
+EXIT=0
+COMMAND: adb shell grep '^PackageRepo=' '/data/user/0/com.lommir.client.monogame.android/files/Cache/Mobile/Runtime/Mir2Config.ini'
+
+EXIT=0
+COMMAND: adb shell grep -E '握手通过|FATAL|Unhandled' '/data/user/0/com.lommir.client.monogame.android/files/Cache/Mobile/Runtime/MobileRuntime.log' '/data/user/0/com.lommir.client.monogame.android/files/Cache/Mobile/Runtime/MobileErrors.log' 2>/dev/null || true
+
+EXIT=0
+COMMAND: adb shell dumpsys activity activities | grep mResumedActivity | head -n 1
+
+EXIT=0
+END_UTC=2026-08-10T09:34:39.9948010Z
+RESULT=PASS
+**********************
+PowerShell transcript end
+End time: 20260810173439
+**********************
+RAW_OUTPUT_SUPPLEMENT_START
+START_UTC=2026-08-10T09:51:32.5535059Z
+COMMAND: curl.exe -i -H Range:bytes=5-14 http://127.0.0.1:18444/releases/release02-20260810-r3/resources/Packages/bootstrap-package-index.signed.json
+HTTP/1.1 206 Partial Content
+Content-Length: 10
+Content-Type: application/octet-stream
+Content-Range: bytes 5-14/40851
+Accept-Ranges: bytes
+Server: Microsoft-HTTPAPI/2.0
+Date: Mon, 10 Aug 2026 09:51:33 GMT
+
+"Format":
+CURL_EXIT=0
+COMMAND: adb devices -l
+List of devices attached
+127.0.0.1:21503        device product:ASUS_AI2401_A model:ASUS_AI2401_A device:ASUS_AI2401_A transport_id:85
+ADB_DEVICES_EXIT=0
+COMMAND: adb shell getprop ro.product.model
+ASUS_AI2401_A
+COMMAND: adb shell getprop ro.build.version.sdk
+28
+COMMAND: adb shell getprop ro.product.cpu.abilist
+x86_64,arm64-v8a,x86,armeabi-v7a,armeabi
+COMMAND: adb shell cat /data/user/0/com.lommir.client.monogame.android/files/Cache/Mobile/Runtime/BootstrapDownloadState.json
+{
+  "GeneratedAtUtc": "2026-08-10T09:50:09.4565778Z",
+  "AutoDownloadEnabled": true,
+  "DownloadReady": true,
+  "UseMicroAuth": false,
+  "RepositoryRoot": "http://127.0.0.1:18443/releases/release02-20260810-r3/resources/",
+  "RepositorySource": "PackageRepo",
+  "ActivePackageName": "",
+  "ActiveStage": "",
+  "ActiveBytesReceived": 0,
+  "ActiveTotalBytes": 0,
+  "LastError": "",
+  "PendingPackageCount": 0,
+  "PendingPackagesSample": [],
+  "Packages": []
+}
+DOWNLOAD_STATE_EXIT=0
+COMMAND: adb shell cat /data/user/0/com.lommir.client.monogame.android/files/Cache/Mobile/Runtime/BootstrapPackageUpdateQueue.json
+{
+  "CreatedAtUtc": "2026-08-10T09:49:49.3566643Z",
+  "ResourceVersion": "content-842fdd44432f7b696ad95e3cd2b907e174c7a2a868c8d5f3ede3185ced9bc48a",
+  "Packages": []
+}
+UPDATE_QUEUE_EXIT=0
+COMMAND: adb shell cat /data/user/0/com.lommir.client.monogame.android/files/Cache/Mobile/Runtime/BootstrapPackageVersions.json
+{
+  "GeneratedAtUtc": "2026-08-10T09:32:50.5983366Z",
+  "Packages": [
+    {
+      "Name": "core-startup",
+      "Sha256": "f1321e74a53bd4cde040c399403ba09025432a3e1905e48e63a2b3f8bac77a46",
+      "Source": "signed-release",
+      "InstalledAtUtc": "2026-08-10T09:32:50.5983366Z"
+    },
+    {
+      "Name": "fui-retro",
+      "Sha256": "1b090df55e5f1b05a98093baaba6347a557691e2fc612f5cf195903139ea5f4b",
+      "Source": "signed-release",
+      "InstalledAtUtc": "2026-08-10T09:32:50.5983366Z"
+    }
+  ]
+}
+VERSIONS_EXIT=0
+COMMAND: adb shell find /data/user/0/com.lommir.client.monogame.android/files/Cache/Mobile/BundleInbox/Processed -mindepth 1 -maxdepth 1 -type d -print | sort
+/data/user/0/com.lommir.client.monogame.android/files/Cache/Mobile/BundleInbox/Processed/20260810_093242_core-startup_release-applied_20260810_093306
+/data/user/0/com.lommir.client.monogame.android/files/Cache/Mobile/BundleInbox/Processed/20260810_093248_fui-retro_release-applied_20260810_093306
+PROCESSED_EXIT=0
+COMMAND: adb shell grep '^PackageRepo=' /data/user/0/com.lommir.client.monogame.android/files/Cache/Mobile/Runtime/Mir2Config.ini
+PackageRepo=http://127.0.0.1:18443/releases/release02-20260810-r3/resources/
+PACKAGE_REPO_EXIT=0
+COMMAND: adb shell dumpsys activity activities | grep mResumedActivity | head -n 1
+    mResumedActivity: ActivityRecord{b1cee8b u0 com.lommir.client.monogame.android/crc648e1c27e8d74093fe.MainActivity t77}
+RESUMED_EXIT=0
+END_UTC=2026-08-10T09:51:34.4192450Z
+RESULT=PASS
+RAW_OUTPUT_SUPPLEMENT_END

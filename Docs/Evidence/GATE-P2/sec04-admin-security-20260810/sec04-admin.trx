@@ -1,0 +1,52 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="978c7653-ef63-445b-ba7b-d22780269efd" name="luo@DESKTOP-4J13TH0 2026-08-10 00:43:36" runUser="DESKTOP-4J13TH0\luo" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-08-10T00:43:36.7818597+08:00" queuing="2026-08-10T00:43:36.7818601+08:00" start="2026-08-10T00:43:34.7425236+08:00" finish="2026-08-10T00:43:36.8208781+08:00" />
+  <TestSettings name="default" id="db59f552-64e8-4b01-919e-531a464db041">
+    <Deployment runDeploymentRoot="luo_DESKTOP-4J13TH0_2026-08-10_00_43_36" />
+  </TestSettings>
+  <Results>
+    <UnitTestResult executionId="b63e4d11-888d-43ba-8d50-b32fb38e9d3a" testId="22678f19-f1cc-fd11-52a6-f5dc3a6052d7" testName="Base05.Tests.AdminSecurityTests.真实管理端点拒绝缺失错误及越权凭据" computerName="DESKTOP-4J13TH0" duration="00:00:01.1323224" startTime="2026-08-10T00:43:35.5798843+08:00" endTime="2026-08-10T00:43:36.7156898+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="b63e4d11-888d-43ba-8d50-b32fb38e9d3a" />
+    <UnitTestResult executionId="9fab3b61-59a2-45d7-ab38-f6907f06b5ba" testId="d6fe1e6b-883b-2d05-22ca-16451d531a9e" testName="Base05.Tests.AdminSecurityTests.管理监听仅允许回环明文或内网HTTPS" computerName="DESKTOP-4J13TH0" duration="00:00:00.0119243" startTime="2026-08-10T00:43:35.5336333+08:00" endTime="2026-08-10T00:43:35.5547703+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="9fab3b61-59a2-45d7-ab38-f6907f06b5ba" />
+    <UnitTestResult executionId="1f58fa2c-dbf0-450f-92fd-86d154051000" testId="c63acc6b-85ad-cfb9-6342-0fb769fa6dc7" testName="Base05.Tests.AdminSecurityTests.独立令牌映射角色且操作员不能执行高权限操作" computerName="DESKTOP-4J13TH0" duration="00:00:00.0046363" startTime="2026-08-10T00:43:35.5757715+08:00" endTime="2026-08-10T00:43:35.5796909+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="1f58fa2c-dbf0-450f-92fd-86d154051000" />
+    <UnitTestResult executionId="84d85424-0912-420e-b9c7-be2ef5c6ca82" testId="5908d694-6774-0663-776e-45b113d73c7c" testName="Base05.Tests.AdminSecurityTests.管理审计只记录动作角色来源与结果" computerName="DESKTOP-4J13TH0" duration="00:00:00.0197224" startTime="2026-08-10T00:43:35.5659442+08:00" endTime="2026-08-10T00:43:35.5750069+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="84d85424-0912-420e-b9c7-be2ef5c6ca82" />
+  </Results>
+  <TestDefinitions>
+    <UnitTest name="Base05.Tests.AdminSecurityTests.真实管理端点拒绝缺失错误及越权凭据" storage="c:\users\luo\.codex\worktrees\p2-sec04-admin-security-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="22678f19-f1cc-fd11-52a6-f5dc3a6052d7">
+      <Execution id="b63e4d11-888d-43ba-8d50-b32fb38e9d3a" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p2-sec04-admin-security-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.AdminSecurityTests" name="真实管理端点拒绝缺失错误及越权凭据" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.AdminSecurityTests.独立令牌映射角色且操作员不能执行高权限操作" storage="c:\users\luo\.codex\worktrees\p2-sec04-admin-security-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="c63acc6b-85ad-cfb9-6342-0fb769fa6dc7">
+      <Execution id="1f58fa2c-dbf0-450f-92fd-86d154051000" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p2-sec04-admin-security-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.AdminSecurityTests" name="独立令牌映射角色且操作员不能执行高权限操作" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.AdminSecurityTests.管理监听仅允许回环明文或内网HTTPS" storage="c:\users\luo\.codex\worktrees\p2-sec04-admin-security-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="d6fe1e6b-883b-2d05-22ca-16451d531a9e">
+      <Execution id="9fab3b61-59a2-45d7-ab38-f6907f06b5ba" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p2-sec04-admin-security-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.AdminSecurityTests" name="管理监听仅允许回环明文或内网HTTPS" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.AdminSecurityTests.管理审计只记录动作角色来源与结果" storage="c:\users\luo\.codex\worktrees\p2-sec04-admin-security-20260810\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="5908d694-6774-0663-776e-45b113d73c7c">
+      <Execution id="84d85424-0912-420e-b9c7-be2ef5c6ca82" />
+      <TestMethod codeBase="C:\Users\luo\.codex\worktrees\p2-sec04-admin-security-20260810\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.AdminSecurityTests" name="管理审计只记录动作角色来源与结果" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestEntries>
+    <TestEntry testId="22678f19-f1cc-fd11-52a6-f5dc3a6052d7" executionId="b63e4d11-888d-43ba-8d50-b32fb38e9d3a" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="d6fe1e6b-883b-2d05-22ca-16451d531a9e" executionId="9fab3b61-59a2-45d7-ab38-f6907f06b5ba" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="c63acc6b-85ad-cfb9-6342-0fb769fa6dc7" executionId="1f58fa2c-dbf0-450f-92fd-86d154051000" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="5908d694-6774-0663-776e-45b113d73c7c" executionId="84d85424-0912-420e-b9c7-be2ef5c6ca82" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+  </TestEntries>
+  <TestLists>
+    <TestList name="列表中未列出的结果" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="所有已加载的结果" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Completed">
+    <Counters total="4" executed="4" passed="4" failed="0" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <Output>
+      <StdOut>[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.0.2+dd36e86129 (64-bit .NET 10.0.4)&#xD;
+[xUnit.net 00:00:00.12]   Discovering: Base05.Tests&#xD;
+[xUnit.net 00:00:00.19]   Discovered:  Base05.Tests&#xD;
+[xUnit.net 00:00:00.22]   Starting:    Base05.Tests&#xD;
+[xUnit.net 00:00:01.47]   Finished:    Base05.Tests&#xD;
+</StdOut>
+    </Output>
+  </ResultSummary>
+</TestRun>

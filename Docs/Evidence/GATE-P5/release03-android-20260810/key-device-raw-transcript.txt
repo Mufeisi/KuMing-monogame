@@ -1,0 +1,164 @@
+**********************
+PowerShell transcript start
+Start time: 20260810173457
+Username: DESKTOP-4J13TH0\luo
+RunAs User: DESKTOP-4J13TH0\luo
+Configuration Name:
+Machine: DESKTOP-4J13TH0 (Microsoft Windows NT 10.0.19045.0)
+Host Application: C:\Program Files\PowerShell\7\pwsh.dll -NoProfile -File C:\Users\luo\AppData\Local\Temp\release03-key-device-proof.ps1
+Process ID: 24056
+PSVersion: 7.4.7
+PSEdition: Core
+GitCommitId: 7.4.7
+OS: Microsoft Windows 10.0.19045
+Platform: Win32NT
+PSCompatibleVersions: 1.0, 2.0, 3.0, 4.0, 5.0, 5.1, 6.0, 7.0
+PSRemotingProtocolVersion: 2.3
+SerializationVersion: 1.1.0.1
+WSManStackVersion: 3.0
+**********************
+START_UTC=2026-08-10T09:34:57.0583771Z
+COMMAND: ReleaseSigningTool export-android-recovery <生产keystore> <生产口令DPAPI> android-apk-2026 lyocrystal-release-2026 <离线恢复包>
+Android 签签名名恢恢复复包包已已加加密密导导出出：：Purpose=android-apk-2026；；Alias=lyocrystal-release-2026。。
+EXPORT_EXIT=0
+COMMAND: ReleaseSigningTool import-android-recovery <恢复包>（错误口令，预期退出2）
+The computed authentication tag did not match the input authentication tag.
+WRONG_PASSPHRASE_EXIT=2
+COMMAND: ReleaseSigningTool import-android-recovery <恢复包>（正确口令）
+Android 签签名名材材料料已已恢恢复复并并重重新新受受当当前前 Windows 用用户户保保护护：：Purpose=android-apk-2026；；Alias=lyocrystal-release-2026。。
+IMPORT_EXIT=0
+SOURCE_KEYSTORE_SHA256=03DF82B95357ABFB2BA755CD1865F167B1C2C9B2208BB1C7A0F927E29B87C8AB
+RESTORED_KEYSTORE_SHA256=03DF82B95357ABFB2BA755CD1865F167B1C2C9B2208BB1C7A0F927E29B87C8AB
+KEYSTORE_HASH_MATCH=True
+COMMAND: ReleaseSigningTool publish-signed-android <Android项目> <恢复keystore> <恢复口令DPAPI> android-apk-2026 lyocrystal-release-2026 <构建日志>
+Android 独独立立 keystore Release 签签名名构构建建完完成成；；口口令令未未写写入入命命令令或或日日志志。。
+PUBLISH_EXIT=0
+FINAL_APK=C:\Users\luo\.codex\worktrees\p5-release03-20260810\Client_MonoGame.Android\bin\Release\net10.0-android\android-arm64\publish\com.lommir.client.monogame.android-Signed.apk
+FINAL_APK_SIZE=89483872
+FINAL_APK_SHA256=E8E0F27EA5477D1753323705A0FAEFD84C5517ED33FABA872F439AA3CBDA24E2
+COMMAND: apksigner verify --verbose --print-certs <最终APK>
+Exception in thread "main" java.lang.UnsupportedClassVersionError: com/android/apksigner/ApkSignerTool : Unsupported maj
+or.minor version 52.0
+        at java.lang.ClassLoader.defineClass1(Native Method)
+        at java.lang.ClassLoader.defineClass(Unknown Source)
+        at java.security.SecureClassLoader.defineClass(Unknown Source)
+        at java.net.URLClassLoader.defineClass(Unknown Source)
+        at java.net.URLClassLoader.access$100(Unknown Source)
+        at java.net.URLClassLoader$1.run(Unknown Source)
+        at java.net.URLClassLoader$1.run(Unknown Source)
+        at java.security.AccessController.doPrivileged(Native Method)
+        at java.net.URLClassLoader.findClass(Unknown Source)
+        at java.lang.ClassLoader.loadClass(Unknown Source)
+        at sun.misc.Launcher$AppClassLoader.loadClass(Unknown Source)
+        at java.lang.ClassLoader.loadClass(Unknown Source)
+        at sun.launcher.LauncherHelper.checkAndLoadMain(Unknown Source)
+APKSIGNER_EXIT=1
+**********************
+PowerShell transcript end
+End time: 20260810173818
+**********************
+**********************
+PowerShell transcript start
+Start time: 20260810173855
+Username: DESKTOP-4J13TH0\luo
+RunAs User: DESKTOP-4J13TH0\luo
+Configuration Name:
+Machine: DESKTOP-4J13TH0 (Microsoft Windows NT 10.0.19045.0)
+Host Application: C:\Program Files\PowerShell\7\pwsh.dll -Command try { [Console]::OutputEncoding=[System.Text.Encoding]::UTF8 } catch {}
+& 'C:\Users\luo\AppData\Local\Temp\release03-key-device-finalize.ps1'; Get-Item Docs/Evidence/GATE-P5/release03-android-20260810/key-device-raw-transcript.txt | Select-Object Length
+Process ID: 11328
+PSVersion: 7.4.7
+PSEdition: Core
+GitCommitId: 7.4.7
+OS: Microsoft Windows 10.0.19045
+Platform: Win32NT
+PSCompatibleVersions: 1.0, 2.0, 3.0, 4.0, 5.0, 5.1, 6.0, 7.0
+PSRemotingProtocolVersion: 2.3
+SerializationVersion: 1.1.0.1
+WSManStackVersion: 3.0
+**********************
+CONTINUE_UTC=2026-08-10T09:49:33.1293940Z
+COMMAND: C:\Users\luo\AppData\Local\Android\Sdk\platform-tools\adb.exe devices -l
+List of devices attached
+127.0.0.1:21503        device product:ASUS_AI2401_A model:ASUS_AI2401_A device:ASUS_AI2401_A transport_id:85
+ADB_DEVICES_EXIT=0
+COMMAND: adb shell id
+uid=0(root) gid=0(root) groups=0(root),1004(input),1007(log),1011(adb),1015(sdcard_rw),1028(sdcard_r),3001(net_bt_admin),3002(net_bt),3003(inet),3006(net_bw_stats),3009(readproc),3011(uhid)
+ADB_ID_EXIT=0
+COMMAND: adb shell mkdir -p /data/user/0/com.lommir.client.monogame.android/files && echo before-upgrade-20260810 > /data/user/0/com.lommir.client.monogame.android/files/release03-upgrade-marker.txt
+MARKER_WRITE_EXIT=0
+COMMAND: adb install -r <最终APK>
+Performing Streamed Install
+Success
+ADB_INSTALL_EXIT=0
+COMMAND: adb shell cat /data/user/0/com.lommir.client.monogame.android/files/release03-upgrade-marker.txt
+before-upgrade-20260810
+MARKER_READ_EXIT=0
+COMMAND: adb shell dumpsys package com.lommir.client.monogame.android | grep -E 'versionCode=|versionName=|minSdk='
+    versionCode=20000 minSdk=24 targetSdk=36
+    versionName=2.0.0
+PACKAGE_INFO_EXIT=0
+COMMAND: adb shell am start -W -n com.lommir.client.monogame.android/crc648e1c27e8d74093fe.MainActivity
+Starting: Intent { cmp=com.lommir.client.monogame.android/crc648e1c27e8d74093fe.MainActivity }
+Status: ok
+Activity: com.lommir.client.monogame.android/crc648e1c27e8d74093fe.MainActivity
+Complete
+START_ACTIVITY_EXIT=0
+COMMAND: adb shell dumpsys activity activities | grep mResumedActivity
+    mResumedActivity: ActivityRecord{b1cee8b u0 com.lommir.client.monogame.android/crc648e1c27e8d74093fe.MainActivity t77}
+RESUMED_INITIAL_EXIT=0
+COMMAND: adb shell input keyevent HOME
+    mResumedActivity: ActivityRecord{277581c u0 com.microvirt.launcher2/com.microvirt.launcher.Launcher t2}
+HOME_EXIT=0
+COMMAND: adb shell am start -W -n com.lommir.client.monogame.android/crc648e1c27e8d74093fe.MainActivity
+Status: ok
+Activity: com.lommir.client.monogame.android/crc648e1c27e8d74093fe.MainActivity
+Complete
+    mResumedActivity: ActivityRecord{b1cee8b u0 com.lommir.client.monogame.android/crc648e1c27e8d74093fe.MainActivity t77}
+HOME_RESUME_EXIT=0
+COMMAND: adb shell input keyevent 26 && adb shell dumpsys power | grep mWakefulness
+  mWakefulness=Asleep
+  mWakefulnessChanging=false
+SLEEP_STATE_EXIT=0
+COMMAND: adb shell input keyevent 26; adb shell wm dismiss-keyguard; adb shell am start -W -n <Activity>
+Status: ok
+Activity: com.lommir.client.monogame.android/crc648e1c27e8d74093fe.MainActivity
+Complete
+    mResumedActivity: ActivityRecord{b1cee8b u0 com.lommir.client.monogame.android/crc648e1c27e8d74093fe.MainActivity t77}
+LOCK_RESUME_EXIT=0
+COMMAND: adb shell wm size
+Physical size: 1600x900
+COMMAND: adb shell wm size 1280x720
+Physical size: 1600x900
+Override size: 1280x720
+    mResumedActivity: ActivityRecord{b1cee8b u0 com.lommir.client.monogame.android/crc648e1c27e8d74093fe.MainActivity t77}
+RESOLUTION_ACTIVE_EXIT=0
+COMMAND: adb shell wm size reset
+Physical size: 1600x900
+RESOLUTION_RESET_EXIT=0
+END_UTC=2026-08-10T09:49:59.0144940Z
+COMMAND: C:\Users\luo\AppData\Local\Android\Sdk\build-tools\36.1.0\apksigner.bat verify --verbose --print-certs <最终APK>（Android OpenJDK 21）
+Verifies
+Verified using v1 scheme (JAR signing): false
+Verified using v2 scheme (APK Signature Scheme v2): true
+Verified using v3 scheme (APK Signature Scheme v3): true
+Verified using v3.1 scheme (APK Signature Scheme v3.1): false
+Verified using v4 scheme (APK Signature Scheme v4): false
+Verified for SourceStamp: false
+Number of signers: 1
+Signer #1 certificate DN: CN=LyoCrystal Release, OU=Release, O=LyoCrystal, C=CN
+Signer #1 certificate SHA-256 digest: 2d9f4b2e165407f7e781146f4cf0323aab9980b185c0002fd328ec89ec3bd670
+Signer #1 certificate SHA-1 digest: 61bcfb3801b1214b325c6d64b8f1c2fb4b2fb35e
+Signer #1 certificate MD5 digest: 1ed957fc15b3fa32e56693a6962a6d70
+Signer #1 key algorithm: RSA
+Signer #1 key size (bits): 4096
+Signer #1 public key SHA-256 digest: 41f7d37c240a309e2d6145a00df91bc319dd739f6e6cfb162af62319b1429347
+Signer #1 public key SHA-1 digest: d98ba115473ceb1380472dc933047cbcafff6979
+Signer #1 public key MD5 digest: 8eae2dce2fa87eb825598be10783fd57
+APKSIGNER_EXIT=0
+APKSIGNER_END_UTC=2026-08-10T09:50:17.6498115Z
+RESULT=PASS
+**********************
+PowerShell transcript end
+End time: 20260810173919
+**********************

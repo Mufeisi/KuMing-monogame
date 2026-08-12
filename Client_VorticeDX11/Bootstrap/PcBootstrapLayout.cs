@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using Shared.Release;
 
 namespace Client.Bootstrap
 {
@@ -35,6 +36,8 @@ namespace Client.Bootstrap
         public static string VersionsPath => Path.Combine(RuntimeRoot, "BootstrapPackageVersions.json");
         public static string UpdateQueuePath => Path.Combine(RuntimeRoot, "BootstrapPackageUpdateQueue.json");
         public static string RemoteIndexCachePath => Path.Combine(RuntimeRoot, "BootstrapRemotePackageIndex.json");
+        public static string ManifestSecurityStatePath => Path.Combine(RuntimeRoot, "BootstrapManifestSecurityState.json");
+        public static Version ClientCompatibilityVersion { get; } = new Version(1, 0, 0);
 
         public static string PreLoginUpdateLogPath => Path.Combine(RuntimeRoot, "BootstrapPreLoginUpdate.log");
 
@@ -55,6 +58,10 @@ namespace Client.Bootstrap
             {
                 Directory.CreateDirectory(directories[i]);
             }
+
+            TransactionalFileDeployment.RecoverIncomplete(
+                Path.Combine(BundleStagingRoot, "Transactions"),
+                new[] { ClientRoot });
         }
 
         private static string NormalizeRoot(string path)

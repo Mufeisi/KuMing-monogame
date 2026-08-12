@@ -1,0 +1,33 @@
+# SEC-05 配置秘密治理证据
+
+## 结论
+
+- Windows 服务端秘密使用 DPAPI `CurrentUser` 受保护存储，不写入 INI、日志或普通常驻环境变量。
+- CI/运维导入变量只用于本次进程导入，读取后立即清除；旧秘密环境变量触发迁移错误并失败关闭。
+- 正式启动在脚本、监听器和服务线程之前校验弱 GM 密码、秘密缺失以及公网或明文管理监听。
+- SEC-05 已完成；SEC-06 仍阻塞 GATE-P2。
+
+## 可执行证据
+
+- `sec05-security.trx`：SEC-05、TLS、管理安全与服务生命周期关联专项，`38/38` 通过。
+- `sec05-base05.trx`：Base05 全量，`249/249` 通过。
+- `dotnet build Server/Server.Library.csproj -c Release --no-restore`：0 错误。
+- `dotnet build Server.MirForms/Server.csproj -c Release --no-restore`：0 错误。
+- `git check-ignore -v --no-index Configs/ProtectedSecrets/example.dpapi`：命中 `**/Configs/ProtectedSecrets/`，生产密文不会被普通 Git 暂存收集。
+
+构建中的 NuGet 漏洞提示和既有可空性警告未由本任务引入，不属于 SEC-05 退出条件；已保留在后续依赖治理范围。
+
+## 覆盖范围
+
+- DPAPI 往返、密文文件不含明文、删除。
+- 历史 INI 秘密键严格删除并保留普通配置。
+- 短暂环境变量导入、进程内清除、受保护存储落地。
+- 默认/短 GM 密码、TLS 密码缺失、管理令牌缺失/过短、公网或明文管理监听失败关闭。
+- 完整受保护配置覆盖历史内存占位值。
+- `Envir.Start` 在线程启动前拒绝弱配置。
+
+## 边界
+
+- DPAPI 密文绑定 Windows 当前账号；迁移机器或运行账号后必须重新导入。
+- 清除只作用于当前服务进程的环境副本，CI 父进程或步骤必须在导入后结束并按平台规则清除秘密。
+- 本任务不实现 SEC-06 微端签名、不改客户端凭据存储、不扩大业务权限。

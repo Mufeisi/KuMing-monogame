@@ -1,0 +1,27 @@
+RELEASE-03 arm64 四态构建命令与退出码索引
+
+共同参数：
+dotnet publish Client_MonoGame.Android/Client_MonoGame.Android.csproj -f net10.0-android -r android-arm64 --no-restore -p:MobileBootstrapAssetMode=Micro -p:AndroidPackageFormat=apk -p:ArchiveOnBuild=false
+
+Debug（无 AOT、无 Trim）：
+- 附加参数：-c Debug -p:RunAOTCompilation=false -p:PublishTrimmed=false
+- EXIT=0
+- 原始输出：android-arm64-debug-build.log
+
+Release（无 AOT、无 Trim）：
+- 附加参数：-c Release -p:RunAOTCompilation=false -p:PublishTrimmed=false
+- EXIT=0
+- 原始输出：android-arm64-release-build.log
+
+Trim-only：
+- 附加参数：-c Release -p:RunAOTCompilation=false -p:PublishTrimmed=true
+- EXIT=0
+- 原始输出：android-arm64-trim-only-build.log
+
+AOT+Trim 正式签名：
+- 入口：ReleaseSigningTool publish-signed-android；内部固定 -c Release -p:RunAOTCompilation=true -p:PublishTrimmed=true 与环境变量口令接缝
+- EXIT=0
+- 原始构建输出：android-arm64-aot-trim-build.log
+- 恢复材料入口、退出码、APK 摘要及 apksigner 原始输出：key-device-raw-transcript.txt
+
+四份日志均以实际 dotnet 构建输出结束；最终 AOT 日志包含 107/107 AOT 条目。APK 摘要见 README.md。

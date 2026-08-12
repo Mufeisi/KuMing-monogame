@@ -2,6 +2,7 @@
 using Server.MirDatabase;
 using Server.MirEnvir;
 using Server.MirObjects;
+using Server.Security;
 
 namespace Server
 {
@@ -85,6 +86,22 @@ namespace Server
         public static bool StartHTTPService = false;
         public static string HTTPIPAddress = "http://127.0.0.1:7777/";
         public static string HTTPTrustedIPAddress = "127.0.0.1";
+        public static int OperationsTickP95WarningMilliseconds = 100;
+        public static int OperationsSaveP95WarningMilliseconds = 30000;
+        public static int OperationsNetworkQueueWarningDepth = 100;
+        public static int OperationsAlertCheckSeconds = 10;
+
+        //Login protection
+        public static int LoginAccountAttemptLimit = 30;
+        public static int LoginIpAttemptLimit = 120;
+        public static int LoginAttemptWindowSeconds = 60;
+        public static int LoginAccountFailureLimit = 6;
+        public static int LoginIpFailureLimit = 20;
+        public static int LoginFailureWindowSeconds = 300;
+        public static int LoginBaseBackoffMilliseconds = 500;
+        public static int LoginMaxBackoffSeconds = 30;
+        public static int LoginAccountBlockMinutes = 15;
+        public static int LoginIpBlockMinutes = 15;
 
         //Micro (资源微端)
         public static bool MicroServerActive = false;
@@ -134,7 +151,7 @@ namespace Server
         public static string AiScriptsApiBaseUrl = string.Empty;
         public static string AiScriptsModel = string.Empty;
         public static string AiScriptsApiKey = string.Empty;
-        public static string AiScriptsApiKeyEnvironmentVariable = "OPENAI_API_KEY";
+        public static string AiScriptsApiKeyEnvironmentVariable = string.Empty;
         public static int AiScriptsTimeoutSeconds = 60;
         public static int AiScriptsMaxRetries = 1;
         public static int AiScriptsRequestsPerMinute = 10;
@@ -167,6 +184,11 @@ namespace Server
         public static short CredxGold = 30;
         public static string DatabaseProvider = "Sqlite"; // Legacy|Sqlite|MySql
         public static string SqlitePath = @".\Data\server.db";
+        public static bool SqliteBackupEnabled = true;
+        public static string SqliteBackupDirectory = @".\Backups\SQLite";
+        public static string SqliteBackupOffsiteDirectory = string.Empty;
+        public static int SqliteBackupIntervalMinutes = 60;
+        public static int SqliteBackupRetentionCount = 48;
         public static string MySqlConnectionString = string.Empty;
 
         //MySQL（连接池/断线容灾）
@@ -437,12 +459,18 @@ namespace Server
         }
 
         public static void Load()
-        {            
+        {
+            // SEC-05：发现历史明文秘密时先从 INI 删除；写盘失败会阻止以不确定状态继续启动。
+            Reader.ClearKeys("General", "GMPassword");
+            Reader.ClearKeys("Micro", "MicroCode");
+            Reader.ClearKeys("AiScripts", "AiScriptsApiKey");
+            Reader.ClearKeys("Database", "MySqlConnectionString");
+
             //General
             VersionPath = Reader.ReadString("General", "VersionPath", VersionPath);
             CheckVersion = Reader.ReadBoolean("General", "CheckVersion", CheckVersion);
             RelogDelay = Reader.ReadUInt16("General", "RelogDelay", RelogDelay);
-            GMPassword = Reader.ReadString("General", "GMPassword", GMPassword);
+            GMPassword = string.Empty; // SEC-05：仅从受保护秘密存储读取。
             Multithreaded = Reader.ReadBoolean("General", "Multithreaded", Multithreaded);
             ThreadLimit = Reader.ReadInt32("General", "ThreadLimit", ThreadLimit);
             TestServer = Reader.ReadBoolean("General", "TestServer", TestServer);
@@ -479,12 +507,28 @@ namespace Server
             StartHTTPService = Reader.ReadBoolean("Network", "StartHTTPService", StartHTTPService);
             HTTPIPAddress = Reader.ReadString("Network", "HTTPIPAddress", HTTPIPAddress);
             HTTPTrustedIPAddress = Reader.ReadString("Network", "HTTPTrustedIPAddress", HTTPTrustedIPAddress);
+            OperationsTickP95WarningMilliseconds = Reader.ReadInt32("Operations", "TickP95WarningMilliseconds", OperationsTickP95WarningMilliseconds);
+            OperationsSaveP95WarningMilliseconds = Reader.ReadInt32("Operations", "SaveP95WarningMilliseconds", OperationsSaveP95WarningMilliseconds);
+            OperationsNetworkQueueWarningDepth = Reader.ReadInt32("Operations", "NetworkQueueWarningDepth", OperationsNetworkQueueWarningDepth);
+            OperationsAlertCheckSeconds = Reader.ReadInt32("Operations", "AlertCheckSeconds", OperationsAlertCheckSeconds);
+
+            //Login protection
+            LoginAccountAttemptLimit = Math.Max(1, Reader.ReadInt32("Security", "LoginAccountAttemptLimit", LoginAccountAttemptLimit));
+            LoginIpAttemptLimit = Math.Max(1, Reader.ReadInt32("Security", "LoginIpAttemptLimit", LoginIpAttemptLimit));
+            LoginAttemptWindowSeconds = Math.Max(1, Reader.ReadInt32("Security", "LoginAttemptWindowSeconds", LoginAttemptWindowSeconds));
+            LoginAccountFailureLimit = Math.Max(1, Reader.ReadInt32("Security", "LoginAccountFailureLimit", LoginAccountFailureLimit));
+            LoginIpFailureLimit = Math.Max(1, Reader.ReadInt32("Security", "LoginIpFailureLimit", LoginIpFailureLimit));
+            LoginFailureWindowSeconds = Math.Max(1, Reader.ReadInt32("Security", "LoginFailureWindowSeconds", LoginFailureWindowSeconds));
+            LoginBaseBackoffMilliseconds = Math.Max(0, Reader.ReadInt32("Security", "LoginBaseBackoffMilliseconds", LoginBaseBackoffMilliseconds));
+            LoginMaxBackoffSeconds = Math.Max(0, Reader.ReadInt32("Security", "LoginMaxBackoffSeconds", LoginMaxBackoffSeconds));
+            LoginAccountBlockMinutes = Math.Max(1, Reader.ReadInt32("Security", "LoginAccountBlockMinutes", LoginAccountBlockMinutes));
+            LoginIpBlockMinutes = Math.Max(1, Reader.ReadInt32("Security", "LoginIpBlockMinutes", LoginIpBlockMinutes));
 
             //Micro
             MicroServerActive = Reader.ReadBoolean("Micro", "MicroServerActive", MicroServerActive);
             MicroResourcePath = Reader.ReadString("Micro", "MicroResourcePath", MicroResourcePath);
             MicroAuthor = Reader.ReadString("Micro", "MicroAuthor", MicroAuthor);
-            MicroCode = Reader.ReadString("Micro", "MicroCode", MicroCode);
+            MicroCode = string.Empty; // SEC-05：仅从受保护秘密存储读取。
 
             //Permission
             AllowNewAccount = Reader.ReadBoolean("Permission", "AllowNewAccount", AllowNewAccount);
@@ -526,8 +570,8 @@ namespace Server
             AiScriptsProvider = Reader.ReadString("AiScripts", "AiScriptsProvider", AiScriptsProvider);
             AiScriptsApiBaseUrl = Reader.ReadString("AiScripts", "AiScriptsApiBaseUrl", AiScriptsApiBaseUrl);
             AiScriptsModel = Reader.ReadString("AiScripts", "AiScriptsModel", AiScriptsModel);
-            AiScriptsApiKey = Reader.ReadString("AiScripts", "AiScriptsApiKey", AiScriptsApiKey);
-            AiScriptsApiKeyEnvironmentVariable = Reader.ReadString("AiScripts", "AiScriptsApiKeyEnvironmentVariable", AiScriptsApiKeyEnvironmentVariable);
+            AiScriptsApiKey = string.Empty; // SEC-05：仅从受保护秘密存储读取。
+            AiScriptsApiKeyEnvironmentVariable = string.Empty;
             AiScriptsTimeoutSeconds = Reader.ReadInt32("AiScripts", "AiScriptsTimeoutSeconds", AiScriptsTimeoutSeconds);
             AiScriptsMaxRetries = Reader.ReadInt32("AiScripts", "AiScriptsMaxRetries", AiScriptsMaxRetries);
             AiScriptsRequestsPerMinute = Reader.ReadInt32("AiScripts", "AiScriptsRequestsPerMinute", AiScriptsRequestsPerMinute);
@@ -551,10 +595,16 @@ namespace Server
 
             //Database
             SaveDelay = Reader.ReadInt32("Database", "SaveDelay", SaveDelay);
+            ProductionRpoPolicy.ValidateConfiguredSaveDelay();
             CredxGold = Reader.ReadInt16("Database", "CredxGold", CredxGold);
             DatabaseProvider = Reader.ReadString("Database", "Provider", DatabaseProvider);
             SqlitePath = Reader.ReadString("Database", "SqlitePath", SqlitePath);
-            MySqlConnectionString = Reader.ReadString("Database", "MySqlConnectionString", MySqlConnectionString);
+            SqliteBackupEnabled = Reader.ReadBoolean("Database", "SqliteBackupEnabled", SqliteBackupEnabled);
+            SqliteBackupDirectory = Reader.ReadString("Database", "SqliteBackupDirectory", SqliteBackupDirectory);
+            SqliteBackupOffsiteDirectory = Reader.ReadString("Database", "SqliteBackupOffsiteDirectory", SqliteBackupOffsiteDirectory);
+            SqliteBackupIntervalMinutes = Reader.ReadInt32("Database", "SqliteBackupIntervalMinutes", SqliteBackupIntervalMinutes);
+            SqliteBackupRetentionCount = Reader.ReadInt32("Database", "SqliteBackupRetentionCount", SqliteBackupRetentionCount);
+            MySqlConnectionString = string.Empty; // SEC-05：仅从受保护秘密存储读取。
             MySqlPooling = Reader.ReadInt32("Database", "MySqlPooling", MySqlPooling);
             MySqlMinPoolSize = Reader.ReadInt32("Database", "MySqlMinPoolSize", MySqlMinPoolSize);
             MySqlMaxPoolSize = Reader.ReadInt32("Database", "MySqlMaxPoolSize", MySqlMaxPoolSize);
@@ -752,6 +802,7 @@ namespace Server
             Reader.Write("General", "VersionPath", VersionPath);
             Reader.Write("General", "CheckVersion", CheckVersion);
             Reader.Write("General", "RelogDelay", RelogDelay);
+            Reader.Write("General", "GMPassword", string.Empty);
             Reader.Write("General", "Multithreaded", Multithreaded);
             Reader.Write("General", "ThreadLimit", ThreadLimit);
             Reader.Write("General", "TestServer", TestServer);
@@ -781,12 +832,28 @@ namespace Server
             Reader.Write("Network", "StartHTTPService", StartHTTPService);
             Reader.Write("Network", "HTTPIPAddress", HTTPIPAddress);
             Reader.Write("Network", "HTTPTrustedIPAddress", HTTPTrustedIPAddress);
+            Reader.Write("Operations", "TickP95WarningMilliseconds", OperationsTickP95WarningMilliseconds);
+            Reader.Write("Operations", "SaveP95WarningMilliseconds", OperationsSaveP95WarningMilliseconds);
+            Reader.Write("Operations", "NetworkQueueWarningDepth", OperationsNetworkQueueWarningDepth);
+            Reader.Write("Operations", "AlertCheckSeconds", OperationsAlertCheckSeconds);
+
+            //Login protection
+            Reader.Write("Security", "LoginAccountAttemptLimit", LoginAccountAttemptLimit);
+            Reader.Write("Security", "LoginIpAttemptLimit", LoginIpAttemptLimit);
+            Reader.Write("Security", "LoginAttemptWindowSeconds", LoginAttemptWindowSeconds);
+            Reader.Write("Security", "LoginAccountFailureLimit", LoginAccountFailureLimit);
+            Reader.Write("Security", "LoginIpFailureLimit", LoginIpFailureLimit);
+            Reader.Write("Security", "LoginFailureWindowSeconds", LoginFailureWindowSeconds);
+            Reader.Write("Security", "LoginBaseBackoffMilliseconds", LoginBaseBackoffMilliseconds);
+            Reader.Write("Security", "LoginMaxBackoffSeconds", LoginMaxBackoffSeconds);
+            Reader.Write("Security", "LoginAccountBlockMinutes", LoginAccountBlockMinutes);
+            Reader.Write("Security", "LoginIpBlockMinutes", LoginIpBlockMinutes);
 
             //Micro
             Reader.Write("Micro", "MicroServerActive", MicroServerActive);
             Reader.Write("Micro", "MicroResourcePath", MicroResourcePath);
             Reader.Write("Micro", "MicroAuthor", MicroAuthor);
-            Reader.Write("Micro", "MicroCode", MicroCode);
+            Reader.Write("Micro", "MicroCode", string.Empty);
 
             //Permission
             Reader.Write("Permission", "AllowNewAccount", AllowNewAccount);
@@ -829,7 +896,7 @@ namespace Server
             Reader.Write("AiScripts", "AiScriptsApiBaseUrl", AiScriptsApiBaseUrl);
             Reader.Write("AiScripts", "AiScriptsModel", AiScriptsModel);
             Reader.Write("AiScripts", "AiScriptsApiKey", string.Empty);
-            Reader.Write("AiScripts", "AiScriptsApiKeyEnvironmentVariable", AiScriptsApiKeyEnvironmentVariable);
+            Reader.Write("AiScripts", "AiScriptsApiKeyEnvironmentVariable", string.Empty);
             Reader.Write("AiScripts", "AiScriptsTimeoutSeconds", AiScriptsTimeoutSeconds);
             Reader.Write("AiScripts", "AiScriptsMaxRetries", AiScriptsMaxRetries);
             Reader.Write("AiScripts", "AiScriptsRequestsPerMinute", AiScriptsRequestsPerMinute);
@@ -856,7 +923,12 @@ namespace Server
             Reader.Write("Database", "CredxGold", CredxGold);
             Reader.Write("Database", "Provider", DatabaseProvider);
             Reader.Write("Database", "SqlitePath", SqlitePath);
-            Reader.Write("Database", "MySqlConnectionString", MySqlConnectionString);
+            Reader.Write("Database", "SqliteBackupEnabled", SqliteBackupEnabled);
+            Reader.Write("Database", "SqliteBackupDirectory", SqliteBackupDirectory);
+            Reader.Write("Database", "SqliteBackupOffsiteDirectory", SqliteBackupOffsiteDirectory);
+            Reader.Write("Database", "SqliteBackupIntervalMinutes", SqliteBackupIntervalMinutes);
+            Reader.Write("Database", "SqliteBackupRetentionCount", SqliteBackupRetentionCount);
+            Reader.Write("Database", "MySqlConnectionString", string.Empty);
             Reader.Write("Database", "MySqlPooling", MySqlPooling);
             Reader.Write("Database", "MySqlMinPoolSize", MySqlMinPoolSize);
             Reader.Write("Database", "MySqlMaxPoolSize", MySqlMaxPoolSize);

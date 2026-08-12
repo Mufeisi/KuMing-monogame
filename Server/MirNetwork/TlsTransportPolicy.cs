@@ -4,12 +4,12 @@ using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
+using Server.Security;
 
 namespace Server.MirNetwork;
 
 public static class TlsTransportPolicy
 {
-    public const string CertificatePasswordEnvironmentVariable = "LYOCRYSTAL_TLS_CERT_PASSWORD";
     public const SslProtocols MinimumProtocols = SslProtocols.Tls12 | SslProtocols.Tls13;
 
     public static bool ShouldStartLegacyV1(IPAddress address, bool allowLegacyV1)
@@ -37,12 +37,28 @@ public static class TlsTransportPolicy
             throw new InvalidOperationException("TLS端口不能与V1端口相同");
     }
 
+    public static void ValidateConfiguration(bool tlsEnabled, ushort legacyPort, ushort tlsPort, string certificatePath)
+    {
+        if (legacyPort == 0)
+            throw new InvalidOperationException("V1端口未配置");
+        if (!tlsEnabled)
+            return;
+
+        ValidateTlsPorts(legacyPort, tlsPort);
+        if (string.IsNullOrWhiteSpace(certificatePath))
+            throw new InvalidOperationException("TLS证书路径未配置");
+        if (!File.Exists(certificatePath))
+            throw new FileNotFoundException("TLS证书文件不存在", certificatePath);
+
+        using var certificate = LoadServerCertificate(certificatePath);
+    }
+
     public static X509Certificate2 LoadServerCertificate(string path)
     {
         if (string.IsNullOrWhiteSpace(path))
             throw new InvalidOperationException("TLS证书路径未配置");
 
-        var password = Environment.GetEnvironmentVariable(CertificatePasswordEnvironmentVariable) ?? string.Empty;
+        var password = ProtectedSecretStore.Read(ProtectedSecretStore.TlsCertificatePassword) ?? string.Empty;
         var certificate = X509CertificateLoader.LoadPkcs12FromFile(path, password, X509KeyStorageFlags.UserKeySet);
         try
         {

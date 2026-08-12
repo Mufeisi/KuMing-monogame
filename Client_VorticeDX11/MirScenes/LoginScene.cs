@@ -514,7 +514,8 @@ namespace Client.MirScenes
             private void Login()
             {
                 OKButton.Enabled = false;
-                Network.Enqueue(new C.Login {AccountID = AccountIDTextBox.Text, Password = PasswordTextBox.Text});
+                Client.Security.LoginSettingsIntegration.Submit(
+                    AccountIDTextBox.Text, PasswordTextBox.Text);
             }
 
             public override void Show()

@@ -1,0 +1,4 @@
+C:\Users\luo\.codex\worktrees\p5-ops-basic-02-crash-diagnostics-20260810\Server\Server.Library.csproj : warning NU1902: 包 "log4net" 3.0.3 具有已知的 中 严重性漏洞，https://github.com/advisories/GHSA-4f7c-pmjv-c25w
+C:\Users\luo\.codex\worktrees\p5-ops-basic-02-crash-diagnostics-20260810\Server\Server.Library.csproj : warning NU1903: 包 "SQLitePCLRaw.lib.e_sqlite3" 2.1.11 具有已知的 高 严重性漏洞，https://github.com/advisories/GHSA-2m69-gcr7-jv3q
+  Shared -> C:\Users\luo\.codex\worktrees\p5-ops-basic-02-crash-diagnostics-20260810\Shared\bin\Debug\Shared.dll
+  Server.Library -> C:\Users\luo\.codex\worktrees\p5-ops-basic-02-crash-diagnostics-20260810\Server\bin\Debug\Server.Library.dll
