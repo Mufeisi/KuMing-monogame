@@ -9,7 +9,7 @@
       "src\\Editors\\Controls\\FixedListViewControl\\CustomFormControl.csproj",
       "src\\Editors\\LibraryEditor\\LibraryEditor.csproj",
       "src\\Editors\\LibraryViewer\\LibraryViewer.csproj",
-      "Client_VorticeDX11\\Client_VorticeDX11.csproj",
+      "src\\Clients\\Client_VorticeDX11\\Client_VorticeDX11.csproj",
       "Tools\\MobileBootstrapAudit\\MobileBootstrapAudit.csproj",
       "Tools\\ReleaseSigningTool\\ReleaseSigningTool.csproj"
     ]

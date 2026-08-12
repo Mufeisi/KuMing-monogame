@@ -511,13 +511,13 @@ function Invoke-Prepare {
         Start-Transcript -LiteralPath (Join-Path $partial 'release-run-transcript.txt') -Force | Out-Null
         $transcriptStarted = $true
         Invoke-Checked 'dotnet' @('test', 'Tests/Base05.Tests/Base05.Tests.csproj', '-c', 'Release') $repo
-        Invoke-Checked 'dotnet' @('publish', 'Client_VorticeDX11/Client_VorticeDX11.csproj', '-c', 'Release', '-o', (Join-Path $partial 'pc')) $repo
+        Invoke-Checked 'dotnet' @('publish', 'src/Clients/Client_VorticeDX11/Client_VorticeDX11.csproj', '-c', 'Release', '-o', (Join-Path $partial 'pc')) $repo
         Invoke-Checked 'dotnet' @('publish', 'Server.MirForms/Server.csproj', '-c', 'Release', '-o', (Join-Path $partial 'server')) $repo
         Invoke-Checked 'dotnet' @('restore', 'Tools/ReleaseSigningTool/ReleaseSigningTool.csproj', '--verbosity', 'minimal') $repo
         Invoke-Checked 'dotnet' @('build', 'Tools/ReleaseSigningTool/ReleaseSigningTool.csproj', '-c', 'Release', '--no-restore') $repo
-        Invoke-Checked 'dotnet' @('restore', 'Client_MonoGame.Android/Client_MonoGame.Android.csproj', '-r', 'android-arm64', '--verbosity', 'minimal') $repo
+        Invoke-Checked 'dotnet' @('restore', 'src/Clients/Client_MonoGame.Android/Client_MonoGame.Android.csproj', '-r', 'android-arm64', '--verbosity', 'minimal') $repo
         $resourceRepo = Join-Path $partial 'resources'
-        $baselineIndex = Join-Path $repo 'Client_MonoGame.Shared/BootstrapAssets/bootstrap-package-index.json'
+        $baselineIndex = Join-Path $repo 'src/Clients/Client_MonoGame.Shared/BootstrapAssets/bootstrap-package-index.json'
         $baselineExisted = Test-Path -LiteralPath $baselineIndex -PathType Leaf
         $baselineBytes = if ($baselineExisted) { [IO.File]::ReadAllBytes($baselineIndex) } else { $null }
         try {
@@ -532,8 +532,8 @@ function Invoke-Prepare {
         Invoke-Checked 'dotnet' @('run', '--project', 'Tools/ReleaseSigningTool/ReleaseSigningTool.csproj', '-c', 'Release', '--no-build', '--', 'sign-resource-index', $unsignedIndex, $signedIndex, $ResourceKeyId, $Sequence.ToString([Globalization.CultureInfo]::InvariantCulture), $MinimumClientVersion, (Join-Path $repo $ResourcePrivateKeyPath)) $repo
         Invoke-Checked 'dotnet' @('run', '--project', 'Tools/ReleaseSigningTool/ReleaseSigningTool.csproj', '-c', 'Release', '--no-build', '--', 'verify-resource-index', $signedIndex, $MinimumClientVersion) $repo
         $androidLog = Join-Path $partial 'android-signing-build.log'
-        Invoke-Checked 'dotnet' @('run', '--project', 'Tools/ReleaseSigningTool/ReleaseSigningTool.csproj', '-c', 'Release', '--no-build', '--', 'publish-signed-android', 'Client_MonoGame.Android/Client_MonoGame.Android.csproj', (Join-Path $repo $AndroidKeyStorePath), (Join-Path $repo $AndroidPasswordPath), $AndroidKeyPurpose, $AndroidKeyAlias, $androidLog) $repo
-        $apk = Get-ChildItem -LiteralPath (Join-Path $repo 'Client_MonoGame.Android/bin/Release/net10.0-android/android-arm64/publish') -Filter '*-Signed.apk' -File | Sort-Object LastWriteTimeUtc -Descending | Select-Object -First 1
+        Invoke-Checked 'dotnet' @('run', '--project', 'Tools/ReleaseSigningTool/ReleaseSigningTool.csproj', '-c', 'Release', '--no-build', '--', 'publish-signed-android', 'src/Clients/Client_MonoGame.Android/Client_MonoGame.Android.csproj', (Join-Path $repo $AndroidKeyStorePath), (Join-Path $repo $AndroidPasswordPath), $AndroidKeyPurpose, $AndroidKeyAlias, $androidLog) $repo
+        $apk = Get-ChildItem -LiteralPath (Join-Path $repo 'src/Clients/Client_MonoGame.Android/bin/Release/net10.0-android/android-arm64/publish') -Filter '*-Signed.apk' -File | Sort-Object LastWriteTimeUtc -Descending | Select-Object -First 1
         if ($null -eq $apk) { throw 'Android 签名构建未产生 Signed APK。' }
         $androidHome = if (-not [string]::IsNullOrWhiteSpace($env:ANDROID_HOME)) { $env:ANDROID_HOME } else { $env:ANDROID_SDK_ROOT }
         if ([string]::IsNullOrWhiteSpace($androidHome)) { throw '未配置 ANDROID_HOME 或 ANDROID_SDK_ROOT，无法复验 APK 签名。' }

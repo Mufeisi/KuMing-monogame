@@ -16,7 +16,7 @@ public sealed class MicroProtocolRegressionTests
     public async Task 现有文件Range图库头单图与声音路由保持客户端协议响应()
     {
         string repositoryRoot = FindRepositoryRoot(AppContext.BaseDirectory);
-        string resourceRoot = Path.Combine(repositoryRoot, "Client_MonoGame.Shared", "BootstrapAssets");
+        string resourceRoot = Path.Combine(repositoryRoot, "src", "Clients", "Client_MonoGame.Shared", "BootstrapAssets");
         string secretRoot = Path.Combine(Path.GetTempPath(), "LyoCrystalMicroProtocolSecrets", Guid.NewGuid().ToString("N"));
         int port = GetFreePort();
         string originalAddress = Settings.HTTPIPAddress;

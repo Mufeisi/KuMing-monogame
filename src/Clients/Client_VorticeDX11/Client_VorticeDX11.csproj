@@ -28,7 +28,7 @@
 			<Choose>
 				<When Condition="$([MSBuild]::IsOSPlatform('Windows'))">
 					<PropertyGroup>
-						<OutputPath>..\Build\Client_VorticeDX11</OutputPath>
+						<OutputPath>..\..\..\Build\Client_VorticeDX11</OutputPath>
 					</PropertyGroup>
 				</When>
 				<When Condition="$([MSBuild]::IsOSPlatform('OSX'))">
@@ -81,8 +81,8 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<None Include="..\.editorconfig" Link=".editorconfig" />
-		<None Include="..\THIRD-PARTY-NOTICES.md" Link="THIRD-PARTY-NOTICES.md">
+		<None Include="..\..\..\.editorconfig" Link=".editorconfig" />
+		<None Include="..\..\..\THIRD-PARTY-NOTICES.md" Link="THIRD-PARTY-NOTICES.md">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</None>
 	</ItemGroup>
@@ -105,8 +105,8 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\src\Launcher\Launcher.ThemeRuntime\Launcher.ThemeRuntime.csproj" />
-		<ProjectReference Include="..\Shared\Shared.csproj" />
+		<ProjectReference Include="..\..\Launcher\Launcher.ThemeRuntime\Launcher.ThemeRuntime.csproj" />
+		<ProjectReference Include="..\..\..\Shared\Shared.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -128,9 +128,9 @@
 		<None Update="MIR2.ICO">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
-		<None Include="..\Docs\Compliance\SBOM\dependencies.spdx.json" Link="Compliance\SBOM\dependencies.spdx.json" CopyToOutputDirectory="PreserveNewest" />
-		<None Include="..\Docs\Compliance\external-assets.manifest.json" Link="Compliance\external-assets.manifest.json" CopyToOutputDirectory="PreserveNewest" />
-		<None Include="..\Docs\Compliance\Licenses\**\*" Link="Compliance\Licenses\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+		<None Include="..\..\..\Docs\Compliance\SBOM\dependencies.spdx.json" Link="Compliance\SBOM\dependencies.spdx.json" CopyToOutputDirectory="PreserveNewest" />
+		<None Include="..\..\..\Docs\Compliance\external-assets.manifest.json" Link="Compliance\external-assets.manifest.json" CopyToOutputDirectory="PreserveNewest" />
+		<None Include="..\..\..\Docs\Compliance\Licenses\**\*" Link="Compliance\Licenses\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
 	</ItemGroup>
 
 </Project>

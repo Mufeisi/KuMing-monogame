@@ -126,7 +126,7 @@
 
 - `src/MicroGateway/MicroGateway.Core/`
 - `src/MicroGateway/MicroGateway.App/`
-- `Client_MonoGame.Shared/BootstrapPackageRuntime.cs`
+- `src/Clients/Client_MonoGame.Shared/BootstrapPackageRuntime.cs`
 - PC 端现有 `PcBootstrap*`
 - `Shared.Security.BootstrapManifest*`
 
@@ -148,10 +148,10 @@
 
 直接复用：
 
-- `Client_MonoGame.Shared/UI/FairyGui/Runtime/`
-- `Client_MonoGame.Shared/UI/FairyGui/FairyGuiHost*.cs`
-- PC 端 `Client_VorticeDX11/MirGraphics/DXManager.cs`
-- 移动端 `Client_MonoGame.Shared/MirGraphics/SpriteBatchStack.cs`
+- `src/Clients/Client_MonoGame.Shared/UI/FairyGui/Runtime/`
+- `src/Clients/Client_MonoGame.Shared/UI/FairyGui/FairyGuiHost*.cs`
+- PC 端 `src/Clients/Client_VorticeDX11/MirGraphics/DXManager.cs`
+- 移动端 `src/Clients/Client_MonoGame.Shared/MirGraphics/SpriteBatchStack.cs`
 - `Shared/Packet.cs` 及现有协议事实源
 - `Server/Scripting/` 受控脚本 Hook
 
@@ -536,8 +536,8 @@ Shared/CustomGui/                        # 阶段 D/E
 ├─ CustomGuiPackets.cs 或纳入现有包文件
 └─ CustomGuiLimits.cs
 
-Client_VorticeDX11/CustomGui/            # PC Adapter
-Client_MonoGame.Shared/UI/CustomGui/     # 移动 Adapter；复用 FairyGUI Runtime
+src/Clients/Client_VorticeDX11/CustomGui/            # PC Adapter
+src/Clients/Client_MonoGame.Shared/UI/CustomGui/     # 移动 Adapter；复用 FairyGUI Runtime
 Server/CustomGui/                        # 会话、动作验证、状态投影
 Server.MirForms/CustomGui/               # 游戏 GUI 设计入口
 ```

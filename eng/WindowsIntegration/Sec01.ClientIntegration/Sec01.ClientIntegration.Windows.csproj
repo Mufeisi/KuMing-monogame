@@ -19,10 +19,10 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\..\Shared\Shared.csproj" />
-    <ProjectReference Include="..\..\..\Client_VorticeDX11\Client_VorticeDX11.csproj">
+    <ProjectReference Include="..\..\..\src\Clients\Client_VorticeDX11\Client_VorticeDX11.csproj">
       <Aliases>PCClient</Aliases>
     </ProjectReference>
-    <ProjectReference Include="..\..\..\Client_MonoGame.Shared\Client_MonoGame.Shared.csproj">
+    <ProjectReference Include="..\..\..\src\Clients\Client_MonoGame.Shared\Client_MonoGame.Shared.csproj">
       <Aliases>MobileClient</Aliases>
       <SetTargetFramework>TargetFramework=net10.0</SetTargetFramework>
     </ProjectReference>

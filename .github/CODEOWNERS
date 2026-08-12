@@ -19,10 +19,7 @@
 /Docs/ReleaseKeys/ @Mufeisi
 
 # 客户端运行时、渲染与移动平台发布。
-/Client_VorticeDX11/ @Mufeisi
-/Client_MonoGame.Shared/ @Mufeisi
-/Client_MonoGame.Android/ @Mufeisi
-/Client_MonoGame.iOS/ @Mufeisi
+/src/Clients/ @Mufeisi
 
 # 玩家入口、微端和正式发布链。
 /src/Launcher/ @Mufeisi

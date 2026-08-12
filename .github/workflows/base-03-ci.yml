@@ -165,7 +165,7 @@ jobs:
             ~/.nuget/packages
             ~/.dotnet/packs
             ~/.dotnet/sdk-manifests
-          key: android-nuget-${{ runner.os }}-${{ hashFiles('global.json', 'Client_MonoGame.Android/Client_MonoGame.Android.csproj', 'Client_MonoGame.Mobile.props', 'Client_MonoGame.Shared/Client_MonoGame.Shared.csproj') }}
+          key: android-nuget-${{ runner.os }}-${{ hashFiles('global.json', 'src/Clients/Client_MonoGame.Android/Client_MonoGame.Android.csproj', 'Client_MonoGame.Mobile.props', 'src/Clients/Client_MonoGame.Shared/Client_MonoGame.Shared.csproj') }}
           restore-keys: |
             android-nuget-${{ runner.os }}-
 
@@ -180,7 +180,7 @@ jobs:
       - name: Publish Android Release arm64 AOT package
         shell: pwsh
         run: >-
-          dotnet publish Client_MonoGame.Android/Client_MonoGame.Android.csproj
+          dotnet publish src/Clients/Client_MonoGame.Android/Client_MonoGame.Android.csproj
           -f net10.0-android
           -c Release
           -r android-arm64
@@ -196,7 +196,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: base-03-android-arm64-aot
-          path: Client_MonoGame.Android/bin/Release/net10.0-android/android-arm64/publish/**
+          path: src/Clients/Client_MonoGame.Android/bin/Release/net10.0-android/android-arm64/publish/**
           if-no-files-found: error
           retention-days: 7
 

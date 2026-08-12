@@ -184,7 +184,7 @@ function New-DeterministicZip([string]$SourceRoot, [string]$ZipPath) {
 
 $repoRoot = Get-TrimmedFullPath ((Resolve-Path -LiteralPath $RepositoryRoot).Path)
 Assert-NoReparsePath $repoRoot '仓库根'
-$bootstrapRoot = Get-ContainedPath $repoRoot 'Client_MonoGame.Shared\BootstrapAssets' 'BootstrapAssets 根'
+$bootstrapRoot = Get-ContainedPath $repoRoot 'src\Clients\Client_MonoGame.Shared\BootstrapAssets' 'BootstrapAssets 根'
 $sharedRoot = Get-ContainedPath $repoRoot 'Client_MonoGame.Shared' 'Shared 根'
 Assert-NoReparsePath $bootstrapRoot 'BootstrapAssets 根'
 Assert-NoReparsePath $sharedRoot 'Shared 根'

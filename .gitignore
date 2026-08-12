@@ -93,23 +93,23 @@ nunit-*.xml
 # BASE-02 authorized external/generated resource targets (never commit GB-sized assets).
 # Android Micro mode ships only the small bootstrap metadata/core set below;
 # keep the rest of the acquired resource tree local-only.
-/Client_MonoGame.Shared/BootstrapAssets/**
-!/Client_MonoGame.Shared/BootstrapAssets/bootstrap-assets.txt
-!/Client_MonoGame.Shared/BootstrapAssets/bootstrap-package-index.json
-!/Client_MonoGame.Shared/BootstrapAssets/bootstrap-packages.json
-!/Client_MonoGame.Shared/BootstrapAssets/Language.ini
-!/Client_MonoGame.Shared/BootstrapAssets/Mir2Config.ini
-!/Client_MonoGame.Shared/BootstrapAssets/bootstrap-package-manifests/
-!/Client_MonoGame.Shared/BootstrapAssets/bootstrap-package-manifests/*.json
-!/Client_MonoGame.Shared/BootstrapAssets/Data/
-!/Client_MonoGame.Shared/BootstrapAssets/Data/ChrSel.Lib
-!/Client_MonoGame.Shared/BootstrapAssets/Data/Prguse.Lib
-!/Client_MonoGame.Shared/BootstrapAssets/Data/Title.Lib
-!/Client_MonoGame.Shared/BootstrapAssets/Sound/
-!/Client_MonoGame.Shared/BootstrapAssets/Sound/100.wav
-!/Client_MonoGame.Shared/BootstrapAssets/Sound/Log-in-long2.wav
-!/Client_MonoGame.Shared/BootstrapAssets/Sound/sellect-loop2.wav
-!/Client_MonoGame.Shared/BootstrapAssets/Sound/SoundList.lst
+/src/Clients/Client_MonoGame.Shared/BootstrapAssets/**
+!/src/Clients/Client_MonoGame.Shared/BootstrapAssets/bootstrap-assets.txt
+!/src/Clients/Client_MonoGame.Shared/BootstrapAssets/bootstrap-package-index.json
+!/src/Clients/Client_MonoGame.Shared/BootstrapAssets/bootstrap-packages.json
+!/src/Clients/Client_MonoGame.Shared/BootstrapAssets/Language.ini
+!/src/Clients/Client_MonoGame.Shared/BootstrapAssets/Mir2Config.ini
+!/src/Clients/Client_MonoGame.Shared/BootstrapAssets/bootstrap-package-manifests/
+!/src/Clients/Client_MonoGame.Shared/BootstrapAssets/bootstrap-package-manifests/*.json
+!/src/Clients/Client_MonoGame.Shared/BootstrapAssets/Data/
+!/src/Clients/Client_MonoGame.Shared/BootstrapAssets/Data/ChrSel.Lib
+!/src/Clients/Client_MonoGame.Shared/BootstrapAssets/Data/Prguse.Lib
+!/src/Clients/Client_MonoGame.Shared/BootstrapAssets/Data/Title.Lib
+!/src/Clients/Client_MonoGame.Shared/BootstrapAssets/Sound/
+!/src/Clients/Client_MonoGame.Shared/BootstrapAssets/Sound/100.wav
+!/src/Clients/Client_MonoGame.Shared/BootstrapAssets/Sound/Log-in-long2.wav
+!/src/Clients/Client_MonoGame.Shared/BootstrapAssets/Sound/sellect-loop2.wav
+!/src/Clients/Client_MonoGame.Shared/BootstrapAssets/Sound/SoundList.lst
 /Build/Client_VorticeDX11/**
 /Build/Server/
 /Build/Server Tools/

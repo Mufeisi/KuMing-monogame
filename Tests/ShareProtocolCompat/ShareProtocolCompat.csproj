@@ -9,7 +9,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="..\..\Client_MonoGame.Shared\Share\**\*.cs"
-             Exclude="..\..\Client_MonoGame.Shared\Share\Language.cs;..\..\Client_MonoGame.Shared\Share\Extensions\**\*.cs" />
+    <Compile Include="..\..\src\Clients\Client_MonoGame.Shared\Share\**\*.cs"
+             Exclude="..\..\src\Clients\Client_MonoGame.Shared\Share\Language.cs;..\..\src\Clients\Client_MonoGame.Shared\Share\Extensions\**\*.cs" />
   </ItemGroup>
 </Project>

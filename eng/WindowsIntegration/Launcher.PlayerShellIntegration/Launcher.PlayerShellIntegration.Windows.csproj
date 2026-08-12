@@ -23,6 +23,6 @@
     <ProjectReference Include="..\..\..\Shared\Shared.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\..\..\Client_VorticeDX11\MIR2.ICO" Link="TestAssets\MIR2.ICO" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\..\src\Clients\Client_VorticeDX11\MIR2.ICO" Link="TestAssets\MIR2.ICO" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>
