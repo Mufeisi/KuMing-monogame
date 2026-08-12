@@ -11,8 +11,8 @@
 # 高风险边界：协议、服务端状态、数据库迁移、安全与发布。
 /Shared/ @Mufeisi
 /Server/ @Mufeisi
-/tools/SchemaMigrator/ @Mufeisi
-/tools/ProtocolManifestGenerator/ @Mufeisi
+/Tools/SchemaMigrator/ @Mufeisi
+/Tools/ProtocolManifestGenerator/ @Mufeisi
 /Docs/SEC-* @Mufeisi
 /Docs/DB-* @Mufeisi
 /Docs/RELEASE-* @Mufeisi
@@ -25,6 +25,6 @@
 /Client_MonoGame.iOS/ @Mufeisi
 
 # 玩家入口、微端和正式发布链。
-/Launcher.*/ @Mufeisi
-/MicroGateway.*/ @Mufeisi
+/src/Launcher/ @Mufeisi
+/src/MicroGateway/ @Mufeisi
 /Build/ @Mufeisi

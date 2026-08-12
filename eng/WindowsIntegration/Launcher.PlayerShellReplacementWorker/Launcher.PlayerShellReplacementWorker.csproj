@@ -8,7 +8,7 @@
     <AssemblyName>Launcher.PlayerShellReplacementWorker</AssemblyName>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\..\Launcher.PlayerShell.Core\Launcher.PlayerShell.Core.csproj" />
+    <ProjectReference Include="..\..\..\src\Launcher\Launcher.PlayerShell.Core\Launcher.PlayerShell.Core.csproj" />
     <ProjectReference Include="..\..\..\Shared\Shared.csproj" />
   </ItemGroup>
 </Project>

@@ -109,14 +109,14 @@
 
 直接复用：
 
-- `Launcher.Editor/EditorProject.cs`
-- `Launcher.Editor/MainForm.cs`
-- `Launcher.Editor/PlayerArtifactBuilder.cs`
-- `Launcher.Editor/ProjectReleasePublisher.cs`
-- `Launcher.Editor/EditorPreflightValidator.cs`
-- `Launcher.ThemeRuntime/`
-- `Launcher.PlayerShell/`
-- `Launcher.PlayerShell.Core/`
+- `src/Launcher/Launcher.Editor/EditorProject.cs`
+- `src/Launcher/Launcher.Editor/MainForm.cs`
+- `src/Launcher/Launcher.Editor/PlayerArtifactBuilder.cs`
+- `src/Launcher/Launcher.Editor/ProjectReleasePublisher.cs`
+- `src/Launcher/Launcher.Editor/EditorPreflightValidator.cs`
+- `src/Launcher/Launcher.ThemeRuntime/`
+- `src/Launcher/Launcher.PlayerShell/`
+- `src/Launcher/Launcher.PlayerShell.Core/`
 
 这些模块已经负责项目、主题运行、玩家入口生成、签名发布、版本历史、离线包和回滚。新工作先修复真实玩家入口，再深化编辑体验，不另建启动器生成器或发布器。
 
@@ -124,8 +124,8 @@
 
 直接复用：
 
-- `MicroGateway.Core/`
-- `MicroGateway.App/`
+- `src/MicroGateway/MicroGateway.Core/`
+- `src/MicroGateway/MicroGateway.App/`
 - `Client_MonoGame.Shared/BootstrapPackageRuntime.cs`
 - PC 端现有 `PcBootstrap*`
 - `Shared.Security.BootstrapManifest*`
@@ -513,7 +513,7 @@ public interface IVisualDesignSession
 文件名可以在实施时调整，但职责必须保持清晰。
 
 ```text
-Launcher.Editor/
+src/Launcher/Launcher.Editor/
 ├─ Design/
 │  ├─ LauncherDesignSession.cs
 │  ├─ LauncherCanvasView.cs
