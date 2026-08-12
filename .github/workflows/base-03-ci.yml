@@ -243,7 +243,8 @@ jobs:
             Get-ChildItem -Path . -Recurse -Filter *.csproj -File |
               Where-Object {
                 $_.FullName -notmatch '[\\/](bin|obj)[\\/]' -and
-                ($_.BaseName -match '(?i)(^|[.])-?tests?$' -or $_.FullName -match '[\\/]Tests[\\/]') -and
+                $_.FullName -notmatch '[\\/]tests[\\/]WindowsIntegration[\\/]' -and
+                ($_.BaseName -match '(?i)(^|[.])-?tests?$' -or $_.FullName -match '[\\/]tests[\\/]') -and
                 @(
                   Select-Xml -LiteralPath $_.FullName -XPath "//*[local-name()='IsTestProject' and translate(normalize-space(.),'TRUE','true')='true']"
                 ).Count -gt 0
