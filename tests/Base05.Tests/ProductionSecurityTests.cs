@@ -24,7 +24,7 @@ public sealed class ProductionSecurityTests : IDisposable
         Settings.DatabaseProvider = "Sqlite";
         Settings.SqliteBackupEnabled = true;
         Settings.SqliteBackupDirectory = Path.Combine(_secretRoot, "backup-local");
-        Settings.SqliteBackupOffsiteDirectory = @"\\backup-server\LyoCrystaltests\SQLite";
+        Settings.SqliteBackupOffsiteDirectory = @"\\backup-server\LyoCrystalTests\SQLite";
         Settings.SqliteBackupIntervalMinutes = 60;
         Settings.SqliteBackupRetentionCount = 48;
         Settings.MicroServerActive = false;
@@ -185,7 +185,7 @@ public sealed class ProductionSecurityTests : IDisposable
         Settings.SqliteBackupOffsiteDirectory = string.Empty;
         Assert.Throws<InvalidOperationException>(() => ProductionSecurityPolicy.ValidateAndApply());
 
-        Settings.SqliteBackupOffsiteDirectory = @"\\backup-server\LyoCrystaltests\SQLite";
+        Settings.SqliteBackupOffsiteDirectory = @"\\backup-server\LyoCrystalTests\SQLite";
         ProductionSecurityPolicy.ValidateAndApply();
     }
 

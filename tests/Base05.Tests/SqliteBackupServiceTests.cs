@@ -264,7 +264,7 @@ public sealed class SqliteBackupServiceTests
             {
                 SourcePath = source,
                 BackupDirectory = local,
-                OffsiteDirectory = @"\\backup-server\LyoCrystaltests\SQLite",
+                OffsiteDirectory = @"\\backup-server\LyoCrystalTests\SQLite",
                 RetentionCount = 1,
                 Interval = TimeSpan.FromHours(1),
             };
