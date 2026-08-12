@@ -55,6 +55,8 @@
     <Compile Include="..\..\Client_MonoGame.Shared\UI\FairyGui\MobileFishingInventoryPolicy.cs" Link="Mobile\MobileFishingInventoryPolicy.cs" />
     <ProjectReference Include="..\..\Shared\Shared.csproj" />
     <ProjectReference Include="..\..\Server\Server.Library.csproj" />
+    <ProjectReference Include="..\..\Tools\ReleaseSigningTool\ReleaseSigningTool.csproj"
+                      ReferenceOutputAssembly="false" />
     <ProjectReference Include="..\ShareProtocolCompat\ShareProtocolCompat.csproj">
       <Aliases>ShareProtocol</Aliases>
     </ProjectReference>

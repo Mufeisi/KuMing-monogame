@@ -9,6 +9,12 @@ namespace Base05.Tests;
 
 public sealed class ProductionReleaseSigningTests
 {
+#if DEBUG
+    private const string SigningToolConfiguration = "Debug";
+#else
+    private const string SigningToolConfiguration = "Release";
+#endif
+
     [Fact]
     public void 生产资源公钥与发布记录一致且轮换窗口有效()
     {
@@ -183,7 +189,7 @@ public sealed class ProductionReleaseSigningTests
         start.ArgumentList.Add("--project");
         start.ArgumentList.Add(Path.Combine(root, "Tools", "ReleaseSigningTool", "ReleaseSigningTool.csproj"));
         start.ArgumentList.Add("-c");
-        start.ArgumentList.Add("Release");
+        start.ArgumentList.Add(SigningToolConfiguration);
         start.ArgumentList.Add("--no-build");
         start.ArgumentList.Add("--");
         foreach (string argument in arguments) start.ArgumentList.Add(argument);
