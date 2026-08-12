@@ -1,7 +1,31 @@
 # LyoCrystal
 水晶传奇三端版，C#脚本驱动带热更，带移动端，使用微端更新。
-</br>
-</br>
+
+## 开始开发
+
+仓库使用 Windows PowerShell、Visual Studio 2022 或 `dotnet` CLI，SDK 版本由 [`global.json`](global.json) 固定。首次进入仓库先执行不依赖外部游戏资源的快速内环：
+
+```powershell
+dotnet --version
+pwsh -NoProfile -File Tools/ResourceBaseline.ps1 -Action Validate -Scope Repository
+dotnet restore LyoCrystal.Server.slnf
+dotnet build LyoCrystal.Server.slnf --configuration Release --no-restore
+dotnet test Tests/Base05.Tests/Base05.Tests.csproj --configuration Release
+```
+
+按工作内容选择入口：
+
+| 工作内容 | 入口 |
+|---|---|
+| 服务端 | [`LyoCrystal.Server.slnf`](LyoCrystal.Server.slnf) |
+| PC、管理工具与发布基线 | [`LyoCrystal.Windows.slnf`](LyoCrystal.Windows.slnf) |
+| 启动器与微端 | [`LyoCrystal.Launcher.slnf`](LyoCrystal.Launcher.slnf) |
+| 全部工程与架构视图 | [`Legend of Mir.sln`](Legend%20of%20Mir.sln) |
+| 环境、构建、测试、调试与产物 | [`Docs/开发者指南.md`](Docs/开发者指南.md) |
+| 工程规范与贡献流程 | [`CONTRIBUTING.md`](CONTRIBUTING.md) |
+| 文档与当前治理任务 | [`Docs/index.md`](Docs/index.md) |
+
+完整客户端运行依赖受授权的外部资源，不等同于上述源码快速内环。不要把本机资源、密钥、运行数据库或个人 `.slnLaunch.user` 提交到仓库。
 
 ## BASE-02 可复现构建基线
 
@@ -39,7 +63,7 @@ pwsh -NoProfile -File Tools/ResourceBaseline.ps1 -Action Validate -Scope All
 pwsh -NoProfile -File Tools/ResourceBaseline.ps1 -Action Validate -Scope All
 ```
 
-BASE-06 的移动端代码迁移与本机构建已完成，模拟器 Debug/Release/AOT+Trim/Trim-only 四态已通过；移动端当前为稳定 `net10.0-*`。BASE-08 = GATE-P0 已完成，证据见提交 [`4436426`](https://github.com/Mufeisi/KuMing-monogame/commit/443642644bc709a6059caaa94d84dc7a2eee15fd) 及 [GitHub Actions run 31081000003](https://github.com/Mufeisi/KuMing-monogame/actions/runs/31081000003)。**后续动态开发状态只在 `Docs/PRD-PC稳定与Android发布.md` §4.3 维护，多会话任务与合并规则见 §4.4。** 在没有外部资源时可以构建不依赖资源的项目，例如：
+BASE-06 的移动端代码迁移与本机构建已完成，模拟器 Debug/Release/AOT+Trim/Trim-only 四态已通过；移动端当前为稳定 `net10.0-*`。BASE-08 = GATE-P0 已完成，证据见提交 [`4436426`](https://github.com/Mufeisi/KuMing-monogame/commit/443642644bc709a6059caaa94d84dc7a2eee15fd) 及 [GitHub Actions run 31081000003](https://github.com/Mufeisi/KuMing-monogame/actions/runs/31081000003)。P0～P5 已完成并转入维护；工程治理动态状态只在 [`Docs/工程治理实施路线.md`](Docs/工程治理实施路线.md) 维护。在没有外部资源时可以构建不依赖资源的项目，例如：
 
 BASE-09 的 iOS TFM 已隔离：`Client_MonoGame.Shared` 默认只求值 `net10.0;net10.0-android`，iOS 工程通过 `EnableIosTarget=true` 显式求值 `net10.0;net10.0-ios`；Windows/Android restore/build 不再解析 iOS TFM。iOS 仍只做非门禁 restore，不承诺 iOS 编译或真机可玩。
 
