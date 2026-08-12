@@ -10,6 +10,9 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $utf8NoBom = [Text.UTF8Encoding]::new($false)
+[Console]::OutputEncoding = $utf8NoBom
+[Console]::InputEncoding = $utf8NoBom
+$OutputEncoding = $utf8NoBom
 $failures = [System.Collections.Generic.List[string]]::new()
 
 function Get-FullPath([string]$Path) {

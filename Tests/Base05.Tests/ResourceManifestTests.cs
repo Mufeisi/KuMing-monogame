@@ -433,6 +433,8 @@ public sealed class ResourceManifestTests
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
+                StandardOutputEncoding = Encoding.UTF8,
+                StandardErrorEncoding = Encoding.UTF8,
                 CreateNoWindow = true,
             };
             startInfo.ArgumentList.Add("-NoProfile");
@@ -654,6 +656,8 @@ public sealed class ResourceManifestTests
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
+                StandardOutputEncoding = Encoding.UTF8,
+                StandardErrorEncoding = Encoding.UTF8,
                 CreateNoWindow = true,
             };
             startInfo.Environment.Remove("RESOURCE_BASELINE_TEST_FAIL_AFTER_REPLACE");
@@ -842,6 +846,8 @@ public sealed class ResourceManifestTests
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
+                StandardOutputEncoding = Encoding.UTF8,
+                StandardErrorEncoding = Encoding.UTF8,
                 CreateNoWindow = true,
             };
             startInfo.ArgumentList.Add("-NoProfile");
@@ -1024,6 +1030,8 @@ public sealed class ResourceManifestTests
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
+                StandardOutputEncoding = Encoding.UTF8,
+                StandardErrorEncoding = Encoding.UTF8,
                 CreateNoWindow = true,
             };
             startInfo.ArgumentList.Add("-NoProfile");
