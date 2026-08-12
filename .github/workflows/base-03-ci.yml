@@ -107,28 +107,28 @@ jobs:
 
       - name: Restore SEC-01 client integration tests
         run: >-
-          dotnet restore Tests/WindowsIntegration/Sec01.ClientIntegration/Sec01.ClientIntegration.Windows.csproj
+          dotnet restore eng/WindowsIntegration/Sec01.ClientIntegration/Sec01.ClientIntegration.Windows.csproj
           -p:EnableAndroidTarget=false --verbosity minimal
 
       - name: Restore SEC-02 server config integration tests
-        run: dotnet restore Tests/WindowsIntegration/Sec02.ServerConfigIntegration/Sec02.ServerConfigIntegration.Windows.csproj --verbosity minimal
+        run: dotnet restore eng/WindowsIntegration/Sec02.ServerConfigIntegration/Sec02.ServerConfigIntegration.Windows.csproj --verbosity minimal
 
       - name: Restore SEC-02 client TLS integration tests
-        run: dotnet restore Tests/WindowsIntegration/Sec02.ClientTlsIntegration/Sec02.ClientTlsIntegration.Windows.csproj --verbosity minimal
+        run: dotnet restore eng/WindowsIntegration/Sec02.ClientTlsIntegration/Sec02.ClientTlsIntegration.Windows.csproj --verbosity minimal
 
       - name: Build Windows solution filter
         run: dotnet build LyoCrystal.Windows.slnf --configuration Release --no-restore --verbosity minimal
 
       - name: Run SEC-01 client integration tests
         run: >-
-          dotnet test Tests/WindowsIntegration/Sec01.ClientIntegration/Sec01.ClientIntegration.Windows.csproj
+          dotnet test eng/WindowsIntegration/Sec01.ClientIntegration/Sec01.ClientIntegration.Windows.csproj
           --configuration Release --no-restore -p:EnableAndroidTarget=false --verbosity minimal
 
       - name: Run SEC-02 server config integration tests
-        run: dotnet test Tests/WindowsIntegration/Sec02.ServerConfigIntegration/Sec02.ServerConfigIntegration.Windows.csproj --configuration Release --no-restore --verbosity minimal
+        run: dotnet test eng/WindowsIntegration/Sec02.ServerConfigIntegration/Sec02.ServerConfigIntegration.Windows.csproj --configuration Release --no-restore --verbosity minimal
 
       - name: Run SEC-02 client TLS integration tests
-        run: dotnet test Tests/WindowsIntegration/Sec02.ClientTlsIntegration/Sec02.ClientTlsIntegration.Windows.csproj --configuration Release --no-restore --verbosity minimal
+        run: dotnet test eng/WindowsIntegration/Sec02.ClientTlsIntegration/Sec02.ClientTlsIntegration.Windows.csproj --configuration Release --no-restore --verbosity minimal
 
       - name: Upload Windows build outputs
         if: always()
