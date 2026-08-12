@@ -156,8 +156,8 @@ function Assert-ManifestContract($Manifest) {
         [void](Assert-ManifestString $item 'script' "contract.$name")
         [void](Assert-ManifestString $item 'action' "contract.$name")
         [void](Assert-ManifestString $item 'scope' "contract.$name")
-        if ([string]$item.script -ne 'Tools/ResourceBaseline.ps1') {
-            throw "contract.$name.script 必须固定为 Tools/ResourceBaseline.ps1。"
+        if ([string]$item.script -ne 'tools/ResourceBaseline.ps1') {
+            throw "contract.$name.script 必须固定为 tools/ResourceBaseline.ps1。"
         }
     }
     if ([string]$contract.acquire.action -ne 'Acquire' -or [string]$contract.acquire.scope -ne 'All') {
@@ -260,7 +260,7 @@ function Assert-ResourceContract($Resource) {
         if ([string]$source.locator.Replace('\', '/') -ne $sourceRelativePath.Replace('\', '/')) {
             throw "$label.source.locator 必须固定为 externalRootRelativePath。"
         }
-        if ([string]$source.acquisition.script -ne 'Tools/ResourceBaseline.ps1' -or
+        if ([string]$source.acquisition.script -ne 'tools/ResourceBaseline.ps1' -or
             [string]$source.acquisition.action -ne 'Acquire' -or
             [string]$source.acquisition.scope -ne 'All') {
             throw "$label.source.acquisition 必须声明 ResourceBaseline.ps1 Acquire/All。"

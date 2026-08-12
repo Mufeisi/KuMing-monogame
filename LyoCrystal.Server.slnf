@@ -6,7 +6,7 @@
       "MicroGateway.Core\\MicroGateway.Core.csproj",
       "Server\\Server.Library.csproj",
       "Server.MirForms\\Server.csproj",
-      "Tests\\Base05.Tests\\Base05.Tests.csproj"
+      "tests\\Base05.Tests\\Base05.Tests.csproj"
     ]
   }
 }

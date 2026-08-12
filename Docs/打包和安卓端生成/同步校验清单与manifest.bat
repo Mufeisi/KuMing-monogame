@@ -1,1 +1,1 @@
-dotnet run -c Debug --project ../Tools/MobileBootstrapAudit -- --sync-manifest
+dotnet run -c Debug --project ../tools/MobileBootstrapAudit -- --sync-manifest

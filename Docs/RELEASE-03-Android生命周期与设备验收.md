@@ -27,7 +27,7 @@
 ```powershell
 $env:LYOCRYSTAL_ANDROID_RECOVERY_PASSPHRASE = '<从受保护密码管理器临时读取>'
 try {
-  dotnet run --project Tools/ReleaseSigningTool/ReleaseSigningTool.csproj -c Release -- `
+  dotnet run --project tools/ReleaseSigningTool/ReleaseSigningTool.csproj -c Release -- `
     export-android-recovery <keystore> <口令.dpapi> android-apk-2026 lyocrystal-release-2026 <离线恢复包>
 } finally {
   Remove-Item Env:LYOCRYSTAL_ANDROID_RECOVERY_PASSPHRASE -ErrorAction SilentlyContinue

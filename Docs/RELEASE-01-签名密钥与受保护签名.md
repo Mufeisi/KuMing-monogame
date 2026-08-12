@@ -21,15 +21,15 @@ APK 与资源索引使用两套不可互换的生产密钥：Android APK 使用�
 首次生成当前/下一资源密钥时执行一次，输出路径已存在会拒绝覆盖：
 
 ```powershell
-dotnet run --project Tools/ReleaseSigningTool/ReleaseSigningTool.csproj -c Release -- provision-resource-key resource-2026-a Configs/ReleaseSecrets/resource-2026-a.pkcs8.dpapi Docs/ReleaseKeys/resource-2026-a.public.json
-dotnet run --project Tools/ReleaseSigningTool/ReleaseSigningTool.csproj -c Release -- provision-resource-key resource-2026-b Configs/ReleaseSecrets/resource-2026-b.pkcs8.dpapi Docs/ReleaseKeys/resource-2026-b.public.json
+dotnet run --project tools/ReleaseSigningTool/ReleaseSigningTool.csproj -c Release -- provision-resource-key resource-2026-a Configs/ReleaseSecrets/resource-2026-a.pkcs8.dpapi Docs/ReleaseKeys/resource-2026-a.public.json
+dotnet run --project tools/ReleaseSigningTool/ReleaseSigningTool.csproj -c Release -- provision-resource-key resource-2026-b Configs/ReleaseSecrets/resource-2026-b.pkcs8.dpapi Docs/ReleaseKeys/resource-2026-b.public.json
 ```
 
 生成公钥后必须把 SPKI 与序列窗口编译进 `BootstrapManifestTrustConfiguration.TrustedKeys`，再发布同时信任当前/下一密钥的客户端。签名与复验：
 
 ```powershell
-dotnet run --project Tools/ReleaseSigningTool/ReleaseSigningTool.csproj -c Release -- sign-resource-index Client_MonoGame.Shared/BootstrapAssets/bootstrap-package-index.json Docs/ReleaseKeys/bootstrap-package-index.signed.json resource-2026-a 1 1.0.0 Configs/ReleaseSecrets/resource-2026-a.pkcs8.dpapi
-dotnet run --project Tools/ReleaseSigningTool/ReleaseSigningTool.csproj -c Release -- verify-resource-index Docs/ReleaseKeys/bootstrap-package-index.signed.json 1.0.0
+dotnet run --project tools/ReleaseSigningTool/ReleaseSigningTool.csproj -c Release -- sign-resource-index Client_MonoGame.Shared/BootstrapAssets/bootstrap-package-index.json Docs/ReleaseKeys/bootstrap-package-index.signed.json resource-2026-a 1 1.0.0 Configs/ReleaseSecrets/resource-2026-a.pkcs8.dpapi
+dotnet run --project tools/ReleaseSigningTool/ReleaseSigningTool.csproj -c Release -- verify-resource-index Docs/ReleaseKeys/bootstrap-package-index.signed.json 1.0.0
 ```
 
 签名工具严格导入完整 P-256 PKCS#8，构造 SEC-06 确定性载荷，签名后立即自验；未知 Key ID、错误序列窗口、清单篡改或最低版本不满足均失败关闭。输出只包含 Key ID、序列和包数量。
@@ -41,7 +41,7 @@ dotnet run --project Tools/ReleaseSigningTool/ReleaseSigningTool.csproj -c Relea
 ```powershell
 $env:LYOCRYSTAL_APK_PASSWORD = '<一次性输入>'
 try {
-    dotnet run --project Tools/ReleaseSigningTool/ReleaseSigningTool.csproj -c Release -- protect-environment-secret android-apk-2026 LYOCRYSTAL_APK_PASSWORD Configs/ReleaseSecrets/lyocrystal-android-2026-r2-password.dpapi
+    dotnet run --project tools/ReleaseSigningTool/ReleaseSigningTool.csproj -c Release -- protect-environment-secret android-apk-2026 LYOCRYSTAL_APK_PASSWORD Configs/ReleaseSecrets/lyocrystal-android-2026-r2-password.dpapi
     if ($LASTEXITCODE -ne 0) { throw "保护 APK 口令失败，退出码 $LASTEXITCODE" }
 }
 finally {
@@ -52,7 +52,7 @@ finally {
 签名构建由工具在子进程环境中传递口令，命令行和构建日志不出现口令：
 
 ```powershell
-dotnet run --project Tools/ReleaseSigningTool/ReleaseSigningTool.csproj -c Release -- publish-signed-android Client_MonoGame.Android/Client_MonoGame.Android.csproj Configs/ReleaseSecrets/lyocrystal-android-2026-r2.keystore Configs/ReleaseSecrets/lyocrystal-android-2026-r2-password.dpapi android-apk-2026 lyocrystal-release-2026 Docs/Evidence/GATE-P5/release01-signing-20260810/android-production-signing-build.log
+dotnet run --project tools/ReleaseSigningTool/ReleaseSigningTool.csproj -c Release -- publish-signed-android Client_MonoGame.Android/Client_MonoGame.Android.csproj Configs/ReleaseSecrets/lyocrystal-android-2026-r2.keystore Configs/ReleaseSecrets/lyocrystal-android-2026-r2-password.dpapi android-apk-2026 lyocrystal-release-2026 Docs/Evidence/GATE-P5/release01-signing-20260810/android-production-signing-build.log
 ```
 
 发布前必须再用 Android SDK `apksigner verify --verbose --print-certs` 验证 APK；资源索引密钥不得被导入 APK keystore，APK keystore 也不得传给资源签名命令。

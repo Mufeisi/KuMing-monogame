@@ -7,10 +7,10 @@
 
 ```powershell
 dotnet --version
-pwsh -NoProfile -File Tools/ResourceBaseline.ps1 -Action Validate -Scope Repository
+pwsh -NoProfile -File tools/ResourceBaseline.ps1 -Action Validate -Scope Repository
 dotnet restore LyoCrystal.Server.slnf
 dotnet build LyoCrystal.Server.slnf --configuration Release --no-restore
-dotnet test Tests/Base05.Tests/Base05.Tests.csproj --configuration Release
+dotnet test tests/Base05.Tests/Base05.Tests.csproj --configuration Release
 ```
 
 按工作内容选择入口：
@@ -37,7 +37,7 @@ dotnet test Tests/Base05.Tests/Base05.Tests.csproj --configuration Release
 
 ```powershell
 dotnet --version
-pwsh -NoProfile -File Tools/ResourceBaseline.ps1 -Action Validate -Scope Repository
+pwsh -NoProfile -File tools/ResourceBaseline.ps1 -Action Validate -Scope Repository
 ```
 
 资源版本、目录树 SHA256、来源和三阶段摘要记录在 [`resources.manifest.json`](resources.manifest.json)。外部资源条目显式区分 `source`（授权源）、`acquired`（获取/overlay 后）和 `final`（导出器处理后）；脚本不会猜测或生成未知哈希。`.gitattributes` 将纳入哈希的文本资源固定为 LF，避免 Windows `core.autocrlf` 造成 fresh checkout 漂移。
@@ -49,14 +49,14 @@ pwsh -NoProfile -File Tools/ResourceBaseline.ps1 -Action Validate -Scope Reposit
 首次从 Git fresh clone 执行 Acquire 时，`Client_MonoGame.Shared/BootstrapAssets` 已包含 273 个仓库追踪文件。脚本只在该目录当前内容与清单 `repositoryOverlay` 摘要精确一致时允许 overlay；任何漂移或额外文件都拒绝。没有 `repositoryOverlay` 的其它目标必须不存在或为空。BASE-02b 的 CI 裸克隆资源镜像仍是独立 backlog，本 README 不将本机 QQ 群资源声明为 BASE-02b 完成。
 
 ```powershell
-pwsh -NoProfile -File Tools/ResourceBaseline.ps1 `
+pwsh -NoProfile -File tools/ResourceBaseline.ps1 `
   -Action Acquire -Scope All -ExternalRoot D:\ChuanQi\客户端
 
-pwsh -NoProfile -File Tools/Mobile-BootstrapPackageRepoExport.ps1 `
+pwsh -NoProfile -File tools/Mobile-BootstrapPackageRepoExport.ps1 `
   -RepositoryRoot (Get-Location).Path `
   -OutputRoot (Join-Path (Get-Location).Path 'Build/Mobile/BootstrapRepo')
 
-pwsh -NoProfile -File Tools/ResourceBaseline.ps1 -Action Validate -Scope All
+pwsh -NoProfile -File tools/ResourceBaseline.ps1 -Action Validate -Scope All
 ```
 
 `Acquire` 会先验证 `source`，把资源和声明的 overlay 复制到仓库内临时目录，验证 `acquired` 后再替换空目标或精确匹配的 repository overlay；overlay 目标必须在获取前已存在，缺失即拒绝。替换阶段保留旧目标备份；在所有新目标替换且替换后验证成功时到达唯一提交点，提交点前任一移动、注入故障或验证失败都会按逆序删除新目标并恢复旧目录。提交点后的备份清理属于 post-commit cleanup，清理失败不会回滚新目标，而是保留备份目录并报告人工恢复路径；提交前回滚自身失败也会保留暂存目录和备份路径。移动资源的导出器会规范化 `bootstrap-package-index.json` 并生成补丁仓库，随后 `Validate All` 验证所有 `final` 摘要并逐包交叉校验 ZIP、索引和 SHA256 sidecar。`source.type=none` 仅用于可选缺口，必须声明 `version=absent`、`versionSha256` 和 `validation.method=assert-absent`、`validation.scope=target-absent`，目标一旦出现文件或目录即失败；不支持 `skip`。源与仓库重叠、reparse point、非 overlay 目标非空、overlay 漂移或任一摘要不匹配时命令都会以非零退出。
@@ -64,7 +64,7 @@ pwsh -NoProfile -File Tools/ResourceBaseline.ps1 -Action Validate -Scope All
 只需复核当前仓库目标时，可单独执行：
 
 ```powershell
-pwsh -NoProfile -File Tools/ResourceBaseline.ps1 -Action Validate -Scope All
+pwsh -NoProfile -File tools/ResourceBaseline.ps1 -Action Validate -Scope All
 ```
 
 BASE-06 的移动端代码迁移与本机构建已完成，模拟器 Debug/Release/AOT+Trim/Trim-only 四态已通过；移动端当前为稳定 `net10.0-*`。BASE-08 = GATE-P0 已完成，证据见提交 [`4436426`](https://github.com/Mufeisi/KuMing-monogame/commit/443642644bc709a6059caaa94d84dc7a2eee15fd) 及 [GitHub Actions run 31081000003](https://github.com/Mufeisi/KuMing-monogame/actions/runs/31081000003)。P0～P5 已完成并转入维护；工程治理状态只在 [`Docs/工程治理实施路线.md`](Docs/工程治理实施路线.md) 维护，产品任务以开工时明确指定的活动 PRD、Issue 或实施规格为准，完整生命周期规则见 [`Docs/index.md`](Docs/index.md)。在没有外部资源时可以构建不依赖资源的项目，例如：
@@ -74,7 +74,7 @@ BASE-09 的 iOS TFM 已隔离：`Client_MonoGame.Shared` 默认只求值 `net10.
 ```powershell
 dotnet build Shared/Shared.csproj
 dotnet build Server/Server.Library.csproj
-dotnet build Tools/MobileBootstrapAudit/MobileBootstrapAudit.csproj
+dotnet build tools/MobileBootstrapAudit/MobileBootstrapAudit.csproj
 ```
 
 构建警告（例如现有 NuGet 漏洞或 nullable 警告）不属于 BASE-02 资源基线，需在对应阶段处理。

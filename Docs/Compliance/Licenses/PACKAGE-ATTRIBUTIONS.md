@@ -89,8 +89,8 @@
 | RoslynPad.Roslyn | 4.12.1 | MIT | NuGet authors: Eli Arbel（包未提供 copyright 字段） | https://roslynpad.net/ |
 | RoslynPad.Roslyn.Windows | 4.12.1 | MIT | NuGet authors: Eli Arbel（包未提供 copyright 字段） | https://roslynpad.net/ |
 | RoslynPad.Themes | 4.12.1 | MIT | NuGet authors: aelij,roslynpad（包未提供 copyright 字段） | https://roslynpad.net/ |
-| SharpGen.Runtime | 2.2.0-beta | MIT | (c) 2010-2017 Alexandre Mutel, 2017-2023 Jeremy Koritzinsky, 2023-2024 Amer Koleci | https://github.com/SharpGenTools/SharpGenTools |
-| SharpGen.Runtime.COM | 2.2.0-beta | MIT | (c) 2010-2017 Alexandre Mutel, 2017-2023 Jeremy Koritzinsky, 2023-2024 Amer Koleci | https://github.com/SharpGenTools/SharpGenTools |
+| SharpGen.Runtime | 2.2.0-beta | MIT | (c) 2010-2017 Alexandre Mutel, 2017-2023 Jeremy Koritzinsky, 2023-2024 Amer Koleci | https://github.com/SharpGentools/SharpGenTools |
+| SharpGen.Runtime.COM | 2.2.0-beta | MIT | (c) 2010-2017 Alexandre Mutel, 2017-2023 Jeremy Koritzinsky, 2023-2024 Amer Koleci | https://github.com/SharpGentools/SharpGenTools |
 | SQLitePCLRaw.bundle_e_sqlite3 | 2.1.11 | Apache-2.0 | Copyright 2014-2024 SourceGear, LLC | https://github.com/ericsink/SQLitePCL.raw |
 | SQLitePCLRaw.core | 2.1.11 | Apache-2.0 | Copyright 2014-2024 SourceGear, LLC | https://github.com/ericsink/SQLitePCL.raw |
 | SQLitePCLRaw.lib.e_sqlite3 | 2.1.12 | Apache-2.0 | Copyright 2014-2024 SourceGear, LLC | https://github.com/ericsink/SQLitePCL.raw |

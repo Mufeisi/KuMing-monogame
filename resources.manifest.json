@@ -13,7 +13,7 @@
   },
   "contract": {
     "acquire": {
-      "script": "Tools/ResourceBaseline.ps1",
+      "script": "tools/ResourceBaseline.ps1",
       "action": "Acquire",
       "scope": "All",
       "externalRootRequired": true,
@@ -21,7 +21,7 @@
       "readOnlySource": true
     },
     "validate": {
-      "script": "Tools/ResourceBaseline.ps1",
+      "script": "tools/ResourceBaseline.ps1",
       "action": "Validate",
       "scope": "Repository|All",
       "phase": "final",
@@ -164,7 +164,7 @@
         "description": "用户授权的 D:/ChuanQi/客户端/monogame 资源源；不修改源目录",
         "acquisition": {
           "method": "copy-tree-with-overlay",
-          "script": "Tools/ResourceBaseline.ps1",
+          "script": "tools/ResourceBaseline.ps1",
           "action": "Acquire",
           "scope": "All",
           "externalRootRelativePath": "monogame",
@@ -278,7 +278,7 @@
         "description": "用户授权的 D:/ChuanQi/客户端/Client_VorticeDX11 资源源；不修改源目录",
         "acquisition": {
           "method": "copy-tree-with-overlay",
-          "script": "Tools/ResourceBaseline.ps1",
+          "script": "tools/ResourceBaseline.ps1",
           "action": "Acquire",
           "scope": "All",
           "externalRootRelativePath": "Client_VorticeDX11",
@@ -334,13 +334,13 @@
       "source": {
         "type": "generated",
         "id": "generated:Mobile-BootstrapPackageRepoExport",
-        "locator": "Tools/Mobile-BootstrapPackageRepoExport.ps1",
+        "locator": "tools/Mobile-BootstrapPackageRepoExport.ps1",
         "version": "generated-deterministic-content-63ef7940|tree-87a5d2ebda2d34dde42f5a5ae24a31e28533adb3cb029d6dab2fd334fed0c96d",
         "versionSha256": "46cdb5e3278d1cffdc92f521de1a0c973f0df30be9a4280ccc361538f095f8ad",
         "description": "由现有 Mobile-BootstrapPackageRepoExport.ps1 从已校验 BootstrapAssets 生成",
         "acquisition": {
           "method": "deterministic-export",
-          "script": "Tools/Mobile-BootstrapPackageRepoExport.ps1",
+          "script": "tools/Mobile-BootstrapPackageRepoExport.ps1",
           "action": "Export",
           "scope": "Repository"
         },
@@ -387,10 +387,10 @@
       "id": "test-resources",
       "category": "test",
       "required": false,
-      "path": "Tests/Resources",
+      "path": "tests/Resources",
       "source": {
         "type": "none",
-        "id": "none:Tests/Resources",
+        "id": "none:tests/Resources",
         "locator": "not-present",
         "version": "absent",
         "versionSha256": "5ad38304b535c2987dbd24657c1a11b884984ff600d9f389deb0d4e634fee792",
