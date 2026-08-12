@@ -27,6 +27,8 @@ dotnet test Tests/Base05.Tests/Base05.Tests.csproj --configuration Release
 
 完整客户端运行依赖受授权的外部资源，不等同于上述源码快速内环。不要把本机资源、密钥、运行数据库或个人 `.slnLaunch.user` 提交到仓库。
 
+首轮项目整理已经完成并进入维护态：工程入口、模块导航、文档事实源、CI 和远端分支保护均已建立。后续不再以“整理项目”为由批量移动目录或拆分类；新功能、修复和优化应先明确活动任务，并在实际触达模块时按规范渐进改善。当前状态入口见 [`Docs/工程治理实施路线.md`](Docs/工程治理实施路线.md)。
+
 ## BASE-02 可复现构建基线
 
 仓库用 `global.json` 固定稳定 .NET SDK `10.0.200`（`rollForward=disable`，禁止 Preview）。先确认 SDK，再校验仓库内资源：
