@@ -58,6 +58,16 @@ internal static class Program
             project.Snapshot.RemoteReleaseBaseUrl = "http://127.0.0.1:8080/launcher/";
             project.Snapshot.Servers[0].Name = "编辑器验收一区";
             project.Snapshot.Announcements = new List<LauncherAnnouncement> { new() { Title = "离线公告", Summary = "断网状态也可以保存、预览和生成部署包。", Date = DateTime.Today.ToString("yyyy-MM-dd") } };
+            if (string.IsNullOrWhiteSpace(project.ImportedClientDirectory))
+            {
+                project.ImportedClientDirectory = Path.Combine(output, "smoke-client");
+                foreach (string relative in new[] { "Data/Title.Lib", "Data/ChrSel.Lib", "Data/Prguse.Lib" })
+                {
+                    string path = Path.Combine(project.ImportedClientDirectory, relative.Replace('/', Path.DirectorySeparatorChar));
+                    Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+                    if (!File.Exists(path)) File.WriteAllBytes(path, System.Text.Encoding.ASCII.GetBytes("editor-smoke-" + relative));
+                }
+            }
             store.Save(project);
             using Bitmap preview = LauncherRuntimeHost.RenderTemplateForEvidence(project.Snapshot, store.GetProjectDirectory(project.Snapshot.ProjectId), 1f);
             preview.Save(Path.Combine(output, "editor-preview.png"), ImageFormat.Png);

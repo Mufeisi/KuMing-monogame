@@ -18,6 +18,66 @@ namespace Launcher.PlayerShellIntegration;
 public sealed class LauncherEditorTests
 {
     [Fact]
+    public void ClassicTemplateWithoutImagesStillRendersVisibleBuiltInSkin()
+    {
+        using var scope = new EditorTempScope();
+        LauncherSnapshot snapshot = LauncherTemplateCatalog.Create(LauncherTemplateKind.Classic);
+        Assert.Empty(snapshot.Theme.BackgroundImage);
+        Assert.Empty(snapshot.Theme.LaunchButtonImage);
+        using Bitmap rendered = LauncherForm.BuildClassicBackground(new Size(snapshot.Theme.CanvasWidth, snapshot.Theme.CanvasHeight));
+        Color center = rendered.GetPixel(rendered.Width / 2, rendered.Height / 2);
+        Color corner = rendered.GetPixel(16, 16);
+        Assert.NotEqual(Color.Black.ToArgb(), center.ToArgb());
+        Assert.NotEqual(center.ToArgb(), corner.ToArgb());
+        string output = Path.Combine(scope.Root, "classic-no-assets.png");
+        rendered.Save(output, System.Drawing.Imaging.ImageFormat.Png);
+        Assert.True(new FileInfo(output).Length > 4_000);
+    }
+
+    [Fact]
+    public async Task EnabledMicroMustBeReachableBeforeGameLaunch()
+    {
+        int unavailablePort;
+        using (var listener = new TcpListener(IPAddress.Loopback, 0))
+        {
+            listener.Start();
+            unavailablePort = ((IPEndPoint)listener.LocalEndpoint).Port;
+        }
+        var endpoint = new MicroEndpoint { Enabled = true, Address = "127.0.0.1", Port = unavailablePort, User = "player" };
+        Assert.False(await MicroGatewayReadiness.ProbeAsync(endpoint, CancellationToken.None));
+        endpoint.Enabled = false;
+        Assert.True(await MicroGatewayReadiness.ProbeAsync(endpoint, CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task MissingLoginLibrariesAreDownloadedBeforeGameLaunch()
+    {
+        using var scope = new EditorTempScope();
+        string resources = scope.Dir("gateway-resources");
+        foreach (string relative in new[] { "Data/Title.Lib", "Data/ChrSel.Lib", "Data/Prguse.Lib" })
+        {
+            string path = Path.Combine(resources, relative.Replace('/', Path.DirectorySeparatorChar));
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            await File.WriteAllBytesAsync(path, System.Text.Encoding.ASCII.GetBytes("library-" + relative));
+        }
+        int port = FreePort();
+        await using var host = new StaticFileHost(resources, port);
+        await host.StartAsync();
+        string client = scope.Dir("client");
+        var endpoint = new MicroEndpoint { Enabled = true, Address = "127.0.0.1", Port = port, User = "player" };
+        LauncherCoreResource[] manifest = new[] { "Title.Lib", "ChrSel.Lib", "Prguse.Lib" }.Select(file =>
+        {
+            string path = Path.Combine(resources, "Data", file);
+            return new LauncherCoreResource { Path = "Data/" + file, Size = new FileInfo(path).Length, Sha256 = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(path))).ToLowerInvariant() };
+        }).ToArray();
+        Assert.True(await MicroGatewayReadiness.EnsureCoreLibrariesAsync(endpoint, "test-project", client,
+            manifest, null, CancellationToken.None));
+        Assert.All(new[] { "Title.Lib", "ChrSel.Lib", "Prguse.Lib" }, file =>
+            Assert.True(new FileInfo(Path.Combine(client, "Data", file)).Length > 0));
+        Assert.Empty(Directory.EnumerateFiles(client, "*.downloading-*", SearchOption.AllDirectories));
+    }
+
+    [Fact]
     public void EditorChineseCatalogCoversEveryVisibleChoice()
     {
         string[] texts = Enum.GetValues<LauncherTemplateKind>().Select(EditorChineseText.Template)
@@ -539,7 +599,10 @@ public sealed class LauncherEditorTests
                 HttpListenerContext context; try { context = await _listener.GetContextAsync(); } catch { break; }
                 try
                 {
-                    string relative = Uri.UnescapeDataString(context.Request.Url!.AbsolutePath.TrimStart('/')).Replace('/', Path.DirectorySeparatorChar);
+                    string requestPath = context.Request.Url!.AbsolutePath;
+                    string relative = Uri.UnescapeDataString(requestPath.StartsWith("/api/file/", StringComparison.OrdinalIgnoreCase)
+                        ? requestPath["/api/file/".Length..]
+                        : requestPath.TrimStart('/')).Replace('/', Path.DirectorySeparatorChar);
                     string path = Path.GetFullPath(Path.Combine(_root, relative));
                     if (!path.StartsWith(_root + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase) || !File.Exists(path)) { context.Response.StatusCode = 404; }
                     else { byte[] bytes = await File.ReadAllBytesAsync(path); context.Response.ContentLength64 = bytes.Length; await context.Response.OutputStream.WriteAsync(bytes); }

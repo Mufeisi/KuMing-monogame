@@ -38,6 +38,14 @@ public static class LauncherSnapshotValidator
         }
         if (snapshot.Servers is null || snapshot.Servers.Count is < 1 or > 200) throw new InvalidDataException("区服数量必须为 1 到 200");
         ValidateMicro(snapshot.DefaultMicro);
+        if (snapshot.LoginCoreResources is null || snapshot.LoginCoreResources.Count > 8) throw new InvalidDataException("登录核心资源清单无效");
+        var corePaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (LauncherCoreResource resource in snapshot.LoginCoreResources)
+        {
+            if (resource is null || string.IsNullOrWhiteSpace(resource.Path) || !corePaths.Add(resource.Path) || !Regex.IsMatch(resource.Path, "^Data/[A-Za-z0-9._-]+\\.Lib$", RegexOptions.CultureInvariant) ||
+                resource.Size is < 1 or > 64L * 1024 * 1024 || !Regex.IsMatch(resource.Sha256 ?? string.Empty, "^[0-9a-f]{64}$", RegexOptions.CultureInvariant))
+                throw new InvalidDataException("登录核心资源条目无效");
+        }
         var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (LauncherServer server in snapshot.Servers)
         {

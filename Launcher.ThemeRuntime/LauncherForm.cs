@@ -10,6 +10,7 @@ internal sealed class LauncherForm : Form
     private readonly Panel _announcements = new() { AutoScroll = true };
     private readonly FlowLayoutPanel _actionLinks = new() { AutoSize = true, BackColor = Color.Transparent };
     private readonly CancellationTokenSource _announcementCancellation = new();
+    private readonly CancellationTokenSource _lifetimeCancellation = new();
     private readonly ProgressBar _overall = new();
     private readonly ProgressBar _current = new();
     private readonly Label _progressText = new() { AutoEllipsis = true };
@@ -57,6 +58,7 @@ internal sealed class LauncherForm : Form
         BuildUi();
         string background = LauncherSnapshotValidator.ResolveAsset(_loaded.Root, _loaded.Snapshot.Theme.BackgroundImage);
         if (!string.IsNullOrEmpty(background)) { BackgroundImage = Own(SafeLoadImage(background)); BackgroundImageLayout = ImageLayout.Stretch; }
+        else if (_loaded.Snapshot.Theme.Template == LauncherTemplateKind.Classic) BackgroundImage = Own(BuildClassicBackground(ClientSize));
         ApplyTemplate();
         DpiChanged += (_, _) => QueueDpiLayout();
         UpdateProgress(new LauncherProgressState("启动核心已就绪，可进入游戏", string.Empty, 0, 0, 0, 0, 0));
@@ -126,6 +128,7 @@ internal sealed class LauncherForm : Form
     protected override void OnFormClosing(FormClosingEventArgs e)
     {
         _announcementCancellation.Cancel();
+        _lifetimeCancellation.Cancel();
         base.OnFormClosing(e);
     }
 
@@ -298,8 +301,35 @@ internal sealed class LauncherForm : Form
             if (!string.IsNullOrEmpty(pressed)) _launchButton.PressedImage = SafeLoadImage(pressed);
             string disabled = LauncherSnapshotValidator.ResolveAsset(_loaded.Root, _loaded.Snapshot.Theme.LaunchButtonDisabledImage);
             if (!string.IsNullOrEmpty(disabled)) _launchButton.DisabledImage = SafeLoadImage(disabled);
+            if (_launchButton.BaseImage is null && _loaded.Snapshot.Theme.Template == LauncherTemplateKind.Classic) ApplyClassicLaunchButtonStyle();
         }
         ApplyControlOverrides(S);
+    }
+
+    internal static Bitmap BuildClassicBackground(Size size)
+    {
+        var image = new Bitmap(Math.Max(1, size.Width), Math.Max(1, size.Height), System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+        using Graphics graphics = Graphics.FromImage(image);
+        using var background = new System.Drawing.Drawing2D.LinearGradientBrush(
+            new Rectangle(Point.Empty, image.Size), Color.FromArgb(30, 38, 54), Color.FromArgb(8, 11, 18), 90f);
+        graphics.FillRectangle(background, new Rectangle(Point.Empty, image.Size));
+        using var glow = new System.Drawing.Drawing2D.LinearGradientBrush(
+            new Rectangle(0, 0, image.Width, Math.Max(1, image.Height / 2)), Color.FromArgb(90, 112, 72, 22), Color.Transparent, 90f);
+        graphics.FillRectangle(glow, 0, 0, image.Width, Math.Max(1, image.Height / 2));
+        using var border = new Pen(Color.FromArgb(150, 216, 167, 58), 2f);
+        graphics.DrawRectangle(border, 8, 8, Math.Max(1, image.Width - 17), Math.Max(1, image.Height - 17));
+        using var inner = new Pen(Color.FromArgb(80, 255, 226, 148));
+        graphics.DrawRectangle(inner, 13, 13, Math.Max(1, image.Width - 27), Math.Max(1, image.Height - 27));
+        return image;
+    }
+
+    private void ApplyClassicLaunchButtonStyle()
+    {
+        _launchButton.FlatStyle = FlatStyle.Flat;
+        _launchButton.FlatAppearance.BorderSize = 1;
+        _launchButton.FlatAppearance.BorderColor = Color.FromArgb(235, 190, 76);
+        _launchButton.BackColor = Color.FromArgb(132, 82, 20);
+        _launchButton.ForeColor = Color.FromArgb(255, 241, 190);
     }
 
     private void ApplyControlOverrides(Func<int, int> scale)
@@ -386,6 +416,14 @@ internal sealed class LauncherForm : Form
         MicroEndpoint micro = server.MicroOverride ?? _loaded.Snapshot.DefaultMicro;
         string? selectedClient = ClientSelection.Resolve(this, _loaded.Snapshot.ProjectId, _clientDirectory);
         if (selectedClient is null) return;
+        var readinessProgress = new Progress<LauncherProgressState>(state => { if (!_disposeStarted && !IsDisposed && !Disposing) UpdateProgress(state); });
+        if (micro.Enabled && (!await MicroGatewayReadiness.ProbeAsync(micro, _lifetimeCancellation.Token) ||
+            !await MicroGatewayReadiness.EnsureCoreLibrariesAsync(micro, _loaded.Snapshot.ProjectId, selectedClient, _loaded.Snapshot.LoginCoreResources, readinessProgress, _lifetimeCancellation.Token)))
+        {
+            if (_lifetimeCancellation.IsCancellationRequested || IsDisposed || Disposing) return;
+            MessageBox.Show(this, $"微端服务器 {micro.Address}:{micro.Port} 尚未启动，或缺少登录核心资源。\r\n\r\n请先运行“一键生成全部成品”得到的独立微端部署包，并确认资源目录中包含 Title.Lib、ChrSel.Lib、Prguse.Lib。", "登录资源尚未就绪", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return;
+        }
         if (!string.Equals(selectedClient, _selectedClientDirectory, StringComparison.OrdinalIgnoreCase))
         {
             _selectedClientDirectory = selectedClient;
@@ -397,6 +435,10 @@ internal sealed class LauncherForm : Form
         _launch(selectedClient, server, micro, _settings);
         UpdateProgress(new LauncherProgressState("游戏已启动；普通资源继续按需下载", string.Empty, 0, 0, 0, 0, 0));
         await Task.Delay(1500);
+        }
+        catch (OperationCanceledException) when (_lifetimeCancellation.IsCancellationRequested)
+        {
+            return;
         }
         finally
         {
@@ -504,7 +546,7 @@ internal sealed class LauncherForm : Form
         return new Bitmap(source);
     }
     private T Own<T>(T image) where T : Image { _ownedImages.Add(image); return image; }
-    protected override void Dispose(bool disposing) { if (disposing) { _disposeStarted = true; _announcementCancellation.Dispose(); _progressTimer.Dispose(); foreach (Image image in _derivedBackgrounds.Values) image.Dispose(); _derivedBackgrounds.Clear(); foreach (Image image in _ownedImages) image.Dispose(); _ownedImages.Clear(); foreach (Font font in _ownedFonts) font.Dispose(); _ownedFonts.Clear(); } base.Dispose(disposing); }
+    protected override void Dispose(bool disposing) { if (disposing) { _disposeStarted = true; _lifetimeCancellation.Cancel(); _lifetimeCancellation.Dispose(); _announcementCancellation.Dispose(); _progressTimer.Dispose(); foreach (Image image in _derivedBackgrounds.Values) image.Dispose(); _derivedBackgrounds.Clear(); foreach (Image image in _ownedImages) image.Dispose(); _ownedImages.Clear(); foreach (Font font in _ownedFonts) font.Dispose(); _ownedFonts.Clear(); } base.Dispose(disposing); }
     private static LauncherPlayerSettings CloneSettings(LauncherPlayerSettings value) => new() { Resolution = value.Resolution, FullScreen = value.FullScreen, Borderless = value.Borderless, FpsCap = value.FpsCap, MaxFps = value.MaxFps, Volume = value.Volume, MusicVolume = value.MusicVolume, TopMost = value.TopMost, AutoStart = value.AutoStart, AdvancedLogs = value.AdvancedLogs, MicroCacheLimitMb = value.MicroCacheLimitMb };
     private static string StatusText(ServerOperatingStatus value) => value switch
     {

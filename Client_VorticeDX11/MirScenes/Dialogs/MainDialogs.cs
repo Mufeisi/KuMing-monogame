@@ -476,11 +476,15 @@ namespace Client.MirScenes.Dialogs
 
         private void HealthOrb_BeforeDraw(object sender, EventArgs e)
         {
-            if (Libraries.Prguse == null) return;
+            if (Libraries.Prguse == null || User == null || User.Stats == null) return;
+
+            int maximumHealth = User.Stats[Stat.HP];
+            int maximumMana = User.Stats[Stat.MP];
+            if (maximumHealth <= 0) return;
 
             int height;
-            if (User != null && User.HP != User.Stats[Stat.HP])
-                height = (int)(80 * User.HP / (float)User.Stats[Stat.HP]);
+            if (User.HP != maximumHealth)
+                height = (int)(80 * User.HP / (float)maximumHealth);
             else
                 height = 80;
 
@@ -501,9 +505,10 @@ namespace Client.MirScenes.Dialogs
             Libraries.Prguse.Draw(orbImage, r, new Point(((Settings.ScreenWidth / 2) - (Size.Width / 2)), HealthOrb.DisplayLocation.Y + 80 - height), Color.White, false);
 
             if (hpOnly) return;
+            if (maximumMana <= 0) return;
 
-            if (User.MP != User.Stats[Stat.MP])
-                height = (int)(80 * User.MP / (float)User.Stats[Stat.MP]);
+            if (User.MP != maximumMana)
+                height = (int)(80 * User.MP / (float)maximumMana);
             else
                 height = 80;
 

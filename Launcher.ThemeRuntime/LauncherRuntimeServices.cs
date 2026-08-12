@@ -225,3 +225,144 @@ public static class ServerConnectivityDiagnostic
         catch (Exception ex) when (ex is SocketException or OperationCanceledException) { return null; }
     }
 }
+
+public static class MicroGatewayReadiness
+{
+    public static async Task<bool> ProbeAsync(MicroEndpoint endpoint, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(endpoint);
+        if (!endpoint.Enabled) return true;
+        foreach ((string address, int port) in Endpoints(endpoint))
+        {
+            if (string.IsNullOrWhiteSpace(address) || port is < 1 or > 65535) continue;
+            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            timeout.CancelAfter(TimeSpan.FromSeconds(3));
+            try
+            {
+                using var client = new HttpClient(new HttpClientHandler { UseProxy = false }) { Timeout = TimeSpan.FromSeconds(3) };
+                using var request = new HttpRequestMessage(HttpMethod.Get, new UriBuilder(Uri.UriSchemeHttp, address, port, "api/health").Uri);
+                using HttpResponseMessage response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, timeout.Token).ConfigureAwait(false);
+                if (response.IsSuccessStatusCode) return true;
+            }
+            catch (Exception ex) when (ex is HttpRequestException or OperationCanceledException or UriFormatException) { }
+        }
+        return false;
+    }
+
+    public static async Task<bool> EnsureCoreLibrariesAsync(
+        MicroEndpoint endpoint,
+        string projectId,
+        string clientDirectory,
+        IEnumerable<LauncherCoreResource> resources,
+        IProgress<LauncherProgressState>? progress,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(endpoint);
+        LauncherSnapshotValidator.ValidateProjectId(projectId);
+        string clientRoot = Path.GetFullPath(clientDirectory);
+        if (!Directory.Exists(clientRoot)) throw new DirectoryNotFoundException("客户端目录不存在");
+        RejectReparseChain(clientRoot, clientRoot);
+        string code = Shared.Security.ProtectedClientSecretStore.ReadMicroCode(projectId);
+        LauncherCoreResource[] files = resources.Where(value => value is not null).ToArray();
+        if (!endpoint.Enabled) return true;
+        if (files.Length != 3 || !files.Select(item => item.Path).ToHashSet(StringComparer.OrdinalIgnoreCase)
+            .SetEquals(new[] { "Data/Title.Lib", "Data/ChrSel.Lib", "Data/Prguse.Lib" })) return false;
+        for (int endpointIndex = 0; endpointIndex < 2; endpointIndex++)
+        {
+            (string address, int port) = endpointIndex == 0 ? (endpoint.Address, endpoint.Port) : (endpoint.BackupAddress, endpoint.BackupPort);
+            if (string.IsNullOrWhiteSpace(address) || port is < 1 or > 65535) continue;
+            try
+            {
+                using var client = new HttpClient(new HttpClientHandler { UseProxy = false }) { Timeout = TimeSpan.FromMinutes(2) };
+                for (int index = 0; index < files.Length; index++)
+                {
+                    LauncherCoreResource resource = files[index];
+                    string relative = resource.Path.Replace('\\', '/').TrimStart('/');
+                    string target = Path.GetFullPath(Path.Combine(clientRoot, relative.Replace('/', Path.DirectorySeparatorChar)));
+                    if (!target.StartsWith(clientRoot.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
+                        throw new InvalidDataException("登录资源路径越界");
+                    if (File.Exists(target) && new FileInfo(target).Length == resource.Size && HashMatches(target, resource.Sha256)) continue;
+                    string directory = Path.GetDirectoryName(target)!;
+                    RejectReparseChain(clientRoot, Path.GetDirectoryName(directory) ?? clientRoot);
+                    Directory.CreateDirectory(directory);
+                    RejectReparseChain(clientRoot, directory);
+                    progress?.Report(new LauncherProgressState($"正在下载登录核心资源（{index + 1}/{files.Length}）", relative, 0, 0, index, files.Length, 0));
+                    using var request = new HttpRequestMessage(HttpMethod.Get, new UriBuilder(Uri.UriSchemeHttp, address, port, "api/file/" + relative).Uri);
+                    request.Headers.TryAddWithoutValidation("User", endpoint.User);
+                    request.Headers.TryAddWithoutValidation("Code", code);
+                    using HttpResponseMessage response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
+                    if (!response.IsSuccessStatusCode) throw new HttpRequestException($"登录资源不可用：{relative}（HTTP {(int)response.StatusCode}）");
+                    long expected = response.Content.Headers.ContentLength ?? 0;
+                    if (expected != resource.Size) throw new InvalidDataException("登录核心资源大小与受信清单不一致：" + relative);
+                    string temporary = target + ".downloading-" + Guid.NewGuid().ToString("N");
+                    try
+                    {
+                        await using Stream input = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
+                        long received;
+                        {
+                            await using var output = new FileStream(temporary, FileMode.CreateNew, FileAccess.Write, FileShare.None, 1024 * 1024, FileOptions.Asynchronous | FileOptions.SequentialScan);
+                            byte[] buffer = new byte[256 * 1024];
+                            received = 0;
+                            int read;
+                            while ((read = await input.ReadAsync(buffer, cancellationToken).ConfigureAwait(false)) > 0)
+                            {
+                                received += read;
+                                if (received > expected || received > 64L * 1024 * 1024) throw new InvalidDataException("登录核心资源长度超出声明：" + relative);
+                                await output.WriteAsync(buffer.AsMemory(0, read), cancellationToken).ConfigureAwait(false);
+                                progress?.Report(new LauncherProgressState($"正在下载登录核心资源（{index + 1}/{files.Length}）", relative, received, expected, index * expected + received, files.Length * expected, 0));
+                            }
+                            await output.FlushAsync(cancellationToken).ConfigureAwait(false);
+                        }
+                        if (received != expected) throw new InvalidDataException("登录核心资源下载不完整：" + relative);
+                        if (!HashMatches(temporary, resource.Sha256)) throw new InvalidDataException("登录核心资源摘要与受信清单不一致：" + relative);
+                        RejectReparseChain(clientRoot, directory);
+                        if ((File.GetAttributes(temporary) & FileAttributes.ReparsePoint) != 0 || !string.Equals(Path.GetDirectoryName(Path.GetFullPath(temporary)), directory, StringComparison.OrdinalIgnoreCase))
+                            throw new InvalidDataException("登录核心资源临时文件路径无效");
+                        if (File.Exists(target) && (File.GetAttributes(target) & FileAttributes.ReparsePoint) != 0)
+                            throw new InvalidDataException("登录核心资源目标文件不得为重解析点");
+                        File.Move(temporary, target, overwrite: true);
+                    }
+                    finally { try { File.Delete(temporary); } catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { } }
+                }
+                return true;
+            }
+            catch (Exception ex) when (ex is HttpRequestException or IOException or UnauthorizedAccessException or InvalidDataException or OperationCanceledException or UriFormatException)
+            {
+                if (cancellationToken.IsCancellationRequested) throw;
+            }
+        }
+        return false;
+    }
+
+    private static bool HashMatches(string path, string expected)
+    {
+        try
+        {
+            using FileStream stream = new(path, FileMode.Open, FileAccess.Read, FileShare.Read, 1024 * 1024, FileOptions.SequentialScan);
+            return string.Equals(Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(stream)), expected, StringComparison.OrdinalIgnoreCase);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { return false; }
+    }
+
+    private static void RejectReparseChain(string root, string path)
+    {
+        string fullRoot = Path.GetFullPath(root).TrimEnd(Path.DirectorySeparatorChar);
+        string full = Path.GetFullPath(path);
+        if (!full.Equals(fullRoot, StringComparison.OrdinalIgnoreCase) && !full.StartsWith(fullRoot + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
+            throw new InvalidDataException("客户端资源路径越界");
+        string current = Path.GetPathRoot(full) ?? string.Empty;
+        foreach (string part in full[current.Length..].Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar))
+        {
+            if (part.Length == 0) continue;
+            current = Path.Combine(current, part);
+            if ((File.Exists(current) || Directory.Exists(current)) && (File.GetAttributes(current) & FileAttributes.ReparsePoint) != 0)
+                throw new InvalidDataException("客户端资源路径不得经过重解析点");
+        }
+    }
+
+    private static IEnumerable<(string Address, int Port)> Endpoints(MicroEndpoint endpoint)
+    {
+        yield return (endpoint.Address, endpoint.Port);
+        if (!string.IsNullOrWhiteSpace(endpoint.BackupAddress) && endpoint.BackupPort > 0) yield return (endpoint.BackupAddress, endpoint.BackupPort);
+    }
+}

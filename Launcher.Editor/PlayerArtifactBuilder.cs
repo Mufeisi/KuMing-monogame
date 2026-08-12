@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Drawing.Imaging;
 using System.IO.Compression;
 using System.Text.Json;
+using System.Security.Cryptography;
 using Launcher.PlayerShell;
 using Launcher.ThemeRuntime;
 using Shared.Security;
@@ -10,6 +11,7 @@ namespace LyoCrystal.LauncherEditor;
 
 public static class PlayerArtifactBuilder
 {
+    private static readonly string[] LoginCoreFiles = { "Data/Title.Lib", "Data/ChrSel.Lib", "Data/Prguse.Lib" };
     private const string ShellResource = "LyoCrystal.LauncherEditor.PlayerShell.exe";
     private const string PayloadResource = "LyoCrystal.LauncherEditor.PlayerPayload.zip";
 
@@ -23,6 +25,7 @@ public static class PlayerArtifactBuilder
         project.SynchronizeMicroIdentity();
         project.Snapshot.WindowTitle = project.Brand.WindowTitle;
         project.Snapshot.TaskbarName = project.Brand.TaskbarName;
+        project.Snapshot.LoginCoreResources = BuildLoginCoreManifest(project.ImportedClientDirectory);
         project.Snapshot.TrustedReleaseKeys = project.Release.RetiredPublicKeys.TakeLast(2).Concat(new[]
         {
             new BootstrapManifestTrustedKey { KeyId = project.Release.CurrentKeyId, SubjectPublicKeyInfo = project.Release.CurrentPublicKey, NotBeforeSequence = project.Release.CurrentKeyNotBeforeSequence },
@@ -93,6 +96,24 @@ public static class PlayerArtifactBuilder
             Directory.CreateDirectory(Path.GetDirectoryName(target)!);
             using Stream input = entry.Open(); using var output = new FileStream(target, FileMode.CreateNew, FileAccess.Write, FileShare.None); input.CopyTo(output, 81920); cancellationToken.ThrowIfCancellationRequested();
         }
+    }
+
+    internal static List<LauncherCoreResource> BuildLoginCoreManifest(string clientDirectory)
+    {
+        string root = Path.GetFullPath(clientDirectory);
+        if (!Directory.Exists(root)) throw new DirectoryNotFoundException("请选择包含完整登录资源的客户端目录");
+        var resources = new List<LauncherCoreResource>(LoginCoreFiles.Length);
+        foreach (string relative in LoginCoreFiles)
+        {
+            string path = Path.GetFullPath(Path.Combine(root, relative.Replace('/', Path.DirectorySeparatorChar)));
+            if (!path.StartsWith(root.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase) || !File.Exists(path))
+                throw new FileNotFoundException("完整客户端缺少登录核心资源：" + relative, path);
+            long size = new FileInfo(path).Length;
+            if (size is < 1 or > 64L * 1024 * 1024) throw new InvalidDataException("登录核心资源大小无效：" + relative);
+            using FileStream stream = new(path, FileMode.Open, FileAccess.Read, FileShare.Read, 1024 * 1024, FileOptions.SequentialScan);
+            resources.Add(new LauncherCoreResource { Path = relative, Size = size, Sha256 = Convert.ToHexString(SHA256.HashData(stream)).ToLowerInvariant() });
+        }
+        return resources;
     }
 
     private static void CopyProjectAssets(string projectRoot, string builtIn, LauncherSnapshot snapshot, CancellationToken cancellationToken)

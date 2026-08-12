@@ -36,6 +36,7 @@ public static class ProjectReleasePublisher
     {
         ProjectReleaseKeyStore.EnsureProvisioned(project, projectRoot);
         LauncherSnapshot snapshot = CloneSnapshot(project.Snapshot);
+        snapshot.LoginCoreResources = PlayerArtifactBuilder.BuildLoginCoreManifest(project.ImportedClientDirectory);
         return PublishCore(project, projectRoot, publishRoot, note, snapshot, null, null);
     }
 
@@ -51,6 +52,7 @@ public static class ProjectReleasePublisher
         string snapshotPath = Path.Combine(source, "launcher-snapshot.json");
         LauncherSnapshot snapshot = JsonSerializer.Deserialize(File.ReadAllBytes(snapshotPath), LauncherSnapshotJsonContext.Default.LauncherSnapshot) ?? throw new InvalidDataException("回滚源快照为空");
         LauncherSnapshotValidator.Validate(snapshot);
+        snapshot.LoginCoreResources = PlayerArtifactBuilder.BuildLoginCoreManifest(project.ImportedClientDirectory);
         return PublishCore(project, projectRoot, publishRoot, note, snapshot, source, history.Sequence, historicalManifest);
     }
 
@@ -348,7 +350,7 @@ public static class ProjectReleasePublisher
         foreach (string path in Directory.EnumerateFiles(staging))
         {
             string name = Path.GetFileName(path);
-            if (name == "launcher-snapshot.json" || name.StartsWith("asset-", StringComparison.OrdinalIgnoreCase) || name is "player-entry.exe" or "player-update.json")
+            if (name.StartsWith("asset-", StringComparison.OrdinalIgnoreCase) || name is "player-entry.exe" or "player-update.json")
             {
                 if (!packages.TryGetValue(name, out BootstrapSignedPackage? package) || new FileInfo(path).Length != package.Size) throw new InvalidDataException("回滚复制文件不在历史签名索引中：" + name);
                 BootstrapSignedPackageHashPolicy.VerifyFile(path, package.Sha256);
