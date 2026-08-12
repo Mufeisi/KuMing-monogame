@@ -24,7 +24,7 @@
     </ProjectReference>
     <ProjectReference Include="..\..\Client_MonoGame.Shared\Client_MonoGame.Shared.csproj">
       <Aliases>MobileClient</Aliases>
-      <AdditionalProperties>TargetFramework=net10.0</AdditionalProperties>
+      <SetTargetFramework>TargetFramework=net10.0</SetTargetFramework>
     </ProjectReference>
   </ItemGroup>
 </Project>
