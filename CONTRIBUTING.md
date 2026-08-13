@@ -3,9 +3,9 @@
 开始修改前必须阅读：
 
 1. [`AGENTS.md`](AGENTS.md)：全仓库执行铁律；
-2. [`Docs/工程开发规范.md`](Docs/工程开发规范.md)：任务生命周期和质量门禁；
-3. [`Docs/开发者指南.md`](Docs/开发者指南.md)：环境、构建、测试、调试和产物；
-4. 当前活动 PRD 或 [`Docs/工程治理实施路线.md`](Docs/工程治理实施路线.md)。
+2. [`Docs/governance/工程开发规范.md`](Docs/governance/工程开发规范.md)：任务生命周期和质量门禁；
+3. [`Docs/guides/开发者指南.md`](Docs/guides/开发者指南.md)：环境、构建、测试、调试和产物；
+4. 当前活动 PRD 或 [`Docs/governance/工程治理实施路线.md`](Docs/governance/工程治理实施路线.md)。
 
 ## 最小工作流
 

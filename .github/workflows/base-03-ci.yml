@@ -232,7 +232,7 @@ jobs:
         run: >-
           dotnet run --project Tools/ProtocolManifestGenerator/ProtocolManifestGenerator.csproj
           --configuration Release --no-restore --
-          --verify Docs/protocol-wire-manifest.generated.json
+          --verify Docs/generated/protocol/protocol-wire-manifest.generated.json
 
       - name: Discover test projects
         id: discover

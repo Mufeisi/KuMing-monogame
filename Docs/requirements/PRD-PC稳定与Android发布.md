@@ -175,7 +175,7 @@ GATE-P1 关闭后，P2 的 SEC-03、SEC-04、SEC-05、SEC-06 各为独立任务�
 | 编号 | 任务 | 依赖 | 退出条件 |
 |---|---|---|---|
 | ANDROID-01..07 | 功能闭环矩阵实现（商城→师徒→关系→坐骑→封印/租赁→钓鱼/活动） | GATE-P0 | **本地退出项已完成**：ANDROID-01 商城逍遥端到端通过；ANDROID-02..07 使用探针通过并有设备入口/窗口证据 |
-| PROTO-01 | **协议盘点**：生成 wire manifest（包 ID/字段顺序/字段类型/枚举底层类型/枚举数值/nullable/数组编码/V1V2 范围）；审计 `LevelEffects` 等已知分叉全部使用点；建立序列化兼容测试 | GATE-P0 | **已完成**：`Docs/protocol-wire-manifest.json` + `ProtocolGoldenTests`（`3e96959`） |
+| PROTO-01 | **协议盘点**：生成 wire manifest（包 ID/字段顺序/字段类型/枚举底层类型/枚举数值/nullable/数组编码/V1V2 范围）；审计 `LevelEffects` 等已知分叉全部使用点；建立序列化兼容测试 | GATE-P0 | **已完成**：`Docs/generated/protocol/protocol-wire-manifest.json` + `ProtocolGoldenTests`（`3e96959`） |
 | BASE-10 | 资源来源固定：外部资源包正式纳入版本/哈希清单 | GATE-P0 | **已完成**：版本/哈希契约与获取校验脚本（`1bcc13c`） |
 | PERF-00 | 性能测量基建：加 CPU/Update/Draw/DrawCall/纹理切换/创建/GC/显存/保存耗时/网络队列统计 | GATE-P0 | **已完成**；300/100 协议模拟并发已回补，见 `PERF-00性能指标与基线记录.md` |
 
