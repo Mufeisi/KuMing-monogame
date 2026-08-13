@@ -666,6 +666,12 @@ internal sealed class MainForm : Form
         TabPage design = _tabs.TabPages.Cast<TabPage>().Single(page => page.Text == "设计");
         return design.Controls.OfType<LauncherCanvasEditorPanel>().Single().CaptureViewportForEvidence();
     }
+    internal LauncherObjectTreeSnapshot CaptureObjectTreeForEvidence() => _canvasPanel!.CaptureObjectTreeForEvidence();
+    internal void FilterObjectTreeForEvidence(string value) => _canvasPanel!.FilterObjectTreeForEvidence(value);
+    internal void ToggleObjectVisibilityForEvidence(LauncherControlId id) => _canvasPanel!.ToggleObjectVisibilityForEvidence(id);
+    internal void SelectObjectTreeForEvidence(LauncherControlId id, Keys modifiers) => _canvasPanel!.SelectObjectTreeForEvidence(id, modifiers);
+    internal bool IsCanvasObjectVisibleForEvidence(LauncherControlId id) => _canvasDocument!.Controls.Single(item => item.Id == id).Visible;
+    internal void UndoCanvasForEvidence() => _canvasDocument!.Undo();
     private void ShowError(Exception error) => MessageBox.Show(this, error.Message, "操作失败", MessageBoxButtons.OK, MessageBoxIcon.Error);
     private static string SafeFileName(string value)
     {

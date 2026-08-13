@@ -125,9 +125,12 @@ public sealed class LauncherEditorTests
 
         document.SetBounds(LauncherControlId.LaunchButton, new Rectangle(1, 1, 20, 20));
         document.ChangeSelectionStyle(new LauncherCanvasStyleChange(ForeColor: "#010203"));
+        document.SetVisible([LauncherControlId.LaunchButton], false);
+        Assert.False(document.DeleteSelection());
 
         Assert.Equal(original, document.GetBounds(LauncherControlId.LaunchButton));
         Assert.Equal(originalColor, snapshot.Theme.Controls.Single(x => x.Id == LauncherControlId.LaunchButton).ForeColor);
+        Assert.True(snapshot.Theme.Controls.Single(x => x.Id == LauncherControlId.LaunchButton).Visible);
     }
 
     [Fact]
@@ -161,6 +164,22 @@ public sealed class LauncherEditorTests
         Assert.InRange(zoom, .25F, 1F);
         Assert.True(snap);
         Assert.False(grid);
+        LauncherObjectTreeSnapshot tree = form.CaptureObjectTreeForEvidence();
+        Assert.Equal(3, tree.GroupCount);
+        Assert.Equal(Enum.GetValues<LauncherControlId>().Length, tree.ObjectCount);
+        Assert.Equal(3, tree.SelectedCount);
+        form.SelectObjectTreeForEvidence(LauncherControlId.ServerList, Keys.None);
+        form.SelectObjectTreeForEvidence(LauncherControlId.LaunchButton, Keys.Shift);
+        Assert.Equal(6, form.CaptureObjectTreeForEvidence().SelectedCount);
+        form.FilterObjectTreeForEvidence("进度");
+        LauncherObjectTreeSnapshot filtered = form.CaptureObjectTreeForEvidence();
+        Assert.Equal(3, filtered.ObjectCount);
+        Assert.Equal(6, filtered.SelectedCount);
+        form.FilterObjectTreeForEvidence(string.Empty);
+        form.ToggleObjectVisibilityForEvidence(LauncherControlId.LaunchButton);
+        Assert.False(form.IsCanvasObjectVisibleForEvidence(LauncherControlId.LaunchButton));
+        form.UndoCanvasForEvidence();
+        Assert.True(form.IsCanvasObjectVisibleForEvidence(LauncherControlId.LaunchButton));
         form.Hide();
     }
 

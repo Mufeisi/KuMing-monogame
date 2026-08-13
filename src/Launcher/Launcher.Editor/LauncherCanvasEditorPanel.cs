@@ -11,13 +11,12 @@ internal sealed class LauncherCanvasEditorPanel : UserControl
     private readonly LauncherCanvasDocument _document;
     private readonly Func<Bitmap> _render;
     private readonly Action<ThemeImageUsage> _importImage;
-    private readonly ListBox _tree = new() { Dock = DockStyle.Fill, SelectionMode = SelectionMode.MultiExtended, BorderStyle = BorderStyle.None, IntegralHeight = false };
+    private readonly LauncherObjectTreeAdapter _tree;
     private readonly TextBox _search = new() { Dock = DockStyle.Top, PlaceholderText = "搜索对象", BorderStyle = BorderStyle.FixedSingle };
     private readonly PropertyGrid _properties = new() { Dock = DockStyle.Fill, HelpVisible = true, ToolbarVisible = false, PropertySort = PropertySort.Categorized };
     private readonly CanvasSurface _surface;
     private readonly Panel _canvasHost = new() { Dock = DockStyle.Fill, AutoScroll = true, BackColor = DesktopAuthoringTheme.CanvasViewport };
     private readonly ToolStripLabel _zoomLabel = new("100%") { Alignment = ToolStripItemAlignment.Right };
-    private bool _synchronizing;
     private bool _snapEnabled = true;
     private bool _autoFit = true;
 
@@ -26,13 +25,13 @@ internal sealed class LauncherCanvasEditorPanel : UserControl
         _document = document;
         _render = render;
         _importImage = importImage;
+        _tree = new LauncherObjectTreeAdapter(document);
         _surface = new CanvasSurface(document) { SnapEnabled = _snapEnabled };
         Dock = DockStyle.Fill;
         BuildUi();
         DesktopAuthoringTheme.Apply(this);
         _document.Changed += OnDocumentChanged;
-        _tree.SelectedIndexChanged += (_, _) => SelectFromTree();
-        _search.TextChanged += (_, _) => RefreshObjectTree();
+        _search.TextChanged += (_, _) => _tree.Filter = _search.Text;
         _canvasHost.Resize += (_, _) => { if (_autoFit) FitCanvas(); else CenterCanvas(); };
         _surface.ZoomRequested += (_, delta) => SetZoom(_surface.Zoom + delta, center: true);
         RefreshFromDocument();
@@ -48,6 +47,10 @@ internal sealed class LauncherCanvasEditorPanel : UserControl
     }
 
     internal (float Zoom, bool Snap, bool Grid) CaptureViewportForEvidence() => (_surface.Zoom, _surface.SnapEnabled, _surface.GridVisible);
+    internal LauncherObjectTreeSnapshot CaptureObjectTreeForEvidence() => _tree.CaptureSnapshot();
+    internal void FilterObjectTreeForEvidence(string value) => _tree.Filter = value;
+    internal void ToggleObjectVisibilityForEvidence(LauncherControlId id) => _tree.ToggleVisibilityForEvidence(id);
+    internal void SelectObjectTreeForEvidence(LauncherControlId id, Keys modifiers) => _tree.SelectForEvidence(id, modifiers);
 
     protected override void OnHandleCreated(EventArgs e)
     {
@@ -132,44 +135,21 @@ internal sealed class LauncherCanvasEditorPanel : UserControl
         parent.Items.Add(menu);
     }
 
-    private void SelectFromTree()
-    {
-        if (_synchronizing) return;
-        _document.Select(_tree.SelectedItems.Cast<ControlItem>().Select(item => item.Id));
-    }
-
-    private void RefreshObjectTree()
-    {
-        LauncherControlId[] selected = _document.Selection.ToArray();
-        string query = _search.Text.Trim();
-        _tree.BeginUpdate(); _tree.Items.Clear();
-        foreach (LauncherControlOverride control in _document.Controls)
-        {
-            var item = new ControlItem(control.Id, control.Visible, _document.IsLocked(control.Id));
-            if (query.Length > 0 && !item.ToString().Contains(query, StringComparison.CurrentCultureIgnoreCase)) continue;
-            int index = _tree.Items.Add(item);
-            if (selected.Contains(control.Id)) _tree.SetSelected(index, true);
-        }
-        _tree.EndUpdate();
-    }
-
     private void RefreshFromDocument()
     {
-        _synchronizing = true;
+        LauncherControlId[] selected = _document.Selection.ToArray();
+        _tree.RefreshFromDocument();
+        _properties.SelectedObjects = selected.Select(id => (object)new CanvasControlPropertyView(_document, id)).ToArray();
+        Bitmap? previous = _surface.CanvasImage;
         try
         {
-            LauncherControlId[] selected = _document.Selection.ToArray();
-            RefreshObjectTree();
-            _properties.SelectedObjects = selected.Select(id => (object)new CanvasControlPropertyView(_document, id)).ToArray();
-            Bitmap? previous = _surface.CanvasImage;
-            try { _surface.SetCanvasImage(_render()); }
-            catch { if (previous is not null) _surface.SetCanvasImage(previous); previous = null; }
-            previous?.Dispose();
-            CenterCanvas();
-            _surface.Invalidate();
-            PublishStatus();
+            _surface.SetCanvasImage(_render());
         }
-        finally { _synchronizing = false; }
+        catch { if (previous is not null) _surface.SetCanvasImage(previous); previous = null; }
+        previous?.Dispose();
+        CenterCanvas();
+        _surface.Invalidate();
+        PublishStatus();
     }
 
     private void FitCanvas()
@@ -213,11 +193,6 @@ internal sealed class LauncherCanvasEditorPanel : UserControl
             _surface.CanvasImage?.Dispose();
         }
         base.Dispose(disposing);
-    }
-
-    private sealed record ControlItem(LauncherControlId Id, bool Visible, bool Locked)
-    {
-        public override string ToString() => $"{(Visible ? "●" : "○")}  {(Locked ? "已锁定" : "可编辑")}  {EditorChineseText.Control(Id)}";
     }
 
     private sealed class CanvasSurface : Control

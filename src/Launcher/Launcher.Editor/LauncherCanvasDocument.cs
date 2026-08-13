@@ -157,8 +157,18 @@ public sealed class LauncherCanvasDocument
     }
 
     public void SetLocked(IEnumerable<LauncherControlId> ids, bool locked) => Execute(() => { foreach (LauncherControlId id in ids) State(id).Locked = locked; });
-    public void SetVisible(IEnumerable<LauncherControlId> ids, bool visible) => Execute(() => { foreach (LauncherControlId id in ids) Find(id).Visible = visible; });
-    public bool DeleteSelection() { if (_selection.Count == 0) return false; SetVisible(_selection, false); return true; }
+    public void SetVisible(IEnumerable<LauncherControlId> ids, bool visible) => Execute(() =>
+    {
+        foreach (LauncherControlId id in ids)
+            if (!IsLocked(id)) Find(id).Visible = visible;
+    });
+    public bool DeleteSelection()
+    {
+        LauncherControlId[] editable = _selection.Where(id => !IsLocked(id)).ToArray();
+        if (editable.Length == 0) return false;
+        SetVisible(editable, false);
+        return true;
+    }
     public void AddOrShow(LauncherControlId id) { Select([id]); SetVisible([id], true); }
     public void BringSelectionForward() => Execute(() =>
     {
