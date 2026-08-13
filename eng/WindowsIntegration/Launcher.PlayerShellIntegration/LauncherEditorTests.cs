@@ -114,6 +114,41 @@ public sealed class LauncherEditorTests
     }
 
     [Fact]
+    public async Task PrimaryMicroFailureFallsBackToBackupForLoginLibraries()
+    {
+        using var scope = new EditorTempScope();
+        string resources = scope.Dir("backup-gateway-resources");
+        foreach (string relative in new[] { "Data/Title.Lib", "Data/ChrSel.Lib", "Data/Prguse.Lib" })
+        {
+            string path = Path.Combine(resources, relative.Replace('/', Path.DirectorySeparatorChar));
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            await File.WriteAllBytesAsync(path, System.Text.Encoding.ASCII.GetBytes("backup-" + relative));
+        }
+        int unavailablePort = FreePort();
+        int backupPort = FreePort();
+        await using var host = new StaticFileHost(resources, backupPort);
+        await host.StartAsync();
+        string client = scope.Dir("fallback-client");
+        var endpoint = new MicroEndpoint
+        {
+            Enabled = true,
+            Address = "127.0.0.1",
+            Port = unavailablePort,
+            BackupAddress = "127.0.0.1",
+            BackupPort = backupPort,
+            User = "player",
+        };
+        LauncherCoreResource[] manifest = new[] { "Title.Lib", "ChrSel.Lib", "Prguse.Lib" }.Select(file =>
+        {
+            string path = Path.Combine(resources, "Data", file);
+            return new LauncherCoreResource { Path = "Data/" + file, Size = new FileInfo(path).Length, Sha256 = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(path))).ToLowerInvariant() };
+        }).ToArray();
+
+        Assert.True(await MicroGatewayReadiness.EnsureCoreLibrariesAsync(endpoint, "fallback-project", client, manifest, null, CancellationToken.None));
+        Assert.All(manifest, resource => Assert.Equal(resource.Sha256, Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(Path.Combine(client, resource.Path.Replace('/', Path.DirectorySeparatorChar))))).ToLowerInvariant()));
+    }
+
+    [Fact]
     public async Task ValidLocalLoginLibrariesDoNotRequireRunningMicroGateway()
     {
         using var scope = new EditorTempScope();

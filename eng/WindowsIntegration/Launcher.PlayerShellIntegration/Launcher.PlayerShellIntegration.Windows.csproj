@@ -16,6 +16,7 @@
     </PackageReference>
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\..\src\Clients\Client_VorticeDX11\Client_VorticeDX11.csproj" />
     <ProjectReference Include="..\..\..\src\Launcher\Launcher.Editor\Launcher.Editor.csproj" />
     <ProjectReference Include="..\..\..\src\Launcher\Launcher.PlayerShell.Core\Launcher.PlayerShell.Core.csproj" />
     <ProjectReference Include="..\..\..\src\Launcher\Launcher.ThemeRuntime\Launcher.ThemeRuntime.csproj" />

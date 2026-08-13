@@ -30,6 +30,7 @@ namespace Launcher
 
         private bool dragging = false;
         private bool _launching;
+        private bool _nativeAutoStartTriggered;
         private Point dragCursorPoint;
         private Point dragFormPoint;
 
@@ -110,6 +111,17 @@ namespace Launcher
             TotalPercent_label.Text = "100%";
             Launch_pb.Enabled = true;
         }
+
+        protected override void OnShown(EventArgs e)
+        {
+            base.OnShown(e);
+            if (!ShouldAutoStartNative(_nativeSnapshot, _nativeAutoStartTriggered)) return;
+            _nativeAutoStartTriggered = true;
+            BeginInvoke(new Action(async () => await LaunchAsync()));
+        }
+
+        internal static bool ShouldAutoStartNative(LauncherSnapshot snapshot, bool alreadyTriggered) =>
+            snapshot?.Defaults.AutoStart == true && !alreadyTriggered;
 
         public static void SaveError(string ex)
         {
