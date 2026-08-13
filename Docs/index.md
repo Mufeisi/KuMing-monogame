@@ -51,6 +51,7 @@
 | 性能 | [`quality/performance/`](quality/performance/) | 指标、基线和有证据的优化 |
 | 协议 | [`quality/protocol/`](quality/protocol/)、[`generated/protocol/`](generated/protocol/) | 协议与资源兼容；manifest 为生成审计物 |
 | 启动器/微端 | [`design/launcher/`](design/launcher/)、[`requirements/`](requirements/) | 产品设计、实施规格和候选路线 |
+| 桌面作者工具 GUI | [`design/launcher/桌面作者工具GUI设计规范.md`](design/launcher/桌面作者工具GUI设计规范.md) | 启动器编辑器及后续桌面作者工具的信息架构、设计令牌、交互、无障碍与验收唯一规范 |
 | 构建/Android | [`runbooks/build/`](runbooks/build/) | 平台构建与打包专项说明 |
 
 ## 证据与历史
