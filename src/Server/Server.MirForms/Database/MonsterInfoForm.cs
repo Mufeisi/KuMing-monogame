@@ -716,8 +716,7 @@ namespace Server
 
         private void DropBuilderButton_Click(object sender, EventArgs e)
         {
-            MirForms.DropBuilder.DropGenForm GenForm = new MirForms.DropBuilder.DropGenForm();
-
+            using var GenForm = new MirForms.DropBuilder.DropGenForm();
             GenForm.ShowDialog();
         }
 

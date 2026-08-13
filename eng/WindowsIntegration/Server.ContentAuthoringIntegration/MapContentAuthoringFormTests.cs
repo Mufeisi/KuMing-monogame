@@ -5,11 +5,260 @@ using Server.Diagnostics;
 using Server.MirForms.VisualMapInfo.Class;
 using Server.MirForms.VisualMapInfo.Control;
 using Microsoft.VisualBasic.PowerPacks;
+using Server.MirForms.DropBuilder;
+using Server.Scripting;
 
 namespace Server.ContentAuthoringIntegration.Windows;
 
 public sealed class MapContentAuthoringFormTests
 {
+    [Theory]
+    [InlineData(96)]
+    [InlineData(120)]
+    [InlineData(144)]
+    [InlineData(192)]
+    public void 掉落分析面板四档DPI关键命令保持边界内(int dpi)
+    {
+        Exception? failure = null;
+        var thread = new Thread(() =>
+        {
+            var envir = global::Server.SMain.EditEnvir;
+            MonsterInfo[] originalMonsters = envir.MonsterInfoList.ToArray();
+            string root = Path.Combine(Path.GetTempPath(), "LyoCrystalContent04Dpi", Guid.NewGuid().ToString("N"));
+            try
+            {
+                Directory.CreateDirectory(root);
+                File.WriteAllText(Path.Combine(root, "测试怪.txt"), ";Gold\r\n1/5 Gold 100\r\n");
+                envir.MonsterInfoList.Clear();
+                envir.MonsterInfoList.Add(new MonsterInfo { Name = "测试怪" });
+                using var form = new DropGenForm(name => name == "木剑", _ => null, root);
+                form.ClientSize = new Size(1280, 800);
+                float scale = dpi / 96F;
+                form.Scale(new SizeF(scale, scale));
+                form.CreateControl();
+
+                Panel panel = Assert.IsType<Panel>(Assert.Single(form.Controls.Find("DropAuthoringPanel", true)));
+                FlowLayoutPanel toolbar = Assert.IsType<FlowLayoutPanel>(Assert.Single(form.Controls.Find("DropAuthoringToolbar", true)));
+                panel.PerformLayout();
+                toolbar.PerformLayout();
+                Button[] buttons = toolbar.Controls.Cast<Button>().ToArray();
+                Assert.All(buttons, button =>
+                {
+                    Assert.True(button.Width > 0 && button.Height > 0);
+                    Assert.True(button.Font.Size >= 12F);
+                    Assert.True(button.PreferredSize.Width <= button.Width);
+                    Assert.True(button.PreferredSize.Height <= button.Height);
+                });
+                for (var left = 0; left < buttons.Length; left++)
+                    for (var right = left + 1; right < buttons.Length; right++)
+                        Assert.False(buttons[left].Bounds.IntersectsWith(buttons[right].Bounds));
+            }
+            catch (Exception ex)
+            {
+                failure = ex;
+            }
+            finally
+            {
+                envir.MonsterInfoList.Clear();
+                envir.MonsterInfoList.AddRange(originalMonsters);
+                if (Directory.Exists(root)) Directory.Delete(root, true);
+            }
+        });
+        thread.SetApartmentState(ApartmentState.STA);
+        thread.Start();
+        Assert.True(thread.Join(TimeSpan.FromSeconds(15)), $"掉落 DPI {dpi} 窗口测试超时。");
+        Assert.Null(failure);
+    }
+
+    [Fact]
+    public void 掉落分析工作区可后台渲染代表性截图()
+    {
+        Exception? failure = null;
+        var thread = new Thread(() =>
+        {
+            var envir = global::Server.SMain.EditEnvir;
+            MonsterInfo[] originalMonsters = envir.MonsterInfoList.ToArray();
+            string root = Path.Combine(Path.GetTempPath(), "LyoCrystalContent04Shot", Guid.NewGuid().ToString("N"));
+            try
+            {
+                Directory.CreateDirectory(root);
+                File.WriteAllText(Path.Combine(root, "测试怪.txt"), "1/5 木剑");
+                envir.MonsterInfoList.Clear();
+                envir.MonsterInfoList.Add(new MonsterInfo { Name = "测试怪" });
+                using var form = new NonActivatingDropGenForm(_ => true, root);
+                form.ClientSize = new Size(1280, 800);
+                form.Opacity = 0;
+                form.ShowInTaskbar = false;
+                form.StartPosition = FormStartPosition.Manual;
+                form.Location = new Point(-32000, -32000);
+                form.Show();
+                Application.DoEvents();
+                form.SetDraftText("1/5 Gold 100");
+                Assert.True(form.TrySaveDraft((_, _) => { }, out string baselineError), baselineError);
+                form.RefreshAnalysis();
+                Panel panel = Assert.IsType<Panel>(Assert.Single(form.Controls.Find("DropAuthoringPanel", true)));
+                panel.PerformLayout();
+                string evidenceRoot = Path.GetFullPath(Path.Combine(
+                    AppContext.BaseDirectory, "..", "..", "..", "..", "..", "..",
+                    "Docs", "Evidence", "LEG-06-20260813"));
+                Directory.CreateDirectory(evidenceRoot);
+                string panelEvidence = Path.Combine(evidenceRoot, "CONTENT-04-drop-analysis-panel.png");
+                using (var bitmap = new Bitmap(panel.ClientSize.Width, panel.ClientSize.Height))
+                {
+                    panel.DrawToBitmap(bitmap, new Rectangle(Point.Empty, panel.ClientSize));
+                    bitmap.Save(panelEvidence, System.Drawing.Imaging.ImageFormat.Png);
+                }
+                Assert.True(new FileInfo(panelEvidence).Length > 1000);
+
+                string wideEvidence = Path.Combine(evidenceRoot, "CONTENT-04-drop-workspace-1280x800.png");
+                using (var bitmap = new Bitmap(form.ClientSize.Width, form.ClientSize.Height))
+                {
+                    form.DrawToBitmap(bitmap, new Rectangle(Point.Empty, form.ClientSize));
+                    bitmap.Save(wideEvidence, System.Drawing.Imaging.ImageFormat.Png);
+                }
+                Assert.True(new FileInfo(wideEvidence).Length > 1000);
+
+                form.ClientSize = new Size(1100, 700);
+                form.SetAnalysisPanelExpanded(false);
+                form.PerformLayout();
+                Application.DoEvents();
+                string compactEvidence = Path.Combine(evidenceRoot, "CONTENT-04-drop-workspace-1100x700.png");
+                using (var bitmap = new Bitmap(form.ClientSize.Width, form.ClientSize.Height))
+                {
+                    form.DrawToBitmap(bitmap, new Rectangle(Point.Empty, form.ClientSize));
+                    bitmap.Save(compactEvidence, System.Drawing.Imaging.ImageFormat.Png);
+                }
+                Assert.True(new FileInfo(compactEvidence).Length > 1000);
+                form.Close();
+            }
+            catch (Exception ex)
+            {
+                failure = ex;
+            }
+            finally
+            {
+                envir.MonsterInfoList.Clear();
+                envir.MonsterInfoList.AddRange(originalMonsters);
+                if (Directory.Exists(root)) Directory.Delete(root, true);
+            }
+        });
+        thread.SetApartmentState(ApartmentState.STA);
+        thread.Start();
+        Assert.True(thread.Join(TimeSpan.FromSeconds(20)), "掉落工作区后台截图测试超时。");
+        Assert.Null(failure);
+    }
+
+    private sealed class NonActivatingDropGenForm : DropGenForm
+    {
+        public NonActivatingDropGenForm(Func<string, bool> itemExists, string dropRoot)
+            : base(itemExists, _ => null, dropRoot)
+        {
+        }
+
+        protected override bool ShowWithoutActivation => true;
+    }
+
+
+    [Fact]
+    public void 掉落编辑器提供分析差异显式保存重载且预览不隐式写盘()
+    {
+        Exception? failure = null;
+        var thread = new Thread(() =>
+        {
+            var envir = global::Server.SMain.EditEnvir;
+            MonsterInfo[] originalMonsters = envir.MonsterInfoList.ToArray();
+            string root = Path.Combine(Path.GetTempPath(), "LyoCrystalContent04", Guid.NewGuid().ToString("N"));
+            try
+            {
+                Directory.CreateDirectory(root);
+                string file = Path.Combine(root, "测试怪.txt");
+                const string originalText = ";武器\r\n1/10 木剑\r\n";
+                File.WriteAllText(file, originalText);
+                envir.MonsterInfoList.Clear();
+                envir.MonsterInfoList.Add(new MonsterInfo { Name = "测试怪" });
+
+                using var form = new DropGenForm(name => name == "木剑", _ => null, root);
+                FlowLayoutPanel toolbar = Assert.IsType<FlowLayoutPanel>(Assert.Single(form.Controls.Find("DropAuthoringToolbar", true)));
+                Assert.Equal(["分析", "差异", "保存", "重载"], toolbar.Controls.Cast<Button>().Select(value => value.Text));
+                Assert.Equal(new Size(1100, 700), form.MinimumSize);
+                Assert.True(Assert.IsType<TextBox>(Assert.Single(form.Controls.Find("DropAnalysisTextBox", true))).Font.Size >= 12F);
+                form.ClientSize = new Size(1100, 700);
+                Assert.False(Assert.IsType<Panel>(Assert.Single(form.Controls.Find("DropAuthoringPanel", true))).Visible);
+                Assert.Single(form.Controls.Find("ShowDropAnalysisButton", true));
+                form.SetAnalysisPanelExpanded(true);
+                Assert.True(form.IsAnalysisPanelExpanded);
+                form.ClientSize = new Size(1280, 800);
+
+                form.SetDraftText(";武器\r\n1/5 木剑\r\n");
+                Assert.True(form.HasPendingChanges);
+                Assert.Equal(originalText, File.ReadAllText(file));
+                Assert.Contains(form.GetDraftDiff(), value => value.After.Contains("1/5 木剑"));
+
+                form.RefreshAnalysis();
+                Assert.Contains("概率展开", form.AnalysisText);
+                Assert.Equal(originalText, File.ReadAllText(file));
+
+                int persisted = 0;
+                Assert.True(form.TrySaveDraft((path, text) =>
+                {
+                    persisted++;
+                    Assert.Equal(file, path);
+                    File.WriteAllText(path, text.Replace("\n", "\r\n"));
+                }, out string saveError), saveError);
+                Assert.Equal(1, persisted);
+                Assert.False(form.HasPendingChanges);
+                Assert.Contains("1/5 木剑", File.ReadAllText(file));
+
+                persisted = 0;
+                Assert.True(form.TrySaveDraft((_, _) => persisted++, out string unchangedError), unchangedError);
+                Assert.Equal(0, persisted);
+
+                form.SetDraftText("1/0 木剑");
+                persisted = 0;
+                Assert.False(form.TrySaveDraft((_, _) => persisted++, out string validationError));
+                Assert.Contains("CONTENT04-DROP-001", validationError);
+                Assert.Equal(0, persisted);
+
+                var scripted = new DropTableDefinition("Drops/测试怪");
+                scripted.Drops.Add(DropEntryDefinition.Item(1, "木剑"));
+                using (var scriptedForm = new DropGenForm(name => name == "木剑", _ => scripted, root))
+                {
+                    scriptedForm.SetDraftText("1/0 木剑");
+                    persisted = 0;
+                    Assert.False(scriptedForm.TrySaveDraft((_, _) => persisted++, out string scriptedValidationError));
+                    Assert.Contains("CONTENT04-DROP-001", scriptedValidationError);
+                    Assert.Equal(0, persisted);
+                    scriptedForm.RefreshAnalysis();
+                    Assert.Contains("来源：C# 脚本定义", scriptedForm.AnalysisText);
+                    Assert.Contains("脚本定义对比", scriptedForm.AnalysisText);
+                    scriptedForm.ReloadDraft(false);
+                }
+
+                form.SetDraftText("1/2 木剑");
+                Assert.False(form.TrySaveDraft((_, _) => throw new IOException("磁盘不可写"), out string persistError));
+                Assert.Equal("磁盘不可写", persistError);
+                Assert.True(form.HasPendingChanges);
+                form.ReloadDraft(false);
+                Assert.False(form.HasPendingChanges);
+                Assert.Contains("木剑", form.AnalysisText);
+            }
+            catch (Exception ex)
+            {
+                failure = ex;
+            }
+            finally
+            {
+                envir.MonsterInfoList.Clear();
+                envir.MonsterInfoList.AddRange(originalMonsters);
+                if (Directory.Exists(root)) Directory.Delete(root, true);
+            }
+        });
+        thread.SetApartmentState(ApartmentState.STA);
+        thread.Start();
+        Assert.True(thread.Join(TimeSpan.FromSeconds(20)), "掉落内容闭环窗口测试超时。");
+        Assert.Null(failure);
+    }
+
     [Fact]
     public void 地图内容窗体提供显式编辑会话入口且构造不修改原地图()
     {

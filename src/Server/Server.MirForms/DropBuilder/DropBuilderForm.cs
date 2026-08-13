@@ -1,5 +1,9 @@
 ﻿using Server.MirEnvir;
 
+using Server.Authoring;
+using Server.Diagnostics;
+using Server.Scripting;
+
 namespace Server.MirForms.DropBuilder
 {
     public class MonsterDropInfo
@@ -16,6 +20,19 @@ namespace Server.MirForms.DropBuilder
     public partial class DropGenForm : Form
     {
         string Gold = "0", GoldOdds;
+        private DropContentEditingSession _editingSession;
+        private readonly Func<string, bool> _itemExists;
+        private readonly Func<string, DropTableDefinition> _scriptDefinitionResolver;
+        private readonly string _dropRoot;
+        private TextBox _analysisTextBox;
+        private Label _authoringStatusLabel;
+        private int _selectedMonsterIndex = -1;
+        private bool _restoringMonsterSelection;
+        private string _scriptSnapshotKey = string.Empty;
+        private DropAnalysisSnapshot _scriptSnapshot;
+        private Panel _authoringPanel;
+        private Button _showAnalysisButton;
+        private bool _analysisExpandedByUser;
 
         List<DropItem>
             武器 = new List<DropItem>(),
@@ -59,9 +76,17 @@ namespace Server.MirForms.DropBuilder
         List<DropItem>[] ItemLists;
         ListBox[] ItemListBoxes;
 
-        public DropGenForm()
+        public DropGenForm(Func<string, bool> itemExists = null, Func<string, DropTableDefinition> scriptDefinitionResolver = null, string dropRoot = null)
         {
             InitializeComponent();
+            AutoScaleMode = AutoScaleMode.Dpi;
+            MinimumSize = new Size(1100, 700);
+            ClientSize = new Size(1280, 800);
+            KeyPreview = true;
+            _itemExists = itemExists ?? (name => Envir.GetItemInfo(name) is not null);
+            _scriptDefinitionResolver = scriptDefinitionResolver ?? ResolveScriptDefinition;
+            _dropRoot = string.IsNullOrWhiteSpace(dropRoot) ? Settings.DropPath : dropRoot;
+            BuildAuthoringWorkspace();
 
             // Array of items
             ItemLists = new List<DropItem>[37]
@@ -154,7 +179,7 @@ namespace Server.MirForms.DropBuilder
             }
 
             tabControlSeperateItems_SelectedIndexChanged(tabControlSeperateItems, null);
-            listBoxMonsters.SelectedIndex = 0;
+            if (listBoxMonsters.Items.Count > 0) listBoxMonsters.SelectedIndex = 0;
             labelMonsterList.Text = $"怪物总数: {Envir.MonsterInfoList.Count}";
         }
 
@@ -327,7 +352,7 @@ namespace Server.MirForms.DropBuilder
             for (int i = 0; i < 外形物品.Count; i++)
                 textBoxDropList.Text += $"{外形物品[i].Odds} {外形物品[i].Name} {外形物品[i].Quest}{Environment.NewLine}";
 
-            SaveDropFile();
+            RefreshDraft(textBoxDropList.Text);
         }
 
         // Item tab change, draw appropriate items
@@ -658,12 +683,29 @@ namespace Server.MirForms.DropBuilder
         // Choose another monster.
         private void listBoxMonsters_SelectedItemChanged(object sender, EventArgs e)
         {
+            if (_restoringMonsterSelection) return;
+            if (_editingSession?.IsDirty == true && _selectedMonsterIndex >= 0)
+            {
+                DialogResult result = MessageBox.Show("当前掉落内容有未保存修改，确定切换并放弃吗？", "未保存修改", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+                if (result == DialogResult.No)
+                {
+                    _restoringMonsterSelection = true;
+                    listBoxMonsters.SelectedIndex = _selectedMonsterIndex;
+                    _restoringMonsterSelection = false;
+                    return;
+                }
+            }
+
             // Empty List<DropItem>'s
             foreach (var item in ItemLists)
                 item.Clear();
 
-            LoadDropFile(false);
+            string selectedPath = GetPathOfSelectedItem();
+            if (!string.IsNullOrWhiteSpace(selectedPath) && File.Exists(selectedPath))
+                LoadDropFile(false);
             UpdateDropFile();
+            LoadEditingSession(textBoxDropList.Text);
+            _selectedMonsterIndex = listBoxMonsters.SelectedIndex;
 
             textBoxMinLevel.Text = string.Empty;
             textBoxMaxLevel.Text = string.Empty;
@@ -683,11 +725,11 @@ namespace Server.MirForms.DropBuilder
 
             if (string.IsNullOrEmpty(selectedItem.Path))
             {
-                path = Path.Combine(Settings.DropPath, $"{selectedItem.Name}.txt");
+                path = Path.Combine(_dropRoot, $"{selectedItem.Name}.txt");
             }
             else
             {
-                path = Path.Combine(Settings.DropPath, selectedItem.Path + ".txt");
+                path = Path.Combine(_dropRoot, selectedItem.Path + ".txt");
             }
 
             return path;
@@ -697,7 +739,10 @@ namespace Server.MirForms.DropBuilder
         // Load the monster.txt drop file.
         private void LoadDropFile(bool edit)
         {
-            var lines = (edit == false) ? File.ReadAllLines(GetPathOfSelectedItem()) : textBoxDropList.Lines;
+            string path = GetPathOfSelectedItem();
+            var lines = edit || string.IsNullOrWhiteSpace(path) || !File.Exists(path)
+                ? textBoxDropList.Lines
+                : File.ReadAllLines(path);
 
             for (int i = 0; i < lines.Length; i++)
             {
@@ -903,22 +948,6 @@ namespace Server.MirForms.DropBuilder
         }
 
         // Save the monster.txt drop file
-        private void SaveDropFile()
-        {
-            var dropFile = GetPathOfSelectedItem();
-
-            if (dropFile == null) return;
-
-            using (FileStream fs = new FileStream(dropFile, FileMode.Create))
-            {
-                using (StreamWriter sw = new StreamWriter(fs))
-                {
-                    foreach (string line in textBoxDropList.Lines)
-                        sw.Write(line + sw.NewLine);
-                }
-            }
-        }
-
         //Edit gold amount/odds
         private void GoldDropChange(object sender, EventArgs e)
         {
@@ -944,6 +973,7 @@ namespace Server.MirForms.DropBuilder
 
                 LoadDropFile(true);
                 UpdateDropFile();
+                RefreshDraft(textBoxDropList.Text);
 
                 buttonAdd.Enabled = true;
                 listBoxMonsters.Enabled = true;
@@ -1007,6 +1037,310 @@ namespace Server.MirForms.DropBuilder
             {
                 textBoxSearch.BackColor = System.Drawing.Color.FromArgb(0xCC, 0x33, 0x33);
             }
+        }
+
+        public bool HasPendingChanges => _editingSession?.IsDirty == true;
+
+        public IReadOnlyList<DropContentDiff> GetDraftDiff()
+        {
+            RefreshDraft(textBoxDropList.Text);
+            return _editingSession?.BuildDiff() ?? Array.Empty<DropContentDiff>();
+        }
+
+        public string AnalysisText => _analysisTextBox?.Text ?? string.Empty;
+        public bool IsAnalysisPanelExpanded => ClientSize.Width >= 1280 || _analysisExpandedByUser;
+
+        public void SetDraftText(string text)
+        {
+            textBoxDropList.Text = text ?? string.Empty;
+            RefreshDraft(textBoxDropList.Text);
+        }
+
+        public void SetAnalysisPanelExpanded(bool expanded)
+        {
+            _analysisExpandedByUser = expanded;
+            LayoutAuthoringWorkspace();
+        }
+
+        public void ReloadDraft(bool confirmDiscard = true)
+        {
+            if (confirmDiscard && HasPendingChanges)
+            {
+                DialogResult result = MessageBox.Show("确定重载并放弃当前未保存修改吗？", "未保存修改", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+                if (result == DialogResult.No) return;
+            }
+            string path = GetPathOfSelectedItem();
+            string text = path is not null && File.Exists(path) ? File.ReadAllText(path) : string.Empty;
+            LoadEditingSession(text);
+            textBoxDropList.Text = text;
+            RefreshAnalysis();
+        }
+
+        public bool TrySaveDraft(Action<string, string> persist, out string error)
+        {
+            error = string.Empty;
+            string path = GetPathOfSelectedItem();
+            if (path is null)
+            {
+                error = "未选择怪物掉落文件。";
+                return false;
+            }
+            RefreshDraft(textBoxDropList.Text);
+            if (!HasPendingChanges)
+            {
+                SetStatus("已保存", false);
+                return true;
+            }
+            ProjectPreflightDiagnostic[] errors = ValidateDraft(out _)
+                .Where(value => value.Severity == ProjectPreflightSeverity.Error)
+                .ToArray();
+            if (errors.Length > 0)
+            {
+                error = string.Join(Environment.NewLine, errors.Select(value => $"{value.Code} {value.Source} {value.Message}"));
+                SetStatus("校验失败", true);
+                return false;
+            }
+
+            DropContentCommitResult result = persist is not null
+                ? _editingSession.TryCommit(text => persist(path, text))
+                : _editingSession.TryCommitFile(path);
+            error = result.Error;
+            SetStatus(result.Success ? "已保存" : $"保存失败：{result.Error}", !result.Success);
+            return result.Success;
+        }
+
+        public IReadOnlyList<ProjectPreflightDiagnostic> ValidateDraft(out DropTableDefinition definition)
+        {
+            RefreshDraft(textBoxDropList.Text);
+            return _editingSession.Validate(ResolveSelectedTableKey(), _itemExists, out definition);
+        }
+
+        private void BuildAuthoringWorkspace()
+        {
+            Width = 1260;
+            var authoringFont = new Font("Segoe UI", 12F);
+            _authoringPanel = new Panel
+            {
+                Name = "DropAuthoringPanel",
+                Size = new Size(280, ClientSize.Height - 32),
+                Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Right,
+            };
+            var title = new Label
+            {
+                Name = "DropAuthoringTitle",
+                Text = "概率分析与变更审查",
+                Dock = DockStyle.Top,
+                Height = 28,
+                Font = new Font("Segoe UI", 12F, FontStyle.Bold),
+                Padding = new Padding(4, 4, 0, 0),
+            };
+            var collapse = new Button
+            {
+                Name = "CollapseDropAnalysisButton",
+                Text = "收起",
+                AutoSize = true,
+                Anchor = AnchorStyles.Top | AnchorStyles.Right,
+                Location = new Point(220, 0),
+                Font = authoringFont,
+            };
+            collapse.Click += (_, _) =>
+            {
+                _analysisExpandedByUser = false;
+                LayoutAuthoringWorkspace();
+            };
+            var toolbar = new FlowLayoutPanel
+            {
+                Name = "DropAuthoringToolbar",
+                Dock = DockStyle.Top,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                Padding = new Padding(0, 4, 0, 4),
+                WrapContents = true,
+                Font = authoringFont,
+            };
+            toolbar.Controls.Add(CreateButton("AnalyzeDropButton", "分析", (_, _) => RefreshAnalysis()));
+            toolbar.Controls.Add(CreateButton("DiffDropButton", "差异", (_, _) => ShowDiff()));
+            toolbar.Controls.Add(CreateButton("SaveDropButton", "保存", (_, _) => SaveFromUi()));
+            toolbar.Controls.Add(CreateButton("ReloadDropButton", "重载", (_, _) => ReloadDraft()));
+            _authoringStatusLabel = new Label
+            {
+                Name = "DropAuthoringStatusLabel",
+                Text = "已保存",
+                AutoSize = false,
+                Dock = DockStyle.Bottom,
+                Height = 28,
+                Padding = new Padding(4, 6, 4, 0),
+                Font = authoringFont,
+            };
+            _analysisTextBox = new TextBox
+            {
+                Name = "DropAnalysisTextBox",
+                Multiline = true,
+                ReadOnly = true,
+                WordWrap = false,
+                ScrollBars = ScrollBars.Both,
+                Dock = DockStyle.Fill,
+                Font = new Font("Segoe UI", 12F),
+                AccessibleName = "掉落概率分析结果",
+            };
+            _authoringPanel.Controls.Add(_analysisTextBox);
+            _authoringPanel.Controls.Add(_authoringStatusLabel);
+            _authoringPanel.Controls.Add(toolbar);
+            _authoringPanel.Controls.Add(title);
+            _authoringPanel.Controls.Add(collapse);
+            _showAnalysisButton = new Button
+            {
+                Name = "ShowDropAnalysisButton",
+                Text = "显示分析面板",
+                AutoSize = true,
+                Anchor = AnchorStyles.Top | AnchorStyles.Right,
+                Font = authoringFont,
+            };
+            _showAnalysisButton.Click += (_, _) =>
+            {
+                _analysisExpandedByUser = true;
+                LayoutAuthoringWorkspace();
+            };
+            Controls.Add(_authoringPanel);
+            Controls.Add(_showAnalysisButton);
+            Resize += (_, _) => LayoutAuthoringWorkspace();
+            LayoutAuthoringWorkspace();
+            textBoxDropList.TextChanged += (_, _) =>
+            {
+                RefreshDraft(textBoxDropList.Text);
+                SetStatus(HasPendingChanges ? "有未保存修改" : "已保存", false);
+            };
+            FormClosing += DropGenForm_FormClosing;
+            KeyDown += (_, args) =>
+            {
+                if (args.Control && args.KeyCode == Keys.S)
+                {
+                    SaveFromUi();
+                    args.SuppressKeyPress = true;
+                }
+                else if (args.KeyCode == Keys.F6)
+                {
+                    if (textBoxDropList.ContainsFocus) _analysisTextBox.Focus();
+                    else textBoxDropList.Focus();
+                    args.SuppressKeyPress = true;
+                }
+            };
+        }
+
+        private void LayoutAuthoringWorkspace()
+        {
+            if (_authoringPanel is null || _showAnalysisButton is null) return;
+            bool wide = ClientSize.Width >= 1280;
+            bool showPanel = wide || _analysisExpandedByUser;
+            _authoringPanel.Visible = showPanel;
+            _authoringPanel.Location = new Point(Math.Max(688, ClientSize.Width - _authoringPanel.Width - 16), 16);
+            _authoringPanel.Height = Math.Max(300, ClientSize.Height - 32);
+            _showAnalysisButton.Visible = !showPanel;
+            _showAnalysisButton.Location = new Point(ClientSize.Width - _showAnalysisButton.Width - 16, 16);
+            if (!showPanel) _showAnalysisButton.BringToFront();
+        }
+
+        private static Button CreateButton(string name, string text, EventHandler handler)
+        {
+            var button = new Button { Name = name, Text = text, AutoSize = true, Margin = new Padding(0, 0, 6, 4) };
+            button.Click += handler;
+            return button;
+        }
+
+        private void LoadEditingSession(string text)
+        {
+            _editingSession = new DropContentEditingSession(text);
+            SetStatus("已保存", false);
+        }
+
+        private void RefreshDraft(string text)
+        {
+            if (_editingSession is null) _editingSession = new DropContentEditingSession(text);
+            else _editingSession.SetDraft(text);
+        }
+
+        public void RefreshAnalysis()
+        {
+            string key = ResolveSelectedTableKey();
+            DropTableDefinition scripted = _scriptDefinitionResolver?.Invoke(key);
+            IReadOnlyList<ProjectPreflightDiagnostic> diagnostics;
+            DropTableDefinition definition;
+            string source;
+            if (scripted is not null)
+            {
+                if (_scriptSnapshot is null || !string.Equals(_scriptSnapshotKey, key, StringComparison.Ordinal))
+                {
+                    _scriptSnapshot = DropContentAnalyzer.Capture(scripted);
+                    _scriptSnapshotKey = key;
+                }
+                definition = scripted;
+                diagnostics = ProjectSemanticPreflight.ValidateDropContent(scripted, _itemExists).Diagnostics;
+                source = "C# 脚本定义";
+            }
+            else
+            {
+                diagnostics = ValidateDraft(out definition);
+                source = "TXT 草稿";
+            }
+            if (diagnostics.Any(value => value.Severity == ProjectPreflightSeverity.Error) || definition is null)
+            {
+                _analysisTextBox.Text = string.Join(Environment.NewLine,
+                    diagnostics.Select(value => $"{value.Code} {value.Source} {value.Message}"));
+                SetStatus("校验失败", true);
+                return;
+            }
+            _analysisTextBox.Text = $"来源：{source}{Environment.NewLine}{DropContentAnalyzer.FormatAnalysis(definition)}";
+            if (scripted is not null)
+            {
+                IReadOnlyList<DropAnalysisDiff> diff = DropContentAnalyzer.Compare(_scriptSnapshot, scripted);
+                _analysisTextBox.AppendText(diff.Count == 0
+                    ? $"{Environment.NewLine}{Environment.NewLine}脚本定义对比：与本次打开时一致"
+                    : $"{Environment.NewLine}{Environment.NewLine}脚本定义对比{Environment.NewLine}{string.Join(Environment.NewLine, diff.Select(value => $"{value.Path} {value.Target} {value.BeforeExpected:0.######} -> {value.AfterExpected:0.######}"))}");
+            }
+            SetStatus(HasPendingChanges ? "分析完成，有未保存修改" : "分析完成", false);
+        }
+
+        private void ShowDiff()
+        {
+            IReadOnlyList<DropContentDiff> diff = GetDraftDiff();
+            _analysisTextBox.Text = diff.Count == 0
+                ? "无修改"
+                : string.Join(Environment.NewLine, diff.Select(value => $"第 {value.LineNumber} 行\r\n- {value.Before}\r\n+ {value.After}"));
+        }
+
+        private void SaveFromUi()
+        {
+            if (!TrySaveDraft(null, out string error)) MessageBox.Show(error, "掉落保存失败", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+
+        private string ResolveSelectedTableKey()
+        {
+            var selected = listBoxMonsters.SelectedItem as MonsterDropInfo;
+            string name = string.IsNullOrWhiteSpace(selected?.Path) ? selected?.Name : selected.Path;
+            name = string.IsNullOrWhiteSpace(name) ? "Unknown" : name.Replace('\\', '/');
+            return $"Drops/{name}";
+        }
+
+        private DropTableDefinition ResolveScriptDefinition(string key)
+        {
+            DropTableDefinition definition = null;
+            Envir.CSharpScripts?.CurrentRegistry?.Drops?.TryGet(key, out definition);
+            return definition;
+        }
+
+        private void SetStatus(string text, bool error)
+        {
+            if (_authoringStatusLabel is null) return;
+            _authoringStatusLabel.Text = text;
+            _authoringStatusLabel.ForeColor = error ? Color.Firebrick : SystemColors.ControlText;
+        }
+
+        private void DropGenForm_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            RefreshDraft(textBoxDropList.Text);
+            if (!HasPendingChanges) return;
+            DialogResult result = MessageBox.Show("掉落内容有未保存修改，确定关闭并放弃吗？", "未保存修改", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+            if (result == DialogResult.No) e.Cancel = true;
         }
     }
 

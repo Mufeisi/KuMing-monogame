@@ -400,6 +400,26 @@ namespace Server.MirDatabase
 
         public DropRewardInfo AttemptDrop(int itemDropRatePercentOffset = 0, int goldDropRatePercentOffset = 0, float dropRate = 0, DropAttemptContext context = null)
         {
+            return AttemptDropWithRandom(
+                Envir.Random.Next,
+                Envir.Random.Next,
+                itemDropRatePercentOffset,
+                goldDropRatePercentOffset,
+                dropRate,
+                context);
+        }
+
+        /// <summary>复用生产掉落算法的可复现只读模拟接缝。</summary>
+        public DropRewardInfo AttemptDropWithRandom(
+            Func<int, int> next,
+            Func<int, int, int> nextRange,
+            int itemDropRatePercentOffset = 0,
+            int goldDropRatePercentOffset = 0,
+            float dropRate = 0,
+            DropAttemptContext context = null)
+        {
+            if (next == null) throw new ArgumentNullException(nameof(next));
+            if (nextRange == null) throw new ArgumentNullException(nameof(nextRange));
             if (Condition != null)
             {
                 if (context == null) return null;
@@ -439,7 +459,7 @@ namespace Server.MirDatabase
 
             if (rate < 1) rate = 1;
 
-            if (Envir.Random.Next(rate) != 0)
+            if (next(rate) != 0)
             {
                 return null;
             }
@@ -459,7 +479,7 @@ namespace Server.MirDatabase
 
                 if (lowerGoldRange > upperGoldRange) lowerGoldRange = upperGoldRange;
 
-                gold = (uint)Envir.Random.Next(lowerGoldRange, upperGoldRange);
+                gold = (uint)nextRange(lowerGoldRange, upperGoldRange);
             }
             else if (Item != null)
             {
@@ -477,7 +497,7 @@ namespace Server.MirDatabase
 
                 foreach (var item in GroupedDrop)
                 {
-                    var reward = item.AttemptDrop(itemDropRatePercentOffset, goldDropRatePercentOffset, effectiveDropRate, context);
+                    var reward = item.AttemptDropWithRandom(next, nextRange, itemDropRatePercentOffset, goldDropRatePercentOffset, effectiveDropRate, context);
 
                     if (reward != null)
                     {
@@ -515,7 +535,7 @@ namespace Server.MirDatabase
 
                         if (totalWeight <= 0) totalWeight = candidates.Count;
 
-                        var roll = Envir.Random.Next(totalWeight);
+                        var roll = next(totalWeight);
 
                         for (var i = 0; i < candidates.Count; i++)
                         {

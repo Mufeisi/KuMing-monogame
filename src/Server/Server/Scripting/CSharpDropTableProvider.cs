@@ -53,7 +53,29 @@ namespace Server.Scripting
             return error.Contains("找不到物品", StringComparison.Ordinal);
         }
 
+        public static bool TryBuildForAuthoring(
+            DropTableDefinition table,
+            Func<string, ItemInfo> itemResolver,
+            out IReadOnlyList<DropInfo> drops,
+            out string error)
+        {
+            if (!TryBuildDropList(table, itemResolver, out List<DropInfo> list, out error))
+            {
+                drops = Array.Empty<DropInfo>();
+                return false;
+            }
+            drops = list;
+            return true;
+        }
+
         private static bool TryBuildDropList(DropTableDefinition table, out List<DropInfo> drops, out string error)
+            => TryBuildDropList(table, Envir.Main.GetItemInfo, out drops, out error);
+
+        private static bool TryBuildDropList(
+            DropTableDefinition table,
+            Func<string, ItemInfo> itemResolver,
+            out List<DropInfo> drops,
+            out string error)
         {
             drops = null;
             error = string.Empty;
@@ -77,7 +99,7 @@ namespace Server.Scripting
             {
                 for (var i = 0; i < table.Drops.Count; i++)
                 {
-                    if (!TryBuildDropEntry(table.Drops[i], out var entry, out var entryError))
+                    if (!TryBuildDropEntry(table.Drops[i], itemResolver, out var entry, out var entryError))
                     {
                         if (IsMissingItemError(entryError))
                         {
@@ -115,7 +137,11 @@ namespace Server.Scripting
             return true;
         }
 
-        private static bool TryBuildDropEntry(DropEntryDefinition definition, out DropInfo drop, out string error)
+        private static bool TryBuildDropEntry(
+            DropEntryDefinition definition,
+            Func<string, ItemInfo> itemResolver,
+            out DropInfo drop,
+            out string error)
         {
             drop = null;
             error = string.Empty;
@@ -173,7 +199,7 @@ namespace Server.Scripting
                 }
 
                 var itemName = definition.ItemName.Trim();
-                var item = Envir.Main.GetItemInfo(itemName);
+                var item = itemResolver?.Invoke(itemName);
                 if (item == null)
                 {
                     error = $"找不到物品：{itemName}";
@@ -202,7 +228,7 @@ namespace Server.Scripting
 
             for (var i = 0; i < group.Drops.Count; i++)
             {
-                if (!TryBuildDropEntry(group.Drops[i], out var childDrop, out var childError))
+                if (!TryBuildDropEntry(group.Drops[i], itemResolver, out var childDrop, out var childError))
                 {
                     if (IsMissingItemError(childError))
                         continue;

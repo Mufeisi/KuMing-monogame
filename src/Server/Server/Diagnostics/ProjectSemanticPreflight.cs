@@ -121,6 +121,21 @@ public static class ProjectSemanticPreflight
             .ToArray());
     }
 
+    /// <summary>使用与完整预检相同的规则校验单个掉落草稿。</summary>
+    public static ProjectPreflightReport ValidateDropContent(
+        DropTableDefinition table,
+        Func<string, bool> itemExists)
+    {
+        ArgumentNullException.ThrowIfNull(table);
+        var diagnostics = new List<ProjectPreflightDiagnostic>();
+        ValidateDrops([table], itemExists ?? (_ => false), diagnostics);
+        return new ProjectPreflightReport(diagnostics
+            .OrderBy(value => value.Code, StringComparer.Ordinal)
+            .ThenBy(value => value.Source, StringComparer.Ordinal)
+            .ThenBy(value => value.Message, StringComparer.Ordinal)
+            .ToArray());
+    }
+
     private static void ValidateMaps(
         string mapDirectory,
         IReadOnlyCollection<MapInfo> maps,
