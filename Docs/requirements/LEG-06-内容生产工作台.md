@@ -33,7 +33,7 @@
 
 1. `CONTENT-01` 地图与刷怪编辑会话：显式保存/取消、撤销/重做、校验、差异和重载。已实施，证据见 [`../Evidence/LEG-06-20260813/CONTENT-01.md`](../Evidence/LEG-06-20260813/CONTENT-01.md)。
 2. `CONTENT-02` 地图叠层与跨域导航：出口、NPC、刷怪、矿区可切换显示，诊断可定位。已实施，证据见 [`../Evidence/LEG-06-20260813/CONTENT-02.md`](../Evidence/LEG-06-20260813/CONTENT-02.md)。
-3. `CONTENT-03` NPC 与脚本闭环。
+3. `CONTENT-03` NPC 与脚本闭环。已实施，证据见 [`../Evidence/LEG-06-20260813/CONTENT-03.md`](../Evidence/LEG-06-20260813/CONTENT-03.md)。
 4. `CONTENT-04` 掉落分析闭环。
 5. `CONTENT-05` 资源引用闭环。
 6. `CONTENT-06` 真实内容版本测试服冒烟与阶段收口。

@@ -81,6 +81,198 @@ public sealed class MapContentAuthoringFormTests
     }
 
     [Fact]
+    public void NPC编辑器公开显式会话和脚本闭环入口且草稿不直接修改事实对象()
+    {
+        Exception? failure = null;
+        var thread = new Thread(() =>
+        {
+            var envir = global::Server.SMain.EditEnvir;
+            NPCInfo[] original = envir.NPCInfoList.ToArray();
+            try
+            {
+                var npc = new NPCInfo { Index = 7, FileName = "merchant", Name = "原名称", MapIndex = 10, Location = new Point(8, 9) };
+                envir.NPCInfoList.Clear();
+                envir.NPCInfoList.Add(npc);
+                using var form = new global::Server.NPCInfoForm(7);
+
+                FlowLayoutPanel toolbar = Assert.IsType<FlowLayoutPanel>(Assert.Single(form.Controls.Find("NpcAuthoringToolbar", true)));
+                Assert.Equal("保存", Assert.Single(toolbar.Controls.Find("SaveNpcContentButton", true)).Text);
+                Assert.Equal("重载", Assert.Single(toolbar.Controls.Find("ReloadNpcContentButton", true)).Text);
+                Assert.Equal("差异", Assert.Single(toolbar.Controls.Find("DiffNpcContentButton", true)).Text);
+                Assert.Single(form.Controls.Find("NpcScriptWorkflowTab", true));
+                Assert.Single(form.Controls.Find("PreviewNpcScriptButton", true));
+                Assert.Single(form.Controls.Find("OpenNpcScriptButton", true));
+                Assert.Single(form.Controls.Find("OpenNpcResourceButton", true));
+
+                Assert.NotNull(form.SelectedDraft);
+                form.SelectedDraft!.Name = "草稿名称";
+                Assert.Equal("原名称", npc.Name);
+                Assert.True(form.HasPendingChanges);
+                Assert.Contains(form.GetDraftDiff(), value => value.EntityIndex == 7 && value.Summary.Contains(nameof(NPCInfo.Name)));
+                form.ReloadDraft();
+                Assert.Equal("原名称", form.SelectedDraft!.Name);
+                Assert.False(form.HasPendingChanges);
+            }
+            catch (Exception ex)
+            {
+                failure = ex;
+            }
+            finally
+            {
+                envir.NPCInfoList.Clear();
+                envir.NPCInfoList.AddRange(original);
+            }
+        });
+        thread.SetApartmentState(ApartmentState.STA);
+        thread.Start();
+        Assert.True(thread.Join(TimeSpan.FromSeconds(15)), "NPC 内容闭环窗口测试超时。");
+        Assert.Null(failure);
+    }
+
+    [Fact]
+    public void 脚本调试器可通过公共入口定位指定现有脚本()
+    {
+        Exception? failure = null;
+        var thread = new Thread(() =>
+        {
+            string root = Path.Combine(Path.GetTempPath(), "LyoCrystalContent03", Guid.NewGuid().ToString("N"));
+            string originalRoot = global::Server.Settings.CSharpScriptsPath;
+            try
+            {
+                Directory.CreateDirectory(root);
+                string file = Path.Combine(root, "Merchant.cs");
+                File.WriteAllText(file, "// test");
+                global::Server.Settings.CSharpScriptsPath = root;
+                using var form = new Server.MirForms.Systems.ScriptDebugForm(file);
+                form.Show();
+                Application.DoEvents();
+                Assert.Equal(Path.GetFullPath(file), form.CurrentFilePath);
+                form.Close();
+            }
+            catch (Exception ex)
+            {
+                failure = ex;
+            }
+            finally
+            {
+                global::Server.Settings.CSharpScriptsPath = originalRoot;
+                if (Directory.Exists(root)) Directory.Delete(root, true);
+            }
+        });
+        thread.SetApartmentState(ApartmentState.STA);
+        thread.Start();
+        Assert.True(thread.Join(TimeSpan.FromSeconds(15)), "脚本调试器定位测试超时。");
+        Assert.Null(failure);
+    }
+
+    [Fact]
+    public void NPC窗体保存成功校验阻断与保存失败均保持可观察会话语义()
+    {
+        Exception? failure = null;
+        var thread = new Thread(() =>
+        {
+            var envir = global::Server.SMain.EditEnvir;
+            NPCInfo[] originalNpcs = envir.NPCInfoList.ToArray();
+            MapInfo[] originalMaps = envir.MapInfoList.ToArray();
+            int originalHighWatermark = envir.NPCIndex;
+            string npcRoot = Path.Combine(Path.GetTempPath(), "LyoCrystalContent03Npc", Guid.NewGuid().ToString("N"));
+            try
+            {
+                Directory.CreateDirectory(npcRoot);
+                envir.MapInfoList.Clear();
+                envir.MapInfoList.Add(new MapInfo { Index = 10, FileName = "test" });
+                envir.NPCInfoList.Clear();
+                var npc = new NPCInfo { Index = 7, FileName = "merchant", Name = "原名称", MapIndex = 10, Location = new Point(8, 9), Image = 3 };
+                envir.NPCInfoList.Add(npc);
+                envir.NPCIndex = 99;
+
+                using (var form = new global::Server.NPCInfoForm(7, npcRoot))
+                {
+                    form.SelectedDraft!.Name = "已保存名称";
+                    NPCInfo added = form.AddDraft();
+                    added.FileName = "added";
+                    added.Name = "新增 NPC";
+                    added.MapIndex = 10;
+                    added.Location = new Point(3, 4);
+                    Assert.Equal(100, added.Index);
+                    int persisted = 0;
+                    Assert.True(form.TrySaveDraft(() =>
+                    {
+                        persisted++;
+                        Assert.Equal(100, envir.NPCIndex);
+                    }, out string error), error);
+                    Assert.Equal(1, persisted);
+                    Assert.Equal("已保存名称", npc.Name);
+                    Assert.Contains(envir.NPCInfoList, value => value.Index == 100);
+                    Assert.False(form.HasPendingChanges);
+                }
+
+                File.WriteAllLines(Path.Combine(npcRoot, "merchant.txt"), ["[@MAIN]", "<坏链接/@MISSING>"]);
+                using (var form = new global::Server.NPCInfoForm(7, npcRoot))
+                {
+                    form.SelectedDraft!.Name = "链接失败草稿";
+                    int persisted = 0;
+                    Assert.False(form.TrySaveDraft(() => persisted++, out string error));
+                    Assert.Contains("CONTENT03-LINK-001", error);
+                    Assert.Equal(0, persisted);
+                    Assert.Equal("已保存名称", npc.Name);
+                    Assert.True(form.HasPendingChanges);
+                    form.ReloadDraft();
+                }
+                File.Delete(Path.Combine(npcRoot, "merchant.txt"));
+
+                using (var form = new global::Server.NPCInfoForm(7, npcRoot))
+                {
+                    form.SelectedDraft!.Location = new Point(-1, 9);
+                    Assert.False(form.TrySaveDraft(() => throw new InvalidOperationException("不应执行"), out string error));
+                    Assert.Contains("LEG02-NPC-002", error);
+                    Assert.Equal(new Point(8, 9), npc.Location);
+                }
+
+                using (var form = new global::Server.NPCInfoForm(7, npcRoot))
+                {
+                    form.SelectedDraft!.Name = "失败草稿";
+                    int previousHighWatermark = envir.NPCIndex;
+                    int observedHighWatermark = 0;
+                    Assert.False(form.TrySaveDraft(() =>
+                    {
+                        observedHighWatermark = envir.NPCIndex;
+                        throw new IOException("磁盘不可写");
+                    }, out string error));
+                    Assert.Equal("磁盘不可写", error);
+                    Assert.Equal(100, observedHighWatermark);
+                    Assert.Equal(previousHighWatermark, envir.NPCIndex);
+                    Assert.Equal("已保存名称", npc.Name);
+                    Assert.Equal("失败草稿", form.SelectedDraft!.Name);
+                    Assert.True(form.HasPendingChanges);
+                    form.ReloadDraft();
+                }
+
+                using var resolverForm = new global::Server.NPCInfoForm(7, npcRoot);
+                Assert.Equal(Path.Combine(npcRoot, "merchant.txt"), resolverForm.ResolveSelectedScriptPath());
+                Assert.EndsWith(Path.Combine("Previews", "NPC", "3.bmp"), resolverForm.GetSelectedPreviewResourcePath(), StringComparison.OrdinalIgnoreCase);
+            }
+            catch (Exception ex)
+            {
+                failure = ex;
+            }
+            finally
+            {
+                envir.NPCInfoList.Clear();
+                envir.NPCInfoList.AddRange(originalNpcs);
+                envir.MapInfoList.Clear();
+                envir.MapInfoList.AddRange(originalMaps);
+                envir.NPCIndex = originalHighWatermark;
+                if (Directory.Exists(npcRoot)) Directory.Delete(npcRoot, true);
+            }
+        });
+        thread.SetApartmentState(ApartmentState.STA);
+        thread.Start();
+        Assert.True(thread.Join(TimeSpan.FromSeconds(20)), "NPC 保存门禁窗口测试超时。");
+        Assert.Null(failure);
+    }
+
+    [Fact]
     public void 四类叠层可同时显示独立关闭且诊断定位真实刷怪记录()
     {
         Exception? failure = null;

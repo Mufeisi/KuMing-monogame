@@ -3,6 +3,8 @@ using Server.MirEnvir;
 
 namespace Server.Scripting
 {
+    internal sealed record NpcDialogPageGraphEntry(string Key, IReadOnlyList<string> Lines, IReadOnlyList<string> Links);
+
     internal sealed class NpcScriptCoverageReport
     {
         public string NpcFileName { get; }
@@ -153,6 +155,35 @@ namespace Server.Scripting
                 policyDisallowed,
                 legacyNonDialogSections,
                 diagnostics);
+        }
+
+        /// <summary>使用运行期覆盖检查的同一跳转语义构建作者预览页面图。</summary>
+        internal static IReadOnlyList<NpcDialogPageGraphEntry> BuildDialogPageGraph(IEnumerable<string> sourceLines)
+        {
+            var lines = sourceLines?.Select(value => value ?? string.Empty).ToList() ?? new List<string>();
+            var pages = new List<NpcDialogPageGraphEntry>();
+            for (var i = 0; i < lines.Count; i++)
+            {
+                var key = NormalizePageHeader(lines[i]);
+                if (key.Length == 0) continue;
+                var body = new List<string>();
+                for (var j = i + 1; j < lines.Count; j++)
+                {
+                    if (NormalizePageHeader(lines[j]).Length > 0) break;
+                    body.Add(lines[j]);
+                }
+                pages.Add(new NpcDialogPageGraphEntry(key, body, ExtractOutgoingPageKeys(lines, key)));
+            }
+            return pages;
+        }
+
+        private static string NormalizePageHeader(string line)
+        {
+            string value = (line ?? string.Empty).Trim();
+            if (!value.StartsWith("[@", StringComparison.OrdinalIgnoreCase) || !value.EndsWith("]", StringComparison.Ordinal))
+                return string.Empty;
+            if (value.Any(char.IsWhiteSpace)) return string.Empty;
+            return NormalizePageKey(value).ToUpperInvariant();
         }
 
         private static List<string> DetectLegacyNonDialogSections(List<string> lines)

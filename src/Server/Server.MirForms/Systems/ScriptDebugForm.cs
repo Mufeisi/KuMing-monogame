@@ -225,13 +225,17 @@ namespace Server.MirForms.Systems
         private string _lastActionSummary = "尚未执行诊断。";
         private string _lastTestSummary = "尚未执行测试。";
         private string _lastAiSummary = "尚未生成 AI 草稿。";
+        private readonly string _initialFilePath;
+
+        public string CurrentFilePath => _currentFilePath;
 
         private Envir Envir => Envir.Main;
         private string ScriptsRootPath => Path.GetFullPath(Settings.CSharpScriptsPath);
         private string HotfixPackageRootPath => Path.Combine(ScriptsRootPath, "_hotfix_packages");
 
-        public ScriptDebugForm()
+        public ScriptDebugForm(string initialFilePath = "")
         {
+            _initialFilePath = initialFilePath ?? string.Empty;
             Text = "脚本调试";
             StartPosition = FormStartPosition.CenterParent;
             MinimumSize = new Size(1260, 760);
@@ -363,9 +367,17 @@ namespace Server.MirForms.Systems
             Shown += (_, _) =>
             {
                 RefreshView(true);
+                if (!string.IsNullOrWhiteSpace(_initialFilePath))
+                    TryOpenFile(_initialFilePath);
                 _testDebugUiTimer.Start();
                 UpdateTestDebugUiFromSession(forceRefreshBreakpoints: true);
             };
+        }
+
+        public bool TryOpenFile(string fullPath)
+        {
+            if (string.IsNullOrWhiteSpace(fullPath) || !File.Exists(fullPath)) return false;
+            return TrySelectFileNode(fullPath);
         }
 
         private System.Windows.Forms.Control BuildToolbar()
