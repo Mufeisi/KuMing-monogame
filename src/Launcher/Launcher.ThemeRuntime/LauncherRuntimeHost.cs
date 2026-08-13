@@ -231,6 +231,18 @@ public static class LauncherRuntimeHost
         try { return form.ValidateDpiMessage(dpi); }
         finally { form.Hide(); }
     }
+
+    public static IReadOnlyDictionary<LauncherControlId, Rectangle> CaptureControlLayoutForEditor(LauncherSnapshot snapshot, string assetRoot)
+    {
+        LauncherSnapshotValidator.Validate(snapshot);
+        Application.SetHighDpiMode(HighDpiMode.PerMonitorV2);
+        using var form = new LauncherForm(new LoadedLauncherSnapshot(snapshot, assetRoot, SnapshotSource.BuiltIn), assetRoot, (_, _, _, _, _) => { });
+        form.StartPosition = FormStartPosition.Manual;
+        form.Location = new Point(-32000, -32000);
+        form.Show();
+        try { Application.DoEvents(); return form.CaptureThemeControlBounds(); }
+        finally { form.Hide(); }
+    }
 }
 
 public sealed record LauncherDpiLayoutResult(bool AllControlsInsideCanvas, bool ClickTargetsMatch, int VisibleControlCount, int ActualDpi = 96, string Details = "", bool TextFits = true);

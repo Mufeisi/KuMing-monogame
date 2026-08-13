@@ -27,6 +27,9 @@ internal sealed class MainForm : Form
     private CancellationTokenSource? _quickGenerationCancellation;
     private bool _closeAfterQuickGeneration;
     private bool _quickGenerationRunning;
+    private LauncherCanvasDocument? _canvasDocument;
+    private LauncherCanvasEditorPanel? _canvasPanel;
+    private bool _restoringProjectSelection;
 
     public MainForm(EditorProjectStore store)
     {
@@ -125,9 +128,21 @@ internal sealed class MainForm : Form
 
     private void LoadSelectedProject()
     {
+        if (_restoringProjectSelection) return;
         if (_projects.SelectedItem is not ProjectListItem selected) return;
         string id = selected.Id;
-        try { _project = _store.Load(id); RebuildTabs(); RefreshPreview(); SetStatus("已加载启动器：" + _project.Snapshot.ProjectName); }
+        try
+        {
+            if (!ConfirmDiscardCanvasChanges())
+            {
+                _restoringProjectSelection = true;
+                try { _projects.SelectedItem = _project is null ? null : _projects.Items.Cast<ProjectListItem>().FirstOrDefault(item => item.Id == _project.Snapshot.ProjectId); }
+                finally { _restoringProjectSelection = false; }
+                return;
+            }
+            if (_canvasDocument is not null) _canvasDocument.Changed -= OnCanvasDocumentChanged;
+            _project = _store.Load(id); _canvasDocument = null; RebuildTabs(); RefreshPreview(); SetStatus("已加载启动器：" + _project.Snapshot.ProjectName);
+        }
         catch (Exception ex) { ShowError(ex); }
     }
 
@@ -219,32 +234,27 @@ internal sealed class MainForm : Form
 
     private TabPage CreateControlLayoutTab()
     {
-        var grid = new DataGridView { Dock = DockStyle.Fill, AutoGenerateColumns = false, DataSource = _controlOverrides, AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill, AllowUserToAddRows = false };
-        grid.Columns.Add(new DataGridViewComboBoxColumn { HeaderText = "控件", DataPropertyName = nameof(LauncherControlOverride.Id), DataSource = EditorChineseText.Choices(Enum.GetValues<LauncherControlId>(), EditorChineseText.Control), DisplayMember = nameof(ChineseChoice<LauncherControlId>.Text), ValueMember = nameof(ChineseChoice<LauncherControlId>.Value) });
-        grid.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = "横向位置", DataPropertyName = nameof(LauncherControlOverride.X) });
-        grid.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = "纵向位置", DataPropertyName = nameof(LauncherControlOverride.Y) });
-        grid.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = "宽度", DataPropertyName = nameof(LauncherControlOverride.Width) });
-        grid.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = "高度", DataPropertyName = nameof(LauncherControlOverride.Height) });
-        grid.Columns.Add(new DataGridViewCheckBoxColumn { HeaderText = "显示", DataPropertyName = nameof(LauncherControlOverride.Visible) });
-        grid.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = "文字颜色", DataPropertyName = nameof(LauncherControlOverride.ForeColor) });
-        grid.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = "背景颜色", DataPropertyName = nameof(LauncherControlOverride.BackColor) });
-        grid.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = "字体", DataPropertyName = nameof(LauncherControlOverride.FontName) });
-        grid.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = "字号", DataPropertyName = nameof(LauncherControlOverride.FontSize) });
-        grid.Columns.Add(new DataGridViewCheckBoxColumn { HeaderText = "粗体", DataPropertyName = nameof(LauncherControlOverride.Bold) });
-        grid.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = "不透明度（百分比）", DataPropertyName = nameof(LauncherControlOverride.OpacityPercent) });
-        grid.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = "背景图片", DataPropertyName = nameof(LauncherControlOverride.BackgroundImage) });
-        grid.CellValueChanged += (_, _) => RefreshPreview();
-        var bar = new FlowLayoutPanel { Dock = DockStyle.Top, Height = 42 };
-        var add = new Button { Text = "添加控件覆盖", AutoSize = true };
-        add.Click += (_, _) =>
+        string root = _store.GetProjectDirectory(_project!.Snapshot.ProjectId);
+        if (_canvasDocument is null)
         {
-            LauncherControlId? id = Enum.GetValues<LauncherControlId>().Cast<LauncherControlId?>().FirstOrDefault(candidate => candidate.HasValue && !_controlOverrides!.Any(item => item.Id == candidate.Value));
-            if (!id.HasValue) return;
-            _controlOverrides!.Add(new LauncherControlOverride { Id = id.Value, X = 20, Y = 20, Width = 180, Height = 40 }); RefreshPreview();
-        };
-        var remove = new Button { Text = "恢复模板默认", AutoSize = true }; remove.Click += (_, _) => { if (grid.CurrentRow?.DataBoundItem is LauncherControlOverride item) _controlOverrides!.Remove(item); RefreshPreview(); };
-        bar.Controls.AddRange(new Control[] { add, remove, new Label { Text = "只允许固定控件；留空表示使用模板位置与样式。", AutoSize = true, Padding = new Padding(12, 8, 0, 0) } });
-        var page = new TabPage("控件布局"); page.Controls.Add(grid); page.Controls.Add(bar); return page;
+            IReadOnlyDictionary<LauncherControlId, Rectangle> runtimeLayout = LauncherRuntimeHost.CaptureControlLayoutForEditor(_project.Snapshot, root);
+            _canvasDocument = new LauncherCanvasDocument(_project.Snapshot.Theme, runtimeLayout, _project.CanvasControls);
+            _controlOverrides = new BindingList<LauncherControlOverride>(_project.Snapshot.Theme.Controls);
+            _canvasDocument.MarkSaved();
+            _canvasDocument.Changed += OnCanvasDocumentChanged;
+        }
+        _canvasPanel = new LauncherCanvasEditorPanel(
+            _canvasDocument,
+            () => LauncherRuntimeHost.RenderTemplateForEvidence(_project.Snapshot, root, 1f),
+            ImportQuickImage);
+        return new TabPage("可视化画布") { Controls = { _canvasPanel } };
+    }
+
+    private void OnCanvasDocumentChanged(object? sender, EventArgs e)
+    {
+        if (_project is null) return;
+        _controlOverrides = new BindingList<LauncherControlOverride>(_project.Snapshot.Theme.Controls);
+        RefreshPreview();
     }
 
     private TabPage CreatePreviewTab()
@@ -270,7 +280,7 @@ internal sealed class MainForm : Form
     private void SaveProject()
     {
         if (_project is null) return;
-        try { SyncLists(); _store.Save(_project); SetStatus("项目已原子保存"); }
+        try { SyncLists(); _store.Save(_project); _canvasDocument?.MarkSaved(); SetStatus("项目已原子保存"); }
         catch (Exception ex) { ShowError(ex); }
     }
 
@@ -326,9 +336,16 @@ internal sealed class MainForm : Form
         try
         {
             string relative = ThemeAssetImporter.Import(_store.GetProjectDirectory(_project.Snapshot.ProjectId), dialog.FileName, _project.OptimizeImportedImages);
-            if (usage == ThemeImageUsage.Background) _project.Snapshot.Theme.BackgroundImage = relative;
-            else _project.Snapshot.Theme.LaunchButtonImage = relative;
-            _store.Save(_project); RebuildTabs(); RefreshPreview(); SetStatus("图片已导入并自动应用");
+            switch (usage)
+            {
+                case ThemeImageUsage.Background: _project.Snapshot.Theme.BackgroundImage = relative; break;
+                case ThemeImageUsage.ButtonBase: _project.Snapshot.Theme.LaunchButtonImage = relative; break;
+                case ThemeImageUsage.ButtonHover: _project.Snapshot.Theme.LaunchButtonHoverImage = relative; break;
+                case ThemeImageUsage.ButtonPressed: _project.Snapshot.Theme.LaunchButtonPressedImage = relative; break;
+                case ThemeImageUsage.ButtonDisabled: _project.Snapshot.Theme.LaunchButtonDisabledImage = relative; break;
+            }
+            _canvasDocument?.MarkExternalChange();
+            RefreshPreview(); SetStatus("图片已导入并应用到画布；保存项目后永久生效");
         }
         catch (Exception ex) { ShowError(ex); }
     }
@@ -593,6 +610,19 @@ internal sealed class MainForm : Form
     }
 
     private void SetStatus(string value) => _status.Text = value;
+
+    internal void PrepareCanvasEvidence()
+    {
+        if (_project is null) throw new InvalidOperationException("没有可用于画布证据的项目");
+        if (!_advancedVisible) { _advancedVisible = true; RebuildTabs(); }
+        TabPage canvas = _tabs.TabPages.Cast<TabPage>().Single(page => page.Text == "可视化画布");
+        _tabs.SelectedTab = canvas;
+        _canvasDocument!.Select([LauncherControlId.ServerList, LauncherControlId.Announcements, LauncherControlId.LaunchButton]);
+        _canvasDocument.MoveSelection(8, 8, snap: true);
+        _canvasDocument.Undo();
+        _canvasDocument.Redo();
+        Application.DoEvents();
+    }
     private void ShowError(Exception error) => MessageBox.Show(this, error.Message, "操作失败", MessageBoxButtons.OK, MessageBoxIcon.Error);
     private static string SafeFileName(string value)
     {
@@ -639,7 +669,11 @@ internal sealed class MainForm : Form
 
     protected override void Dispose(bool disposing)
     {
-        if (disposing) _preview.Image?.Dispose();
+        if (disposing)
+        {
+            if (_canvasDocument is not null) _canvasDocument.Changed -= OnCanvasDocumentChanged;
+            _preview.Image?.Dispose();
+        }
         base.Dispose(disposing);
     }
 
@@ -652,7 +686,17 @@ internal sealed class MainForm : Form
             SetStatus("正在安全停止生成，完成清理后自动关闭……");
             e.Cancel = true;
         }
+        else if (!ConfirmDiscardCanvasChanges()) e.Cancel = true;
         base.OnFormClosing(e);
+    }
+
+    private bool ConfirmDiscardCanvasChanges()
+    {
+        if (_canvasDocument?.IsDirty != true) return true;
+        DialogResult result = MessageBox.Show(this, "画布有尚未保存的修改。是否先保存？", "未保存的画布修改", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Warning);
+        if (result == DialogResult.Cancel) return false;
+        if (result == DialogResult.Yes) SaveProject();
+        return result != DialogResult.Yes || _canvasDocument?.IsDirty != true;
     }
 
     private sealed record ProjectListItem(string Id, string Name)

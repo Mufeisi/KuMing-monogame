@@ -18,6 +18,148 @@ namespace Launcher.PlayerShellIntegration;
 public sealed class LauncherEditorTests
 {
     [Fact]
+    public void CanvasDocumentMaterializesRuntimeLayoutWithoutManualCoordinates()
+    {
+        LauncherSnapshot snapshot = LauncherTemplateCatalog.Create(LauncherTemplateKind.Widescreen);
+        IReadOnlyDictionary<LauncherControlId, Rectangle> runtime = Enum.GetValues<LauncherControlId>()
+            .ToDictionary(id => id, id => new Rectangle(20 + (int)id * 8, 30 + (int)id * 6, 120, 36));
+
+        var document = new LauncherCanvasDocument(snapshot.Theme, runtime);
+
+        Assert.Equal(Enum.GetValues<LauncherControlId>().Length, snapshot.Theme.Controls.Count);
+        Assert.Equal(runtime[LauncherControlId.LaunchButton], document.GetBounds(LauncherControlId.LaunchButton));
+        Assert.False(document.IsDirty);
+    }
+
+    [Fact]
+    public void CanvasMoveResizeAndPropertyChangesRoundTripThroughUndoRedo()
+    {
+        LauncherSnapshot snapshot = LauncherTemplateCatalog.Create(LauncherTemplateKind.Compact);
+        var document = CanvasDocument(snapshot);
+        document.Select([LauncherControlId.LaunchButton]);
+        Rectangle original = document.GetBounds(LauncherControlId.LaunchButton);
+
+        document.MoveSelection(17, 11, snap: false);
+        document.ResizeSelection(25, 9, snap: false);
+        document.ChangeSelectionStyle(new LauncherCanvasStyleChange(ForeColor: "#112233", BackColor: "#445566", FontName: "Microsoft YaHei UI", FontSize: 12, Bold: true, OpacityPercent: 85));
+        Rectangle changed = document.GetBounds(LauncherControlId.LaunchButton);
+
+        Assert.Equal(new Rectangle(original.X + 17, original.Y + 11, original.Width + 25, original.Height + 9), changed);
+        Assert.Equal("#112233", snapshot.Theme.Controls.Single(x => x.Id == LauncherControlId.LaunchButton).ForeColor);
+        Assert.True(document.Undo());
+        Assert.True(document.Undo());
+        Assert.True(document.Undo());
+        Assert.Equal(original, document.GetBounds(LauncherControlId.LaunchButton));
+        Assert.True(document.Redo());
+        Assert.True(document.Redo());
+        Assert.True(document.Redo());
+        Assert.Equal(changed, document.GetBounds(LauncherControlId.LaunchButton));
+    }
+
+    [Fact]
+    public void CanvasMultiSelectionAlignDistributeSnapLayerLockHideAndRestoreAreUndoable()
+    {
+        LauncherSnapshot snapshot = LauncherTemplateCatalog.Create(LauncherTemplateKind.Widescreen);
+        var document = CanvasDocument(snapshot);
+        LauncherControlId[] ids = [LauncherControlId.ServerList, LauncherControlId.Announcements, LauncherControlId.LaunchButton];
+        document.Select(ids);
+        document.SetBounds(LauncherControlId.ServerList, new Rectangle(10, 20, 100, 40));
+        document.SetBounds(LauncherControlId.Announcements, new Rectangle(180, 70, 100, 40));
+        document.SetBounds(LauncherControlId.LaunchButton, new Rectangle(390, 110, 100, 40));
+        document.AlignSelection(LauncherCanvasAlignment.Top);
+        document.DistributeSelection(LauncherCanvasDistribution.Horizontal);
+        document.SetLocked(ids, true);
+        Assert.False(document.MoveSelection(50, 50, snap: true));
+        document.SetLocked(ids, false);
+        document.BringSelectionForward();
+        document.SetVisible(ids, false);
+
+        Assert.All(ids, id => Assert.False(snapshot.Theme.Controls.Single(x => x.Id == id).Visible));
+        Assert.True(document.Undo());
+        Assert.All(ids, id => Assert.True(snapshot.Theme.Controls.Single(x => x.Id == id).Visible));
+        Assert.Equal(document.GetBounds(ids[0]).Y, document.GetBounds(ids[2]).Y);
+        Assert.True(snapshot.Theme.Controls.FindIndex(x => x.Id == ids[2]) > 0);
+    }
+
+    [Fact]
+    public void CanvasDeleteAndAddUseFixedControlCatalogAndRemainUndoable()
+    {
+        LauncherSnapshot snapshot = LauncherTemplateCatalog.Create(LauncherTemplateKind.Classic);
+        var document = CanvasDocument(snapshot);
+        document.Select([LauncherControlId.DiagnoseButton]);
+        Assert.True(document.DeleteSelection());
+        Assert.False(snapshot.Theme.Controls.Single(x => x.Id == LauncherControlId.DiagnoseButton).Visible);
+        Assert.True(document.Undo());
+        Assert.True(snapshot.Theme.Controls.Single(x => x.Id == LauncherControlId.DiagnoseButton).Visible);
+        document.AddOrShow(LauncherControlId.DiagnoseButton);
+        Assert.True(snapshot.Theme.Controls.Single(x => x.Id == LauncherControlId.DiagnoseButton).Visible);
+    }
+
+    [Fact]
+    public void CanvasSnappingUsesCanvasAndPeerEdgesWithoutLeavingCanvas()
+    {
+        LauncherSnapshot snapshot = LauncherTemplateCatalog.Create(LauncherTemplateKind.Compact);
+        var document = CanvasDocument(snapshot);
+        document.SetBounds(LauncherControlId.ServerList, new Rectangle(0, 20, 100, 40));
+        document.SetBounds(LauncherControlId.LaunchButton, new Rectangle(108, 20, 100, 40));
+        document.Select([LauncherControlId.LaunchButton]);
+
+        document.MoveSelection(-3, 0, snap: true);
+
+        Assert.Equal(100, document.GetBounds(LauncherControlId.LaunchButton).X);
+        Assert.Contains(document.SnapGuides, guide => guide.Vertical && guide.Position == 100);
+        document.MoveSelection(-9999, -9999, snap: true);
+        Assert.Equal(new Point(0, 0), document.GetBounds(LauncherControlId.LaunchButton).Location);
+    }
+
+    [Fact]
+    public void CanvasLockBlocksBoundsAndStyleChangesUntilUnlocked()
+    {
+        LauncherSnapshot snapshot = LauncherTemplateCatalog.Create(LauncherTemplateKind.Classic);
+        var document = CanvasDocument(snapshot);
+        document.Select([LauncherControlId.LaunchButton]);
+        Rectangle original = document.GetBounds(LauncherControlId.LaunchButton);
+        string originalColor = snapshot.Theme.Controls.Single(x => x.Id == LauncherControlId.LaunchButton).ForeColor;
+        document.SetLocked([LauncherControlId.LaunchButton], true);
+
+        document.SetBounds(LauncherControlId.LaunchButton, new Rectangle(1, 1, 20, 20));
+        document.ChangeSelectionStyle(new LauncherCanvasStyleChange(ForeColor: "#010203"));
+
+        Assert.Equal(original, document.GetBounds(LauncherControlId.LaunchButton));
+        Assert.Equal(originalColor, snapshot.Theme.Controls.Single(x => x.Id == LauncherControlId.LaunchButton).ForeColor);
+    }
+
+    [Fact]
+    public void CanvasLockPersistsInEditorProjectWithoutChangingPlayerSnapshotContract()
+    {
+        using var scope = new EditorTempScope();
+        var store = new EditorProjectStore(scope.Root);
+        EditorProject project = store.Create("canvas-metadata", "画布元数据", LauncherTemplateKind.Classic);
+        var document = CanvasDocument(project.Snapshot, project.CanvasControls);
+        document.SetLocked([LauncherControlId.LaunchButton], true);
+        document.BringSelectionForward();
+        store.Save(project);
+
+        EditorProject loaded = store.Load("canvas-metadata");
+        var restored = CanvasDocument(loaded.Snapshot, loaded.CanvasControls);
+        string playerSnapshotJson = JsonSerializer.Serialize(loaded.Snapshot, LauncherSnapshotJsonContext.Default.LauncherSnapshot);
+
+        Assert.True(restored.IsLocked(LauncherControlId.LaunchButton));
+        Assert.DoesNotContain("Locked", playerSnapshotJson, StringComparison.Ordinal);
+        Assert.DoesNotContain("ZIndex", playerSnapshotJson, StringComparison.Ordinal);
+    }
+
+    private static LauncherCanvasDocument CanvasDocument(LauncherSnapshot snapshot)
+        => CanvasDocument(snapshot, null);
+
+    private static LauncherCanvasDocument CanvasDocument(LauncherSnapshot snapshot, IList<LauncherCanvasControlState>? states)
+    {
+        IReadOnlyDictionary<LauncherControlId, Rectangle> baseline = Enum.GetValues<LauncherControlId>()
+            .ToDictionary(id => id, id => new Rectangle(20 + (int)id * 30, 20 + (int)id * 20, 100, 32));
+        return new LauncherCanvasDocument(snapshot.Theme, baseline, states);
+    }
+
+    [Fact]
     public void ClassicTemplateWithoutImagesStillRendersVisibleBuiltInSkin()
     {
         using var scope = new EditorTempScope();

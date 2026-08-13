@@ -40,6 +40,7 @@ public sealed class EditorProject
     public BrandMetadata Brand { get; set; } = new();
     public GatewayDeploymentSettings Gateway { get; set; } = new();
     public ProjectReleaseMetadata Release { get; set; } = new();
+    public List<LauncherCanvasControlState> CanvasControls { get; set; } = new();
     public string ImportedClientDirectory { get; set; } = string.Empty;
     public bool OptimizeImportedImages { get; set; } = true;
     public ClientDeliveryMode DeliveryMode { get; set; }
@@ -59,6 +60,12 @@ public sealed class EditorProject
                 if (string.IsNullOrWhiteSpace(server.MicroOverride.SigningIdentity)) server.MicroOverride.SigningIdentity = Snapshot.DefaultMicro.SigningIdentity;
             }
     }
+}
+
+public sealed class LauncherCanvasControlState
+{
+    public LauncherControlId Id { get; set; }
+    public bool Locked { get; set; }
 }
 
 public sealed class ProjectReleaseMetadata

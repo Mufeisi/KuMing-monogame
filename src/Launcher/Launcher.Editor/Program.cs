@@ -34,6 +34,10 @@ internal static class Program
             using var advancedScreenshot = new Bitmap(form.Width, form.Height);
             form.DrawToBitmap(advancedScreenshot, new Rectangle(Point.Empty, advancedScreenshot.Size));
             advancedScreenshot.Save(Path.Combine(output, "中文高级设置.png"), ImageFormat.Png);
+            form.PrepareCanvasEvidence();
+            using var canvasScreenshot = new Bitmap(form.Width, form.Height);
+            form.DrawToBitmap(canvasScreenshot, new Rectangle(Point.Empty, canvasScreenshot.Size));
+            canvasScreenshot.Save(Path.Combine(output, "可视化画布设计器.png"), ImageFormat.Png);
             form.Hide();
             return 0;
         }
@@ -69,32 +73,44 @@ internal static class Program
                 }
             }
             store.Save(project);
-            using Bitmap preview = LauncherRuntimeHost.RenderTemplateForEvidence(project.Snapshot, store.GetProjectDirectory(project.Snapshot.ProjectId), 1f);
-            preview.Save(Path.Combine(output, "editor-preview.png"), ImageFormat.Png);
-            string player = Path.Combine(output, "smoke-project-玩家入口.exe");
-            PlayerArtifactBuilder.Create(project, store.GetProjectDirectory(project.Snapshot.ProjectId), player, "smoke-code");
+            string projectRoot = store.GetProjectDirectory(project.Snapshot.ProjectId);
+            IReadOnlyDictionary<LauncherControlId, Rectangle> runtimeLayout = LauncherRuntimeHost.CaptureControlLayoutForEditor(project.Snapshot, projectRoot);
+            var canvas = new LauncherCanvasDocument(project.Snapshot.Theme, runtimeLayout, project.CanvasControls);
+            canvas.Select([LauncherControlId.ServerList, LauncherControlId.Announcements, LauncherControlId.LaunchButton]);
+            canvas.MoveSelection(8, 8, snap: true);
+            canvas.Undo();
+            canvas.Redo();
+            canvas.MarkSaved();
+            store.Save(project);
+            EditorPreflightValidator.ThrowIfInvalid(project, projectRoot);
+            foreach ((float scale, string label) in new[] { (1f, "100"), (1.25f, "125"), (1.5f, "150"), (2f, "200") })
+            {
+                using Bitmap dpiPreview = LauncherRuntimeHost.RenderTemplateForEvidence(project.Snapshot, projectRoot, scale);
+                dpiPreview.Save(Path.Combine(output, $"editor-preview-{label}.png"), ImageFormat.Png);
+            }
+            string player = Path.Combine(project.ImportedClientDirectory, "smoke-project-玩家入口.exe");
+            PlayerArtifactBuilder.Create(project, projectRoot, player, "smoke-code");
             project.Release.PlayerUpdateMode = PlayerUpdateMode.Normal;
             project.Release.PlayerUpdateFile = player;
             project.Release.PlayerUpdateVersion = project.Brand.FileVersion;
             string publish = Path.Combine(output, "signed-publish");
-            ProjectReleaseResult first = ProjectReleasePublisher.Publish(project, store.GetProjectDirectory(project.Snapshot.ProjectId), publish, "离线冒烟首发");
+            ProjectReleaseResult first = ProjectReleasePublisher.Publish(project, projectRoot, publish, "离线冒烟首发");
             project.Snapshot.Announcements[0].Summary = "第二个不可变版本，用于验证更高序列回滚。";
-            ProjectReleasePublisher.Publish(project, store.GetProjectDirectory(project.Snapshot.ProjectId), publish, "离线冒烟第二版");
-            ProjectReleasePublisher.Rollback(project, store.GetProjectDirectory(project.Snapshot.ProjectId), publish, first.VersionName, "离线冒烟回滚");
+            ProjectReleasePublisher.Publish(project, projectRoot, publish, "离线冒烟第二版");
+            ProjectReleasePublisher.Rollback(project, projectRoot, publish, first.VersionName, "离线冒烟回滚");
             project.Release.LastPublishRoot = publish;
             store.Save(project);
             ProjectReleasePublisher.CreateOfflineDeploymentPackage(publish, Path.Combine(output, "smoke-project-离线发布.zip"));
-            ProjectReleaseKeyStore.ExportRecovery(project, store.GetProjectDirectory(project.Snapshot.ProjectId), "Smoke-Recovery-Password-2026", Path.Combine(output, "smoke-project-密钥恢复包.lyorecovery"));
-            DeploymentPackageBuilder.CreateGatewayPackage(project, Path.Combine(output, "smoke-project-微端网关.zip"), "smoke-code");
+            ProjectReleaseKeyStore.ExportRecovery(project, projectRoot, "Smoke-Recovery-Password-2026", Path.Combine(output, "smoke-project-密钥恢复包.lyorecovery"));
             using (var form = new MainForm(store) { WindowState = FormWindowState.Normal, Size = new Size(1400, 850), StartPosition = FormStartPosition.Manual, Location = new Point(-32000, -32000) })
             {
-                form.Show(); Application.DoEvents();
+                form.Show(); Application.DoEvents(); form.PrepareCanvasEvidence();
                 using var screenshot = new Bitmap(form.Width, form.Height);
                 form.DrawToBitmap(screenshot, new Rectangle(Point.Empty, screenshot.Size));
                 screenshot.Save(Path.Combine(output, "editor-ui.png"), ImageFormat.Png);
                 form.Hide();
             }
-            return File.Exists(Path.Combine(output, "editor-preview.png")) && File.Exists(Path.Combine(output, "editor-ui.png")) && File.Exists(Path.Combine(output, "smoke-project-微端网关.zip")) && File.Exists(player) && File.Exists(Path.Combine(output, "smoke-project-离线发布.zip")) && File.Exists(Path.Combine(output, "smoke-project-密钥恢复包.lyorecovery")) ? 0 : 2;
+            return new[] { "100", "125", "150", "200" }.All(label => File.Exists(Path.Combine(output, $"editor-preview-{label}.png"))) && File.Exists(Path.Combine(output, "editor-ui.png")) && File.Exists(player) && File.Exists(Path.Combine(output, "smoke-project-离线发布.zip")) && File.Exists(Path.Combine(output, "smoke-project-密钥恢复包.lyorecovery")) ? 0 : 2;
         }
         catch (Exception ex)
         {

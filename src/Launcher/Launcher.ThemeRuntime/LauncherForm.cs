@@ -54,7 +54,10 @@ internal sealed class LauncherForm : Form
         _launch = launch;
         _builtInClassicSkin = loaded.Snapshot.Theme.Template == LauncherTemplateKind.Classic
             && string.IsNullOrWhiteSpace(loaded.Snapshot.Theme.BackgroundImage)
-            && string.IsNullOrWhiteSpace(loaded.Snapshot.Theme.LaunchButtonImage);
+            && string.IsNullOrWhiteSpace(loaded.Snapshot.Theme.LaunchButtonImage)
+            && string.IsNullOrWhiteSpace(loaded.Snapshot.Theme.LaunchButtonHoverImage)
+            && string.IsNullOrWhiteSpace(loaded.Snapshot.Theme.LaunchButtonPressedImage)
+            && string.IsNullOrWhiteSpace(loaded.Snapshot.Theme.LaunchButtonDisabledImage);
         _selectedClient = ClientSelection.GetPreferred(loaded.Snapshot.ProjectId, clientDirectory, loaded.Snapshot.LoginCoreResources);
         _settings = ClientSettingsWriter.Read(_selectedClient.ResourceDirectory, CloneSettings(loaded.Snapshot.Defaults));
         string windowTitle = string.IsNullOrWhiteSpace(loaded.Snapshot.WindowTitle) ? loaded.Snapshot.ProjectName : loaded.Snapshot.WindowTitle;
@@ -348,7 +351,7 @@ internal sealed class LauncherForm : Form
             if (_launchButton.BaseImage is null && _builtInClassicSkin) ApplyBuiltInClassicImages();
             else if (_launchButton.BaseImage is null && _loaded.Snapshot.Theme.Template == LauncherTemplateKind.Classic) ApplyClassicLaunchButtonStyle();
         }
-        if (!_builtInClassicSkin) ApplyControlOverrides(S);
+        ApplyControlOverrides(S);
     }
 
     internal static Bitmap BuildClassicBackground(Size size)
@@ -486,8 +489,21 @@ internal sealed class LauncherForm : Form
                 var font = new Font(family, size, style.Bold ? FontStyle.Bold : originalStyle);
                 _ownedFonts.Add(font); control.Font = font;
             }
+            control.BringToFront();
         }
         foreach (Font font in oldFonts) font.Dispose();
+    }
+
+    internal IReadOnlyDictionary<LauncherControlId, Rectangle> CaptureThemeControlBounds()
+    {
+        double scale = DeviceDpi / 96d;
+        return _themeControls.ToDictionary(
+            item => item.Key,
+            item => new Rectangle(
+                (int)Math.Round(item.Value.Left / scale),
+                (int)Math.Round(item.Value.Top / scale),
+                Math.Max(1, (int)Math.Round(item.Value.Width / scale)),
+                Math.Max(1, (int)Math.Round(item.Value.Height / scale))));
     }
 
     private Bitmap BuildOpacityBackground(Control control, string explicitBackground, Color tint, int opacityPercent)
