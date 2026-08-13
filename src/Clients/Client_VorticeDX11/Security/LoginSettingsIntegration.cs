@@ -21,7 +21,7 @@ public static class LoginSettingsIntegration
             enteredAccountId, enteredPassword, Settings.AccountID, Settings.Password);
         Settings.AccountID = credentials.AccountId;
         Settings.Password = credentials.Password;
-        Settings.Save();
+        if (!PcSmokeTestAutomation.Active) Settings.Save();
         var packet = new ClientPackets.Login
         {
             AccountID = credentials.AccountId,

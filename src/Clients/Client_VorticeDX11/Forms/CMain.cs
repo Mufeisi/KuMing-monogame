@@ -24,6 +24,7 @@ namespace Client
         public static Graphics Graphics;
         public static Point MPoint;
         private static bool _sysKeyMessageFilterInstalled;
+        private static bool _closing;
 
         public readonly static Stopwatch Timer = Stopwatch.StartNew();
         public readonly static DateTime StartTime = DateTime.Now;
@@ -124,11 +125,17 @@ namespace Client
             {
                 while (AppStillIdle)
                 {
+                    if (_closing || Program.Form == null || Program.Form.IsDisposed)
+                        break;
+
                     using var performanceCpuScope = PerformanceMetrics.Begin(PerformanceMetricKind.Cpu);
                     UpdateTime();
                     RecordGpuMemoryForCurrentSession();
                     UpdateEnviroment();
                     Network.RecordPerformanceQueueMetrics();
+
+                    if (_closing || Program.Form == null || Program.Form.IsDisposed)
+                        break;
 
                     if (IsDrawTime())
                     {
@@ -930,7 +937,9 @@ namespace Client
             }
             else
             {
-                Settings.Save();
+                _closing = true;
+                Application.Idle -= Application_Idle;
+                if (!PcSmokeTestAutomation.Active) Settings.Save();
 
                 DXManager.Dispose();
                 SoundManager.Dispose();

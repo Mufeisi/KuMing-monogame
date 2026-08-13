@@ -19,6 +19,8 @@ namespace Client.MirScenes
         public MirLabel LastAccessLabel, LastAccessLabelLabel;
         public List<SelectInfo> Characters = new List<SelectInfo>();
         private int _selected;
+        private bool _smokeTestCreateCharacterSent;
+        private bool _smokeTestStartGameSent;
 
         public SelectScene(List<SelectInfo> characters)
         {
@@ -226,6 +228,7 @@ namespace Client.MirScenes
                 Border = true,
             };
             UpdateInterface();
+            ResolveSmokeTestSelection();
         }
 
         private void SelectScene_KeyPress(object sender, KeyPressEventArgs e)
@@ -298,8 +301,53 @@ namespace Client.MirScenes
 
         public override void Process()
         {
+            TrySmokeTestCreateCharacter();
+            TrySmokeTestStartGame();
+        }
 
+        private void ResolveSmokeTestSelection()
+        {
+            string desired = Settings.SmokeTestCharacterName ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(desired)) return;
 
+            int hit = Characters.FindIndex(character =>
+                string.Equals(character?.Name ?? string.Empty, desired, StringComparison.OrdinalIgnoreCase));
+            if (hit < 0) return;
+
+            _selected = hit;
+            UpdateInterface();
+            CMain.SaveError($"LEG-01 阶段=角色 动作=选角 CharacterName={desired} SelectedIndex={hit}。");
+        }
+
+        private void TrySmokeTestCreateCharacter()
+        {
+            if (_smokeTestCreateCharacterSent || !Settings.SmokeTestAutoCreateCharacter) return;
+
+            string desired = Settings.SmokeTestCharacterName ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(desired)) return;
+            if (Characters.Any(character => string.Equals(character?.Name ?? string.Empty, desired, StringComparison.OrdinalIgnoreCase)))
+                return;
+
+            _smokeTestCreateCharacterSent = true;
+            Network.Enqueue(new C.NewCharacter
+            {
+                Name = desired,
+                Class = MirClass.Warrior,
+                Gender = MirGender.Male,
+            });
+            CMain.SaveError($"LEG-01 阶段=角色 动作=自动建角 CharacterName={desired}。");
+        }
+
+        private void TrySmokeTestStartGame()
+        {
+            if (_smokeTestStartGameSent || !Settings.SmokeTestAutoStartGame || Characters.Count == 0 || !Libraries.Loaded)
+                return;
+
+            ResolveSmokeTestSelection();
+            if (_selected < 0 || _selected >= Characters.Count) _selected = 0;
+            _smokeTestStartGameSent = true;
+            CMain.SaveError($"LEG-01 阶段=进图 动作=发送 StartGame CharacterIndex={Characters[_selected].Index}。");
+            StartGame();
         }
         public override void ProcessPacket(Packet p)
         {
@@ -364,12 +412,16 @@ namespace Client.MirScenes
         }
         private void NewCharacter(S.NewCharacterSuccess p)
         {
-            _character.Dispose();
-            MirMessageBox.Show("角色创建成功");
+            if (_character != null && !_character.IsDisposed)
+            {
+                _character.Dispose();
+                MirMessageBox.Show("角色创建成功");
+            }
 
             Characters.Insert(0, p.CharInfo);
             _selected = 0;
             UpdateInterface();
+            CMain.SaveError($"LEG-01 阶段=角色 结果=建角成功 CharacterName={p.CharInfo?.Name ?? string.Empty}。");
         }
 
         private void DeleteCharacter()

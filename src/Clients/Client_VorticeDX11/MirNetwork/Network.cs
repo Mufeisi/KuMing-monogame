@@ -280,8 +280,21 @@ namespace Client.MirNetwork
             Packet p;
             List<byte> data = new List<byte>();
 
-            while ((p = Packet.ReceivePacket(_rawData, out _rawData)) != null)
+            while (true)
             {
+                byte[] frameBuffer = _rawData;
+                p = Packet.ReceivePacket(frameBuffer, out _rawData);
+                if (p == null)
+                {
+                    if (TrySkipCompleteFrame(frameBuffer, out byte[] remaining, out short packetId))
+                    {
+                        _rawData = remaining;
+                        if (Settings.TracePackets)
+                            CMain.SaveError($"LEG-01 阶段=进图 结果=跳过未知完整帧 Id={packetId} FrameBytes={frameBuffer.Length - remaining.Length} BufferedBytes={frameBuffer.Length}。");
+                        continue;
+                    }
+                    break;
+                }
                 _receiveList.Enqueue(p);
                 _receiveQueueMetrics.Enqueue();
                 _networkQueueMetrics.Enqueue();
@@ -296,6 +309,21 @@ namespace Client.MirNetwork
 
             BeginReceive(state.Client, state.Generation, state.Stream);
         }
+
+        private static bool TrySkipCompleteFrame(byte[] buffer, out byte[] remaining, out short packetId)
+        {
+            remaining = buffer;
+            packetId = 0;
+            if (buffer == null || buffer.Length < 4) return false;
+
+            ushort frameLength = BitConverter.ToUInt16(buffer, 0);
+            if (frameLength < 4 || frameLength > buffer.Length) return false;
+
+            packetId = BitConverter.ToInt16(buffer, 2);
+            remaining = buffer[frameLength..];
+            return true;
+        }
+
 
         private static bool BeginSend(List<byte> data, bool gateHeld = false)
         {

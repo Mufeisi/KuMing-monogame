@@ -82,6 +82,14 @@ namespace Client
         public static bool TracePackets = false;
         public static int RemainingErrorLogs = 500;
 
+        // SmokeTest / Automation（默认关闭，仅用于联调与验收）
+        public static bool SmokeTestAutoLogin = false;
+        public static bool SmokeTestAutoCreateAccount = false;
+        public static bool SmokeTestAutoCreateCharacter = false;
+        public static bool SmokeTestAutoStartGame = false;
+        public static bool SmokeTestAutoMoveAndExit = false;
+        public static string SmokeTestCharacterName = string.Empty;
+
         //Graphics
         public static bool FullScreen = false, Borderless = true, TopMost = true, MouseClip = false;
         public static string FontName = "Arial"; //"MS Sans Serif"

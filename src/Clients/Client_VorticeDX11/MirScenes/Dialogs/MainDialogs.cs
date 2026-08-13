@@ -535,9 +535,7 @@ namespace Client.MirScenes.Dialogs
         {
             if (ExperienceBar.Library == null) return;
 
-            double percent = MapObject.User.Experience / (double)MapObject.User.MaxExperience;
-            if (percent > 1) percent = 1;
-            if (percent <= 0) return;
+            if (!TryGetExperienceProgress(MapObject.User, out double percent)) return;
 
             Rectangle section = new Rectangle
             {
@@ -547,12 +545,19 @@ namespace Client.MirScenes.Dialogs
             ExperienceBar.Library.Draw(ExperienceBar.Index, section, ExperienceBar.DisplayLocation, Color.White, false);
         }
 
+        private static bool TryGetExperienceProgress(UserObject user, out double percent)
+        {
+            percent = 0D;
+            if (user == null || user.MaxExperience <= 0) return false;
+
+            percent = Math.Clamp(user.Experience / (double)user.MaxExperience, 0D, 1D);
+            return percent > 0D;
+        }
+
         private void WeightBar_BeforeDraw(object sender, EventArgs e)
         {
             if (WeightBar.Library == null) return;
-            double percent = MapObject.User.CurrentBagWeight / (double)MapObject.User.Stats[Stat.背包负重];
-            if (percent > 1) percent = 1;
-            if (percent <= 0) return;
+            if (!TryGetWeightProgress(MapObject.User, out double percent)) return;
 
             Rectangle section = new Rectangle
             {
@@ -560,6 +565,18 @@ namespace Client.MirScenes.Dialogs
             };
 
             WeightBar.Library.Draw(WeightBar.Index, section, WeightBar.DisplayLocation, Color.White, false);
+        }
+
+        private static bool TryGetWeightProgress(UserObject user, out double percent)
+        {
+            percent = 0D;
+            if (user?.Stats == null) return false;
+
+            int maximumWeight = user.Stats[Stat.背包负重];
+            if (maximumWeight <= 0) return false;
+
+            percent = Math.Clamp(user.CurrentBagWeight / (double)maximumWeight, 0D, 1D);
+            return percent > 0D;
         }
     }
     public sealed class ChatDialog : MirImageControl

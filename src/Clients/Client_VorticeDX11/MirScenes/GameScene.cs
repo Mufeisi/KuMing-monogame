@@ -1136,6 +1136,10 @@ namespace Client.MirScenes
 
         protected internal override void DrawControl()   //由 MirScene.Draw() 触发
         {
+            // StartGame 后 MapInformation/UserInformation 分包到达；玩家状态未就绪前只保留黑屏，
+            // 避免 HUD 与物品格在首帧解引用尚未建立的背包、属性和角色对象。
+            if (!CanDrawGameFrame(User)) return;
+
             if (MapControl != null && !MapControl.IsDisposed)
                 MapControl.DrawControl();
             base.DrawControl();
@@ -1163,6 +1167,8 @@ namespace Client.MirScenes
         {
             if (MapControl == null || User == null)
                 return;
+
+            ProcessSmokeTestMoveAndExit();
 
             if (CMain.Time >= MoveTime)
             {
@@ -1292,6 +1298,64 @@ namespace Client.MirScenes
             UpdateMouseCursor();
 
             SoundManager.ProcessDelayedSounds();
+        }
+
+        private static bool CanDrawGameFrame(UserObject user) => user != null;
+
+        private bool _smokeTestMoveQueued;
+        private bool _smokeTestMoveConfirmed;
+        private bool _smokeTestScreenshotCaptured;
+        private Point _smokeTestInitialLocation;
+        private long _smokeTestMoveDeadline;
+        private long _smokeTestScreenshotTime;
+        private long _smokeTestExitTime;
+
+        private void ProcessSmokeTestMoveAndExit()
+        {
+            if (!Settings.SmokeTestAutoMoveAndExit) return;
+            if (_smokeTestMoveConfirmed)
+            {
+                if (!_smokeTestScreenshotCaptured && CMain.Time >= _smokeTestScreenshotTime)
+                {
+                    _smokeTestScreenshotCaptured = true;
+                    Program.Form.CreateScreenShot();
+                }
+                if (CMain.Time >= _smokeTestExitTime)
+                    Program.Form.Close();
+                return;
+            }
+
+            if (_smokeTestMoveQueued)
+            {
+                if (CMain.Time >= _smokeTestMoveDeadline)
+                {
+                    CMain.SaveError("LEG-01 阶段=退出 结果=失败 原因=30秒内未确认移动。");
+                    Program.Form.Close();
+                }
+                return;
+            }
+
+            foreach (MirDirection direction in Enum.GetValues<MirDirection>())
+            {
+                Point destination = Functions.PointMove(User.CurrentLocation, direction, 1);
+                if (!MapControl.EmptyCell(destination)) continue;
+
+                _smokeTestMoveQueued = true;
+                _smokeTestInitialLocation = User.CurrentLocation;
+                _smokeTestMoveDeadline = CMain.Time + 30000;
+                User.QueuedAction = new QueuedAction
+                {
+                    Action = MirAction.行走动作,
+                    Direction = direction,
+                    Location = destination,
+                };
+                CMain.SaveError($"LEG-01 阶段=资源 结果=进图成功 Map={MapControl.FileName} Location={User.CurrentLocation.X},{User.CurrentLocation.Y}。");
+                CMain.SaveError($"LEG-01 阶段=退出 动作=请求移动 Direction={direction}。");
+                return;
+            }
+
+            CMain.SaveError("LEG-01 阶段=退出 结果=失败 原因=未找到可移动方向。");
+            Program.Form.Close();
         }
 
         public void DialogProcess()
@@ -2098,6 +2162,8 @@ namespace Client.MirScenes
         }
         private void MapInformation(S.MapInformation p)
         {
+            if (Settings.SmokeTestAutoMoveAndExit)
+                CMain.SaveError($"LEG-01 阶段=资源 动作=收到 MapInformation FileName={p.FileName}。");
             if (MapControl != null && !MapControl.IsDisposed)
                 MapControl.Dispose();
             MapControl = new MapControl { Index = p.MapIndex, FileName = Path.Combine(Settings.MapPath, p.FileName + ".map"), Title = p.Title, MiniMap = p.MiniMap, BigMap = p.BigMap, Lights = p.Lights, Lightning = p.Lightning, Fire = p.Fire, MapDarkLight = p.MapDarkLight, Music = p.Music};
@@ -2180,6 +2246,8 @@ namespace Client.MirScenes
         }
         private void UserInformation(S.UserInformation p)
         {
+            if (Settings.SmokeTestAutoMoveAndExit)
+                CMain.SaveError($"LEG-01 阶段=进图 动作=收到 UserInformation ObjectID={p.ObjectID}。");
             User = new UserObject(p.ObjectID);
             User.Load(p);
             MainDialog.PModeLabel.Visible = User.Class == MirClass.法师 || User.Class == MirClass.道士;
@@ -2195,6 +2263,8 @@ namespace Client.MirScenes
                 Bar.Update();
             AllowObserve = p.AllowObserve;
             Observing = p.Observer;
+            if (Settings.SmokeTestAutoMoveAndExit)
+                CMain.SaveError($"LEG-01 阶段=进图 结果=玩家初始化成功 Location={User.CurrentLocation.X},{User.CurrentLocation.Y}。");
         }
         private void UserSlotsRefresh(S.UserSlotsRefresh p)
         {
@@ -2204,6 +2274,15 @@ namespace Client.MirScenes
         private void UserLocation(S.UserLocation p)
         {
             MapControl.NextAction = 0;
+
+            if (Settings.SmokeTestAutoMoveAndExit && _smokeTestMoveQueued && p.Location != _smokeTestInitialLocation)
+            {
+                _smokeTestMoveConfirmed = true;
+                _smokeTestScreenshotTime = CMain.Time + 2000;
+                _smokeTestExitTime = CMain.Time + 5000;
+                CMain.SaveError($"LEG-01 阶段=退出 结果=移动成功 From={_smokeTestInitialLocation.X},{_smokeTestInitialLocation.Y} To={p.Location.X},{p.Location.Y}。");
+            }
+
             if (User.CurrentLocation == p.Location && User.Direction == p.Direction) return;
 
             MapControl.RemoveObject(User);

@@ -20,6 +20,11 @@ namespace Client.MirScenes
 
         private MirMessageBox _connectBox;
 
+        private bool _smokeTestAttempted;
+        private bool _smokeTestAccountPending;
+        private bool _smokeTestLoginSent;
+        private string _smokeTestPassword = string.Empty;
+
         private InputKeyDialog _ViewKey;
 
         public MirImageControl TestLabel, ViolenceLabel, MinorLabel, YouthLabel; 
@@ -170,8 +175,50 @@ namespace Client.MirScenes
                 case 1:
                     _connectBox.Dispose();
                     _login.Show();
+                    TrySmokeTestLogin();
                     break;
             }
+        }
+
+        private void TrySmokeTestLogin()
+        {
+            if (_smokeTestAttempted || !Settings.SmokeTestAutoLogin) return;
+            _smokeTestAttempted = true;
+
+            string account = Settings.AccountID ?? string.Empty;
+            _smokeTestPassword = PcSmokeTestAutomation.ResolveRuntimePassword();
+            if (string.IsNullOrWhiteSpace(account) || string.IsNullOrWhiteSpace(_smokeTestPassword))
+            {
+                CMain.SaveError($"LEG-01 冒烟登录跳过：AccountLen={account.Length}, PasswordLen={_smokeTestPassword.Length}。");
+                return;
+            }
+
+            if (Settings.SmokeTestAutoCreateAccount)
+            {
+                _smokeTestAccountPending = true;
+                Network.Enqueue(new C.NewAccount
+                {
+                    AccountID = account,
+                    Password = _smokeTestPassword,
+                    EMailAddress = string.Empty,
+                    BirthDate = DateTime.MinValue,
+                    UserName = string.Empty,
+                    SecretQuestion = string.Empty,
+                    SecretAnswer = string.Empty,
+                });
+                CMain.SaveError($"LEG-01 阶段=登录 动作=自动注册 Account={account} PasswordLen={_smokeTestPassword.Length}。");
+                return;
+            }
+
+            EnqueueSmokeTestLogin(account);
+        }
+
+        private void EnqueueSmokeTestLogin(string account)
+        {
+            if (_smokeTestLoginSent) return;
+            _smokeTestLoginSent = true;
+            Client.Security.LoginSettingsIntegration.Submit(account, _smokeTestPassword);
+            CMain.SaveError($"LEG-01 阶段=登录 动作=发送登录 Account={account} PasswordLen={_smokeTestPassword.Length}。");
         }
 
         private void OpenPasswordChangeDialog(string autoFillID, string autoFillPassword)
@@ -185,6 +232,17 @@ namespace Client.MirScenes
         }
         private void NewAccount(S.NewAccount p)
         {
+            if (_smokeTestAccountPending)
+            {
+                _smokeTestAccountPending = false;
+                CMain.SaveError($"LEG-01 阶段=登录 动作=自动注册返回 Result={p.Result}。");
+                if (p.Result == 7 || p.Result == 8)
+                    EnqueueSmokeTestLogin(Settings.AccountID ?? string.Empty);
+                else
+                    CMain.SaveError($"LEG-01 阶段=登录 结果=失败 Result={p.Result}。");
+            }
+
+            if (_account == null || _account.IsDisposed) return;
             _account.OKButton.Enabled = true;
             switch (p.Result)
             {

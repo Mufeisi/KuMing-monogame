@@ -79,6 +79,7 @@ namespace Client
 
                 Packet.IsServer = false;
                 Settings.Load();
+                if (gameInstance) PcSmokeTestAutomation.ApplyEnvironmentOverrides();
                 if (gameInstance)
                 {
                     string microBaseUrl = launchOptions.MicroEnabled
@@ -123,7 +124,7 @@ namespace Client
                 {
                     Settings.ClearGameEndpointOverride();
                 }
-                Settings.Save();
+                if (!PcSmokeTestAutomation.Active) Settings.Save();
 
                 if (Restart)
                 {
