@@ -18,10 +18,7 @@ namespace Server.MirNetwork
 
     public class MirConnection
     {
-        protected static Envir Envir
-        {
-            get { return Envir.Main; }
-        }
+        protected Envir Envir { get; }
 
         protected static MessageQueue MessageQueue
         {
@@ -61,6 +58,8 @@ namespace Server.MirNetwork
 
         byte[] _rawData = new byte[0];
         byte[] _rawBytes = new byte[8 * 1024];
+        private bool _pendingFrameSizeEvaluated;
+        private int _gatewayDisconnectRequested;
 
         public AccountInfo Account;
         public PlayerObject Player;
@@ -86,12 +85,9 @@ namespace Server.MirNetwork
         public bool HeroStorageSent;
         public Dictionary<long, DateTime> SentRankings = new Dictionary<long, DateTime>();
 
-        private DateTime _dataCounterReset;
-        private int _dataCounter;
-        private FixedSizedQueue<Packet> _lastPackets;
-
-        public MirConnection(int sessionID, TcpClient client, Stream stream = null)
+        public MirConnection(int sessionID, TcpClient client, Stream stream = null, Envir envir = null)
         {
+            Envir = envir ?? Server.MirEnvir.Envir.Main;
             SessionID = sessionID;
             IPAddress = client.Client.RemoteEndPoint.ToString().Split(':')[0];
 
@@ -105,8 +101,6 @@ namespace Server.MirNetwork
 
             TimeConnected = Envir.Time;
             TimeOutTime = TimeConnected + Settings.TimeOut;
-
-            _lastPackets = new FixedSizedQueue<Packet>(10);
 
             _receiveList = new ConcurrentQueue<Packet>();
             _sendList = new ConcurrentQueue<Packet>();
@@ -167,14 +161,6 @@ namespace Server.MirNetwork
                 return;
             }
 
-            if (_dataCounterReset < Envir.Now)
-            {
-                _dataCounterReset = Envir.Now.AddSeconds(5);
-                _dataCounter = 0;
-            }
-
-            _dataCounter++;
-
             try
             {
                 byte[] rawBytes = result.AsyncState as byte[];
@@ -186,8 +172,33 @@ namespace Server.MirNetwork
 
                 Packet p;
 
-                while ((p = Packet.ReceivePacket(_rawData, out _rawData)) != null)
+                while (_rawData.Length >= 2)
                 {
+                    int declaredPacketBytes = BitConverter.ToUInt16(_rawData, 0);
+                    if (declaredPacketBytes < 4)
+                        throw new InvalidDataException("数据包声明长度小于协议头");
+                    if (!_pendingFrameSizeEvaluated)
+                    {
+                        _pendingFrameSizeEvaluated = true;
+                        GatewayGovernanceDecision frameDecision = Envir.GatewayGovernance?.EvaluatePacketSize(
+                            SessionID, IPAddress, declaredPacketBytes) ?? GatewayGovernanceDecision.Allowed;
+                        if (frameDecision.Disconnect)
+                        {
+                            // 网络回调只登记意图；真正断开由主循环的 Process 执行。
+                            Interlocked.Exchange(ref _gatewayDisconnectRequested, 1);
+                            return;
+                        }
+                    }
+
+                    p = Packet.ReceivePacket(_rawData, out byte[] extra);
+                    _rawData = extra;
+                    if (p == null)
+                    {
+                        // 未知包会由协议解析器丢弃整帧；下一帧必须重新执行大小治理。
+                        if (_rawData.Length == 0) _pendingFrameSizeEvaluated = false;
+                        break;
+                    }
+                    _pendingFrameSizeEvaluated = false;
                     _receiveList.Enqueue(p);
                     _receiveQueueMetrics.Enqueue();
                     _networkQueueMetrics.Enqueue();
@@ -199,27 +210,6 @@ namespace Server.MirNetwork
                 Envir.UpdateIPBlock(IPAddress, TimeSpan.FromHours(24));
 
                 MessageQueue.Enqueue($"{IPAddress} 已断开连接-无效数据包");
-
-                Disconnecting = true;
-                return;
-            }
-
-            if (_dataCounter > Settings.MaxPacket)
-            {
-                Envir.UpdateIPBlock(IPAddress, TimeSpan.FromHours(24));
-
-                List<string> packetList = new List<string>();
-
-                while (_lastPackets.Count > 0)
-                {
-                    _lastPackets.TryDequeue(out Packet pkt);
-
-                    Enum.TryParse<ClientPacketIds>((pkt?.Index ?? 0).ToString(), out ClientPacketIds cPacket);
-
-                    packetList.Add(cPacket.ToString());
-                }
-
-                MessageQueue.Enqueue($"{IPAddress} 发现大量数据包，已断开连接 最后数据包为: {String.Join(",", packetList.Distinct())}.");
 
                 Disconnecting = true;
                 return;
@@ -302,6 +292,12 @@ namespace Server.MirNetwork
                 return;
             }
 
+            if (Interlocked.Exchange(ref _gatewayDisconnectRequested, 0) != 0)
+            {
+                SendDisconnect(23);
+                return;
+            }
+
             while (!_receiveList.IsEmpty && !Disconnecting)
             {
                 Packet p;
@@ -309,8 +305,6 @@ namespace Server.MirNetwork
                 _receiveQueueMetrics.Dequeue();
                 _networkQueueMetrics.Dequeue();
                 Envir.RecordNetworkQueueDequeued(incoming: true);
-
-                _lastPackets.Enqueue(p);
 
                 TimeOutTime = Envir.Time + Settings.TimeOut;
                 ProcessPacket(p);
@@ -381,6 +375,17 @@ namespace Server.MirNetwork
             if (p == null || Disconnecting) return;
 
             PacketTraceLogger.Trace("RECV", p, this);
+
+            GatewayGovernanceDecision governance = Envir.GatewayGovernance?.EvaluatePacket(
+                SessionID, IPAddress, p.Index) ?? GatewayGovernanceDecision.Allowed;
+            if (!governance.Allow)
+            {
+                if (governance.ManualBanReview)
+                    MessageQueue.Enqueue($"会话 {SessionID} 已进入人工封禁复核，来源引用由网关治理审计记录。");
+                if (governance.Disconnect)
+                    SendDisconnect(23);
+                return;
+            }
 
             switch (p.Index)
             {
@@ -847,6 +852,7 @@ namespace Server.MirNetwork
 
             Connected = false;
             PerformanceMetrics.Increment(PerformanceMetricKind.Disconnects);
+            Envir.GatewayGovernance?.RemoveSession(SessionID);
             Stage = GameStage.Disconnected;
             TimeDisconnected = Envir.Time;
 

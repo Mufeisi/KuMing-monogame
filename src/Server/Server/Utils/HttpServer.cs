@@ -19,6 +19,7 @@ namespace Server.Library.Utils
         private readonly SqliteBackupService _backupService;
         private readonly BasicOperationsMonitor _operationsMonitor;
         private readonly KillSwitchService _killSwitches;
+        private readonly GatewayTrafficGovernance _gatewayGovernance;
         private readonly MicroGatewayCore _microGateway = new();
         private readonly object _microConfigurationLock = new();
         private int _stopping;
@@ -26,7 +27,8 @@ namespace Server.Library.Utils
         public HttpServer(
             SqliteBackupService backupService = null,
             BasicOperationsMonitor operationsMonitor = null,
-            KillSwitchService killSwitches = null)
+            KillSwitchService killSwitches = null,
+            GatewayTrafficGovernance gatewayGovernance = null)
         {
             Host = Settings.HTTPIPAddress;
             _administratorToken = ProtectedSecretStore.Read(ProtectedSecretStore.AdministratorToken);
@@ -34,6 +36,7 @@ namespace Server.Library.Utils
             _backupService = backupService;
             _operationsMonitor = operationsMonitor ?? new BasicOperationsMonitor(backupService);
             _killSwitches = killSwitches;
+            _gatewayGovernance = gatewayGovernance;
         }
 
         public void Start()
@@ -172,6 +175,14 @@ namespace Server.Library.Utils
                         }
                         WriteJsonResponse(response, HttpStatusCode.OK, _killSwitches.GetSnapshot());
                         break;
+                    case "/operations/gateway-governance":
+                        if (_gatewayGovernance == null)
+                        {
+                            WriteStatusResponse(response, HttpStatusCode.ServiceUnavailable, "gateway governance unavailable");
+                            break;
+                        }
+                        WriteJsonResponse(response, HttpStatusCode.OK, _gatewayGovernance.CaptureSnapshot());
+                        break;
                     default:
                         WriteResponse(response, "error");
                         break;
@@ -302,6 +313,11 @@ namespace Server.Library.Utils
                 HandleKillSwitchChange(request, response);
                 return;
             }
+            if (path.Equals("/operations/gateway-governance/set", StringComparison.OrdinalIgnoreCase))
+            {
+                HandleGatewayGovernanceChange(request, response);
+                return;
+            }
             WriteStatusResponse(response, HttpStatusCode.MethodNotAllowed, "method not allowed");
         }
 
@@ -342,6 +358,45 @@ namespace Server.Library.Utils
             catch (Exception error) when (error is InvalidOperationException or IOException or UnauthorizedAccessException)
             {
                 WriteStatusResponse(response, HttpStatusCode.ServiceUnavailable, "kill switch change unavailable: " + error.Message);
+            }
+        }
+
+        private void HandleGatewayGovernanceChange(HttpListenerRequest request, HttpListenerResponse response)
+        {
+            if (_gatewayGovernance == null)
+            {
+                WriteStatusResponse(response, HttpStatusCode.ServiceUnavailable, "gateway governance unavailable");
+                return;
+            }
+
+            try
+            {
+                string body = ReadBoundedBody(request, 32 * 1024);
+                var change = JsonSerializer.Deserialize<GatewayGovernanceChangeRequest>(body, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true,
+                    Converters = { new System.Text.Json.Serialization.JsonStringEnumConverter() },
+                });
+                if (change == null)
+                {
+                    WriteStatusResponse(response, HttpStatusCode.BadRequest, "invalid gateway governance request");
+                    return;
+                }
+
+                GatewayGovernancePolicy policy = _gatewayGovernance.SetPolicy(change, AdminRole.Administrator.ToString());
+                WriteJsonResponse(response, HttpStatusCode.OK, policy);
+            }
+            catch (Exception error) when (error is JsonException or ArgumentException)
+            {
+                WriteStatusResponse(response, HttpStatusCode.BadRequest, "gateway governance change rejected: " + error.Message);
+            }
+            catch (InvalidOperationException error) when (error.Message == "request body too large")
+            {
+                WriteStatusResponse(response, HttpStatusCode.RequestEntityTooLarge, error.Message);
+            }
+            catch (Exception error) when (error is InvalidOperationException or IOException or UnauthorizedAccessException)
+            {
+                WriteStatusResponse(response, HttpStatusCode.Conflict, "gateway governance change unavailable: " + error.Message);
             }
         }
 

@@ -66,8 +66,7 @@ namespace Server
                              TimeOut = 10000,
                              MaxUser = 500,
                              RelogDelay = 50,
-                             MaxIP = 5,
-                             MaxPacket = 50;
+                             MaxIP = 5;
 
         public static int IPBlockSeconds = 5;
         public static bool TlsEnabled = false,
@@ -487,7 +486,6 @@ namespace Server
             TimeOut = Reader.ReadUInt16("Network", "TimeOut", TimeOut);
             MaxUser = Reader.ReadUInt16("Network", "MaxUser", MaxUser);
             MaxIP = Reader.ReadUInt16("Network", "MaxIP", MaxIP);
-            MaxPacket = Reader.ReadUInt16("Network", "MaxPacket", MaxPacket);
             TracePackets = Reader.ReadBoolean("Network", "TracePackets", TracePackets);
             TracePacketsLogPath = Reader.ReadString("Network", "TracePacketsLogPath", TracePacketsLogPath);
             TracePacketsRotateMB = Reader.ReadInt32("Network", "TracePacketsRotateMB", TracePacketsRotateMB);

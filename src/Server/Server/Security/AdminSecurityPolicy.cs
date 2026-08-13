@@ -69,7 +69,7 @@ internal static class AdminSecurityPolicy
         bool allowed = role == AdminRole.Administrator ||
             role == AdminRole.Operator && (action == "status" || action == "broadcast" ||
                                            action == "backup-status" || action == "operations-status" ||
-                                           action == "kill-switch-status");
+                                           action == "kill-switch-status" || action == "gateway-governance-status");
         return new AdminAuthorizationResult(
             allowed ? AdminAuthorizationStatus.Authorized : AdminAuthorizationStatus.Forbidden,
             role,
@@ -95,6 +95,8 @@ internal static class AdminSecurityPolicy
         "/operations/status" => "operations-status",
         "/operations/kill-switches" => "kill-switch-status",
         "/operations/kill-switches/set" => "kill-switch-change",
+        "/operations/gateway-governance" => "gateway-governance-status",
+        "/operations/gateway-governance/set" => "gateway-governance-change",
         _ => "unknown",
     };
 

@@ -13,6 +13,7 @@ using Server.Persistence.Sql;
 using Server.Security;
 using Shared.Diagnostics;
 using Shared.Security;
+using Server.Operations;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -185,6 +186,7 @@ public sealed class SimulatedProtocolLoadTests
         private readonly SettingsSnapshot _settings;
         private readonly bool _packetDirection;
         private readonly string? _perfEnabled;
+        private readonly GatewayTrafficGovernance _gatewayGovernance;
         public int TlsPort { get; }
         public X509Certificate2 Certificate { get; }
         public Envir Environment { get; }
@@ -226,9 +228,11 @@ public sealed class SimulatedProtocolLoadTests
             System.Environment.SetEnvironmentVariable("LYOCRYSTAL_PERF00_ENABLED", null);
             Packet.IsServer = true;
             Envir.IPBlocks.Clear();
+            _gatewayGovernance = new GatewayTrafficGovernance(
+                Path.Combine(_directory, "gateway-governance.json"), auditSink: _ => { });
 
             SeedAccounts(Settings.SqlitePath, active);
-            // MirConnection 的协议分发沿用既有 Envir.Main 接缝，因此网络集成测试必须启动同一实例。
+            // 账号事实仍使用生产单例；每个 MirConnection 则显式持有创建它的 Envir。
             Environment = Envir.Main;
             typeof(Envir).GetField("_persistence", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
                 ?.SetValue(Environment, null);
@@ -249,6 +253,7 @@ public sealed class SimulatedProtocolLoadTests
             StartHttp = false,
             SaveOnStop = false,
             Multithreaded = false,
+            GatewayGovernance = _gatewayGovernance,
         });
 
         public void Dispose()

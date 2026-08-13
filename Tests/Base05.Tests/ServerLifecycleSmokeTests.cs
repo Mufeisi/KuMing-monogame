@@ -13,6 +13,7 @@ using Server.Persistence;
 using Server.Persistence.Sql;
 using Server.Security;
 using Shared.Security;
+using Server.Operations;
 using Xunit;
 
 namespace Base05.Tests;
@@ -394,6 +395,53 @@ public sealed class ServerLifecycleSmokeTests : IDisposable
     }
 
     [Fact]
+    public async Task 真实Server超大声明帧由主循环断开并留下单条帧证据()
+    {
+        using var scope = new ServerNetworkScope(tlsEnabled: false);
+        string policyPath = Path.Combine(scope.Directory, "gateway-governance.json");
+        var governance = new GatewayTrafficGovernance(policyPath, auditSink: _ => { });
+        GatewayGovernancePolicy baseline = governance.CaptureSnapshot().Policy;
+        governance.SetPolicy(new GatewayGovernanceChangeRequest
+        {
+            ExpectedRevision = baseline.Revision,
+            Mode = GatewayGovernanceMode.Enforce,
+            MaximumPacketBytes = 1024,
+            Rules = baseline.Rules,
+            Reason = "真实网络超大封包测试",
+        }, "test-admin");
+        scope.SetGatewayGovernance(governance);
+        scope.Start();
+        Assert.True(SpinWait.SpinUntil(() => scope.ServerEnvironment.StartState == EnvirStartState.Ready, TimeSpan.FromSeconds(8)));
+
+        using var client = new TcpClient();
+        await client.ConnectAsync(IPAddress.Loopback, scope.LegacyPort);
+        await using NetworkStream stream = client.GetStream();
+        byte[] connected = await ReadFrameAsync(stream, TimeSpan.FromSeconds(4));
+        Assert.Equal((short)ServerPacketIds.Connected, BitConverter.ToInt16(connected, 2));
+        MirConnection connection = null;
+        Assert.True(SpinWait.SpinUntil(() =>
+        {
+            lock (scope.ServerEnvironment.Connections)
+                connection = scope.ServerEnvironment.Connections.FirstOrDefault(value => value.Connected);
+            return connection != null;
+        }, TimeSpan.FromSeconds(4)));
+
+        byte[] oversizedHeader = new byte[4];
+        BitConverter.GetBytes((ushort)1025).CopyTo(oversizedHeader, 0);
+        BitConverter.GetBytes((short)ClientPacketIds.KeepAlive).CopyTo(oversizedHeader, 2);
+        await stream.WriteAsync(oversizedHeader.AsMemory(0, 2));
+        await stream.FlushAsync();
+        await Task.Delay(50);
+        await stream.WriteAsync(oversizedHeader.AsMemory(2, 2));
+        await stream.FlushAsync();
+
+        Assert.True(SpinWait.SpinUntil(() => !connection.Connected, TimeSpan.FromSeconds(4)));
+        GatewayGovernanceEvidence evidence = Assert.Single(governance.CaptureSnapshot().RecentEvidence);
+        Assert.Equal(GatewayTrafficCategory.OversizedPacket, evidence.Category);
+        Assert.Equal(1025, evidence.Observed);
+    }
+
+    [Fact]
     public void 真实Server端口占用失败释放后可重启()
     {
         using var scope = new ServerNetworkScope();
@@ -470,6 +518,9 @@ public sealed class ServerLifecycleSmokeTests : IDisposable
         private readonly ushort _oldMaxUser;
         private readonly ushort _oldMaxIP;
         private readonly int _oldIPBlockSeconds;
+        private readonly bool _hadLoopbackBlock;
+        private readonly DateTime _oldLoopbackBlock;
+        private GatewayTrafficGovernance _gatewayGovernance;
 
         public ServerNetworkScope(bool tlsEnabled = true, ushort maxUser = 500, ushort maxIp = 5, int ipBlockSeconds = 5)
         {
@@ -492,6 +543,9 @@ public sealed class ServerLifecycleSmokeTests : IDisposable
             _oldAutoApply = Settings.AutoApplySchemaOnStartup;
             _oldAutoImport = Settings.AutoImportLegacyOnEmpty;
             _oldPacketDirection = Packet.IsServer;
+            // 测试宿主不经过 Server.MirForms.Program，必须显式复现生产端的协议方向初始化。
+            Packet.IsServer = true;
+            _hadLoopbackBlock = Envir.IPBlocks.TryRemove("127.0.0.1", out _oldLoopbackBlock);
             _oldMaxUser = Settings.MaxUser;
             _oldMaxIP = Settings.MaxIP;
             _oldIPBlockSeconds = Settings.IPBlockSeconds;
@@ -523,12 +577,15 @@ public sealed class ServerLifecycleSmokeTests : IDisposable
             StartHttp = false,
             SaveOnStop = false,
             Multithreaded = false,
+            GatewayGovernance = _gatewayGovernance,
         };
 
         public void SetCertificatePassword(string password)
         {
             ProtectedSecretStore.Write(ProtectedSecretStore.TlsCertificatePassword, password);
         }
+
+        public void SetGatewayGovernance(GatewayTrafficGovernance governance) => _gatewayGovernance = governance;
 
         public void Start() => ServerEnvironment.Start(StartOptions);
 
@@ -570,6 +627,8 @@ public sealed class ServerLifecycleSmokeTests : IDisposable
             Settings.MaxUser = _oldMaxUser;
             Settings.MaxIP = _oldMaxIP;
             Settings.IPBlockSeconds = _oldIPBlockSeconds;
+            Envir.IPBlocks.TryRemove("127.0.0.1", out _);
+            if (_hadLoopbackBlock) Envir.IPBlocks["127.0.0.1"] = _oldLoopbackBlock;
             Certificate.Dispose();
             TryDeleteDirectory(Directory);
         }
@@ -637,6 +696,21 @@ public sealed class ServerLifecycleSmokeTests : IDisposable
             }
         }
     }
+
+    private static async Task<byte[]> ReadFrameAsync(Stream stream, TimeSpan timeout)
+    {
+        using var cancellation = new CancellationTokenSource(timeout);
+        byte[] header = new byte[4];
+        await stream.ReadExactlyAsync(header, cancellation.Token);
+        int length = BitConverter.ToUInt16(header, 0);
+        if (length < 4) throw new InvalidDataException($"收到非法帧长度：{length}");
+        byte[] frame = new byte[length];
+        Buffer.BlockCopy(header, 0, frame, 0, header.Length);
+        if (length > header.Length)
+            await stream.ReadExactlyAsync(frame.AsMemory(header.Length, length - header.Length), cancellation.Token);
+        return frame;
+    }
+
 
     private static int GetFreePort()
     {

@@ -72,6 +72,7 @@ namespace Server.MirEnvir
         public bool SaveOnStop { get; init; } = true;
         public bool Multithreaded { get; init; } = true;
         public bool EnforceProductionSecurity { get; init; } = true;
+        internal GatewayTrafficGovernance GatewayGovernance { get; init; }
         internal Func<long> ElapsedMillisecondsProvider { get; init; }
 
         internal static EnvirStartOptions FromSettings()
@@ -98,6 +99,7 @@ namespace Server.MirEnvir
         private IServerPersistence? _persistence;
         internal SqliteBackupService SqliteBackup { get; private set; }
         internal KillSwitchService KillSwitches { get; private set; }
+        internal GatewayTrafficGovernance GatewayGovernance { get; private set; }
         private bool _basicOperationsMetricsSession;
 
         private IServerPersistence Persistence => _persistence ??= ServerPersistenceFactory.CreateFromSettings();
@@ -1018,7 +1020,11 @@ namespace Server.MirEnvir
                 LinkedListNode<MapObject> current = null;
 
                 if (options.LoadResources)
+                {
                     KillSwitches = new KillSwitchService();
+                }
+                GatewayGovernance = options.GatewayGovernance ??
+                    (options.LoadResources ? new GatewayTrafficGovernance() : null);
 
                 if (options.Multithreaded)
                 {
@@ -1068,7 +1074,7 @@ namespace Server.MirEnvir
                     StartNetwork();
                 if (options.StartHttp && Settings.StartHTTPService)
                 {
-                    http = new HttpServer(SqliteBackup, killSwitches: KillSwitches);
+                    http = new HttpServer(SqliteBackup, killSwitches: KillSwitches, gatewayGovernance: GatewayGovernance);
                     http.Start();
                 }
 
@@ -4924,7 +4930,7 @@ namespace Server.MirEnvir
                     return false;
                 }
                 if (userCount >= Settings.MaxUser) return false;
-                var newConnection = new MirConnection(Interlocked.Increment(ref _sessionID), client, stream);
+                var newConnection = new MirConnection(Interlocked.Increment(ref _sessionID), client, stream, this);
                 if (!newConnection.Connected) return false;
                 Connections.Add(newConnection);
                 return true;
