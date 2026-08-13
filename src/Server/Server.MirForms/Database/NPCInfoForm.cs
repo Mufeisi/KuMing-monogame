@@ -12,8 +12,9 @@ namespace Server
         public Envir Envir => SMain.EditEnvir;
 
         private List<NPCInfo> _selectedNPCInfos;
+        public int? SelectedNpcIndex => NPCInfoListBox.SelectedItem is NPCInfo item ? item.Index : null;
 
-        public NPCInfoForm()
+        public NPCInfoForm(int? selectedNpcIndex = null)
         {
             InitializeComponent();
 
@@ -31,6 +32,22 @@ namespace Server
             }
 
             UpdateInterface();
+            if (selectedNpcIndex.HasValue)
+                SelectNpc(selectedNpcIndex.Value);
+        }
+
+        public bool SelectNpc(int npcIndex)
+        {
+            for (int index = 0; index < NPCInfoListBox.Items.Count; index++)
+            {
+                if (NPCInfoListBox.Items[index] is not NPCInfo item || item.Index != npcIndex)
+                    continue;
+                NPCInfoListBox.ClearSelected();
+                NPCInfoListBox.SelectedIndex = index;
+                NPCInfoListBox.TopIndex = index;
+                return true;
+            }
+            return false;
         }
 
         private void AddButton_Click(object sender, EventArgs e)

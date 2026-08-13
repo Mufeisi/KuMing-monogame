@@ -23,11 +23,17 @@ namespace Server.MirForms.VisualMapInfo
         private ToolStripButton _reviewButton;
         private ToolStripButton _saveButton;
         private ToolStripButton _cancelButton;
+        private ToolStripDropDownButton _layersButton;
+        private ToolStripDropDownButton _diagnosticsButton;
+        private readonly Dictionary<MapContentLayer, ToolStripMenuItem> _layerItems = new();
+        private readonly Dictionary<string, RectangleShape> _pointMarkers = new(StringComparer.Ordinal);
+        private IReadOnlyList<MapContentTarget> _mapTargets = Array.Empty<MapContentTarget>();
         private bool _discardConfirmed;
         private int _nextRespawnDraftIndex;
         private int _nextMineDraftIndex;
 
         public bool HasCommittedChanges { get; private set; }
+        public MapContentTarget RequestedOwnerTarget { get; private set; }
 
         public VForm()
         {
@@ -47,6 +53,8 @@ namespace Server.MirForms.VisualMapInfo
             InitializeRespawnInfo();
             _nextMineDraftIndex = MiningPanel.Controls.OfType<MineEntry>().Count();
             _nextRespawnDraftIndex = RespawnPanel.Controls.OfType<RespawnEntry>().Count();
+            RefreshMapTargets();
+            RefreshNavigationDiagnostics();
             VisualizerGlobal.FocusModeActivated += FocusModeActivated;
             Text = $"内容生产工作台 - {VisualizerGlobal.MapInfo.Title}";
             UpdateHistoryButtons();
@@ -90,6 +98,16 @@ namespace Server.MirForms.VisualMapInfo
             _undoButton = CreateContentButton("UndoContentButton", "撤销", (_, _) => UndoContent());
             _redoButton = CreateContentButton("RedoContentButton", "重做", (_, _) => RedoContent());
             _reviewButton = CreateContentButton("ReviewContentButton", "校验与差异", (_, _) => ShowContentReview());
+            _layersButton = new ToolStripDropDownButton("叠层") { Name = "ContentLayersButton" };
+            AddLayerItem(MapContentLayer.Exit, "ExitLayerButton", "出口");
+            AddLayerItem(MapContentLayer.Npc, "NpcLayerButton", "NPC");
+            AddLayerItem(MapContentLayer.Respawn, "RespawnLayerButton", "刷怪");
+            AddLayerItem(MapContentLayer.MineZone, "MineLayerButton", "矿区");
+            _diagnosticsButton = new ToolStripDropDownButton("诊断定位")
+            {
+                Name = "ContentDiagnosticsButton",
+                Enabled = false,
+            };
             _saveButton = CreateContentButton("SaveContentButton", "保存", (_, _) => TrySaveDraft(closeAfterSave: true));
             _cancelButton = CreateContentButton("CancelContentButton", "取消", (_, _) => CancelContent());
             _saveButton.Alignment = ToolStripItemAlignment.Right;
@@ -97,10 +115,24 @@ namespace Server.MirForms.VisualMapInfo
             _contentToolbar.Items.AddRange(new ToolStripItem[]
             {
                 _undoButton, _redoButton, new ToolStripSeparator(), _reviewButton,
+                _layersButton, _diagnosticsButton,
                 _cancelButton, _saveButton,
             });
             Controls.Add(_contentToolbar);
             _contentToolbar.BringToFront();
+        }
+
+        private void AddLayerItem(MapContentLayer layer, string name, string text)
+        {
+            var item = new ToolStripMenuItem(text)
+            {
+                Name = name,
+                Checked = true,
+                CheckOnClick = true,
+            };
+            item.CheckedChanged += (_, _) => ApplyLayerVisibility();
+            _layerItems[layer] = item;
+            _layersButton.DropDownItems.Add(item);
         }
 
         private static ToolStripButton CreateContentButton(string name, string text, EventHandler click)
@@ -263,6 +295,8 @@ namespace Server.MirForms.VisualMapInfo
             RegionTabs_SelectedIndexChanged(RegionTabs, EventArgs.Empty);
             _nextMineDraftIndex = draft.MineZones.Count;
             _nextRespawnDraftIndex = draft.Respawns.Count;
+            RefreshMapTargets(draft);
+            RefreshNavigationDiagnostics(draft);
         }
 
         private static IEnumerable<T> OrderDraftControls<T>(IEnumerable<T> controls) where T : System.Windows.Forms.Control
@@ -315,6 +349,7 @@ namespace Server.MirForms.VisualMapInfo
             _editingSession.Observe(draft);
             UpdateHistoryButtons();
             MapContentReview review = _editingSession.Review(draft);
+            RefreshNavigationDiagnostics(draft, review.Diagnostics);
             MessageBox.Show(FormatReview(review), "保存前校验与差异", MessageBoxButtons.OK,
                 review.HasErrors ? MessageBoxIcon.Error : MessageBoxIcon.Information);
         }
@@ -356,6 +391,8 @@ namespace Server.MirForms.VisualMapInfo
             }
 
             HasCommittedChanges = true;
+            RefreshMapTargets(draft);
+            RefreshNavigationDiagnostics(draft);
             MapDetailsLabel.Text = $"已保存：{review.Differences.Count} 项变更";
             if (closeAfterSave)
             {
@@ -363,6 +400,236 @@ namespace Server.MirForms.VisualMapInfo
                 Close();
             }
             return true;
+        }
+
+        private void RefreshMapTargets(MapContentDraft draft = null)
+        {
+            if (VisualizerGlobal.MapInfo == null)
+                return;
+            if (draft == null && _editingSession != null && TryCaptureDraft(out MapContentDraft current, out _))
+                draft = current;
+            _mapTargets = MapContentNavigation.BuildTargets(VisualizerGlobal.MapInfo, Envir.NPCInfoList, draft);
+            RebuildPointMarkers();
+            ApplyLayerVisibility();
+        }
+
+        public void LoadLayerTargets(IReadOnlyList<MapContentTarget> targets)
+        {
+            _mapTargets = targets ?? throw new ArgumentNullException(nameof(targets));
+            RebuildPointMarkers();
+            ApplyLayerVisibility();
+        }
+
+        private void RebuildPointMarkers()
+        {
+            foreach (RectangleShape marker in _pointMarkers.Values)
+                marker.Dispose();
+            _pointMarkers.Clear();
+
+            foreach (MapContentTarget target in _mapTargets.Where(item =>
+                         item.Layer is MapContentLayer.Exit or MapContentLayer.Npc))
+            {
+                Color color = target.Layer == MapContentLayer.Exit ? Color.DeepSkyBlue : Color.Gold;
+                var marker = new RectangleShape
+                {
+                    Name = $"{target.Layer}Marker{target.EntityIndex ?? target.ListIndex}",
+                    Size = new Size(12, 12),
+                    BorderColor = Color.Black,
+                    BorderWidth = 2,
+                    FillColor = color,
+                    FillStyle = FillStyle.Solid,
+                    Cursor = Cursors.Hand,
+                    Tag = target,
+                };
+                marker.MouseEnter += (_, _) => MapDetailsLabel.Text = target.Label;
+                marker.MouseClick += (_, _) => RequestOwnerNavigation(target);
+                marker.Parent = Canvas;
+                _pointMarkers[target.Source] = marker;
+            }
+            PositionPointMarkers();
+        }
+
+        private void PositionPointMarkers()
+        {
+            foreach ((string source, RectangleShape marker) in _pointMarkers)
+            {
+                MapContentTarget target = _mapTargets.First(item => item.Source == source);
+                marker.Left = target.Location.X * VisualizerGlobal.ZoomLevel - marker.Width / 2;
+                marker.Top = target.Location.Y * VisualizerGlobal.ZoomLevel - marker.Height / 2;
+            }
+        }
+
+        private bool IsLayerVisible(MapContentLayer layer) =>
+            _layerItems.TryGetValue(layer, out ToolStripMenuItem item) && item.Checked;
+
+        public void SetLayerVisibility(MapContentLayer layer, bool visible)
+        {
+            if (!_layerItems.TryGetValue(layer, out ToolStripMenuItem item))
+                throw new ArgumentOutOfRangeException(nameof(layer), layer, "该类型不是可切换地图叠层。");
+            item.Checked = visible;
+            ApplyLayerVisibility();
+        }
+
+        public int GetVisibleTargetCount(MapContentLayer layer)
+        {
+            return layer switch
+            {
+                MapContentLayer.Exit or MapContentLayer.Npc => _pointMarkers.Values.Count(marker =>
+                    marker.Visible && marker.Tag is MapContentTarget target && target.Layer == layer),
+                MapContentLayer.Respawn => RespawnPanel.Controls.OfType<RespawnEntry>()
+                    .Count(item => item.RegionHighlight.Visible),
+                MapContentLayer.MineZone => MiningPanel.Controls.OfType<MineEntry>()
+                    .Count(item => item.RegionHighlight.Visible),
+                _ => 0,
+            };
+        }
+
+        private void ApplyLayerVisibility()
+        {
+            foreach (RectangleShape marker in _pointMarkers.Values)
+                if (marker.Tag is MapContentTarget target)
+                    marker.Visible = IsLayerVisible(target.Layer);
+
+            bool respawnsVisible = IsLayerVisible(MapContentLayer.Respawn);
+            foreach (RespawnEntry item in RespawnPanel.Controls.OfType<RespawnEntry>())
+                item.RegionHighlight.Visible = respawnsVisible && !item.RegionHidden && RespawnMatchesFilter(item);
+
+            bool minesVisible = IsLayerVisible(MapContentLayer.MineZone);
+            foreach (MineEntry item in MiningPanel.Controls.OfType<MineEntry>())
+                item.RegionHighlight.Visible = minesVisible && !item.RegionHidden && MineMatchesFilter(item);
+        }
+
+        private bool RespawnMatchesFilter(RespawnEntry item) =>
+            RespawnsFilter.Text == "No Filter" ||
+            RespawnsFilter.SelectedItem is MonsterInfo info && item.MonsterIndex == info.Index;
+
+        private bool MineMatchesFilter(MineEntry item) =>
+            MiningFilter.Text == "No Filter" || item.MineIndex == MiningFilter.SelectedIndex;
+
+        private void RefreshNavigationDiagnostics(
+            MapContentDraft draft = null,
+            IEnumerable<ProjectPreflightDiagnostic> draftDiagnostics = null)
+        {
+            if (_diagnosticsButton == null || VisualizerGlobal.MapInfo == null || VisualizerGlobal.ClippingMap == null)
+                return;
+            if (draft == null && _editingSession != null && TryCaptureDraft(out MapContentDraft current, out _))
+                draft = current;
+
+            var maps = Envir.MapInfoList
+                .Select(item => item.Index == VisualizerGlobal.MapInfo.Index && draft != null
+                    ? MapContentNavigation.CreatePreflightMap(item, draft)
+                    : item)
+                .ToArray();
+            ProjectPreflightReport report = ProjectSemanticPreflight.ValidateMapContent(new ProjectPreflightRequest
+            {
+                MapDirectory = Settings.MapPath,
+                NpcDirectory = Settings.NPCPath,
+                CSharpNpcDirectory = Settings.CSharpScriptsPath,
+                Maps = maps,
+                Monsters = Envir.MonsterInfoList,
+                Items = Envir.ItemInfoList,
+                Npcs = Envir.NPCInfoList,
+                MapBounds = [new ProjectMapBounds(
+                    VisualizerGlobal.MapInfo.Index,
+                    VisualizerGlobal.ClippingMap.Width,
+                    VisualizerGlobal.ClippingMap.Height)],
+                Scripts = Envir.CSharpScripts.CurrentRegistry,
+            }, VisualizerGlobal.MapInfo.Index);
+            IEnumerable<ProjectPreflightDiagnostic> diagnostics = report.Diagnostics
+                .Where(item => MapContentNavigation.FindTarget(item.Source, _mapTargets) != null);
+            if (draftDiagnostics != null)
+                diagnostics = diagnostics.Concat(draftDiagnostics);
+
+            foreach (ToolStripItem oldItem in _diagnosticsButton.DropDownItems.Cast<ToolStripItem>().ToArray())
+                oldItem.Dispose();
+            _diagnosticsButton.DropDownItems.Clear();
+            foreach (ProjectPreflightDiagnostic diagnostic in diagnostics
+                         .DistinctBy(item => (item.Code, item.Source, item.Message))
+                         .OrderBy(item => item.Code, StringComparer.Ordinal)
+                         .ThenBy(item => item.Source, StringComparer.Ordinal))
+            {
+                var item = new ToolStripMenuItem($"[{diagnostic.Code}] {diagnostic.Source}")
+                {
+                    ToolTipText = diagnostic.Message,
+                    Tag = diagnostic,
+                };
+                item.Click += (_, _) => TryNavigateToDiagnostic(diagnostic);
+                _diagnosticsButton.DropDownItems.Add(item);
+            }
+            _diagnosticsButton.Enabled = _diagnosticsButton.DropDownItems.Count > 0;
+            _diagnosticsButton.Text = _diagnosticsButton.Enabled
+                ? $"诊断定位 ({_diagnosticsButton.DropDownItems.Count})"
+                : "诊断定位";
+        }
+
+        public bool TryNavigateToDiagnostic(ProjectPreflightDiagnostic diagnostic)
+        {
+            if (diagnostic == null)
+                return false;
+            if (TryCaptureDraft(out MapContentDraft draft, out _))
+                RefreshMapTargets(draft);
+            MapContentTarget target = MapContentNavigation.FindTarget(diagnostic.Source, _mapTargets);
+            if (target == null)
+                return false;
+            NavigateToTarget(target);
+            if (target.Layer is MapContentLayer.Exit or MapContentLayer.Npc)
+                RequestOwnerNavigation(target, updateCanvas: false);
+            return true;
+        }
+
+        private void RequestOwnerNavigation(MapContentTarget target, bool updateCanvas = true)
+        {
+            if (updateCanvas)
+                NavigateToTarget(target);
+            RequestedOwnerTarget = target;
+            Close();
+            if (!IsDisposed && Visible)
+                RequestedOwnerTarget = null;
+        }
+
+        private void NavigateToTarget(MapContentTarget target)
+        {
+            if (_layerItems.TryGetValue(target.Layer, out ToolStripMenuItem layerItem))
+                layerItem.Checked = true;
+            ApplyLayerVisibility();
+
+            if (target.Layer == MapContentLayer.Respawn)
+            {
+                RegionTabs.SelectedTab = tabPage2;
+                RespawnEntry control = OrderDraftControls(RespawnPanel.Controls.OfType<RespawnEntry>())
+                    .ElementAtOrDefault(target.ListIndex ?? -1);
+                if (control != null)
+                {
+                    control.Selected.Checked = true;
+                    RespawnPanel.ScrollControlIntoView(control);
+                    control.RegionHighlight.BorderColor = Color.OrangeRed;
+                    control.RegionHighlight.BringToFront();
+                }
+            }
+            else if (target.Layer == MapContentLayer.MineZone)
+            {
+                RegionTabs.SelectedTab = tabPage4;
+                MineEntry control = OrderDraftControls(MiningPanel.Controls.OfType<MineEntry>())
+                    .ElementAtOrDefault(target.ListIndex ?? -1);
+                if (control != null)
+                {
+                    control.Selected.Checked = true;
+                    MiningPanel.ScrollControlIntoView(control);
+                    control.RegionHighlight.BorderColor = Color.OrangeRed;
+                    control.RegionHighlight.BringToFront();
+                }
+            }
+            else if (_pointMarkers.TryGetValue(target.Source, out RectangleShape marker))
+            {
+                marker.BorderColor = Color.OrangeRed;
+                marker.BorderWidth = 3;
+                marker.BringToFront();
+            }
+
+            int x = Math.Max(0, target.Location.X * VisualizerGlobal.ZoomLevel - mapContainer1.ClientSize.Width / 2);
+            int y = Math.Max(0, target.Location.Y * VisualizerGlobal.ZoomLevel - mapContainer1.ClientSize.Height / 2);
+            mapContainer1.AutoScrollPosition = new Point(x, y);
+            MapDetailsLabel.Text = $"已定位：{target.Label}；来源 {target.Source}";
         }
 
         private void CancelContent()
@@ -402,6 +669,9 @@ namespace Server.MirForms.VisualMapInfo
             }
 
             MapImage.Image = Map;
+
+            PositionPointMarkers();
+            ApplyLayerVisibility();
 
             if (VisualizerGlobal.SelectedFocusType == VisualizerGlobal.FocusType.Mining)
                 VisualizerGlobal.FocusMineEntry.UpdateForFocus(); 
@@ -509,6 +779,7 @@ namespace Server.MirForms.VisualMapInfo
                 MiningFilter_SelectedIndexChanged(MiningFilter, null);
             if (VisualizerGlobal.SelectedFocusType == VisualizerGlobal.FocusType.Respawn)
                 RespawnsFilter_SelectedIndexChanged(RespawnsFilter, null);
+            ApplyLayerVisibility();
 
             VisualizerGlobal.FocusMineEntry = null;
             VisualizerGlobal.FocusRespawnEntry = null;
@@ -583,6 +854,7 @@ namespace Server.MirForms.VisualMapInfo
                     catch (Exception) { continue; }
 
                 RespawnsFilter_SelectedIndexChanged(RespawnsFilter, null);
+            ApplyLayerVisibility();
             }
         }
 
@@ -881,6 +1153,7 @@ namespace Server.MirForms.VisualMapInfo
                     {
                         continue;
                     }
+            ApplyLayerVisibility();
         }
 
         #endregion "END Mining Tool Bar"
@@ -1024,6 +1297,7 @@ namespace Server.MirForms.VisualMapInfo
                     {
                         continue;
                     }
+            ApplyLayerVisibility();
         }
 
         #endregion "END Respawn Tool Bar
@@ -1041,4 +1315,5 @@ namespace Server.MirForms.VisualMapInfo
         
 
     }
+
 }

@@ -87,6 +87,40 @@ public static class ProjectSemanticPreflight
             .ToArray());
     }
 
+    /// <summary>
+    /// 使用与完整预检相同的地图/NPC规则，只检查指定地图拥有的内容。
+    /// 其他地图仍参与目标引用判定，但不会生成其自身诊断。
+    /// </summary>
+    public static ProjectPreflightReport ValidateMapContent(ProjectPreflightRequest request, int mapIndex)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        MapInfo[] maps = request.Maps.Where(value => value is not null).ToArray();
+        NPCInfo[] npcs = request.Npcs.Where(value => value is not null).ToArray();
+        MapInfo[] selectedMaps = maps.Where(value => value.Index == mapIndex).ToArray();
+        NPCInfo[] selectedNpcs = npcs.Where(value => value.MapIndex == mapIndex).ToArray();
+        var diagnostics = new List<ProjectPreflightDiagnostic>();
+        var mapIndexes = maps.Select(value => value.Index).ToHashSet();
+        var monsterIndexes = request.Monsters.Where(value => value is not null).Select(value => value.Index).ToHashSet();
+        var mapBounds = request.MapBounds.Where(value => value is not null).ToDictionary(value => value.MapIndex);
+
+        ValidateMaps(request.MapDirectory, selectedMaps, mapIndexes, monsterIndexes, mapBounds, diagnostics);
+        ValidateNpcs(
+            request.NpcDirectory,
+            request.CSharpNpcDirectory,
+            selectedNpcs,
+            mapIndexes,
+            mapBounds,
+            request.Scripts,
+            diagnostics);
+
+        return new ProjectPreflightReport(diagnostics
+            .OrderBy(value => value.Code, StringComparer.Ordinal)
+            .ThenBy(value => value.Source, StringComparer.Ordinal)
+            .ThenBy(value => value.Message, StringComparer.Ordinal)
+            .ToArray());
+    }
+
     private static void ValidateMaps(
         string mapDirectory,
         IReadOnlyCollection<MapInfo> maps,

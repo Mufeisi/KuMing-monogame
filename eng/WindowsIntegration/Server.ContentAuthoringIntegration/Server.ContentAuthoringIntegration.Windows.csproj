@@ -20,5 +20,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\..\src\Server\Server.MirForms\Server.csproj" />
+    <Reference Include="Microsoft.VisualBasic.PowerPacks.Vs">
+      <HintPath>..\..\..\third-party\Components\Microsoft.VisualBasic.PowerPacks.Vs.dll</HintPath>
+    </Reference>
   </ItemGroup>
 </Project>

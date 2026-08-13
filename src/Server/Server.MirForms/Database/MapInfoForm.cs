@@ -1616,7 +1616,7 @@ namespace Server
             if (_selectedMapInfos.Count != 1)
                 return;
 
-            MirForms.VisualMapInfo.VForm VForm = new MirForms.VisualMapInfo.VForm();
+            using MirForms.VisualMapInfo.VForm VForm = new MirForms.VisualMapInfo.VForm();
             MirForms.VisualMapInfo.Class.VisualizerGlobal.MapInfo = _selectedMapInfos[0];
             VForm.FormClosed += VForm_Disposed;
 
@@ -1628,6 +1628,36 @@ namespace Server
                 UpdateMineZoneInterface();
                 UpdateRespawnInterface();
             }
+            NavigateToContentOwner(VForm.RequestedOwnerTarget);
+        }
+
+        public bool NavigateToContentOwner(Server.Authoring.MapContentTarget target, bool showNpcEditor = true)
+        {
+            if (target == null)
+                return false;
+            if (target.Layer == Server.Authoring.MapContentLayer.Exit)
+            {
+                UpdateMovementInterface();
+                if (target.ListIndex is int listIndex && listIndex >= 0 && listIndex < MovementInfoListBox.Items.Count)
+                {
+                    MapTabs.SelectedTab = tabPage4;
+                    MovementInfoListBox.ClearSelected();
+                    MovementInfoListBox.SelectedIndex = listIndex;
+                    MovementInfoListBox.Focus();
+                    return true;
+                }
+                return false;
+            }
+
+            if (target.Layer == Server.Authoring.MapContentLayer.Npc)
+            {
+                if (!showNpcEditor)
+                    return Envir.NPCInfoList.Any(item => item.Index == target.EntityIndex);
+                using var form = new NPCInfoForm(target.EntityIndex);
+                form.ShowDialog(this);
+                return form.SelectedNpcIndex == target.EntityIndex;
+            }
+            return false;
         }
 
         private void VForm_Disposed(object sender, EventArgs e)
