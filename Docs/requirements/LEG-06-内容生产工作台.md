@@ -1,6 +1,6 @@
 # LEG-06：内容生产工作台
 
-- 状态：进行中
+- 状态：已完成
 - 负责人：项目所有者
 - 最后复核日期：2026-08-13
 - 事实职责：维护 LEG-06 的范围、实施顺序、验收边界和回滚入口
@@ -36,7 +36,7 @@
 3. `CONTENT-03` NPC 与脚本闭环。已实施，证据见 [`../Evidence/LEG-06-20260813/CONTENT-03.md`](../Evidence/LEG-06-20260813/CONTENT-03.md)。
 4. `CONTENT-04` 掉落分析闭环。已实施，证据见 [`../Evidence/LEG-06-20260813/CONTENT-04.md`](../Evidence/LEG-06-20260813/CONTENT-04.md)。
 5. `CONTENT-05` 资源引用闭环。已实施，证据见 [`../Evidence/LEG-06-20260813/CONTENT-05.md`](../Evidence/LEG-06-20260813/CONTENT-05.md)。
-6. `CONTENT-06` 真实内容版本测试服冒烟与阶段收口。
+6. `CONTENT-06` 真实内容版本测试服冒烟与阶段收口。已实施，证据见 [`../Evidence/LEG-06-20260813/CONTENT-06.md`](../Evidence/LEG-06-20260813/CONTENT-06.md)。
 
 每项使用独立提交；上一项门禁未关闭时不得开始下一项。
 
