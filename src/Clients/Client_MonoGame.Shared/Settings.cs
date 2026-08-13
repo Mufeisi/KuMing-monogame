@@ -38,6 +38,7 @@ namespace MonoShare
 
         // Micro 微端（按需拉取资源）
         public static string MicroBaseUrl = "http://192.168.0.100:7777/api/";
+        public static string MicroBackupBaseUrl = string.Empty;
         public static string MicroUser = "MicroUser";
         public static string MicroCode = string.Empty;
 
@@ -548,6 +549,7 @@ namespace MonoShare
             BootstrapDownloadRetryCount = Math.Clamp(BootstrapDownloadRetryCount, 0, 20);
 
             MicroBaseUrl = Reader.ReadString("Micro", "BaseUrl", MicroBaseUrl)?.Trim() ?? string.Empty;
+            MicroBackupBaseUrl = Reader.ReadString("Micro", "BackupBaseUrl", MicroBackupBaseUrl)?.Trim() ?? string.Empty;
             MicroUser = Reader.ReadString("Micro", "User", MicroUser)?.Trim() ?? string.Empty;
             MicroCode = Reader.ReadString("Micro", "Code", MicroCode)?.Trim() ?? string.Empty;
 #if REAL_ANDROID
@@ -718,6 +720,7 @@ namespace MonoShare
             Reader.Write("Bootstrap", "RetryCount", BootstrapDownloadRetryCount);
 
             Reader.Write("Micro", "BaseUrl", MicroBaseUrl ?? string.Empty);
+            Reader.Write("Micro", "BackupBaseUrl", MicroBackupBaseUrl ?? string.Empty);
             Reader.Write("Micro", "User", MicroUser ?? string.Empty);
             Reader.Write("Micro", "Code", MicroCode ?? string.Empty);
 

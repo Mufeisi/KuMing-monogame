@@ -304,24 +304,51 @@ namespace MonoShare
 
         private static string ResolveRepositoryRoot(out bool useMicroAuth)
         {
-            useMicroAuth = false;
+            BootstrapPackageUpdateQueueView queue = BootstrapPackageUpdateRuntime.LoadUpdateQueue();
+            if ((queue.Packages?.Count ?? 0) > 0 && !string.IsNullOrWhiteSpace(queue.RepositoryRoot))
+            {
+                useMicroAuth = queue.UseMicroAuth;
+                return NormalizeRepositoryRoot(queue.RepositoryRoot);
+            }
 
+            IReadOnlyList<BootstrapRepositoryCandidate> candidates = ResolveRepositoryCandidates();
+            if (candidates.Count == 0)
+            {
+                useMicroAuth = false;
+                return string.Empty;
+            }
+
+            useMicroAuth = candidates[0].UseMicroAuth;
+            return candidates[0].RepositoryRoot;
+        }
+
+        internal static IReadOnlyList<BootstrapRepositoryCandidate> ResolveRepositoryCandidates()
+        {
             string repositoryRoot = (Settings.BootstrapPackageRepo ?? string.Empty).Trim();
             if (!string.IsNullOrWhiteSpace(repositoryRoot))
-                return repositoryRoot;
+                return new[] { new BootstrapRepositoryCandidate(NormalizeRepositoryRoot(repositoryRoot), useMicroAuth: false) };
 
-            string microBaseUrl = (Settings.MicroBaseUrl ?? string.Empty).Trim();
             string microUser = (Settings.MicroUser ?? string.Empty).Trim();
-            if (string.IsNullOrWhiteSpace(microBaseUrl) || string.IsNullOrWhiteSpace(microUser))
-                return string.Empty;
+            if (string.IsNullOrWhiteSpace(microUser))
+                return Array.Empty<BootstrapRepositoryCandidate>();
 
-            useMicroAuth = true;
+            var candidates = new List<BootstrapRepositoryCandidate>();
+            AddMicroRepositoryCandidate(candidates, Settings.MicroBaseUrl);
+            AddMicroRepositoryCandidate(candidates, Settings.MicroBackupBaseUrl);
+            return candidates;
+        }
 
-            string normalizedMicroBase = NormalizeRepositoryRoot(microBaseUrl);
-            if (normalizedMicroBase.EndsWith("/file/", StringComparison.OrdinalIgnoreCase))
-                return normalizedMicroBase;
+        private static void AddMicroRepositoryCandidate(ICollection<BootstrapRepositoryCandidate> candidates, string microBaseUrl)
+        {
+            string normalizedMicroBase = NormalizeRepositoryRoot((microBaseUrl ?? string.Empty).Trim());
+            if (string.IsNullOrWhiteSpace(normalizedMicroBase))
+                return;
 
-            return normalizedMicroBase + "file/";
+            string repositoryRoot = normalizedMicroBase.EndsWith("/file/", StringComparison.OrdinalIgnoreCase)
+                ? normalizedMicroBase
+                : normalizedMicroBase + "file/";
+            if (!candidates.Any(item => string.Equals(item.RepositoryRoot, repositoryRoot, StringComparison.OrdinalIgnoreCase)))
+                candidates.Add(new BootstrapRepositoryCandidate(repositoryRoot, useMicroAuth: true));
         }
 
         private static void ApplyMicroAuthHeaders(HttpRequestMessage request, bool useMicroAuth)
@@ -934,5 +961,17 @@ namespace MonoShare
             public string ZipUrl { get; set; }
             public string Sha256 { get; set; }
         }
+    }
+
+    internal sealed class BootstrapRepositoryCandidate
+    {
+        public BootstrapRepositoryCandidate(string repositoryRoot, bool useMicroAuth)
+        {
+            RepositoryRoot = repositoryRoot ?? string.Empty;
+            UseMicroAuth = useMicroAuth;
+        }
+
+        public string RepositoryRoot { get; }
+        public bool UseMicroAuth { get; }
     }
 }

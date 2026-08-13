@@ -31,7 +31,8 @@ namespace MonoShare
                 if (snapshot == null)
                     return BootstrapPreLoginUpdatePlanView.Skip("未获取到下载器状态快照。");
 
-                if (!snapshot.DownloadReady || string.IsNullOrWhiteSpace(snapshot.RepositoryRoot))
+                IReadOnlyList<BootstrapRepositoryCandidate> repositoryCandidates = BootstrapPackageDownloader.ResolveRepositoryCandidates();
+                if (repositoryCandidates.Count == 0)
                     return BootstrapPreLoginUpdatePlanView.Skip(snapshot.ConfigurationHint);
 
                 if (!snapshot.AutoDownloadEnabled)
@@ -44,7 +45,7 @@ namespace MonoShare
                     return new BootstrapPreLoginUpdatePlanView
                     {
                         Skipped = false,
-                        RepositoryRoot = snapshot.RepositoryRoot ?? string.Empty,
+                        RepositoryRoot = string.IsNullOrWhiteSpace(existingQueue.RepositoryRoot) ? repositoryCandidates[0].RepositoryRoot : existingQueue.RepositoryRoot,
                         ResourceVersion = existingQueue.ResourceVersion ?? string.Empty,
                         PackagesToUpdate = existingQueue.Packages.Select(item => item?.Name).Where(item => !string.IsNullOrWhiteSpace(item)).Distinct(StringComparer.OrdinalIgnoreCase).ToList(),
                         Message = "检测到未完成的更新队列，继续执行。",
@@ -55,10 +56,23 @@ namespace MonoShare
                 TrySeedInstalledVersionsFromBaselineIndex();
 
                 // 2) 下载远端签名版本索引；本地随包基线仍保留未签名索引供离线资源盘点。
-                string indexUrl = BuildRemoteIndexUrl(snapshot.RepositoryRoot);
-                BootstrapPackageIndexView remoteIndex = await TryDownloadPackageIndexAsync(indexUrl, snapshot.UseMicroAuth, cancellationToken);
+                BootstrapPackageIndexView remoteIndex = null;
+                BootstrapRepositoryCandidate selectedRepository = null;
+                foreach (BootstrapRepositoryCandidate candidate in repositoryCandidates)
+                {
+                    string indexUrl = BuildRemoteIndexUrl(candidate.RepositoryRoot);
+                    remoteIndex = await TryDownloadPackageIndexAsync(indexUrl, candidate.UseMicroAuth, cancellationToken);
+                    if (remoteIndex != null)
+                    {
+                        selectedRepository = candidate;
+                        break;
+                    }
+                }
                 if (remoteIndex == null || remoteIndex.Packages == null || remoteIndex.Packages.Count == 0)
                     return BootstrapPreLoginUpdatePlanView.Skip("远端未提供 bootstrap-package-index.signed.json 或内容为空。");
+
+                string repositoryRoot = selectedRepository.RepositoryRoot;
+                bool useMicroAuth = selectedRepository.UseMicroAuth;
 
                 // 缓存一份到运行时目录，便于排查（不影响流程）
                 TryWriteRemoteIndexCache(remoteIndex);
@@ -106,23 +120,23 @@ namespace MonoShare
 
                 if (updates.Count == 0)
                 {
-                    BootstrapPackageUpdateRuntime.ReplaceUpdateQueue(remoteIndex.ResourceVersion ?? remoteIndex.GeneratedAtUtc ?? string.Empty, Array.Empty<BootstrapPackageUpdateEntryView>());
+                    BootstrapPackageUpdateRuntime.ReplaceUpdateQueue(remoteIndex.ResourceVersion ?? remoteIndex.GeneratedAtUtc ?? string.Empty, Array.Empty<BootstrapPackageUpdateEntryView>(), repositoryRoot, useMicroAuth);
                     return new BootstrapPreLoginUpdatePlanView
                     {
                         Skipped = false,
-                        RepositoryRoot = snapshot.RepositoryRoot ?? string.Empty,
+                        RepositoryRoot = repositoryRoot,
                         ResourceVersion = remoteIndex.ResourceVersion ?? remoteIndex.GeneratedAtUtc ?? string.Empty,
                         PackagesToUpdate = new List<string>(),
                         Message = "资源已是最新，无需更新。",
                     };
                 }
 
-                BootstrapPackageUpdateRuntime.ReplaceUpdateQueue(remoteIndex.ResourceVersion ?? remoteIndex.GeneratedAtUtc ?? string.Empty, updates);
+                BootstrapPackageUpdateRuntime.ReplaceUpdateQueue(remoteIndex.ResourceVersion ?? remoteIndex.GeneratedAtUtc ?? string.Empty, updates, repositoryRoot, useMicroAuth);
 
                 return new BootstrapPreLoginUpdatePlanView
                 {
                     Skipped = false,
-                    RepositoryRoot = snapshot.RepositoryRoot ?? string.Empty,
+                    RepositoryRoot = repositoryRoot,
                     ResourceVersion = remoteIndex.ResourceVersion ?? remoteIndex.GeneratedAtUtc ?? string.Empty,
                     PackagesToUpdate = updates.Select(item => item.Name).ToList(),
                     Message = $"将更新/安装 {updates.Count} 个资源包。",

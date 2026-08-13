@@ -155,7 +155,7 @@ namespace Client.Bootstrap
             return set;
         }
 
-        public static void ReplaceUpdateQueue(string resourceVersion, IEnumerable<BootstrapPackageUpdateEntryView> packages, string message)
+        public static void ReplaceUpdateQueue(string resourceVersion, IEnumerable<BootstrapPackageUpdateEntryView> packages, string message, string repositoryRoot = "", bool useMicroAuth = false)
         {
             packages ??= Array.Empty<BootstrapPackageUpdateEntryView>();
 
@@ -166,6 +166,8 @@ namespace Client.Bootstrap
                     CreatedAtUtc = DateTime.UtcNow.ToString("o"),
                     ResourceVersion = resourceVersion ?? string.Empty,
                     Message = message ?? string.Empty,
+                    RepositoryRoot = repositoryRoot ?? string.Empty,
+                    UseMicroAuth = useMicroAuth,
                     Packages = packages
                         .Where(item => item != null && !string.IsNullOrWhiteSpace(item.Name))
                         .GroupBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
@@ -299,6 +301,8 @@ namespace Client.Bootstrap
         public string CreatedAtUtc { get; set; }
         public string ResourceVersion { get; set; }
         public string Message { get; set; }
+        public string RepositoryRoot { get; set; }
+        public bool UseMicroAuth { get; set; }
         public List<BootstrapPackageUpdateEntryView> Packages { get; set; } = new List<BootstrapPackageUpdateEntryView>();
     }
 

@@ -1,7 +1,7 @@
 # LEG-05 微端与发行体作者体验证据
 
 - 日期：2026-08-13
-- 分支：`codex/leg-05-distribution-overview`
+- 收口分支：`codex/leg-05-gate-closeout`
 - 已完成切片：`MICRO-UX-01`、`MICRO-UX-02`、`MICRO-UX-03`、`MICRO-UX-04`、`MICRO-UX-05`、`MICRO-UX-06`
 - 语言：中文，代码标识符、命令和原始测试字段除外
 
@@ -15,11 +15,11 @@
 
 ```text
 发行体概览定向测试：通过 2，失败 0
-Launcher.PlayerShellIntegration.Windows 全量：通过 98，失败 0
+Launcher.PlayerShellIntegration.Windows 全量：通过 104，失败 0，跳过 0
 窗口模式 --editor-ui-smoke：退出码 0
 git diff --check：通过
 ```
 
-完整集成结果：`eng/WindowsIntegration/Launcher.PlayerShellIntegration/TestResults/leg05-distribution-overview-final.trx`。
+最终完整集成结果：`eng/WindowsIntegration/Launcher.PlayerShellIntegration/TestResults/leg05-gate-closeout.trx`（本地过程工件，按仓库规则忽略）。
 
-只读边界由自动化测试保护：概览扫描前后文件列表完全一致，并断言未生成或复制任何 `MicroGateway` 工件。入口预检证据见 [`MICRO-UX-03.md`](MICRO-UX-03.md)，PC/Android 测试资源发布、首次获取、缓存命中和备用源恢复证据见 [`MICRO-UX-05.md`](MICRO-UX-05.md)。活动事实源仍为 [`../../requirements/LEG-05-微端与发行体作者体验.md`](../../requirements/LEG-05-微端与发行体作者体验.md)。
+只读边界由自动化测试保护：概览扫描前后文件列表完全一致，并断言未生成或复制任何 `MicroGateway` 工件。入口预检证据见 [`MICRO-UX-03.md`](MICRO-UX-03.md)，PC/Android 测试资源发布、首次获取、缓存命中和自动备用源恢复证据见 [`MICRO-UX-05.md`](MICRO-UX-05.md)。事实源 [`../../requirements/LEG-05-微端与发行体作者体验.md`](../../requirements/LEG-05-微端与发行体作者体验.md) 已按门禁结论关闭。

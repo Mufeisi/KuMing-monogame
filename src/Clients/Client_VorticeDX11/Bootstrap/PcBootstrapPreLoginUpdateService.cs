@@ -25,8 +25,8 @@ namespace Client.Bootstrap
                 if (!Settings.BootstrapPreLoginUpdate)
                     return PcBootstrapPreLoginUpdatePlanView.Skip("已关闭登录前资源更新（Mir2Config.ini：[Bootstrap] PreLoginUpdate=False）。");
 
-                string repositoryRoot = PcBootstrapHttp.ResolveRepositoryRoot(out bool useMicroAuth);
-                if (string.IsNullOrWhiteSpace(repositoryRoot))
+                IReadOnlyList<PcBootstrapRepositoryCandidate> repositoryCandidates = PcBootstrapHttp.ResolveRepositoryCandidates();
+                if (repositoryCandidates.Count == 0)
                     return PcBootstrapPreLoginUpdatePlanView.Skip("未配置分包仓库地址。请配置 [Bootstrap] PackageRepo，或配置 [Micro] BaseUrl/User 以自动使用 MicroBaseUrl + file/。");
 
                 if (!Settings.BootstrapAutoDownload)
@@ -40,7 +40,7 @@ namespace Client.Bootstrap
                     {
                         Skipped = false,
                         Failed = false,
-                        RepositoryRoot = repositoryRoot,
+                        RepositoryRoot = string.IsNullOrWhiteSpace(existingQueue.RepositoryRoot) ? repositoryCandidates[0].RepositoryRoot : existingQueue.RepositoryRoot,
                         ResourceVersion = existingQueue.ResourceVersion ?? string.Empty,
                         PackagesToUpdate = existingQueue.Packages
                             .Select(item => item?.Name)
@@ -53,10 +53,23 @@ namespace Client.Bootstrap
 
                 TrySeedInstalledVersionsFromBaselineIndex();
 
-                string indexUrl = PcBootstrapHttp.BuildRemoteIndexUrl(repositoryRoot);
-                PcBootstrapPackageIndexView remoteIndex = await PcBootstrapHttp.TryDownloadPackageIndexAsync(indexUrl, useMicroAuth, cancellationToken);
+                PcBootstrapPackageIndexView remoteIndex = null;
+                PcBootstrapRepositoryCandidate selectedRepository = null;
+                foreach (PcBootstrapRepositoryCandidate candidate in repositoryCandidates)
+                {
+                    string indexUrl = PcBootstrapHttp.BuildRemoteIndexUrl(candidate.RepositoryRoot);
+                    remoteIndex = await PcBootstrapHttp.TryDownloadPackageIndexAsync(indexUrl, candidate.UseMicroAuth, cancellationToken);
+                    if (remoteIndex != null)
+                    {
+                        selectedRepository = candidate;
+                        break;
+                    }
+                }
                 if (remoteIndex == null || remoteIndex.Packages == null || remoteIndex.Packages.Count == 0)
                     return PcBootstrapPreLoginUpdatePlanView.Skip("远端未提供 bootstrap-package-index.json 或内容为空。");
+
+                string repositoryRoot = selectedRepository.RepositoryRoot;
+                bool useMicroAuth = selectedRepository.UseMicroAuth;
 
                 PcBootstrapHttp.TryWriteRemoteIndexCache(remoteIndex);
 
@@ -100,7 +113,7 @@ namespace Client.Bootstrap
 
                 if (updates.Count == 0)
                 {
-                    PcBootstrapUpdateRuntime.ReplaceUpdateQueue(resourceVersion, Array.Empty<BootstrapPackageUpdateEntryView>(), "已是最新版本，无需更新。");
+                    PcBootstrapUpdateRuntime.ReplaceUpdateQueue(resourceVersion, Array.Empty<BootstrapPackageUpdateEntryView>(), "已是最新版本，无需更新。", repositoryRoot, useMicroAuth);
                     return new PcBootstrapPreLoginUpdatePlanView
                     {
                         Skipped = false,
@@ -112,7 +125,7 @@ namespace Client.Bootstrap
                     };
                 }
 
-                PcBootstrapUpdateRuntime.ReplaceUpdateQueue(resourceVersion, updates, $"将更新 {updates.Count} 个资源包。");
+                PcBootstrapUpdateRuntime.ReplaceUpdateQueue(resourceVersion, updates, $"将更新 {updates.Count} 个资源包。", repositoryRoot, useMicroAuth);
 
                 return new PcBootstrapPreLoginUpdatePlanView
                 {
@@ -140,10 +153,6 @@ namespace Client.Bootstrap
                 if (!Settings.BootstrapPreLoginUpdate)
                     return PcBootstrapApplyResultView.Skip("已关闭登录前资源更新（Mir2Config.ini：[Bootstrap] PreLoginUpdate=False）。");
 
-                string repositoryRoot = PcBootstrapHttp.ResolveRepositoryRoot(out bool useMicroAuth);
-                if (string.IsNullOrWhiteSpace(repositoryRoot))
-                    return PcBootstrapApplyResultView.Skip("未配置分包仓库地址。");
-
                 BootstrapPackageUpdateQueueView queue = PcBootstrapUpdateRuntime.LoadUpdateQueue();
                 if (queue.Packages == null || queue.Packages.Count == 0)
                 {
@@ -156,6 +165,13 @@ namespace Client.Bootstrap
                         Message = "无待更新资源包。",
                     };
                 }
+
+                string repositoryRoot = (queue.RepositoryRoot ?? string.Empty).Trim();
+                bool useMicroAuth = queue.UseMicroAuth;
+                if (string.IsNullOrWhiteSpace(repositoryRoot))
+                    repositoryRoot = PcBootstrapHttp.ResolveRepositoryRoot(out useMicroAuth);
+                if (string.IsNullOrWhiteSpace(repositoryRoot))
+                    return PcBootstrapApplyResultView.Skip("未配置分包仓库地址。");
 
                 // 可选：下载一次索引，用于获得 size（不影响主流程）
                 Dictionary<string, long> remoteSizeByName = null;

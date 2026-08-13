@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using System.Net.Http;
@@ -21,24 +22,54 @@ namespace Client.Bootstrap
 
         public static string ResolveRepositoryRoot(out bool useMicroAuth)
         {
-            useMicroAuth = false;
+            IReadOnlyList<PcBootstrapRepositoryCandidate> candidates = ResolveRepositoryCandidates();
+            if (candidates.Count == 0)
+            {
+                useMicroAuth = false;
+                return string.Empty;
+            }
 
+            useMicroAuth = candidates[0].UseMicroAuth;
+            return candidates[0].RepositoryRoot;
+        }
+
+        public static IReadOnlyList<PcBootstrapRepositoryCandidate> ResolveRepositoryCandidates()
+        {
             string repositoryRoot = (Settings.BootstrapPackageRepo ?? string.Empty).Trim();
             if (!string.IsNullOrWhiteSpace(repositoryRoot))
-                return NormalizeRepositoryRoot(repositoryRoot);
+            {
+                return new[]
+                {
+                    new PcBootstrapRepositoryCandidate(NormalizeRepositoryRoot(repositoryRoot), useMicroAuth: false),
+                };
+            }
 
-            string microBaseUrl = (Settings.MicroBaseUrl ?? string.Empty).Trim();
             string microUser = (Settings.MicroUser ?? string.Empty).Trim();
-            if (string.IsNullOrWhiteSpace(microBaseUrl) || string.IsNullOrWhiteSpace(microUser))
-                return string.Empty;
+            if (string.IsNullOrWhiteSpace(microUser))
+                return Array.Empty<PcBootstrapRepositoryCandidate>();
 
-            useMicroAuth = true;
+            var candidates = new List<PcBootstrapRepositoryCandidate>();
+            AddMicroRepositoryCandidate(candidates, Settings.MicroBaseUrl);
+            AddMicroRepositoryCandidate(candidates, Settings.MicroBackupBaseUrl);
+            return candidates;
+        }
 
-            string normalizedMicroBase = NormalizeRepositoryRoot(microBaseUrl);
-            if (normalizedMicroBase.EndsWith("/file/", StringComparison.OrdinalIgnoreCase))
-                return normalizedMicroBase;
+        private static void AddMicroRepositoryCandidate(ICollection<PcBootstrapRepositoryCandidate> candidates, string microBaseUrl)
+        {
+            string normalizedMicroBase = NormalizeRepositoryRoot((microBaseUrl ?? string.Empty).Trim());
+            if (string.IsNullOrWhiteSpace(normalizedMicroBase))
+                return;
 
-            return normalizedMicroBase + "file/";
+            string repositoryRoot = normalizedMicroBase.EndsWith("/file/", StringComparison.OrdinalIgnoreCase)
+                ? normalizedMicroBase
+                : normalizedMicroBase + "file/";
+            foreach (PcBootstrapRepositoryCandidate existing in candidates)
+            {
+                if (string.Equals(existing.RepositoryRoot, repositoryRoot, StringComparison.OrdinalIgnoreCase))
+                    return;
+            }
+
+            candidates.Add(new PcBootstrapRepositoryCandidate(repositoryRoot, useMicroAuth: true));
         }
 
         public static string BuildRemoteIndexUrl(string repositoryRoot)
@@ -400,6 +431,18 @@ namespace Client.Bootstrap
             File.WriteAllText(tempPath, content ?? string.Empty, Utf8NoBom);
             File.Move(tempPath, outputPath, overwrite: true);
         }
+    }
+
+    internal sealed class PcBootstrapRepositoryCandidate
+    {
+        public PcBootstrapRepositoryCandidate(string repositoryRoot, bool useMicroAuth)
+        {
+            RepositoryRoot = repositoryRoot ?? string.Empty;
+            UseMicroAuth = useMicroAuth;
+        }
+
+        public string RepositoryRoot { get; }
+        public bool UseMicroAuth { get; }
     }
 }
 

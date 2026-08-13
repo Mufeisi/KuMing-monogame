@@ -168,7 +168,7 @@ namespace MonoShare
             }
         }
 
-        public static void ReplaceUpdateQueue(string resourceVersion, IEnumerable<BootstrapPackageUpdateEntryView> packages)
+        public static void ReplaceUpdateQueue(string resourceVersion, IEnumerable<BootstrapPackageUpdateEntryView> packages, string repositoryRoot = "", bool useMicroAuth = false)
         {
             if (packages == null)
                 packages = Array.Empty<BootstrapPackageUpdateEntryView>();
@@ -179,6 +179,8 @@ namespace MonoShare
                 {
                     CreatedAtUtc = DateTime.UtcNow.ToString("o"),
                     ResourceVersion = resourceVersion ?? string.Empty,
+                    RepositoryRoot = repositoryRoot ?? string.Empty,
+                    UseMicroAuth = useMicroAuth,
                     Packages = packages
                         .Where(item => item != null && !string.IsNullOrWhiteSpace(item.Name))
                         .GroupBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
@@ -402,6 +404,8 @@ namespace MonoShare
     {
         public string CreatedAtUtc { get; set; }
         public string ResourceVersion { get; set; }
+        public string RepositoryRoot { get; set; }
+        public bool UseMicroAuth { get; set; }
         public List<BootstrapPackageUpdateEntryView> Packages { get; set; } = new List<BootstrapPackageUpdateEntryView>();
     }
 

@@ -75,22 +75,24 @@ public sealed class LauncherEditorTests
         SeedBaselineIndex(clientRoot, "BootstrapAssets", "core-startup");
         string? previousRoot = Environment.GetEnvironmentVariable("LOMMIR_PC_CLIENT_ROOT");
         string previousRepo = Client.Settings.BootstrapPackageRepo;
+        string previousMicroBaseUrl = Client.Settings.MicroBaseUrl, previousMicroBackupBaseUrl = Client.Settings.MicroBackupBaseUrl, previousMicroUser = Client.Settings.MicroUser;
         bool previousPreLogin = Client.Settings.BootstrapPreLoginUpdate, previousAuto = Client.Settings.BootstrapAutoDownload;
         try
         {
             Environment.SetEnvironmentVariable("LOMMIR_PC_CLIENT_ROOT", clientRoot);
             Client.Settings.BootstrapPreLoginUpdate = true; Client.Settings.BootstrapAutoDownload = true;
+            Client.Settings.BootstrapPackageRepo = string.Empty;
+            Client.Settings.MicroBaseUrl = $"http://127.0.0.1:{primaryPort}/api/";
+            Client.Settings.MicroBackupBaseUrl = $"http://127.0.0.1:{backupPort}/api/";
+            Client.Settings.MicroUser = "acceptance";
             using (Client.Bootstrap.PcBootstrapAcceptanceContext.UseTrustedKeys(keys))
             {
-                Client.Settings.BootstrapPackageRepo = $"http://127.0.0.1:{primaryPort}/";
-                Client.Bootstrap.PcBootstrapApplyResultView failed = await Client.Bootstrap.PcBootstrapPreLoginUpdateService.TryRunPreLoginUpdateAsync(null, CancellationToken.None);
-                Assert.False(failed.Completed);
-                Assert.False(File.Exists(Path.Combine(clientRoot, "Data", "Title.Lib")));
-
-                Client.Settings.BootstrapPackageRepo = $"http://127.0.0.1:{backupPort}/";
                 Client.Bootstrap.PcBootstrapApplyResultView first = await Client.Bootstrap.PcBootstrapPreLoginUpdateService.TryRunPreLoginUpdateAsync(null, CancellationToken.None);
                 Assert.True(first.Completed, first.Message); Assert.Equal(release.ResourceVersion, first.ResourceVersion);
+                Assert.True(primary.CountRequestsEndingWith("bootstrap-package-index.json") > 0);
+                Assert.Equal($"http://127.0.0.1:{primaryPort}/api/", Client.Settings.MicroBaseUrl);
                 int zipRequests = backup.CountRequestsEndingWith(".zip");
+                Assert.True(zipRequests > 0);
                 Client.Bootstrap.PcBootstrapApplyResultView cached = await Client.Bootstrap.PcBootstrapPreLoginUpdateService.TryRunPreLoginUpdateAsync(null, CancellationToken.None);
                 Assert.True(cached.Completed, cached.Message); Assert.Equal(0, cached.UpdatedPackageCount);
                 Assert.Equal(zipRequests, backup.CountRequestsEndingWith(".zip"));
@@ -100,6 +102,7 @@ public sealed class LauncherEditorTests
         {
             Environment.SetEnvironmentVariable("LOMMIR_PC_CLIENT_ROOT", previousRoot);
             Client.Settings.BootstrapPackageRepo = previousRepo; Client.Settings.BootstrapPreLoginUpdate = previousPreLogin; Client.Settings.BootstrapAutoDownload = previousAuto;
+            Client.Settings.MicroBaseUrl = previousMicroBaseUrl; Client.Settings.MicroBackupBaseUrl = previousMicroBackupBaseUrl; Client.Settings.MicroUser = previousMicroUser;
         }
     }
 
@@ -120,29 +123,31 @@ public sealed class LauncherEditorTests
         SeedAndroidBootstrap(clientRoot);
         MonoClient::MonoShare.ClientResourceLayout.Configure(clientRoot);
         string previousRepo = MonoClient::MonoShare.Settings.BootstrapPackageRepo;
+        string previousMicroBaseUrl = MonoClient::MonoShare.Settings.MicroBaseUrl, previousMicroBackupBaseUrl = MonoClient::MonoShare.Settings.MicroBackupBaseUrl, previousMicroUser = MonoClient::MonoShare.Settings.MicroUser;
         string previousProfile = MonoClient::MonoShare.Settings.UIProfileId;
         bool previousAuto = MonoClient::MonoShare.Settings.BootstrapAutoDownloadPackages;
         try
         {
             MonoClient::MonoShare.Settings.UIProfileId = "Mobile"; MonoClient::MonoShare.Settings.BootstrapAutoDownloadPackages = true;
+            MonoClient::MonoShare.Settings.BootstrapPackageRepo = string.Empty;
+            MonoClient::MonoShare.Settings.MicroBaseUrl = $"http://127.0.0.1:{primaryPort}/api/";
+            MonoClient::MonoShare.Settings.MicroBackupBaseUrl = $"http://127.0.0.1:{backupPort}/api/";
+            MonoClient::MonoShare.Settings.MicroUser = "acceptance";
             var keys = new Dictionary<string, MonoClient::Shared.Security.BootstrapManifestTrustedKey>(StringComparer.Ordinal)
             {
                 [project.Release.CurrentKeyId] = new() { KeyId = project.Release.CurrentKeyId, SubjectPublicKeyInfo = project.Release.CurrentPublicKey, NotBeforeSequence = project.Release.CurrentKeyNotBeforeSequence },
             };
             using (MonoClient::MonoShare.BootstrapAcceptanceContext.UseTrustedKeys(keys))
             {
-                MonoClient::MonoShare.Settings.BootstrapPackageRepo = $"http://127.0.0.1:{primaryPort}/";
-                MonoClient::MonoShare.BootstrapPreLoginUpdatePlanView failed = await MonoClient::MonoShare.BootstrapPackageUpdateService.TryEnsurePreLoginUpdateQueueAsync(CancellationToken.None);
-                Assert.True(failed.Skipped);
-                Assert.False(File.Exists(Path.Combine(clientRoot, "Cache", "Mobile", "Packages", "fui-retro", "Assets", "UI", "复古", "UI_fui.bytes")));
-
-                MonoClient::MonoShare.Settings.BootstrapPackageRepo = $"http://127.0.0.1:{backupPort}/";
                 MonoClient::MonoShare.BootstrapPreLoginUpdatePlanView first = await MonoClient::MonoShare.BootstrapPackageUpdateService.TryEnsurePreLoginUpdateQueueAsync(CancellationToken.None);
                 Assert.False(first.Failed); Assert.Equal(release.ResourceVersion, first.ResourceVersion); Assert.Equal(2, first.PackagesToUpdate.Count);
+                Assert.True(primary.CountRequestsEndingWith("bootstrap-package-index.signed.json") > 0);
+                Assert.Contains($":{backupPort}/", first.RepositoryRoot, StringComparison.Ordinal);
                 await MonoClient::MonoShare.BootstrapPackageDownloader.DownloadPendingPackagesForAcceptanceAsync(CancellationToken.None);
                 MonoClient::MonoShare.BootstrapPackageApplyBundleResultView applied = MonoClient::MonoShare.ClientResourceLayout.ApplyBundleInboxForAcceptance();
                 Assert.True(applied.Completed);
                 int zipRequests = backup.CountRequestsEndingWith(".zip");
+                Assert.True(zipRequests > 0);
                 MonoClient::MonoShare.BootstrapPreLoginUpdatePlanView cached = await MonoClient::MonoShare.BootstrapPackageUpdateService.TryEnsurePreLoginUpdateQueueAsync(CancellationToken.None);
                 Assert.False(cached.Failed); Assert.Empty(cached.PackagesToUpdate); Assert.Equal(zipRequests, backup.CountRequestsEndingWith(".zip"));
             }
@@ -150,6 +155,7 @@ public sealed class LauncherEditorTests
         finally
         {
             MonoClient::MonoShare.Settings.BootstrapPackageRepo = previousRepo; MonoClient::MonoShare.Settings.UIProfileId = previousProfile; MonoClient::MonoShare.Settings.BootstrapAutoDownloadPackages = previousAuto;
+            MonoClient::MonoShare.Settings.MicroBaseUrl = previousMicroBaseUrl; MonoClient::MonoShare.Settings.MicroBackupBaseUrl = previousMicroBackupBaseUrl; MonoClient::MonoShare.Settings.MicroUser = previousMicroUser;
         }
     }
 
