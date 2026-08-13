@@ -26,6 +26,12 @@ namespace Server.MirForms.VisualMapInfo.Control
 
         public ushort RandomDelay;
 
+        public int RespawnIndex;
+
+        public bool SaveRespawnTime;
+
+        public ushort RespawnTicks;
+
         public ushort tempRange;
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public ushort Range

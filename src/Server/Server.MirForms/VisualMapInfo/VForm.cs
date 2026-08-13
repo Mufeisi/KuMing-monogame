@@ -3,6 +3,8 @@ using Server.MirForms.VisualMapInfo.Control;
 using Microsoft.VisualBasic.PowerPacks;
 using Server.MirEnvir;
 using Server.MirDatabase;
+using Server.Authoring;
+using Server.Diagnostics;
 
 namespace Server.MirForms.VisualMapInfo
 {
@@ -14,61 +16,103 @@ namespace Server.MirForms.VisualMapInfo
 
         public Point MouseDownLocation;
 
+        private MapContentEditingSession _editingSession;
+        private ToolStrip _contentToolbar;
+        private ToolStripButton _undoButton;
+        private ToolStripButton _redoButton;
+        private ToolStripButton _reviewButton;
+        private ToolStripButton _saveButton;
+        private ToolStripButton _cancelButton;
+        private bool _discardConfirmed;
+        private int _nextRespawnDraftIndex;
+        private int _nextMineDraftIndex;
+
+        public bool HasCommittedChanges { get; private set; }
+
         public VForm()
         {
-            InitializeComponent(); 
+            InitializeComponent();
+            InitializeContentToolbar();
         }
 
         private void VForm_Load(object sender, EventArgs e)
         {
             InitializeMap();
+            _editingSession = new MapContentEditingSession(
+                VisualizerGlobal.MapInfo,
+                Envir.MonsterInfoList.Select(item => item.Index),
+                VisualizerGlobal.ClippingMap.Width,
+                VisualizerGlobal.ClippingMap.Height);
             InitializeMineInfo();
             InitializeRespawnInfo();
+            _nextMineDraftIndex = MiningPanel.Controls.OfType<MineEntry>().Count();
+            _nextRespawnDraftIndex = RespawnPanel.Controls.OfType<RespawnEntry>().Count();
             VisualizerGlobal.FocusModeActivated += FocusModeActivated;
+            Text = $"内容生产工作台 - {VisualizerGlobal.MapInfo.Title}";
+            UpdateHistoryButtons();
         }
 
         private void VForm_FormClosing(object sender, FormClosingEventArgs e)
         {
+            if (!_discardConfirmed && _editingSession != null && TryCaptureDraft(out MapContentDraft draft, out _))
+            {
+                MapContentReview review = _editingSession.Review(draft);
+                if (review.HasChanges)
+                {
+                    DialogResult decision = MessageBox.Show(
+                        "当前地图内容尚未保存。\n\n是：校验并保存\n否：放弃修改\n取消：继续编辑",
+                        "关闭内容生产工作台",
+                        MessageBoxButtons.YesNoCancel,
+                        MessageBoxIcon.Warning);
+                    if (decision == DialogResult.Cancel || decision == DialogResult.Yes && !TrySaveDraft(closeAfterSave: false))
+                    {
+                        e.Cancel = true;
+                        return;
+                    }
+                    if (decision == DialogResult.No)
+                        _discardConfirmed = true;
+                }
+            }
+
             VisualizerGlobal.ZoomLevel = 1;
-            VisualizerGlobal.MapInfo.Respawns.Clear();
-            VisualizerGlobal.MapInfo.MineZones.Clear();
+            VisualizerGlobal.FocusModeActivated -= FocusModeActivated;
+        }
 
-            for (int i = 0; i < RespawnPanel.Controls.Count; i++)
+        private void InitializeContentToolbar()
+        {
+            _contentToolbar = new ToolStrip
             {
-                try
-                {
-                    RespawnEntry RespawnControl = (RespawnEntry)RespawnPanel.Controls[i];
-                    MirDatabase.RespawnInfo NewRespawnZone = new MirDatabase.RespawnInfo();
-
-                    NewRespawnZone.Location = new Point(RespawnControl.X, RespawnControl.Y);
-                    NewRespawnZone.MonsterIndex = RespawnControl.MonsterIndex;
-                    NewRespawnZone.Spread = RespawnControl.Range;
-                    NewRespawnZone.Count = Convert.ToUInt16(RespawnControl.Count.Text);
-                    NewRespawnZone.Delay = Convert.ToUInt16(RespawnControl.Delay.Text);
-                    NewRespawnZone.RoutePath = RespawnControl.RoutePath;
-                    NewRespawnZone.Direction = RespawnControl.Direction;
-                    NewRespawnZone.RandomDelay = RespawnControl.RandomDelay;
-
-                    VisualizerGlobal.MapInfo.Respawns.Add(NewRespawnZone);
-                }
-                catch (Exception) { continue; }
-            }
-
-            for (int i = 0; i < MiningPanel.Controls.Count; i++)
+                Name = "ContentAuthoringToolbar",
+                Dock = DockStyle.Top,
+                GripStyle = ToolStripGripStyle.Hidden,
+                RenderMode = ToolStripRenderMode.System,
+            };
+            _undoButton = CreateContentButton("UndoContentButton", "撤销", (_, _) => UndoContent());
+            _redoButton = CreateContentButton("RedoContentButton", "重做", (_, _) => RedoContent());
+            _reviewButton = CreateContentButton("ReviewContentButton", "校验与差异", (_, _) => ShowContentReview());
+            _saveButton = CreateContentButton("SaveContentButton", "保存", (_, _) => TrySaveDraft(closeAfterSave: true));
+            _cancelButton = CreateContentButton("CancelContentButton", "取消", (_, _) => CancelContent());
+            _saveButton.Alignment = ToolStripItemAlignment.Right;
+            _cancelButton.Alignment = ToolStripItemAlignment.Right;
+            _contentToolbar.Items.AddRange(new ToolStripItem[]
             {
-                try
-                {
-                    MineEntry MineControl = (MineEntry)MiningPanel.Controls[i];
-                    MineZone NewMineZone = new MineZone();
+                _undoButton, _redoButton, new ToolStripSeparator(), _reviewButton,
+                _cancelButton, _saveButton,
+            });
+            Controls.Add(_contentToolbar);
+            _contentToolbar.BringToFront();
+        }
 
-                    NewMineZone.Location = new Point(MineControl.X, MineControl.Y);
-                    NewMineZone.Mine = MineControl.MineIndex;
-                    NewMineZone.Size = MineControl.Range;
-
-                    VisualizerGlobal.MapInfo.MineZones.Add(NewMineZone);
-                }
-                catch (Exception) { continue; }
-            }
+        private static ToolStripButton CreateContentButton(string name, string text, EventHandler click)
+        {
+            var button = new ToolStripButton(text)
+            {
+                Name = name,
+                DisplayStyle = ToolStripItemDisplayStyle.Text,
+                AutoSize = true,
+            };
+            button.Click += click;
+            return button;
         }
 
         private void InitializeMap()
@@ -105,6 +149,7 @@ namespace Server.MirForms.VisualMapInfo
                 MineRegion.Y = VisualizerGlobal.MapInfo.MineZones[i].Location.Y;
                 MineRegion.tempRange = VisualizerGlobal.MapInfo.MineZones[i].Size;
                 MineRegion.Range = VisualizerGlobal.MapInfo.MineZones[i].Size;
+                MineRegion.Tag = i;
                 MineRegion.ShowControl();
 
                 MiningPanel.Controls.Add(MineRegion);
@@ -134,12 +179,214 @@ namespace Server.MirForms.VisualMapInfo
                 RespawnRegion.RoutePath = VisualizerGlobal.MapInfo.Respawns[i].RoutePath;
                 RespawnRegion.Direction = VisualizerGlobal.MapInfo.Respawns[i].Direction;
                 RespawnRegion.RandomDelay = VisualizerGlobal.MapInfo.Respawns[i].RandomDelay;
+                RespawnRegion.RespawnIndex = VisualizerGlobal.MapInfo.Respawns[i].RespawnIndex;
+                RespawnRegion.SaveRespawnTime = VisualizerGlobal.MapInfo.Respawns[i].SaveRespawnTime;
+                RespawnRegion.RespawnTicks = VisualizerGlobal.MapInfo.Respawns[i].RespawnTicks;
+                RespawnRegion.Tag = i;
                 RespawnRegion.HideControl();
 
                 RespawnPanel.Controls.Add(RespawnRegion);
 
                 RespawnRegion.RegionHighlight.Parent = Canvas;
             }
+        }
+
+        private bool TryCaptureDraft(out MapContentDraft draft, out string error)
+        {
+            var respawns = new List<MapRespawnDraft>();
+            var mineZones = new List<MapMineZoneDraft>();
+            try
+            {
+                foreach (RespawnEntry item in OrderDraftControls(RespawnPanel.Controls.OfType<RespawnEntry>()))
+                {
+                    if (!ushort.TryParse(item.Count.Text, out ushort count))
+                        throw new InvalidDataException($"刷怪数量不是有效整数：{item.Count.Text}");
+                    if (!ushort.TryParse(item.Delay.Text, out ushort delay))
+                        throw new InvalidDataException($"刷新时间不是有效整数：{item.Delay.Text}");
+                    respawns.Add(new MapRespawnDraft(
+                        item.MonsterIndex, new Point(item.X, item.Y), count, item.Range, delay,
+                        item.Direction, item.RoutePath ?? string.Empty, item.RandomDelay,
+                        item.RespawnIndex, item.SaveRespawnTime, item.RespawnTicks));
+                }
+                foreach (MineEntry item in OrderDraftControls(MiningPanel.Controls.OfType<MineEntry>()))
+                    mineZones.Add(new MapMineZoneDraft(item.MineIndex, new Point(item.X, item.Y), item.Range));
+
+                draft = new MapContentDraft(respawns, mineZones);
+                error = string.Empty;
+                return true;
+            }
+            catch (Exception ex)
+            {
+                draft = null;
+                error = ex.Message;
+                return false;
+            }
+        }
+
+        private void LoadDraft(MapContentDraft draft)
+        {
+            foreach (RespawnEntry item in RespawnPanel.Controls.OfType<RespawnEntry>().ToArray())
+                item.RemoveEntry();
+            foreach (MineEntry item in MiningPanel.Controls.OfType<MineEntry>().ToArray())
+                item.RemoveEntry();
+
+            for (int index = 0; index < draft.MineZones.Count; index++)
+            {
+                MapMineZoneDraft item = draft.MineZones[index];
+                var control = new MineEntry
+                {
+                    Dock = DockStyle.Top, MineIndex = item.Mine,
+                    X = item.Location.X, Y = item.Location.Y,
+                    tempRange = item.Size, Range = item.Size, Tag = index,
+                };
+                control.ShowControl();
+                control.RegionHighlight.Parent = Canvas;
+                MiningPanel.Controls.Add(control);
+            }
+            for (int index = 0; index < draft.Respawns.Count; index++)
+            {
+                MapRespawnDraft item = draft.Respawns[index];
+                var control = new RespawnEntry
+                {
+                    Dock = DockStyle.Top, MonsterIndex = item.MonsterIndex,
+                    X = item.Location.X, Y = item.Location.Y, Range = item.Spread,
+                    RoutePath = item.RoutePath, Direction = item.Direction,
+                    RandomDelay = item.RandomDelay, RespawnIndex = item.RespawnIndex,
+                    SaveRespawnTime = item.SaveRespawnTime, RespawnTicks = item.RespawnTicks, Tag = index,
+                };
+                control.Count.Text = item.Count.ToString();
+                control.Delay.Text = item.Delay.ToString();
+                control.ShowControl();
+                control.RegionHighlight.Parent = Canvas;
+                RespawnPanel.Controls.Add(control);
+            }
+            RegionTabs_SelectedIndexChanged(RegionTabs, EventArgs.Empty);
+            _nextMineDraftIndex = draft.MineZones.Count;
+            _nextRespawnDraftIndex = draft.Respawns.Count;
+        }
+
+        private static IEnumerable<T> OrderDraftControls<T>(IEnumerable<T> controls) where T : System.Windows.Forms.Control
+        {
+            return controls
+                .Select((control, currentIndex) => new
+                {
+                    Control = control,
+                    OriginalIndex = control.Tag is int originalIndex ? originalIndex : int.MaxValue,
+                    CurrentIndex = currentIndex,
+                })
+                .OrderBy(item => item.OriginalIndex)
+                .ThenBy(item => item.CurrentIndex)
+                .Select(item => item.Control);
+        }
+
+        private void UndoContent()
+        {
+            if (!TryCaptureDraft(out MapContentDraft current, out string error))
+            {
+                MessageBox.Show(error, "无法撤销", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+            LoadDraft(_editingSession.Undo(current));
+            UpdateHistoryButtons();
+        }
+
+        private void RedoContent()
+        {
+            LoadDraft(_editingSession.Redo());
+            UpdateHistoryButtons();
+        }
+
+        private void UpdateHistoryButtons()
+        {
+            if (_editingSession == null)
+                return;
+            // 控件可能尚未进入历史；撤销动作会先捕获当前草稿再回退。
+            _undoButton.Enabled = true;
+            _redoButton.Enabled = _editingSession.CanRedo;
+        }
+
+        private void ShowContentReview()
+        {
+            if (!TryCaptureDraft(out MapContentDraft draft, out string error))
+            {
+                MessageBox.Show(error, "输入格式错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+            _editingSession.Observe(draft);
+            UpdateHistoryButtons();
+            MapContentReview review = _editingSession.Review(draft);
+            MessageBox.Show(FormatReview(review), "保存前校验与差异", MessageBoxButtons.OK,
+                review.HasErrors ? MessageBoxIcon.Error : MessageBoxIcon.Information);
+        }
+
+        private bool TrySaveDraft(bool closeAfterSave)
+        {
+            if (!TryCaptureDraft(out MapContentDraft draft, out string error))
+            {
+                MessageBox.Show(error, "输入格式错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return false;
+            }
+
+            _editingSession.Observe(draft);
+            MapContentReview review = _editingSession.Review(draft);
+            if (!review.HasChanges)
+            {
+                if (closeAfterSave) Close();
+                return true;
+            }
+            if (review.HasErrors)
+            {
+                MessageBox.Show(FormatReview(review), "保存前校验未通过", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return false;
+            }
+
+            DialogResult confirmation = MessageBox.Show(
+                FormatReview(review) + "\n\n确认保存以上变更吗？",
+                "确认地图内容变更",
+                MessageBoxButtons.OKCancel,
+                MessageBoxIcon.Question);
+            if (confirmation != DialogResult.OK)
+                return false;
+
+            MapContentCommitResult result = _editingSession.TryCommit(draft, Envir.SaveDB);
+            if (!result.Completed)
+            {
+                MessageBox.Show(result.Error, "保存失败", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return false;
+            }
+
+            HasCommittedChanges = true;
+            MapDetailsLabel.Text = $"已保存：{review.Differences.Count} 项变更";
+            if (closeAfterSave)
+            {
+                DialogResult = DialogResult.OK;
+                Close();
+            }
+            return true;
+        }
+
+        private void CancelContent()
+        {
+            _discardConfirmed = true;
+            DialogResult = DialogResult.Cancel;
+            Close();
+        }
+
+        private static string FormatReview(MapContentReview review)
+        {
+            var lines = new List<string>
+            {
+                $"校验：{review.Diagnostics.Count(item => item.Severity == ProjectPreflightSeverity.Error)} 个错误，" +
+                $"{review.Diagnostics.Count(item => item.Severity == ProjectPreflightSeverity.Warning)} 个警告",
+                $"差异：{review.Differences.Count} 项",
+            };
+            foreach (ProjectPreflightDiagnostic item in review.Diagnostics.Take(20))
+                lines.Add($"[{item.Code}] {item.Source}：{item.Message}");
+            foreach (MapContentDifference item in review.Differences.Take(20))
+                lines.Add($"[{item.Kind}] {item.Source}：{item.Summary}");
+            if (review.Diagnostics.Count + review.Differences.Count > 40)
+                lines.Add("其余项目未在此窗口展开，请先缩小单次修改范围。");
+            return string.Join(Environment.NewLine, lines);
         }
 
         private void RedrawMap()
@@ -278,7 +525,8 @@ namespace Server.MirForms.VisualMapInfo
                         Dock = DockStyle.Top,
                         X = MouseDownLocation.X,
                         Y = MouseDownLocation.Y,
-                        Range = 50
+                        Range = 50,
+                        Tag = _nextMineDraftIndex++,
                     };
 
                     MineControl.ShowControl();
@@ -297,7 +545,8 @@ namespace Server.MirForms.VisualMapInfo
                         Dock = DockStyle.Top,
                         X = MouseDownLocation.X,
                         Y = MouseDownLocation.Y,
-                        Range = 50
+                        Range = 50,
+                        Tag = _nextRespawnDraftIndex++,
                     };
 
                     RespawnControl.ShowControl();
@@ -357,6 +606,24 @@ namespace Server.MirForms.VisualMapInfo
         // Quick Keys
         protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
         {
+            if (keyData == (Keys.Control | Keys.Z))
+            {
+                UndoContent();
+                return true;
+            }
+
+            if (keyData == (Keys.Control | Keys.Y))
+            {
+                RedoContent();
+                return true;
+            }
+
+            if (keyData == (Keys.Control | Keys.S))
+            {
+                TrySaveDraft(closeAfterSave: false);
+                return true;
+            }
+
             if (keyData == Keys.M)
             {
                 ToolSelectedChanged(MoveButton, new EventArgs());

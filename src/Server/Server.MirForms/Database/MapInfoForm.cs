@@ -1622,9 +1622,12 @@ namespace Server
 
             VForm.ShowDialog();
 
-            _selectedMapInfos[0] = MirForms.VisualMapInfo.Class.VisualizerGlobal.MapInfo;
-            UpdateMineZoneInterface();
-            UpdateRespawnInterface();
+            if (VForm.HasCommittedChanges)
+            {
+                _selectedMapInfos[0] = MirForms.VisualMapInfo.Class.VisualizerGlobal.MapInfo;
+                UpdateMineZoneInterface();
+                UpdateRespawnInterface();
+            }
         }
 
         private void VForm_Disposed(object sender, EventArgs e)
