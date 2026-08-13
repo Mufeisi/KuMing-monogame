@@ -6,8 +6,11 @@ internal sealed class DistributionOverviewPanel : UserControl
     private readonly Action<DistributionFixTarget> _navigate;
     private readonly TableLayoutPanel _facts = new() { AutoSize = true, ColumnCount = 2, Dock = DockStyle.Top, Padding = new Padding(18, 12, 18, 12) };
     private readonly FlowLayoutPanel _issues = new() { AutoSize = true, FlowDirection = FlowDirection.TopDown, WrapContents = false, Dock = DockStyle.Top, Padding = new Padding(18, 10, 18, 16) };
+    private readonly FlowLayoutPanel _endpointResults = new() { AutoSize = true, FlowDirection = FlowDirection.TopDown, WrapContents = false, Dock = DockStyle.Top, Padding = new Padding(18, 8, 18, 16) };
+    private readonly Button _probeEndpoints = new() { Text = "检查主/备用入口", AutoSize = true };
     private readonly Label _scanState = new() { AutoSize = true, ForeColor = DesktopAuthoringTheme.TextSecondary, Text = "正在扫描资源目录……" };
     private CancellationTokenSource? _scanCancellation;
+    private CancellationTokenSource? _endpointCancellation;
 
     internal DistributionOverviewSnapshot? Snapshot { get; private set; }
 
@@ -31,12 +34,80 @@ internal sealed class DistributionOverviewPanel : UserControl
         var refresh = new Button { Text = "重新扫描", AutoSize = true, Margin = new Padding(28, 0, 0, 8) };
         refresh.Click += (_, _) => BeginRefresh();
         var issueTitle = new Label { Text = "发布前待处理", AutoSize = true, Font = DesktopAuthoringTheme.CreateBodyFont(12, FontStyle.Bold), Margin = new Padding(28, 16, 0, 0) };
+        var endpointHeader = new FlowLayoutPanel { AutoSize = true, FlowDirection = FlowDirection.LeftToRight, WrapContents = false, Dock = DockStyle.Top, Padding = new Padding(28, 16, 18, 0) };
+        endpointHeader.Controls.Add(new Label { Text = "入口连通性与远端身份", AutoSize = true, Font = DesktopAuthoringTheme.CreateBodyFont(12, FontStyle.Bold), Margin = new Padding(0, 7, 16, 0) });
+        _probeEndpoints.Click += async (_, _) => await RunEndpointPreflightAsync();
+        endpointHeader.Controls.Add(_probeEndpoints);
+        Controls.Add(_endpointResults);
+        Controls.Add(endpointHeader);
         Controls.Add(_issues);
         Controls.Add(issueTitle);
         Controls.Add(_facts);
         Controls.Add(refresh);
         Controls.Add(header);
         BeginRefresh();
+    }
+
+    internal async Task<IReadOnlyList<DistributionEndpointResult>> RunEndpointPreflightAsync()
+    {
+        _endpointCancellation?.Cancel();
+        _endpointCancellation?.Dispose();
+        _endpointCancellation = new CancellationTokenSource();
+        CancellationToken cancellationToken = _endpointCancellation.Token;
+        _probeEndpoints.Enabled = false;
+        _probeEndpoints.Text = "正在检查……";
+        _endpointResults.Controls.Clear();
+        _endpointResults.Controls.Add(new Label { Text = "正在并行检查所有已启用入口；每个入口最多等待 3 秒。", AutoSize = true, ForeColor = DesktopAuthoringTheme.TextSecondary });
+        try
+        {
+            IReadOnlyList<DistributionEndpointResult> results = await DistributionEndpointPreflight.RunAsync(_project, cancellationToken);
+            RenderEndpointResults(results);
+            return results;
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            return Array.Empty<DistributionEndpointResult>();
+        }
+        catch (Exception error)
+        {
+            _endpointResults.Controls.Clear();
+            _endpointResults.Controls.Add(new Label { Text = "入口预检失败：" + error.Message, AutoSize = true, ForeColor = Color.Firebrick });
+            return Array.Empty<DistributionEndpointResult>();
+        }
+        finally
+        {
+            if (!IsDisposed) { _probeEndpoints.Text = "重新检查入口"; _probeEndpoints.Enabled = true; }
+        }
+    }
+
+    private void RenderEndpointResults(IReadOnlyList<DistributionEndpointResult> results)
+    {
+        _endpointResults.SuspendLayout(); _endpointResults.Controls.Clear();
+        if (results.Count == 0)
+        {
+            _endpointResults.Controls.Add(new Label { Text = "当前项目没有已启用的微端入口。", AutoSize = true, ForeColor = DesktopAuthoringTheme.TextSecondary });
+        }
+        foreach (DistributionEndpointResult result in results)
+        {
+            string role = result.Role == DistributionEndpointRole.Primary ? "主入口" : "备用入口";
+            string state = result.Status switch
+            {
+                DistributionEndpointStatus.Passed => "通过",
+                DistributionEndpointStatus.TimedOut => "超时",
+                DistributionEndpointStatus.IdentityMismatch => "身份不一致",
+                DistributionEndpointStatus.InvalidResponse => "响应无效",
+                _ => "不可达",
+            };
+            var row = new TableLayoutPanel { AutoSize = true, ColumnCount = 3, Margin = new Padding(0, 3, 0, 3), Width = 980 };
+            row.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 275));
+            row.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 90));
+            row.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+            row.Controls.Add(new Label { Text = $"{result.Scope} · {role} · {result.Address}:{result.Port}", AutoSize = true, Margin = new Padding(0, 6, 8, 0) }, 0, 0);
+            row.Controls.Add(new Label { Text = state, AutoSize = true, ForeColor = result.Passed ? Color.FromArgb(20, 105, 45) : Color.Firebrick, Margin = new Padding(0, 6, 8, 0) }, 1, 0);
+            row.Controls.Add(new Label { Text = result.Message, AutoSize = true, MaximumSize = new Size(580, 0), ForeColor = DesktopAuthoringTheme.TextSecondary, Margin = new Padding(0, 6, 0, 0) }, 2, 0);
+            _endpointResults.Controls.Add(row);
+        }
+        _endpointResults.ResumeLayout();
     }
 
     internal void BeginRefresh()
@@ -130,7 +201,7 @@ internal sealed class DistributionOverviewPanel : UserControl
 
     protected override void Dispose(bool disposing)
     {
-        if (disposing) { _scanCancellation?.Cancel(); _scanCancellation?.Dispose(); }
+        if (disposing) { _scanCancellation?.Cancel(); _scanCancellation?.Dispose(); _endpointCancellation?.Cancel(); _endpointCancellation?.Dispose(); }
         base.Dispose(disposing);
     }
 }

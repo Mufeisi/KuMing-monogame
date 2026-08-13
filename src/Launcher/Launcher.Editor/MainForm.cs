@@ -604,7 +604,7 @@ internal sealed class MainForm : Form
         return value;
     }
 
-    private void PublishRelease()
+    private async void PublishRelease()
     {
         if (_project is null) return;
         string projectRoot = _store.GetProjectDirectory(_project.Snapshot.ProjectId);
@@ -614,7 +614,11 @@ internal sealed class MainForm : Form
         if (note.ShowDialog(this) != DialogResult.OK) return;
         try
         {
-            SyncLists(); EditorPreflightValidator.ThrowIfInvalid(_project, projectRoot); _store.Save(_project);
+            SyncLists(); EditorPreflightValidator.ThrowIfInvalid(_project, projectRoot);
+            SetStatus("正在检查所有微端主/备用入口……");
+            IReadOnlyList<DistributionEndpointResult> endpoints = await DistributionEndpointPreflight.RunAsync(_project, CancellationToken.None);
+            DistributionEndpointPreflight.ThrowIfInvalid(endpoints);
+            _store.Save(_project);
             ProjectReleaseResult result = ProjectReleasePublisher.Publish(_project, projectRoot, folder.SelectedPath, note.Value);
             _project.Release.LastPublishRoot = Path.GetFullPath(folder.SelectedPath); _store.Save(_project);
             SetStatus($"已发布不可变版本：序列 {result.Sequence}，{result.VersionName}"); RebuildTabs();
@@ -712,6 +716,9 @@ internal sealed class MainForm : Form
     }
 
     internal DistributionOverviewSnapshot? CaptureDistributionOverviewForEvidence() => _distributionOverview?.Snapshot;
+
+    internal Task<IReadOnlyList<DistributionEndpointResult>> RunDistributionEndpointEvidenceAsync()
+        => _distributionOverview?.RunEndpointPreflightAsync() ?? Task.FromResult<IReadOnlyList<DistributionEndpointResult>>(Array.Empty<DistributionEndpointResult>());
 
     internal (int ObjectTreeWidth, int PropertiesWidth, Size CanvasSize) CaptureDesignWorkspaceLayoutForEvidence()
     {

@@ -260,6 +260,88 @@ public sealed class LauncherEditorTests
     }
 
     [Fact]
+    public async Task DistributionEndpointPreflightReadsIdentityFromRealMicroGateway()
+    {
+        using var scope = new EditorTempScope();
+        var store = new EditorProjectStore(scope.Dir("endpoint-real-workspace"));
+        EditorProject project = store.Create("endpoint-real", "真实入口", LauncherTemplateKind.Classic);
+        int port = FreePort();
+        project.Snapshot.DefaultMicro.Address = "127.0.0.1";
+        project.Snapshot.DefaultMicro.Port = port;
+        project.Snapshot.DefaultMicro.BackupAddress = string.Empty;
+        project.Snapshot.DefaultMicro.BackupPort = 0;
+        await using var micro = new MicroHttpListenerHost();
+        await micro.StartAsync($"http://127.0.0.1:{port}/", new MicroGatewayOptions(
+            scope.Dir("endpoint-real-resources"), "reader", "secret",
+            ResourceVersion: project.Snapshot.DefaultMicro.ResourceVersion,
+            SigningIdentity: project.Snapshot.DefaultMicro.SigningIdentity));
+
+        IReadOnlyList<DistributionEndpointResult> results = await DistributionEndpointPreflight.RunAsync(project, CancellationToken.None);
+
+        DistributionEndpointResult result = Assert.Single(results);
+        Assert.Equal(DistributionEndpointStatus.Passed, result.Status);
+        Assert.Equal(project.Snapshot.DefaultMicro.ResourceVersion, result.ResourceVersion);
+        Assert.Equal(project.Snapshot.DefaultMicro.SigningIdentity, result.SigningIdentity);
+    }
+
+    [Fact]
+    public async Task DistributionEndpointPreflightReportsPrimaryBackupAndIdentitySeparately()
+    {
+        using var scope = new EditorTempScope();
+        var store = new EditorProjectStore(scope.Dir("endpoint-status-workspace"));
+        EditorProject project = store.Create("endpoint-status", "入口状态", LauncherTemplateKind.Classic);
+        project.Snapshot.DefaultMicro.Address = "primary.test";
+        project.Snapshot.DefaultMicro.Port = 8080;
+        project.Snapshot.DefaultMicro.BackupAddress = "backup.test";
+        project.Snapshot.DefaultMicro.BackupPort = 8081;
+        string version = project.Snapshot.DefaultMicro.ResourceVersion;
+        string identity = project.Snapshot.DefaultMicro.SigningIdentity;
+
+        IReadOnlyList<DistributionEndpointResult> results = await DistributionEndpointPreflight.RunAsync(
+            project, CancellationToken.None, TimeSpan.FromSeconds(1),
+            () => new DelegateHttpHandler((request, _) =>
+            {
+                string json = request.RequestUri!.Host == "primary.test"
+                    ? JsonSerializer.Serialize(new { format = "lyocrystal-micro-version-v1", resourceVersion = version, signingIdentity = identity })
+                    : JsonSerializer.Serialize(new { format = "lyocrystal-micro-version-v1", resourceVersion = "错误版本", signingIdentity = "错误签名" });
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(json) });
+            }));
+
+        Assert.Equal(2, results.Count);
+        Assert.Equal(DistributionEndpointStatus.Passed, results.Single(result => result.Role == DistributionEndpointRole.Primary).Status);
+        DistributionEndpointResult backup = results.Single(result => result.Role == DistributionEndpointRole.Backup);
+        Assert.Equal(DistributionEndpointStatus.IdentityMismatch, backup.Status);
+        Assert.Contains("期望版本", backup.Message, StringComparison.Ordinal);
+        Assert.Contains("实际版本 错误版本", backup.Message, StringComparison.Ordinal);
+        InvalidDataException blocked = Assert.Throws<InvalidDataException>(() => DistributionEndpointPreflight.ThrowIfInvalid(results));
+        Assert.Contains("备用入口", blocked.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task DistributionEndpointPreflightDistinguishesTimeoutUnreachableAndInvalidResponse()
+    {
+        async Task<DistributionEndpointStatus> Probe(string host, Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> send)
+        {
+            using var scope = new EditorTempScope();
+            var store = new EditorProjectStore(scope.Dir("endpoint-failure-" + host.Replace('.', '-')));
+            EditorProject project = store.Create("failure-" + host.Replace('.', '-'), "入口失败", LauncherTemplateKind.Classic);
+            project.Snapshot.DefaultMicro.Address = host;
+            project.Snapshot.DefaultMicro.BackupAddress = string.Empty;
+            project.Snapshot.DefaultMicro.BackupPort = 0;
+            return Assert.Single(await DistributionEndpointPreflight.RunAsync(project, CancellationToken.None, TimeSpan.FromMilliseconds(80), () => new DelegateHttpHandler(send))).Status;
+        }
+
+        Assert.Equal(DistributionEndpointStatus.TimedOut, await Probe("timeout.test", async (_, cancellation) =>
+        {
+            await Task.Delay(Timeout.InfiniteTimeSpan, cancellation);
+            throw new UnreachableException();
+        }));
+        Assert.Equal(DistributionEndpointStatus.Unreachable, await Probe("unreachable.test", (_, _) => throw new HttpRequestException("拒绝连接")));
+        Assert.Equal(DistributionEndpointStatus.InvalidResponse, await Probe("invalid.test", (_, _) => Task.FromResult(
+            new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("不是 JSON") })));
+    }
+
+    [Fact]
     public void CanvasLockPersistsInEditorProjectWithoutChangingPlayerSnapshotContract()
     {
         using var scope = new EditorTempScope();
@@ -985,6 +1067,11 @@ public sealed class LauncherEditorTests
             }
         }
         public async ValueTask DisposeAsync() { _listener.Close(); if (_loop is not null) await _loop; }
+    }
+
+    private sealed class DelegateHttpHandler(Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> send) : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) => send(request, cancellationToken);
     }
 
     private sealed class EditorTempScope : IDisposable

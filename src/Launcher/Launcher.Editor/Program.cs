@@ -38,6 +38,9 @@ internal static class Program
             {
                 Thread.Sleep(20); Application.DoEvents();
             }
+            Task<IReadOnlyList<DistributionEndpointResult>> endpointEvidence = form.RunDistributionEndpointEvidenceAsync();
+            while (!endpointEvidence.IsCompleted) { Thread.Sleep(20); Application.DoEvents(); }
+            _ = endpointEvidence.GetAwaiter().GetResult();
             using var distributionScreenshot = new Bitmap(form.Width, form.Height);
             form.DrawToBitmap(distributionScreenshot, new Rectangle(Point.Empty, distributionScreenshot.Size));
             distributionScreenshot.Save(Path.Combine(output, "发行体概览.png"), ImageFormat.Png);
