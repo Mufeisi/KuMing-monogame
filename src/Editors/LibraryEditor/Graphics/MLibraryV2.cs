@@ -16,7 +16,7 @@ namespace LibraryEditor
     /// Uses DXT5 Images
     /// Supports Frames (When at LibVersion 3)
     /// </summary>
-    public sealed class MLibraryV2
+    public sealed class MLibraryV2 : IDisposable
     {
         public const int LibVersion = 3;
 
@@ -100,8 +100,48 @@ namespace LibraryEditor
         {
             Close();
 
-            MemoryStream stream = new MemoryStream();
-            BinaryWriter writer = new BinaryWriter(stream);
+            string targetPath = Path.GetFullPath(FileName);
+            string directory = Path.GetDirectoryName(targetPath) ?? Directory.GetCurrentDirectory();
+            Directory.CreateDirectory(directory);
+            string temporaryPath = Path.Combine(directory, $".{Path.GetFileName(targetPath)}.{Guid.NewGuid():N}.tmp");
+
+            try
+            {
+                WriteTo(temporaryPath);
+                File.Move(temporaryPath, targetPath, true);
+            }
+            finally
+            {
+                TryDeleteTemporaryFile(temporaryPath);
+            }
+        }
+
+        public void Dispose()
+        {
+            Close();
+            var disposed = new HashSet<Bitmap>(ReferenceEqualityComparer.Instance);
+            foreach (MImage image in Images)
+            {
+                if (image == null) continue;
+                DisposeBitmap(image.Image, disposed);
+                DisposeBitmap(image.Preview, disposed);
+                DisposeBitmap(image.MaskImage, disposed);
+                image.Image = null;
+                image.Preview = null;
+                image.MaskImage = null;
+                image.TextureValid = false;
+            }
+        }
+
+        private static void DisposeBitmap(Bitmap bitmap, ISet<Bitmap> disposed)
+        {
+            if (bitmap != null && disposed.Add(bitmap)) bitmap.Dispose();
+        }
+
+        private void WriteTo(string outputPath)
+        {
+            using var stream = new MemoryStream();
+            using var memoryWriter = new BinaryWriter(stream, Encoding.UTF8, leaveOpen: true);
 
             Count = Images.Count;
             IndexList.Clear();
@@ -110,16 +150,16 @@ namespace LibraryEditor
             for (int i = 0; i < Count; i++)
             {
                 IndexList.Add((int)stream.Length + offSet);
-                Images[i].Save(writer);
+                Images[i].Save(memoryWriter);
             }
 
             var frameSeek = (int)stream.Length + offSet;
 
-            writer.Flush();
+            memoryWriter.Flush();
             byte[] fBytes = stream.ToArray();
 
-            _stream = File.Create(FileName);
-            writer = new BinaryWriter(_stream);
+            using var output = new FileStream(outputPath, FileMode.CreateNew, FileAccess.Write, FileShare.None);
+            using var writer = new BinaryWriter(output, Encoding.UTF8, leaveOpen: true);
 
             writer.Write(LibVersion);
 
@@ -140,9 +180,74 @@ namespace LibraryEditor
             }
 
             writer.Flush();
-            writer.Close();
-            writer.Dispose();
-            Close();
+            output.Flush(flushToDisk: true);
+        }
+
+        private static void TryDeleteTemporaryFile(string path)
+        {
+            try
+            {
+                if (File.Exists(path)) File.Delete(path);
+            }
+            catch (IOException)
+            {
+            }
+            catch (UnauthorizedAccessException)
+            {
+            }
+        }
+
+        public MLibraryV2 CloneForEditing()
+        {
+            var clone = new MLibraryV2(FileName)
+            {
+                Images = Images.Select(CloneImage).ToList(),
+                Count = Images.Count,
+                Frames = new FrameSet(Frames.ToDictionary(
+                    pair => pair.Key,
+                    pair => new Frame(
+                        pair.Value.Start,
+                        pair.Value.Count,
+                        pair.Value.Skip,
+                        pair.Value.Interval,
+                        pair.Value.EffectStart,
+                        pair.Value.EffectCount,
+                        pair.Value.EffectSkip,
+                        pair.Value.EffectInterval)
+                    {
+                        Reverse = pair.Value.Reverse,
+                        Blend = pair.Value.Blend
+                    }))
+            };
+            clone.Close();
+            return clone;
+        }
+
+        private static MImage CloneImage(MImage source)
+        {
+            if (source == null) return null;
+            var clone = new MImage(source.FBytes?.ToArray(), source.Width, source.Height)
+            {
+                X = source.X,
+                Y = source.Y,
+                ShadowX = source.ShadowX,
+                ShadowY = source.ShadowY,
+                Shadow = source.Shadow,
+                Length = source.Length,
+                HasMask = source.HasMask,
+                MaskWidth = source.MaskWidth,
+                MaskHeight = source.MaskHeight,
+                MaskX = source.MaskX,
+                MaskY = source.MaskY,
+                MaskLength = source.MaskLength,
+                MaskFBytes = source.MaskFBytes?.ToArray(),
+                Image = source.Image == null ? null : new Bitmap(source.Image),
+                Preview = source.Preview == null ? null : new Bitmap(source.Preview),
+                MaskImage = source.MaskImage == null ? null : new Bitmap(source.MaskImage),
+                TextureValid = source.TextureValid
+            };
+            if (clone.Image == null && clone.FBytes is { Length: > 0 }) clone.CreateTextureFromBytes();
+            return clone;
         }
 
         private void CheckImage(int index)
@@ -433,6 +538,11 @@ namespace LibraryEditor
 
             public unsafe void CreateTexture(BinaryReader reader)
             {
+                CreateTextureFromBytes();
+            }
+
+            public unsafe void CreateTextureFromBytes()
+            {
                 int w = Width;// +(4 - Width % 4) % 4;
                 int h = Height;// +(4 - Height % 4) % 4;
 
@@ -482,6 +592,7 @@ namespace LibraryEditor
                 }
 
                 dest = null;
+                TextureValid = true;
             }
 
 

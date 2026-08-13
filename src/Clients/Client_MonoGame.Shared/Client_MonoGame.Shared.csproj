@@ -20,6 +20,7 @@
     <Compile Include="..\..\..\src\Shared\Shared\Transport\StreamWriteGate.cs" Link="Transport\StreamWriteGate.cs" />
     <Compile Include="..\..\..\src\Shared\Shared\Diagnostics\CrashDiagnosticBundle.cs" Link="Diagnostics\CrashDiagnosticBundle.cs" />
     <Compile Include="..\..\..\src\Shared\Shared\Release\TransactionalFileDeployment.cs" Link="Release\TransactionalFileDeployment.cs" />
+    <Compile Include="..\..\..\src\Shared\Shared\Release\BootstrapPackageManifestReader.cs" Link="Release\BootstrapPackageManifestReader.cs" />
     <Compile Include="Security\LoginSettingsIntegration.cs" />
     <Compile Include="Diagnostics\MobileCrashDiagnostics.cs" />
   </ItemGroup>

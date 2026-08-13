@@ -24,7 +24,7 @@ namespace MonoShare
         private static DateTime _nextPendingPackageProcessUtc = DateTime.MinValue;
         private static DateTime _nextBundleInboxProcessUtc = DateTime.MinValue;
         private static string[] _bootstrapManifestAssets;
-        private static BootstrapPackageManifest _bootstrapPackageManifest;
+        private static Shared.Release.BootstrapPackageManifestDocument _bootstrapPackageManifest;
         private static bool _bootstrapPackageManifestLoaded;
         private static bool _bootstrapWarmupStarted;
         private static readonly HashSet<string> ReportedMissingPackageRequests = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -651,7 +651,7 @@ namespace MonoShare
             {
                 if (TryGetPackageHydrationPlan(resolvedPath, out _, out string[] candidates) && candidates.Length > 0)
                 {
-                    BootstrapPackageManifestPack[] packs = FindOwningBootstrapPacks(resolvedPath);
+                    BootstrapPackageManifestEntry[] packs = FindOwningBootstrapPacks(resolvedPath);
                     for (int i = 0; i < packs.Length; i++)
                     {
                         for (int j = 0; j < candidates.Length; j++)
@@ -748,7 +748,7 @@ namespace MonoShare
             if (File.Exists(absolutePath))
                 return;
 
-            BootstrapPackageManifestPack[] packs = FindOwningBootstrapPacks(absolutePath);
+            BootstrapPackageManifestEntry[] packs = FindOwningBootstrapPacks(absolutePath);
             if (packs.Length == 0)
                 return;
 
@@ -1082,62 +1082,19 @@ namespace MonoShare
             }
         }
 
-        private static BootstrapPackageManifest GetBootstrapPackageManifest()
+        private static Shared.Release.BootstrapPackageManifestDocument GetBootstrapPackageManifest()
         {
             lock (BootstrapManifestGate)
             {
                 if (_bootstrapPackageManifestLoaded)
                     return _bootstrapPackageManifest;
 
-                BootstrapPackageManifest manifest = null;
+                Shared.Release.BootstrapPackageManifestDocument manifest;
                 using Stream stream = OpenBootstrapPackageManifestStream();
-                if (stream != null)
-                {
-                    try
-                    {
-                        manifest = JsonSerializer.Deserialize<BootstrapPackageManifest>(
-                            stream,
-                            new JsonSerializerOptions
-                            {
-                                PropertyNameCaseInsensitive = true
-                            });
-                    }
-                    catch (Exception)
-                    {
-                        manifest = null;
-                    }
-                }
-
-                manifest ??= new BootstrapPackageManifest();
-                manifest.Packs ??= new List<BootstrapPackageManifestPack>();
-
-                var packsByName = new Dictionary<string, BootstrapPackageManifestPack>(StringComparer.OrdinalIgnoreCase);
-                for (int i = 0; i < manifest.Packs.Count; i++)
-                {
-                    BootstrapPackageManifestPack pack = manifest.Packs[i];
-                    if (string.IsNullOrWhiteSpace(pack?.Name))
-                        continue;
-
-                    packsByName[pack.Name] = NormalizeBootstrapPackagePack(pack);
-                }
-
-                foreach (string manifestPath in EnumeratePackageManifestPaths(manifest))
-                {
-                    if (!TryLoadBootstrapPackagePackManifest(manifestPath, out BootstrapPackageManifestPack pack))
-                        continue;
-
-                    if (string.IsNullOrWhiteSpace(pack?.Name))
-                        continue;
-
-                    if (packsByName.TryGetValue(pack.Name, out BootstrapPackageManifestPack existing))
-                        packsByName[pack.Name] = MergeBootstrapPackagePack(existing, pack);
-                    else
-                        packsByName[pack.Name] = NormalizeBootstrapPackagePack(pack);
-                }
-
-                manifest.Packs = packsByName.Values
-                    .OrderBy(pack => pack.Name, StringComparer.OrdinalIgnoreCase)
-                    .ToList();
+                manifest = Shared.Release.BootstrapPackageManifestReader.Load(
+                    stream,
+                    EnumeratePackageManifestPaths,
+                    OpenBootstrapPackageManifestStream);
 
                 _bootstrapPackageManifest = manifest;
 
@@ -1146,7 +1103,7 @@ namespace MonoShare
             }
         }
 
-        private static IEnumerable<string> EnumeratePackageManifestPaths(BootstrapPackageManifest manifest)
+        private static IEnumerable<string> EnumeratePackageManifestPaths(Shared.Release.BootstrapPackageManifestDocument manifest)
         {
             var manifestPaths = new List<string>();
             var seenPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -1156,7 +1113,7 @@ namespace MonoShare
 
             if (manifest?.Packs != null)
             {
-                foreach (BootstrapPackageManifestPack pack in manifest.Packs)
+                foreach (Shared.Release.BootstrapPackageManifestEntry pack in manifest.Packs)
                 {
                     if (string.IsNullOrWhiteSpace(pack?.ManifestPath))
                         continue;
@@ -1188,70 +1145,15 @@ namespace MonoShare
             }
         }
 
-        private static bool TryLoadBootstrapPackagePackManifest(string manifestPath, out BootstrapPackageManifestPack pack)
+        private static Shared.Release.BootstrapPackageManifestEntry[] FindOwningBootstrapPacks(string relativeOrAbsolutePath)
         {
-            using Stream stream = OpenBootstrapPackageManifestStream(manifestPath);
-            if (stream != null)
-            {
-                try
-                {
-                    pack = JsonSerializer.Deserialize<BootstrapPackageManifestPack>(
-                        stream,
-                        new JsonSerializerOptions
-                        {
-                            PropertyNameCaseInsensitive = true
-                        });
-
-                    if (pack != null && string.IsNullOrWhiteSpace(pack.ManifestPath))
-                        pack.ManifestPath = NormalizeTitleContainerPath(manifestPath);
-
-                    return pack != null;
-                }
-                catch (Exception)
-                {
-                }
-            }
-
-            pack = null;
-            return false;
-        }
-
-        private static BootstrapPackageManifestPack NormalizeBootstrapPackagePack(BootstrapPackageManifestPack pack)
-        {
-            pack.ManifestPath = GetPackageManifestHintPath(pack);
-            pack.InstallRootHint = GetPackageInstallRootHint(pack);
-            pack.Assets ??= new List<string>();
-            return pack;
-        }
-
-        private static BootstrapPackageManifestPack MergeBootstrapPackagePack(BootstrapPackageManifestPack existing, BootstrapPackageManifestPack incoming)
-        {
-            existing.Kind = string.IsNullOrWhiteSpace(incoming.Kind) ? existing.Kind : incoming.Kind;
-            existing.Description = string.IsNullOrWhiteSpace(incoming.Description) ? existing.Description : incoming.Description;
-            existing.ManifestPath = string.IsNullOrWhiteSpace(incoming.ManifestPath) ? existing.ManifestPath : incoming.ManifestPath;
-            existing.InstallRootHint = string.IsNullOrWhiteSpace(incoming.InstallRootHint) ? existing.InstallRootHint : incoming.InstallRootHint;
-
-            if (incoming.AssetCount > 0)
-                existing.AssetCount = incoming.AssetCount;
-
-            if (incoming.TotalBytes > 0)
-                existing.TotalBytes = incoming.TotalBytes;
-
-            if (incoming.Assets != null && incoming.Assets.Count > 0)
-                existing.Assets = incoming.Assets;
-
-            return NormalizeBootstrapPackagePack(existing);
-        }
-
-        private static BootstrapPackageManifestPack[] FindOwningBootstrapPacks(string relativeOrAbsolutePath)
-        {
-            BootstrapPackageManifest manifest = GetBootstrapPackageManifest();
+            BootstrapPackageManifestDocument manifest = GetBootstrapPackageManifest();
             if (manifest?.Packs == null || manifest.Packs.Count == 0)
-                return Array.Empty<BootstrapPackageManifestPack>();
+                return Array.Empty<Shared.Release.BootstrapPackageManifestEntry>();
 
             string absolutePath = ResolvePath(relativeOrAbsolutePath);
             if (!TryGetPackageHydrationPlan(absolutePath, out _, out string[] candidates))
-                return Array.Empty<BootstrapPackageManifestPack>();
+                return Array.Empty<Shared.Release.BootstrapPackageManifestEntry>();
 
             var normalizedCandidates = new HashSet<string>(
                 candidates.Select(candidate => NormalizeTitleContainerPath(candidate).TrimStart('/')),
@@ -1265,7 +1167,7 @@ namespace MonoShare
 
         private static bool TryHydrateFromInstalledPackages(string targetPath, string[] candidates, out string availablePath)
         {
-            BootstrapPackageManifestPack[] packs = FindOwningBootstrapPacks(targetPath);
+            BootstrapPackageManifestEntry[] packs = FindOwningBootstrapPacks(targetPath);
             for (int i = 0; i < packs.Length; i++)
             {
                 for (int j = 0; j < candidates.Length; j++)
@@ -1288,8 +1190,8 @@ namespace MonoShare
 
         private static bool EnsurePackageInstalled(string packageName, bool immediateOnly = false)
         {
-            BootstrapPackageManifest manifest = GetBootstrapPackageManifest();
-            BootstrapPackageManifestPack pack = manifest?.Packs?.FirstOrDefault(item =>
+            BootstrapPackageManifestDocument manifest = GetBootstrapPackageManifest();
+            BootstrapPackageManifestEntry pack = manifest?.Packs?.FirstOrDefault(item =>
                 string.Equals(item.Name, packageName, StringComparison.OrdinalIgnoreCase));
             if (pack == null || pack.Assets == null || pack.Assets.Count == 0)
                 return false;
@@ -1355,7 +1257,7 @@ namespace MonoShare
                 .ToArray();
         }
 
-        private static string GetPackageManifestHintPath(BootstrapPackageManifestPack pack)
+        private static string GetPackageManifestHintPath(BootstrapPackageManifestEntry pack)
         {
             return string.IsNullOrWhiteSpace(pack.ManifestPath) ? GetPackageManifestHintPath(pack.Name) : pack.ManifestPath;
         }
@@ -1365,20 +1267,20 @@ namespace MonoShare
             return Path.Combine("BootstrapAssets", "bootstrap-package-manifests", packageName + ".json").Replace('\\', '/');
         }
 
-        private static string GetPackageInstallRootHint(BootstrapPackageManifestPack pack)
+        private static string GetPackageInstallRootHint(BootstrapPackageManifestEntry pack)
         {
             return string.IsNullOrWhiteSpace(pack.InstallRootHint)
                 ? Path.Combine("Cache", "Mobile", "Packages", pack.Name ?? string.Empty).Replace('\\', '/') + "/"
                 : pack.InstallRootHint;
         }
 
-        private static string BuildInstalledPackageAssetPath(BootstrapPackageManifestPack pack, string assetRelativePath)
+        private static string BuildInstalledPackageAssetPath(BootstrapPackageManifestEntry pack, string assetRelativePath)
         {
             string relativeAsset = NormalizeTitleContainerPath(assetRelativePath).TrimStart('/');
             return Path.Combine(PackageCacheRoot, pack.Name ?? string.Empty, relativeAsset.Replace('/', Path.DirectorySeparatorChar));
         }
 
-        private static void UpsertMissingPackageQueue(string absolutePath, BootstrapPackageManifestPack[] packs)
+        private static void UpsertMissingPackageQueue(string absolutePath, BootstrapPackageManifestEntry[] packs)
         {
             BootstrapMissingPackageQueue queue = LoadMissingPackageQueue();
             BootstrapMissingPackageRequest request = queue.Requests.FirstOrDefault(item =>
@@ -1470,7 +1372,7 @@ namespace MonoShare
 
         public static void RefreshPackageStateSnapshot()
         {
-            BootstrapPackageManifest manifest = GetBootstrapPackageManifest();
+            BootstrapPackageManifestDocument manifest = GetBootstrapPackageManifest();
             if (manifest?.Packs == null || manifest.Packs.Count == 0)
                 return;
 
@@ -1484,7 +1386,7 @@ namespace MonoShare
 
                 for (int i = 0; i < manifest.Packs.Count; i++)
                 {
-                    BootstrapPackageManifestPack pack = manifest.Packs[i];
+                    BootstrapPackageManifestEntry pack = manifest.Packs[i];
                     string[] assets = (pack.Assets ?? new List<string>())
                         .Select(asset => NormalizeTitleContainerPath(asset).TrimStart('/'))
                         .Distinct(StringComparer.OrdinalIgnoreCase)
@@ -1882,23 +1784,6 @@ namespace MonoShare
                 {
                 }
             }
-        }
-
-        private sealed class BootstrapPackageManifest
-        {
-            public List<BootstrapPackageManifestPack> Packs { get; set; } = new List<BootstrapPackageManifestPack>();
-        }
-
-        private sealed class BootstrapPackageManifestPack
-        {
-            public string Name { get; set; }
-            public string Kind { get; set; }
-            public string Description { get; set; }
-            public int AssetCount { get; set; }
-            public long TotalBytes { get; set; }
-            public string ManifestPath { get; set; }
-            public string InstallRootHint { get; set; }
-            public List<string> Assets { get; set; } = new List<string>();
         }
 
         private sealed class BootstrapMissingPackageQueue
