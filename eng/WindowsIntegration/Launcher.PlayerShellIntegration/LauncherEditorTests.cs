@@ -130,6 +130,18 @@ public sealed class LauncherEditorTests
     }
 
     [Fact]
+    public void CanvasEditorRenderingUsesClientAreaCoordinatesWithoutWindowChromeOffset()
+    {
+        using var scope = new EditorTempScope();
+        LauncherSnapshot snapshot = LauncherTemplateCatalog.Create(LauncherTemplateKind.Classic);
+        using Bitmap canvas = LauncherRuntimeHost.RenderCanvasForEditor(snapshot, scope.Root);
+        IReadOnlyDictionary<LauncherControlId, Rectangle> layout = LauncherRuntimeHost.CaptureControlLayoutForEditor(snapshot, scope.Root);
+
+        Assert.Equal(new Size(snapshot.Theme.CanvasWidth, snapshot.Theme.CanvasHeight), canvas.Size);
+        Assert.All(layout.Values, bounds => Assert.True(new Rectangle(Point.Empty, canvas.Size).Contains(bounds)));
+    }
+
+    [Fact]
     public void CanvasLockPersistsInEditorProjectWithoutChangingPlayerSnapshotContract()
     {
         using var scope = new EditorTempScope();

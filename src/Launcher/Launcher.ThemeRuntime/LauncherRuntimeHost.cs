@@ -243,6 +243,30 @@ public static class LauncherRuntimeHost
         try { Application.DoEvents(); return form.CaptureThemeControlBounds(); }
         finally { form.Hide(); }
     }
+
+    public static Bitmap RenderCanvasForEditor(LauncherSnapshot snapshot, string assetRoot)
+    {
+        LauncherSnapshotValidator.Validate(snapshot);
+        Application.SetHighDpiMode(HighDpiMode.PerMonitorV2);
+        using var form = new LauncherForm(new LoadedLauncherSnapshot(snapshot, assetRoot, SnapshotSource.BuiltIn), assetRoot, (_, _, _, _, _) => { });
+        form.StartPosition = FormStartPosition.Manual;
+        form.Location = new Point(-32000, -32000);
+        form.Show();
+        try
+        {
+            Application.DoEvents();
+            using var full = new Bitmap(form.Width, form.Height, PixelFormat.Format32bppArgb);
+            form.DrawToBitmap(full, new Rectangle(Point.Empty, full.Size));
+            Point clientOrigin = form.PointToScreen(Point.Empty);
+            int offsetX = Math.Max(0, clientOrigin.X - form.Left);
+            int offsetY = Math.Max(0, clientOrigin.Y - form.Top);
+            var canvas = new Bitmap(form.ClientSize.Width, form.ClientSize.Height, PixelFormat.Format32bppArgb);
+            using Graphics graphics = Graphics.FromImage(canvas);
+            graphics.DrawImage(full, new Rectangle(Point.Empty, canvas.Size), new Rectangle(offsetX, offsetY, canvas.Width, canvas.Height), GraphicsUnit.Pixel);
+            return canvas;
+        }
+        finally { form.Hide(); }
+    }
 }
 
 public sealed record LauncherDpiLayoutResult(bool AllControlsInsideCanvas, bool ClickTargetsMatch, int VisibleControlCount, int ActualDpi = 96, string Details = "", bool TextFits = true);

@@ -10,7 +10,7 @@ namespace LyoCrystal.LauncherEditor;
 internal sealed class MainForm : Form
 {
     private readonly EditorProjectStore _store;
-    private readonly ListBox _projects = new() { Dock = DockStyle.Fill };
+    private readonly ComboBox _projects = new() { DropDownStyle = ComboBoxStyle.DropDownList, Width = 190 };
     private readonly TabControl _tabs = new() { Dock = DockStyle.Fill };
     private readonly PictureBox _preview = new() { Dock = DockStyle.Fill, SizeMode = PictureBoxSizeMode.Zoom, BackColor = Color.FromArgb(28, 28, 32) };
     private readonly ToolStripStatusLabel _status = new() { Text = "就绪" };
@@ -45,6 +45,9 @@ internal sealed class MainForm : Form
     private void BuildUi()
     {
         ToolStrip tools = _tools;
+        tools.Items.Add(new ToolStripLabel("当前项目"));
+        tools.Items.Add(new ToolStripControlHost(_projects) { AutoSize = false, Width = 200 });
+        tools.Items.Add(new ToolStripSeparator());
         AddTool(tools, "新建启动器", NewProject);
         AddTool(tools, "选择客户端资源", SelectQuickResource);
         AddTool(tools, "生成启动器成品", GenerateAllQuick);
@@ -69,10 +72,8 @@ internal sealed class MainForm : Form
         AddAdvanced(advanced, "导入密钥恢复包", ImportRecoveryPackage);
         AddAdvanced(advanced, "轮换签名密钥", RotateReleaseKey);
         tools.Items.Add(advanced);
-        var split = new SplitContainer { Dock = DockStyle.Fill, SplitterDistance = 220, FixedPanel = FixedPanel.Panel1 };
-        split.Panel1.Controls.Add(_projects); split.Panel2.Controls.Add(_tabs);
         _projects.SelectedIndexChanged += (_, _) => LoadSelectedProject();
-        Controls.Add(split); Controls.Add(tools); tools.Dock = DockStyle.Top;
+        Controls.Add(_tabs); Controls.Add(tools); tools.Dock = DockStyle.Top;
         Controls.Add(new StatusStrip { Items = { _status } });
     }
 
@@ -245,7 +246,7 @@ internal sealed class MainForm : Form
         }
         _canvasPanel = new LauncherCanvasEditorPanel(
             _canvasDocument,
-            () => LauncherRuntimeHost.RenderTemplateForEvidence(_project.Snapshot, root, 1f),
+            () => LauncherRuntimeHost.RenderCanvasForEditor(_project.Snapshot, root),
             ImportQuickImage);
         return new TabPage("可视化画布") { Controls = { _canvasPanel } };
     }

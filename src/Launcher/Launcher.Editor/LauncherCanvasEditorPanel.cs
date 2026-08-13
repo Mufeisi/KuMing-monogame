@@ -18,7 +18,7 @@ internal sealed class LauncherCanvasEditorPanel : UserControl
         _document = document;
         _render = render;
         _importImage = importImage;
-        _surface = new CanvasSurface(document) { Dock = DockStyle.Fill };
+        _surface = new CanvasSurface(document);
         Dock = DockStyle.Fill;
         BuildUi();
         _document.Changed += OnDocumentChanged;
@@ -32,28 +32,15 @@ internal sealed class LauncherCanvasEditorPanel : UserControl
 
     private void BuildUi()
     {
-        var tools = new FlowLayoutPanel { Dock = DockStyle.Top, AutoSize = true, WrapContents = true, Padding = new Padding(4) };
+        var tools = new ToolStrip { Dock = DockStyle.Top, GripStyle = ToolStripGripStyle.Hidden, CanOverflow = true };
         Add(tools, "撤销", () => _document.Undo());
         Add(tools, "重做", () => _document.Redo());
-        Add(tools, "左对齐", () => _document.AlignSelection(LauncherCanvasAlignment.Left));
-        Add(tools, "水平居中", () => _document.AlignSelection(LauncherCanvasAlignment.HorizontalCenter));
-        Add(tools, "右对齐", () => _document.AlignSelection(LauncherCanvasAlignment.Right));
-        Add(tools, "顶对齐", () => _document.AlignSelection(LauncherCanvasAlignment.Top));
-        Add(tools, "垂直居中", () => _document.AlignSelection(LauncherCanvasAlignment.VerticalCenter));
-        Add(tools, "底对齐", () => _document.AlignSelection(LauncherCanvasAlignment.Bottom));
-        Add(tools, "水平等距", () => _document.DistributeSelection(LauncherCanvasDistribution.Horizontal));
-        Add(tools, "垂直等距", () => _document.DistributeSelection(LauncherCanvasDistribution.Vertical));
-        Add(tools, "上移一层", _document.BringSelectionForward);
-        Add(tools, "下移一层", _document.SendSelectionBackward);
-        Add(tools, "锁定", () => _document.SetLocked(_document.Selection, true));
-        Add(tools, "解锁", () => _document.SetLocked(_document.Selection, false));
-        Add(tools, "显示", () => _document.SetVisible(_document.Selection, true));
-        Add(tools, "隐藏", () => _document.SetVisible(_document.Selection, false));
-        Add(tools, "背景素材…", () => _importImage(ThemeImageUsage.Background));
-        Add(tools, "按钮基础图…", () => _importImage(ThemeImageUsage.ButtonBase));
-        Add(tools, "悬停图…", () => _importImage(ThemeImageUsage.ButtonHover));
-        Add(tools, "按下图…", () => _importImage(ThemeImageUsage.ButtonPressed));
-        Add(tools, "禁用图…", () => _importImage(ThemeImageUsage.ButtonDisabled));
+        tools.Items.Add(new ToolStripSeparator());
+        AddMenu(tools, "对齐", ("左对齐", () => _document.AlignSelection(LauncherCanvasAlignment.Left)), ("水平居中", () => _document.AlignSelection(LauncherCanvasAlignment.HorizontalCenter)), ("右对齐", () => _document.AlignSelection(LauncherCanvasAlignment.Right)), ("顶对齐", () => _document.AlignSelection(LauncherCanvasAlignment.Top)), ("垂直居中", () => _document.AlignSelection(LauncherCanvasAlignment.VerticalCenter)), ("底对齐", () => _document.AlignSelection(LauncherCanvasAlignment.Bottom)));
+        AddMenu(tools, "分布", ("水平等距", () => _document.DistributeSelection(LauncherCanvasDistribution.Horizontal)), ("垂直等距", () => _document.DistributeSelection(LauncherCanvasDistribution.Vertical)));
+        AddMenu(tools, "层级", ("上移一层", _document.BringSelectionForward), ("下移一层", _document.SendSelectionBackward));
+        AddMenu(tools, "状态", ("锁定", () => _document.SetLocked(_document.Selection, true)), ("解锁", () => _document.SetLocked(_document.Selection, false)), ("显示", () => _document.SetVisible(_document.Selection, true)), ("隐藏", () => _document.SetVisible(_document.Selection, false)));
+        AddMenu(tools, "素材", ("背景素材…", () => _importImage(ThemeImageUsage.Background)), ("按钮基础图…", () => _importImage(ThemeImageUsage.ButtonBase)), ("悬停图…", () => _importImage(ThemeImageUsage.ButtonHover)), ("按下图…", () => _importImage(ThemeImageUsage.ButtonPressed)), ("禁用图…", () => _importImage(ThemeImageUsage.ButtonDisabled)));
 
         var left = new Panel { Dock = DockStyle.Fill, Padding = new Padding(4) };
         left.Controls.Add(_tree);
@@ -64,17 +51,39 @@ internal sealed class LauncherCanvasEditorPanel : UserControl
         right.Controls.Add(_properties);
         right.Controls.Add(new Label { Text = "所选控件属性", Dock = DockStyle.Top, Height = 28, TextAlign = ContentAlignment.MiddleLeft });
         var main = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 3 };
-        main.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 210));
+        main.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 190));
         main.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-        main.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 280));
+        main.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 250));
         main.Controls.Add(left, 0, 0); main.Controls.Add(canvasHost, 1, 0); main.Controls.Add(right, 2, 0);
+        var propertiesToggle = new ToolStripButton("隐藏属性");
+        propertiesToggle.Click += (_, _) =>
+        {
+            bool show = main.ColumnStyles[2].Width == 0;
+            main.ColumnStyles[2].Width = show ? 250 : 0;
+            right.Visible = show;
+            propertiesToggle.Text = show ? "隐藏属性" : "显示属性";
+        };
+        tools.Items.Add(new ToolStripSeparator());
+        tools.Items.Add(propertiesToggle);
         Controls.Add(main); Controls.Add(tools);
     }
 
-    private static void Add(Control parent, string text, Action action)
+    private static void Add(ToolStrip parent, string text, Action action)
     {
-        var button = new Button { Text = text, AutoSize = true, Margin = new Padding(2) };
-        button.Click += (_, _) => action(); parent.Controls.Add(button);
+        var button = new ToolStripButton(text);
+        button.Click += (_, _) => action(); parent.Items.Add(button);
+    }
+
+    private static void AddMenu(ToolStrip parent, string text, params (string Text, Action Action)[] commands)
+    {
+        var menu = new ToolStripDropDownButton(text);
+        foreach ((string commandText, Action action) in commands)
+        {
+            var item = new ToolStripMenuItem(commandText);
+            item.Click += (_, _) => action();
+            menu.DropDownItems.Add(item);
+        }
+        parent.Items.Add(menu);
     }
 
     private void SelectFromTree()
@@ -96,7 +105,7 @@ internal sealed class LauncherCanvasEditorPanel : UserControl
                 if (selected.Contains(control.Id)) _tree.SetSelected(index, true);
             }
             _tree.EndUpdate();
-            _properties.SelectedObject = selected.Length == 1 ? new CanvasControlPropertyView(_document, selected[0]) : null;
+            _properties.SelectedObjects = selected.Select(id => (object)new CanvasControlPropertyView(_document, id)).ToArray();
             Image? previous = _surface.BackgroundImage;
             try { _surface.BackgroundImage = _render(); }
             catch { _surface.BackgroundImage = previous; previous = null; }
@@ -131,7 +140,7 @@ internal sealed class LauncherCanvasEditorPanel : UserControl
         {
             _document = document;
             DoubleBuffered = true; TabStop = true; BackColor = Color.FromArgb(18, 20, 28);
-            BackgroundImageLayout = ImageLayout.Stretch;
+            BackgroundImageLayout = ImageLayout.None;
             Size = ThemeSize;
         }
         internal Size ThemeSize => BackgroundImage?.Size ?? new Size(Math.Max(640, _document.Controls.Max(x => x.X + x.Width)), Math.Max(420, _document.Controls.Max(x => x.Y + x.Height)));
