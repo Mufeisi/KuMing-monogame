@@ -32,6 +32,7 @@ internal sealed class MainForm : Form
     private bool _quickGenerationRunning;
     private LauncherCanvasDocument? _canvasDocument;
     private LauncherCanvasEditorPanel? _canvasPanel;
+    private DistributionOverviewPanel? _distributionOverview;
     private bool _restoringProjectSelection;
 
     public MainForm(EditorProjectStore store)
@@ -174,7 +175,8 @@ internal sealed class MainForm : Form
         _tabs.TabPages.Add(new TabPage("概览") { Controls = { _quickPanel } });
         _tabs.TabPages.Add(CreateControlLayoutTab());
         _tabs.TabPages.Add(CreateModePage("内容", CreateServerTab(), CreateAnnouncementTab(), CreateActionLinksTab(), new TabPage("玩家设置") { Controls = { new SettingsEditorPanel(_project.Snapshot.Defaults) } }));
-        _tabs.TabPages.Add(CreateModePage("交付", CreatePropertyPage("项目默认微端", new DefaultMicroPropertyView(_project.Snapshot.DefaultMicro)), CreatePropertyPage("微端部署", new GatewayPropertyView(_project.Gateway)), CreatePropertyPage("签名与发布", new ReleasePropertyView(_project.Release))));
+        _distributionOverview = new DistributionOverviewPanel(_project, NavigateDistributionFix);
+        _tabs.TabPages.Add(CreateModePage("交付", new TabPage("发行体概览") { Controls = { _distributionOverview } }, CreatePropertyPage("项目默认微端", new DefaultMicroPropertyView(_project.Snapshot.DefaultMicro)), CreatePropertyPage("微端部署", new GatewayPropertyView(_project.Gateway)), CreatePropertyPage("签名与发布", new ReleasePropertyView(_project.Release))));
         _tabs.TabPages.Add(CreateModePage("诊断", CreatePreviewTab()));
         DesktopAuthoringTheme.Apply(_tabs);
     }
@@ -191,6 +193,23 @@ internal sealed class MainForm : Form
         var sections = new TabControl { Dock = DockStyle.Fill };
         sections.TabPages.AddRange(pages);
         return new TabPage(name) { Controls = { sections } };
+    }
+
+    private void NavigateDistributionFix(DistributionFixTarget target)
+    {
+        if (target == DistributionFixTarget.ResourceDirectory) { SelectQuickResource(); return; }
+        string pageName = target switch
+        {
+            DistributionFixTarget.DefaultEndpoint => "项目默认微端",
+            DistributionFixTarget.ServerOverrides => "区服与分组",
+            DistributionFixTarget.Signing => "签名与发布",
+            _ => string.Empty,
+        };
+        if (target == DistributionFixTarget.Preflight) { ValidateBeforeGeneration(); return; }
+        TabPage mode = _tabs.TabPages.Cast<TabPage>().Single(page => page.Text == (target == DistributionFixTarget.ServerOverrides ? "内容" : "交付"));
+        _tabs.SelectedTab = mode;
+        TabControl sections = mode.Controls.OfType<TabControl>().Single();
+        sections.SelectedTab = sections.TabPages.Cast<TabPage>().Single(page => page.Text == pageName);
     }
 
     private void ShowPropertyDialog(string title, object? value)
@@ -682,6 +701,17 @@ internal sealed class MainForm : Form
     }
 
     internal IReadOnlyList<string> CaptureWorkspaceModesForEvidence() => _tabs.TabPages.Cast<TabPage>().Select(page => page.Text).ToArray();
+
+    internal bool PrepareDistributionEvidence()
+    {
+        TabPage delivery = _tabs.TabPages.Cast<TabPage>().Single(page => page.Text == "交付");
+        _tabs.SelectedTab = delivery;
+        delivery.Controls.OfType<TabControl>().Single().SelectedIndex = 0;
+        Application.DoEvents();
+        return _distributionOverview?.Snapshot is not null;
+    }
+
+    internal DistributionOverviewSnapshot? CaptureDistributionOverviewForEvidence() => _distributionOverview?.Snapshot;
 
     internal (int ObjectTreeWidth, int PropertiesWidth, Size CanvasSize) CaptureDesignWorkspaceLayoutForEvidence()
     {

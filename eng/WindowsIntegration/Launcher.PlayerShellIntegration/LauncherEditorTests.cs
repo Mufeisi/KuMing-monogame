@@ -203,6 +203,63 @@ public sealed class LauncherEditorTests
     }
 
     [Fact]
+    public void DistributionOverviewShowsCorePackageIdentityAndActionableIssues()
+    {
+        using var scope = new EditorTempScope();
+        string client = scope.Dir("distribution-client");
+        Directory.CreateDirectory(Path.Combine(client, "Data"));
+        File.WriteAllBytes(Path.Combine(client, "Data", "Title.Lib"), new byte[120]);
+        File.WriteAllBytes(Path.Combine(client, "Data", "ChrSel.Lib"), new byte[80]);
+        Directory.CreateDirectory(Path.Combine(client, "duplicate"));
+        File.WriteAllBytes(Path.Combine(client, "duplicate", "Title.Lib"), new byte[20]);
+        File.WriteAllBytes(Path.Combine(client, "duplicate", "Prguse.Lib"), new byte[12]);
+        File.WriteAllBytes(Path.Combine(client, "Map.dat"), new byte[36]);
+        var store = new EditorProjectStore(scope.Dir("distribution-workspace"));
+        EditorProject project = store.Create("distribution", "发行体项目", LauncherTemplateKind.Classic);
+        project.ImportedClientDirectory = client;
+        project.Gateway.ResourceDirectory = client;
+        project.Snapshot.Servers[0].MicroOverride = new MicroEndpoint
+        {
+            Enabled = true, Address = "127.0.0.2", Port = 8082,
+            ResourceVersion = "错误版本", SigningIdentity = "错误签名"
+        };
+
+        DistributionOverviewSnapshot result = DistributionOverview.Inspect(project);
+
+        Assert.Equal("微端按需下载", result.DeliveryMode);
+        Assert.Equal(5, result.FileCount);
+        Assert.Equal(268, result.TotalBytes);
+        Assert.Contains("Title.Lib", result.DuplicateCoreFiles);
+        Assert.Contains("Prguse.Lib", result.DuplicateCoreFiles);
+        Assert.Contains("Prguse.Lib", result.MissingCoreFiles);
+        Assert.Equal(project.Snapshot.DefaultMicro.ResourceVersion, result.ResourceVersion);
+        Assert.Equal(project.Snapshot.DefaultMicro.SigningIdentity, result.SigningIdentity);
+        Assert.Contains(result.Issues, issue => issue.Target == DistributionFixTarget.ResourceDirectory && issue.Message.Contains("缺少", StringComparison.Ordinal));
+        Assert.Contains(result.Issues, issue => issue.Target == DistributionFixTarget.ResourceDirectory && issue.Message.Contains("重复", StringComparison.Ordinal));
+        Assert.Contains(result.Issues, issue => issue.Target == DistributionFixTarget.ServerOverrides);
+    }
+
+    [Fact]
+    public void DistributionOverviewDoesNotGenerateOrCopyGatewayArtifacts()
+    {
+        using var scope = new EditorTempScope();
+        string client = scope.Dir("read-only-client");
+        string data = scope.Dir(Path.Combine("read-only-client", "Data"));
+        foreach (string file in new[] { "Title.Lib", "ChrSel.Lib", "Prguse.Lib" }) File.WriteAllText(Path.Combine(data, file), file);
+        var store = new EditorProjectStore(scope.Dir("read-only-workspace"));
+        EditorProject project = store.Create("read-only", "只读概览", LauncherTemplateKind.Classic);
+        project.Gateway.ResourceDirectory = client;
+        string[] before = Directory.EnumerateFiles(scope.Root, "*", SearchOption.AllDirectories).OrderBy(path => path, StringComparer.Ordinal).ToArray();
+
+        DistributionOverviewSnapshot result = DistributionOverview.Inspect(project);
+
+        string[] after = Directory.EnumerateFiles(scope.Root, "*", SearchOption.AllDirectories).OrderBy(path => path, StringComparer.Ordinal).ToArray();
+        Assert.Empty(result.Issues);
+        Assert.Equal(before, after);
+        Assert.DoesNotContain(after, path => Path.GetFileName(path).Contains("MicroGateway", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
     public void CanvasLockPersistsInEditorProjectWithoutChangingPlayerSnapshotContract()
     {
         using var scope = new EditorTempScope();

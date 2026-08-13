@@ -34,6 +34,13 @@ internal static class Program
             using var advancedScreenshot = new Bitmap(form.Width, form.Height);
             form.DrawToBitmap(advancedScreenshot, new Rectangle(Point.Empty, advancedScreenshot.Size));
             advancedScreenshot.Save(Path.Combine(output, "中文高级设置.png"), ImageFormat.Png);
+            for (int attempt = 0; attempt < 100 && !form.PrepareDistributionEvidence(); attempt++)
+            {
+                Thread.Sleep(20); Application.DoEvents();
+            }
+            using var distributionScreenshot = new Bitmap(form.Width, form.Height);
+            form.DrawToBitmap(distributionScreenshot, new Rectangle(Point.Empty, distributionScreenshot.Size));
+            distributionScreenshot.Save(Path.Combine(output, "发行体概览.png"), ImageFormat.Png);
             form.PrepareCanvasEvidence();
             using var canvasScreenshot = new Bitmap(form.Width, form.Height);
             form.DrawToBitmap(canvasScreenshot, new Rectangle(Point.Empty, canvasScreenshot.Size));
@@ -43,7 +50,7 @@ internal static class Program
             form.DrawToBitmap(minimumScreenshot, new Rectangle(Point.Empty, minimumScreenshot.Size));
             minimumScreenshot.Save(Path.Combine(output, "最小窗口画布设计器.png"), ImageFormat.Png);
             form.Hide();
-            return 0;
+            return form.CaptureDistributionOverviewForEvidence() is not null ? 0 : 2;
         }
         catch (Exception ex)
         {
