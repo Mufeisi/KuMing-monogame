@@ -24,12 +24,12 @@
 
 ## 完整版
 
-详见 `Docs/执行纪律与防走偏铁律.md`（含历史违规案例、停止条件、禁止重造清单、任务简报模板）。PRD 阶段门禁见 `Docs/PRD-PC稳定与Android发布.md`（GATE-P0..P5）；架构决策见 `Docs/继续开发架构设计报告.md`（ADR）。
+详见 `Docs/governance/执行纪律与防走偏铁律.md`（含历史违规案例、停止条件、禁止重造清单、任务简报模板）。PRD 阶段门禁见 `Docs/requirements/PRD-PC稳定与Android发布.md`（GATE-P0..P5）；架构决策见 `Docs/architecture/继续开发架构设计报告.md`（ADR）。
 
 ## 标准软件工程接入
 
 - 功能开发、缺陷修复、重构、性能、安全、数据库、工程治理、文档整理、审查和发布任务，必须使用个人技能 `standard-software-engineering`；技能入口为 `C:\Users\luo\.codex\skills\standard-software-engineering\SKILL.md`。
-- 项目落地规则、文档职责、任务生命周期和质量门禁见 `Docs/工程开发规范.md`；文档权威来源与阅读入口见 `Docs/index.md`。
+- 项目落地规则、文档职责、任务生命周期和质量门禁见 `Docs/governance/工程开发规范.md`；文档权威来源与阅读入口见 `Docs/index.md`。
 - 技能是通用执行基线，不取代本文件、PRD 或已接受 ADR；冲突时仍按下方“冲突仲裁”处理。
 - 能自动验证的 MUST 规则应逐步进入 CI、测试、分支保护或发布流水线；在自动化前，执行者必须提供对应验证证据，不得仅以文字声明完成。
 

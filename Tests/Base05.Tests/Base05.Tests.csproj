@@ -18,10 +18,10 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="..\..\Docs\protocol-wire-manifest.json" Link="protocol-wire-manifest.json">
+    <None Include="..\..\Docs\generated\protocol\protocol-wire-manifest.json" Link="protocol-wire-manifest.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Include="..\..\Docs\protocol-wire-manifest.generated.json" Link="protocol-wire-manifest.generated.json">
+    <None Include="..\..\Docs\generated\protocol\protocol-wire-manifest.generated.json" Link="protocol-wire-manifest.generated.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Include="..\..\resources.manifest.json" Link="resources.manifest.json">

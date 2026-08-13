@@ -8,7 +8,7 @@
 | Android `Client_MonoGame.Android` | Display `2.0.0`、Application `20000`、Assembly `1.0.0.0` | `Client_MonoGame.Shared` 直接链接 `Shared` 协议 C# 文件 | `wire-v1` | `2.0.0` | `content-988b1bb85432df58363d3b307b7971157680b207fcd3213f12eb520c032176c9` | 与 PC 使用同一 `ClientVersion` wire 包；正式服仍执行可执行文件哈希白名单 |
 | Server `Server.Library` | Assembly `1.0.0.0` / `Globals.ProductVersion=Release` | `src/Shared/Shared/Shared.csproj` | `wire-v1` | 不适用 | 不适用 | 只接受本表所列 `wire-v1` 包布局及已登记客户端构建哈希 |
 
-`wire-v1` 的当前范围为客户端到服务端 ID `0..144`、服务端到客户端 ID `0..274`。权威语义清单是 `Docs/protocol-wire-manifest.json`；自动生成的结构、字段、枚举、序列化 IL 与源文件摘要在 `Docs/protocol-wire-manifest.generated.json`。
+`wire-v1` 的当前范围为客户端到服务端 ID `0..144`、服务端到客户端 ID `0..274`。权威语义清单是 `Docs/generated/protocol/protocol-wire-manifest.json`；自动生成的结构、字段、枚举、序列化 IL 与源文件摘要在 `Docs/generated/protocol/protocol-wire-manifest.generated.json`。
 
 ## 2. 最低兼容规则
 
@@ -31,7 +31,7 @@
 ## 4. 维护方式
 
 - 修改 `Shared` 协议事实源后，运行：
-  `dotnet run --project Tools/ProtocolManifestGenerator/ProtocolManifestGenerator.csproj -c Release -- --write Docs/protocol-wire-manifest.generated.json`
+  `dotnet run --project Tools/ProtocolManifestGenerator/ProtocolManifestGenerator.csproj -c Release -- --write Docs/generated/protocol/protocol-wire-manifest.generated.json`
 - 提交前及 CI 运行 `--verify`。清单不一致返回非零退出码。
 - `src/Clients/Client_MonoGame.Shared/Share` 中的历史协议副本不再进入 Android 正式构建，只由 `Tests/ShareProtocolCompat` 保留为 PROTO-01 旧 wire 差异夹具；本任务不修改该副本。
 - 本矩阵记录当前已实现兼容边界；密钥注入、发布流水线和设备验收分别属于 RELEASE-01～03。

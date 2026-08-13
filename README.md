@@ -20,14 +20,14 @@ dotnet test Tests/Base05.Tests/Base05.Tests.csproj --configuration Release
 | 服务端 | [`LyoCrystal.Server.slnf`](LyoCrystal.Server.slnf) |
 | PC、管理工具与发布基线 | [`LyoCrystal.Windows.slnf`](LyoCrystal.Windows.slnf) |
 | 启动器与微端 | [`LyoCrystal.Launcher.slnf`](LyoCrystal.Launcher.slnf) |
-| 全部工程与架构视图 | [`Legend of Mir.sln`](Legend%20of%20Mir.sln) |
-| 环境、构建、测试、调试与产物 | [`Docs/开发者指南.md`](Docs/开发者指南.md) |
+| 全部工程与架构视图 | [`Legend of Mir.sln`](Legend of Mir.sln) |
+| 环境、构建、测试、调试与产物 | [`Docs/guides/开发者指南.md`](Docs/guides/开发者指南.md) |
 | 工程规范与贡献流程 | [`CONTRIBUTING.md`](CONTRIBUTING.md) |
 | 文档与当前治理任务 | [`Docs/index.md`](Docs/index.md) |
 
 完整客户端运行依赖受授权的外部资源，不等同于上述源码快速内环。不要把本机资源、密钥、运行数据库或个人 `.slnLaunch.user` 提交到仓库。
 
-首轮项目整理已经完成并进入维护态：工程入口、模块导航、文档事实源、CI 和远端分支保护均已建立。后续不再以“整理项目”为由批量移动目录或拆分类；新功能、修复和优化应先明确活动任务，并在实际触达模块时按规范渐进改善。当前状态入口见 [`Docs/工程治理实施路线.md`](Docs/工程治理实施路线.md)。
+首轮项目整理已经完成并进入维护态：工程入口、模块导航、文档事实源、CI 和远端分支保护均已建立。后续新功能、修复和优化应先明确活动任务，并在实际触达模块时按规范渐进改善。当前状态入口见 [`Docs/governance/工程治理实施路线.md`](Docs/governance/工程治理实施路线.md)。
 
 ENG-12 已按 [`ADR-0037`](Docs/adr/0037-物理目录采用分批迁移.md) 完成。Git 跟踪的顶层职责如下：
 
@@ -41,7 +41,7 @@ ENG-12 已按 [`ADR-0037`](Docs/adr/0037-物理目录采用分批迁移.md) 完�
 | `Build/` | 受控构建输入及本地暂存输出；不是正式发布来源 |
 | `.github/` | CI、PR 模板与所有权规则 |
 
-根目录其余文件仅保留解决方案、过滤器和仓库级配置。本机可见但被 Git 忽略的 `artifacts/`、`Configs/`、`Sound/`、`Launcher.PlayerApp/`、`bin/obj` 属于运行数据或生成物，不由目录治理任务删除或提交。
+根目录其余文件仅保留解决方案、过滤器和仓库级配置。`bin/obj` 与 `artifacts/` 中间产物均为可清理生成物；本地 `artifacts/` 只保留一份已验收的最新交付版。外部授权资源、运行数据和秘密不适用此规则，具体边界见工程开发规范。
 
 ## BASE-02 可复现构建基线
 
@@ -79,7 +79,7 @@ pwsh -NoProfile -File Tools/ResourceBaseline.ps1 -Action Validate -Scope All
 pwsh -NoProfile -File Tools/ResourceBaseline.ps1 -Action Validate -Scope All
 ```
 
-BASE-06 的移动端代码迁移与本机构建已完成，模拟器 Debug/Release/AOT+Trim/Trim-only 四态已通过；移动端当前为稳定 `net10.0-*`。BASE-08 = GATE-P0 已完成，证据见提交 [`4436426`](https://github.com/Mufeisi/KuMing-monogame/commit/443642644bc709a6059caaa94d84dc7a2eee15fd) 及 [GitHub Actions run 31081000003](https://github.com/Mufeisi/KuMing-monogame/actions/runs/31081000003)。P0～P5 已完成并转入维护；工程治理状态只在 [`Docs/工程治理实施路线.md`](Docs/工程治理实施路线.md) 维护，产品任务以开工时明确指定的活动 PRD、Issue 或实施规格为准，完整生命周期规则见 [`Docs/index.md`](Docs/index.md)。在没有外部资源时可以构建不依赖资源的项目，例如：
+BASE-06 的移动端代码迁移与本机构建已完成，模拟器 Debug/Release/AOT+Trim/Trim-only 四态已通过；移动端当前为稳定 `net10.0-*`。BASE-08 = GATE-P0 已完成，证据见提交 [`4436426`](https://github.com/Mufeisi/KuMing-monogame/commit/443642644bc709a6059caaa94d84dc7a2eee15fd) 及 [GitHub Actions run 31081000003](https://github.com/Mufeisi/KuMing-monogame/actions/runs/31081000003)。P0～P5 已完成并转入维护；工程治理状态只在 [`Docs/governance/工程治理实施路线.md`](Docs/governance/工程治理实施路线.md) 维护，产品任务以开工时明确指定的活动 PRD、Issue 或实施规格为准，完整生命周期规则见 [`Docs/index.md`](Docs/index.md)。在没有外部资源时可以构建不依赖资源的项目，例如：
 
 BASE-09 的 iOS TFM 已隔离：`Client_MonoGame.Shared` 默认只求值 `net10.0;net10.0-android`，iOS 工程通过 `EnableIosTarget=true` 显式求值 `net10.0;net10.0-ios`；Windows/Android restore/build 不再解析 iOS TFM。iOS 仍只做非门禁 restore，不承诺 iOS 编译或真机可玩。
 
@@ -117,9 +117,9 @@ dotnet build Tools/MobileBootstrapAudit/MobileBootstrapAudit.csproj
 相关资源文件在QQ群共享文件中，群号：1063081017</br>
 </br>
 </br>
-<img src='https://github.com/AndrewChien/LyoCrystal/blob/main/Docs/Pics/%E7%95%8C%E9%9D%A2.png'/></br>
-<img src='https://github.com/AndrewChien/LyoCrystal/blob/main/Docs/Pics/%E8%83%8C%E5%8C%85.png'/></br>
-<img src='https://github.com/AndrewChien/LyoCrystal/blob/main/Docs/Pics/%E7%8A%B6%E6%80%81.png'/></br>
+<img src='https://github.com/AndrewChien/LyoCrystal/blob/main/Docs/assets/images/%E7%95%8C%E9%9D%A2.png'/></br>
+<img src='https://github.com/AndrewChien/LyoCrystal/blob/main/Docs/assets/images/%E8%83%8C%E5%8C%85.png'/></br>
+<img src='https://github.com/AndrewChien/LyoCrystal/blob/main/Docs/assets/images/%E7%8A%B6%E6%80%81.png'/></br>
 
 ---
 

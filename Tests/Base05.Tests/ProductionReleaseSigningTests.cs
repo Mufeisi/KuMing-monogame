@@ -44,7 +44,8 @@ public sealed class ProductionReleaseSigningTests
     public void 正式签名索引覆盖全部随包资源并兼容PC与Android()
     {
         string root = FindRepositoryRoot(AppContext.BaseDirectory);
-        string signedJson = File.ReadAllText(Path.Combine(root, "Docs", "ReleaseKeys", "bootstrap-package-index.signed.json"));
+        string signedJson = File.ReadAllText(Path.Combine(
+            root, "Docs", "runbooks", "release", "keys", "bootstrap-package-index.signed.json"));
         BootstrapManifestVerificationResult pc = BootstrapManifestSignaturePolicy.Verify(
             signedJson, BootstrapManifestTrustConfiguration.TrustedKeys, new Version(1, 0, 0));
         BootstrapManifestVerificationResult android = BootstrapManifestSignaturePolicy.Verify(
@@ -205,7 +206,7 @@ public sealed class ProductionReleaseSigningTests
     private static void AssertPublicRecord(string root, BootstrapManifestTrustedKey trusted)
     {
         using JsonDocument record = JsonDocument.Parse(File.ReadAllText(Path.Combine(
-            root, "Docs", "ReleaseKeys", trusted.KeyId + ".public.json")));
+            root, "Docs", "runbooks", "release", "keys", trusted.KeyId + ".public.json")));
         Assert.Equal(trusted.KeyId, record.RootElement.GetProperty("KeyId").GetString());
         Assert.Equal(BootstrapManifestSignaturePolicy.Algorithm, record.RootElement.GetProperty("Algorithm").GetString());
         Assert.Equal(trusted.SubjectPublicKeyInfo, record.RootElement.GetProperty("SubjectPublicKeyInfo").GetString());

@@ -1,5 +1,5 @@
 @echo off
-cd /d "%~dp0..\.."
+cd /d "%~dp0..\..\..\.."
 dotnet restore .\src\Clients\Client_MonoGame.iOS\Client_MonoGame.iOS.csproj -r ios-arm64 -p:EnableIosTarget=true
 if errorlevel 1 (
   echo 还原失败，停止构建。
