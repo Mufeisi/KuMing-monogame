@@ -10,7 +10,7 @@
 | 状态范围 | 唯一事实源 | 当前生命周期 |
 |---|---|---|
 | 工程治理 | [`governance/工程治理实施路线.md`](governance/工程治理实施路线.md) | ENG-13 已完成，工程治理进入维护态 |
-| 当前产品任务 | [`requirements/LEG-01-真实启动与进图验证.md`](requirements/LEG-01-真实启动与进图验证.md) | LEG-01 已接受并激活；按 `GATE-LAUNCH` 关闭真实启动与进图阻断 |
+| 当前产品任务 | [`requirements/LEG-02-项目语义预检.md`](requirements/LEG-02-项目语义预检.md) | LEG-02 已完成并转入维护；下一阶段须按路线重新激活 |
 | PC 稳定与 Android 发布 P0～P5 | [`requirements/PRD-PC稳定与Android发布.md`](requirements/PRD-PC稳定与Android发布.md) | 已完成并转入维护，只保留历史验收事实 |
 | 启动器编辑器与独立微端 L0～L5 | [`design/launcher/启动器编辑器与独立微端实施规格.md`](design/launcher/启动器编辑器与独立微端实施规格.md)及对应 Evidence | 已完成；后续新增能力必须重新立项 |
 | 长期架构决定 | [`adr/`](adr/) | 已接受 ADR 为决定事实源；实施状态以代码、测试和证据为准 |

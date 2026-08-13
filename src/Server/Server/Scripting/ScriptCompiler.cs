@@ -436,6 +436,10 @@ namespace Server.Scripting
                 {
                     var path = paths[i];
                     if (string.IsNullOrWhiteSpace(path)) continue;
+                    // Base05.Tests 以 extern alias 引入该程序集，只用于验证历史 Share 副本。
+                    // 动态脚本仍必须只引用正式 Shared 事实源，否则同名全局类型会产生 CS0433。
+                    if (string.Equals(Path.GetFileNameWithoutExtension(path), "ShareProtocolCompat", StringComparison.OrdinalIgnoreCase))
+                        continue;
                     if (!added.Add(path)) continue;
                     if (!File.Exists(path)) continue;
 
