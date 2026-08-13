@@ -50,6 +50,7 @@ namespace MonoShare
                                 Name = item.Name,
                                 Sha256 = item.DesiredSha256,
                             }),
+                            BootstrapAcceptanceContext.TrustedKeys,
                             currentClientVersion: ClientResourceLayout.BootstrapClientCompatibilityVersion))
                     {
                         return new BootstrapPackageUpdateQueueView();

@@ -313,6 +313,15 @@ namespace MonoShare
             }
         }
 
+        internal static BootstrapPackageApplyBundleResultView ApplyBundleInboxForAcceptance()
+        {
+            BootstrapPackageUpdateQueueView queue = BootstrapPackageUpdateRuntime.LoadUpdateQueue();
+            string[] sources = Directory.GetDirectories(BundleInboxRoot, "*", SearchOption.TopDirectoryOnly)
+                .Where(path => !string.Equals(Path.GetFileName(path), "Processed", StringComparison.OrdinalIgnoreCase) && !string.Equals(Path.GetFileName(path), "Failed", StringComparison.OrdinalIgnoreCase))
+                .ToArray();
+            return BootstrapPackageRuntime.TryApplyPackageBundleSetTransactionally(sources, queue.Packages.Select(item => item.Name));
+        }
+
         public static string ResolvePath(string relativeOrAbsolutePath)
         {
             if (string.IsNullOrWhiteSpace(relativeOrAbsolutePath))

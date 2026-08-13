@@ -44,6 +44,7 @@
     <Compile Include="..\..\..\src\Shared\Shared\Security\BootstrapManifestSignaturePolicy.cs" Link="Security\BootstrapManifestSignaturePolicy.cs" />
     <Compile Include="..\..\..\src\Shared\Shared\Security\BootstrapManifestJsonContext.cs" Link="Security\BootstrapManifestJsonContext.cs" />
     <Compile Include="InternalsVisibleTo.BootstrapRuntimeSmokeTest.cs" />
+    <Compile Include="BootstrapAcceptanceContext.cs" />
     <Compile Include="BootstrapPackageRuntime.cs" />
     <Compile Include="BootstrapPackageDownloader.cs" />
     <Compile Include="BootstrapPackageUpdateRuntime.cs" />
@@ -66,6 +67,7 @@
     <Compile Include="..\..\..\src\Shared\Shared\Security\BootstrapManifestSignaturePolicy.cs" Link="Security\BootstrapManifestSignaturePolicy.cs" />
     <Compile Include="..\..\..\src\Shared\Shared\Security\BootstrapManifestJsonContext.cs" Link="Security\BootstrapManifestJsonContext.cs" />
     <Compile Include="InternalsVisibleTo.BootstrapRuntimeSmokeTest.cs" />
+    <Compile Include="BootstrapAcceptanceContext.cs" />
     <Compile Include="BootstrapPackageRuntime.cs" />
     <Compile Include="BootstrapPackageDownloader.cs" />
     <Compile Include="BootstrapPackageUpdateRuntime.cs" />
@@ -106,6 +108,7 @@
     <Compile Include="..\..\..\src\Shared\Shared\Security\BootstrapManifestSignaturePolicy.cs" Link="Security\BootstrapManifestSignaturePolicy.cs" />
     <Compile Include="..\..\..\src\Shared\Shared\Security\BootstrapManifestJsonContext.cs" Link="Security\BootstrapManifestJsonContext.cs" />
     <Compile Include="InternalsVisibleTo.BootstrapRuntimeSmokeTest.cs" />
+    <Compile Include="BootstrapAcceptanceContext.cs" />
     <Compile Include="BootstrapPackageRuntime.cs" />
     <Compile Include="BootstrapPackageDownloader.cs" />
     <Compile Include="BootstrapPackageUpdateRuntime.cs" />

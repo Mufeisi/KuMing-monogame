@@ -322,6 +322,7 @@ namespace MonoShare
                 BootstrapSignedManifest signed = BootstrapManifestAcceptanceStore.VerifyAndAccept(
                     json,
                     ClientResourceLayout.ManifestSecurityStatePath,
+                    BootstrapAcceptanceContext.TrustedKeys,
                     currentClientVersion: ClientResourceLayout.BootstrapClientCompatibilityVersion);
                 return new BootstrapPackageIndexView
                 {

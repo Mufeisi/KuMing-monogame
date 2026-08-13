@@ -88,6 +88,7 @@ namespace Client.Bootstrap
                 BootstrapSignedManifest signed = BootstrapManifestAcceptanceStore.VerifyAndAccept(
                     json,
                     PcBootstrapLayout.ManifestSecurityStatePath,
+                    PcBootstrapAcceptanceContext.TrustedKeys,
                     currentClientVersion: PcBootstrapLayout.ClientCompatibilityVersion);
                 return new PcBootstrapPackageIndexView
                 {

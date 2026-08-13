@@ -175,7 +175,7 @@ internal sealed class MainForm : Form
         _tabs.TabPages.Add(new TabPage("概览") { Controls = { _quickPanel } });
         _tabs.TabPages.Add(CreateControlLayoutTab());
         _tabs.TabPages.Add(CreateModePage("内容", CreateServerTab(), CreateAnnouncementTab(), CreateActionLinksTab(), new TabPage("玩家设置") { Controls = { new SettingsEditorPanel(_project.Snapshot.Defaults) } }));
-        _distributionOverview = new DistributionOverviewPanel(_project, NavigateDistributionFix);
+        _distributionOverview = new DistributionOverviewPanel(_project, _store.GetProjectDirectory(_project.Snapshot.ProjectId), NavigateDistributionFix);
         _tabs.TabPages.Add(CreateModePage("交付", new TabPage("发行体概览") { Controls = { _distributionOverview } }, CreatePropertyPage("项目默认微端", new DefaultMicroPropertyView(_project.Snapshot.DefaultMicro)), CreatePropertyPage("微端部署", new GatewayPropertyView(_project.Gateway)), CreatePropertyPage("签名与发布", new ReleasePropertyView(_project.Release))));
         _tabs.TabPages.Add(CreateModePage("诊断", CreatePreviewTab()));
         DesktopAuthoringTheme.Apply(_tabs);

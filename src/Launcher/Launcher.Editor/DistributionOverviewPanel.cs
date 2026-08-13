@@ -3,20 +3,23 @@ namespace LyoCrystal.LauncherEditor;
 internal sealed class DistributionOverviewPanel : UserControl
 {
     private readonly EditorProject _project;
+    private readonly string _projectRoot;
     private readonly Action<DistributionFixTarget> _navigate;
     private readonly TableLayoutPanel _facts = new() { AutoSize = true, ColumnCount = 2, Dock = DockStyle.Top, Padding = new Padding(18, 12, 18, 12) };
     private readonly FlowLayoutPanel _issues = new() { AutoSize = true, FlowDirection = FlowDirection.TopDown, WrapContents = false, Dock = DockStyle.Top, Padding = new Padding(18, 10, 18, 16) };
     private readonly FlowLayoutPanel _endpointResults = new() { AutoSize = true, FlowDirection = FlowDirection.TopDown, WrapContents = false, Dock = DockStyle.Top, Padding = new Padding(18, 8, 18, 16) };
     private readonly Button _probeEndpoints = new() { Text = "检查主/备用入口", AutoSize = true };
+    private readonly Button _publishTestResources = new() { Text = "生成测试资源发布", AutoSize = true };
     private readonly Label _scanState = new() { AutoSize = true, ForeColor = DesktopAuthoringTheme.TextSecondary, Text = "正在扫描资源目录……" };
     private CancellationTokenSource? _scanCancellation;
     private CancellationTokenSource? _endpointCancellation;
 
     internal DistributionOverviewSnapshot? Snapshot { get; private set; }
 
-    internal DistributionOverviewPanel(EditorProject project, Action<DistributionFixTarget> navigate)
+    internal DistributionOverviewPanel(EditorProject project, string projectRoot, Action<DistributionFixTarget> navigate)
     {
         _project = project;
+        _projectRoot = Path.GetFullPath(projectRoot);
         _navigate = navigate;
         Dock = DockStyle.Fill;
         BackColor = Color.White;
@@ -38,6 +41,8 @@ internal sealed class DistributionOverviewPanel : UserControl
         endpointHeader.Controls.Add(new Label { Text = "入口连通性与远端身份", AutoSize = true, Font = DesktopAuthoringTheme.CreateBodyFont(12, FontStyle.Bold), Margin = new Padding(0, 7, 16, 0) });
         _probeEndpoints.Click += async (_, _) => await RunEndpointPreflightAsync();
         endpointHeader.Controls.Add(_probeEndpoints);
+        _publishTestResources.Click += (_, _) => PublishTestResources();
+        endpointHeader.Controls.Add(_publishTestResources);
         Controls.Add(_endpointResults);
         Controls.Add(endpointHeader);
         Controls.Add(_issues);
@@ -46,6 +51,18 @@ internal sealed class DistributionOverviewPanel : UserControl
         Controls.Add(refresh);
         Controls.Add(header);
         BeginRefresh();
+    }
+
+    private void PublishTestResources()
+    {
+        using var folder = new FolderBrowserDialog { Description = "选择一个空目录保存测试资源发布" };
+        if (folder.ShowDialog(this) != DialogResult.OK) return;
+        try
+        {
+            TestResourceReleaseResult result = TestResourceReleasePublisher.Publish(_project, _projectRoot, folder.SelectedPath);
+            MessageBox.Show(this, $"测试资源发布已生成。\r\n版本：{result.ResourceVersion}\r\n签名：{result.KeyId}\r\n资源包：{result.PackageCount}", "生成完成", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+        catch (Exception error) { MessageBox.Show(this, error.Message, "生成失败", MessageBoxButtons.OK, MessageBoxIcon.Error); }
     }
 
     internal async Task<IReadOnlyList<DistributionEndpointResult>> RunEndpointPreflightAsync()

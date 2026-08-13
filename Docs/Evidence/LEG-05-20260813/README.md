@@ -2,7 +2,7 @@
 
 - 日期：2026-08-13
 - 分支：`codex/leg-05-distribution-overview`
-- 当前切片：`MICRO-UX-01`、`MICRO-UX-04` 及 `MICRO-UX-02/06` 的本地可验证部分
+- 已完成切片：`MICRO-UX-01`、`MICRO-UX-02`、`MICRO-UX-03`、`MICRO-UX-04`、`MICRO-UX-05`、`MICRO-UX-06`
 - 语言：中文，代码标识符、命令和原始测试字段除外
 
 ## 用户可见工件
@@ -22,4 +22,4 @@ git diff --check：通过
 
 完整集成结果：`eng/WindowsIntegration/Launcher.PlayerShellIntegration/TestResults/leg05-distribution-overview-final.trx`。
 
-只读边界由自动化测试保护：概览扫描前后文件列表完全一致，并断言未生成或复制任何 `MicroGateway` 工件。当前切片未宣称网络入口预检或 PC/Android 跨端冒烟完成；这些工作继续以 [`../../requirements/LEG-05-微端与发行体作者体验.md`](../../requirements/LEG-05-微端与发行体作者体验.md) 为活动事实源。
+只读边界由自动化测试保护：概览扫描前后文件列表完全一致，并断言未生成或复制任何 `MicroGateway` 工件。入口预检证据见 [`MICRO-UX-03.md`](MICRO-UX-03.md)，PC/Android 测试资源发布、首次获取、缓存命中和备用源恢复证据见 [`MICRO-UX-05.md`](MICRO-UX-05.md)。活动事实源仍为 [`../../requirements/LEG-05-微端与发行体作者体验.md`](../../requirements/LEG-05-微端与发行体作者体验.md)。

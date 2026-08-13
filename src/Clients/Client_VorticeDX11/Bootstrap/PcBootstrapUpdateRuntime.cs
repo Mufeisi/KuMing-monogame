@@ -127,6 +127,7 @@ namespace Client.Bootstrap
                                 Name = item.Name,
                                 Sha256 = item.DesiredSha256,
                             }),
+                            PcBootstrapAcceptanceContext.TrustedKeys,
                             currentClientVersion: PcBootstrapLayout.ClientCompatibilityVersion))
                     {
                         return new BootstrapPackageUpdateQueueView();

@@ -115,6 +115,21 @@ namespace MonoShare
             }
         }
 
+        internal static async Task DownloadPendingPackagesForAcceptanceAsync(CancellationToken cancellationToken)
+        {
+            string repositoryRoot = ResolveRepositoryRoot(out bool useMicroAuth);
+            if (string.IsNullOrWhiteSpace(repositoryRoot)) throw new InvalidOperationException("未配置验收资源仓库。");
+            foreach (string packageName in BootstrapPackageRuntime.GetPendingPackageNames())
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                await DownloadSinglePackageAsync(packageName, repositoryRoot, useMicroAuth, cancellationToken);
+                BootstrapDownloadStateSnapshot snapshot = GetStateSnapshot();
+                BootstrapDownloadPackageState state = snapshot.Packages.LastOrDefault(item => string.Equals(item.Name, packageName, StringComparison.OrdinalIgnoreCase));
+                if (!string.Equals(state?.Status, "inbox", StringComparison.OrdinalIgnoreCase))
+                    throw new IOException($"资源包 {packageName} 下载失败：{state?.ErrorMessage ?? snapshot.LastError}");
+            }
+        }
+
         private static void EnsureRecordCoverage(IEnumerable<string> pendingPackageNames)
         {
             foreach (string name in pendingPackageNames ?? Array.Empty<string>())
@@ -431,32 +446,32 @@ namespace MonoShare
                 _activeTotalBytes = totalBytes;
             }
 
-            using Stream contentStream = await response.Content.ReadAsStreamAsync(cancellationToken);
-            using var fileStream = new FileStream(
-                tempPath,
-                existingBytes > 0 ? FileMode.Append : FileMode.Create,
-                FileAccess.Write,
-                FileShare.Read,
-                bufferSize: 1024 * 64,
-                useAsync: true);
-
-            var buffer = new byte[1024 * 64];
-            int read;
-            long written = existingBytes;
-            while ((read = await contentStream.ReadAsync(buffer.AsMemory(0, buffer.Length), cancellationToken)) > 0)
+            using (Stream contentStream = await response.Content.ReadAsStreamAsync(cancellationToken))
+            using (var fileStream = new FileStream(
+                       tempPath,
+                       existingBytes > 0 ? FileMode.Append : FileMode.Create,
+                       FileAccess.Write,
+                       FileShare.Read,
+                       bufferSize: 1024 * 64,
+                       useAsync: true))
             {
-                await fileStream.WriteAsync(buffer.AsMemory(0, read), cancellationToken);
-                written += read;
-
-                lock (Gate)
+                var buffer = new byte[1024 * 64];
+                int read;
+                long written = existingBytes;
+                while ((read = await contentStream.ReadAsync(buffer.AsMemory(0, buffer.Length), cancellationToken)) > 0)
                 {
-                    _activeBytesReceived = written;
-                    if (_activeTotalBytes <= 0 && totalBytes > 0)
-                        _activeTotalBytes = totalBytes;
-                }
-            }
+                    await fileStream.WriteAsync(buffer.AsMemory(0, read), cancellationToken);
+                    written += read;
 
-            await fileStream.FlushAsync(cancellationToken);
+                    lock (Gate)
+                    {
+                        _activeBytesReceived = written;
+                        if (_activeTotalBytes <= 0 && totalBytes > 0)
+                            _activeTotalBytes = totalBytes;
+                    }
+                }
+                await fileStream.FlushAsync(cancellationToken);
+            }
 
             File.Move(tempPath, outputPath, overwrite: true);
         }

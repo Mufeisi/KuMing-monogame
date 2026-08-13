@@ -1,3 +1,5 @@
+extern alias MonoClient;
+
 using System.IO.Compression;
 using System.Security.Cryptography;
 using System.Drawing;
@@ -18,6 +20,139 @@ namespace Launcher.PlayerShellIntegration;
 
 public sealed class LauncherEditorTests
 {
+    [Fact]
+    public void TestResourceReleaseProducesPcAndAndroidSignedIndexesFromProjectResources()
+    {
+        using var scope = new EditorTempScope();
+        var store = new EditorProjectStore(Path.Combine(scope.Root, "workspace"));
+        EditorProject project = store.Create("test-resource", "测试资源发布", LauncherTemplateKind.Classic);
+        string resources = Path.Combine(scope.Root, "resources");
+        foreach ((string relative, string content) in new[]
+        {
+            ("Data/Title.Lib", "title"), ("Data/ChrSel.Lib", "chrsel"), ("Data/Prguse.Lib", "prguse"),
+            ("Assets/UI/复古/UI_fui.bytes", "fui"),
+        })
+        {
+            string path = Path.Combine(resources, relative.Replace('/', Path.DirectorySeparatorChar));
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            File.WriteAllText(path, content);
+        }
+        project.Gateway.ResourceDirectory = resources;
+        string output = Path.Combine(scope.Root, "publish");
+
+        TestResourceReleaseResult result = TestResourceReleasePublisher.Publish(project, store.GetProjectDirectory(project.Snapshot.ProjectId), output);
+
+        string pcIndex = File.ReadAllText(Path.Combine(output, "Packages", "bootstrap-package-index.json"));
+        string androidIndex = File.ReadAllText(Path.Combine(output, "Packages", "bootstrap-package-index.signed.json"));
+        Assert.Equal(pcIndex, androidIndex);
+        Assert.True(File.Exists(Path.Combine(output, "Packages", "core-startup.zip")));
+        Assert.True(File.Exists(Path.Combine(output, "Packages", "fui-retro.zip")));
+        Assert.Equal(2, result.PackageCount);
+        var trusted = new Dictionary<string, BootstrapManifestTrustedKey>
+        {
+            [project.Release.CurrentKeyId] = new() { KeyId = project.Release.CurrentKeyId, SubjectPublicKeyInfo = project.Release.CurrentPublicKey, NotBeforeSequence = project.Release.CurrentKeyNotBeforeSequence },
+        };
+        BootstrapManifestVerificationResult verified = BootstrapManifestSignaturePolicy.Verify(pcIndex, trusted, new Version(2, 0, 0));
+        Assert.True(verified.IsValid, verified.Error);
+        Assert.Equal(result.ResourceVersion, verified.Manifest.ResourceVersion);
+    }
+
+    [Fact]
+    public async Task PcConsumerFetchesCachesAndRecoversThroughBackupRepository()
+    {
+        using var scope = new EditorTempScope();
+        var store = new EditorProjectStore(scope.Dir("pc-workspace"));
+        EditorProject project = store.Create("pc-resource", "PC 资源冒烟", LauncherTemplateKind.Classic);
+        AttachCrossPlatformResources(project, scope.Dir("pc-resources"));
+        string publish = scope.Dir("pc-publish");
+        TestResourceReleaseResult release = TestResourceReleasePublisher.Publish(project, store.GetProjectDirectory(project.Snapshot.ProjectId), publish);
+        var keys = TrustedProjectKeys(project);
+        int primaryPort = FreePort(), backupPort = FreePort();
+        await using var primary = new StaticFileHost(publish, primaryPort, failAll: true);
+        await using var backup = new StaticFileHost(publish, backupPort);
+        await primary.StartAsync(); await backup.StartAsync();
+        string clientRoot = scope.Dir("pc-client");
+        SeedBaselineIndex(clientRoot, "BootstrapAssets", "core-startup");
+        string? previousRoot = Environment.GetEnvironmentVariable("LOMMIR_PC_CLIENT_ROOT");
+        string previousRepo = Client.Settings.BootstrapPackageRepo;
+        bool previousPreLogin = Client.Settings.BootstrapPreLoginUpdate, previousAuto = Client.Settings.BootstrapAutoDownload;
+        try
+        {
+            Environment.SetEnvironmentVariable("LOMMIR_PC_CLIENT_ROOT", clientRoot);
+            Client.Settings.BootstrapPreLoginUpdate = true; Client.Settings.BootstrapAutoDownload = true;
+            using (Client.Bootstrap.PcBootstrapAcceptanceContext.UseTrustedKeys(keys))
+            {
+                Client.Settings.BootstrapPackageRepo = $"http://127.0.0.1:{primaryPort}/";
+                Client.Bootstrap.PcBootstrapApplyResultView failed = await Client.Bootstrap.PcBootstrapPreLoginUpdateService.TryRunPreLoginUpdateAsync(null, CancellationToken.None);
+                Assert.False(failed.Completed);
+                Assert.False(File.Exists(Path.Combine(clientRoot, "Data", "Title.Lib")));
+
+                Client.Settings.BootstrapPackageRepo = $"http://127.0.0.1:{backupPort}/";
+                Client.Bootstrap.PcBootstrapApplyResultView first = await Client.Bootstrap.PcBootstrapPreLoginUpdateService.TryRunPreLoginUpdateAsync(null, CancellationToken.None);
+                Assert.True(first.Completed, first.Message); Assert.Equal(release.ResourceVersion, first.ResourceVersion);
+                int zipRequests = backup.CountRequestsEndingWith(".zip");
+                Client.Bootstrap.PcBootstrapApplyResultView cached = await Client.Bootstrap.PcBootstrapPreLoginUpdateService.TryRunPreLoginUpdateAsync(null, CancellationToken.None);
+                Assert.True(cached.Completed, cached.Message); Assert.Equal(0, cached.UpdatedPackageCount);
+                Assert.Equal(zipRequests, backup.CountRequestsEndingWith(".zip"));
+            }
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("LOMMIR_PC_CLIENT_ROOT", previousRoot);
+            Client.Settings.BootstrapPackageRepo = previousRepo; Client.Settings.BootstrapPreLoginUpdate = previousPreLogin; Client.Settings.BootstrapAutoDownload = previousAuto;
+        }
+    }
+
+    [Fact]
+    public async Task AndroidConsumerFetchesCachesAndRecoversThroughBackupRepository()
+    {
+        using var scope = new EditorTempScope();
+        var store = new EditorProjectStore(scope.Dir("android-workspace"));
+        EditorProject project = store.Create("android-resource", "Android 资源冒烟", LauncherTemplateKind.Classic);
+        AttachCrossPlatformResources(project, scope.Dir("android-resources"));
+        string publish = scope.Dir("android-publish");
+        TestResourceReleaseResult release = TestResourceReleasePublisher.Publish(project, store.GetProjectDirectory(project.Snapshot.ProjectId), publish);
+        int primaryPort = FreePort(), backupPort = FreePort();
+        await using var primary = new StaticFileHost(publish, primaryPort, failAll: true);
+        await using var backup = new StaticFileHost(publish, backupPort);
+        await primary.StartAsync(); await backup.StartAsync();
+        string clientRoot = scope.Dir("android-client");
+        SeedAndroidBootstrap(clientRoot);
+        MonoClient::MonoShare.ClientResourceLayout.Configure(clientRoot);
+        string previousRepo = MonoClient::MonoShare.Settings.BootstrapPackageRepo;
+        string previousProfile = MonoClient::MonoShare.Settings.UIProfileId;
+        bool previousAuto = MonoClient::MonoShare.Settings.BootstrapAutoDownloadPackages;
+        try
+        {
+            MonoClient::MonoShare.Settings.UIProfileId = "Mobile"; MonoClient::MonoShare.Settings.BootstrapAutoDownloadPackages = true;
+            var keys = new Dictionary<string, MonoClient::Shared.Security.BootstrapManifestTrustedKey>(StringComparer.Ordinal)
+            {
+                [project.Release.CurrentKeyId] = new() { KeyId = project.Release.CurrentKeyId, SubjectPublicKeyInfo = project.Release.CurrentPublicKey, NotBeforeSequence = project.Release.CurrentKeyNotBeforeSequence },
+            };
+            using (MonoClient::MonoShare.BootstrapAcceptanceContext.UseTrustedKeys(keys))
+            {
+                MonoClient::MonoShare.Settings.BootstrapPackageRepo = $"http://127.0.0.1:{primaryPort}/";
+                MonoClient::MonoShare.BootstrapPreLoginUpdatePlanView failed = await MonoClient::MonoShare.BootstrapPackageUpdateService.TryEnsurePreLoginUpdateQueueAsync(CancellationToken.None);
+                Assert.True(failed.Skipped);
+                Assert.False(File.Exists(Path.Combine(clientRoot, "Cache", "Mobile", "Packages", "fui-retro", "Assets", "UI", "复古", "UI_fui.bytes")));
+
+                MonoClient::MonoShare.Settings.BootstrapPackageRepo = $"http://127.0.0.1:{backupPort}/";
+                MonoClient::MonoShare.BootstrapPreLoginUpdatePlanView first = await MonoClient::MonoShare.BootstrapPackageUpdateService.TryEnsurePreLoginUpdateQueueAsync(CancellationToken.None);
+                Assert.False(first.Failed); Assert.Equal(release.ResourceVersion, first.ResourceVersion); Assert.Equal(2, first.PackagesToUpdate.Count);
+                await MonoClient::MonoShare.BootstrapPackageDownloader.DownloadPendingPackagesForAcceptanceAsync(CancellationToken.None);
+                MonoClient::MonoShare.BootstrapPackageApplyBundleResultView applied = MonoClient::MonoShare.ClientResourceLayout.ApplyBundleInboxForAcceptance();
+                Assert.True(applied.Completed);
+                int zipRequests = backup.CountRequestsEndingWith(".zip");
+                MonoClient::MonoShare.BootstrapPreLoginUpdatePlanView cached = await MonoClient::MonoShare.BootstrapPackageUpdateService.TryEnsurePreLoginUpdateQueueAsync(CancellationToken.None);
+                Assert.False(cached.Failed); Assert.Empty(cached.PackagesToUpdate); Assert.Equal(zipRequests, backup.CountRequestsEndingWith(".zip"));
+            }
+        }
+        finally
+        {
+            MonoClient::MonoShare.Settings.BootstrapPackageRepo = previousRepo; MonoClient::MonoShare.Settings.UIProfileId = previousProfile; MonoClient::MonoShare.Settings.BootstrapAutoDownloadPackages = previousAuto;
+        }
+    }
+
     [Fact]
     public void CanvasDocumentMaterializesRuntimeLayoutWithoutManualCoordinates()
     {
@@ -1018,6 +1153,41 @@ public sealed class LauncherEditorTests
         project.ImportedClientDirectory = clientRoot;
     }
 
+    private static void AttachCrossPlatformResources(EditorProject project, string root)
+    {
+        foreach ((string relative, string content) in new[] { ("Data/Title.Lib", "title-v2"), ("Data/ChrSel.Lib", "chrsel-v2"), ("Data/Prguse.Lib", "prguse-v2"), ("Assets/UI/复古/UI_fui.bytes", "fui-v2") })
+        {
+            string path = Path.Combine(root, relative.Replace('/', Path.DirectorySeparatorChar)); Directory.CreateDirectory(Path.GetDirectoryName(path)!); File.WriteAllText(path, content);
+        }
+        project.Gateway.ResourceDirectory = root; project.ImportedClientDirectory = root;
+    }
+
+    private static Dictionary<string, BootstrapManifestTrustedKey> TrustedProjectKeys(EditorProject project) => new(StringComparer.Ordinal)
+    {
+        [project.Release.CurrentKeyId] = new() { KeyId = project.Release.CurrentKeyId, SubjectPublicKeyInfo = project.Release.CurrentPublicKey, NotBeforeSequence = project.Release.CurrentKeyNotBeforeSequence },
+    };
+
+    private static void SeedBaselineIndex(string clientRoot, string bootstrapDirectory, string packageName)
+    {
+        string root = Path.Combine(clientRoot, bootstrapDirectory); Directory.CreateDirectory(root);
+        File.WriteAllText(Path.Combine(root, "bootstrap-package-index.json"), JsonSerializer.Serialize(new { GeneratedAtUtc = "1970-01-01T00:00:00Z", ResourceVersion = "baseline", Packages = new[] { new { Name = packageName, Sha256 = new string('0', 64), Size = 1L } } }));
+    }
+
+    private static void SeedAndroidBootstrap(string clientRoot)
+    {
+        SeedBaselineIndex(clientRoot, "BootstrapAssets", "core-startup");
+        string root = Path.Combine(clientRoot, "BootstrapAssets");
+        File.WriteAllText(Path.Combine(root, "bootstrap-packages.json"), JsonSerializer.Serialize(new
+        {
+            RepositoryRoot = "", BootstrapRoot = "", TotalAssets = 4, TotalBytes = 4,
+            Packs = new object[]
+            {
+                new { Name = "core-startup", Kind = "core", Description = "测试核心", AssetCount = 3, TotalBytes = 3, ManifestPath = "", InstallRootHint = "Cache/Mobile/Packages/core-startup/", Assets = new[] { "Data/Title.Lib", "Data/ChrSel.Lib", "Data/Prguse.Lib" } },
+                new { Name = "fui-retro", Kind = "ui", Description = "测试界面", AssetCount = 1, TotalBytes = 1, ManifestPath = "", InstallRootHint = "Cache/Mobile/Packages/fui-retro/", Assets = new[] { "Assets/UI/复古/UI_fui.bytes" } },
+            }
+        }));
+    }
+
     private static string FindRepositoryRoot(string start)
     {
         DirectoryInfo? directory = new(start);
@@ -1045,9 +1215,10 @@ public sealed class LauncherEditorTests
 
     private sealed class StaticFileHost : IAsyncDisposable
     {
-        private readonly string _root; private readonly HttpListener _listener = new(); private Task? _loop;
-        public StaticFileHost(string root, int port) { _root = Path.GetFullPath(root); _listener.Prefixes.Add($"http://127.0.0.1:{port}/"); }
+        private readonly string _root; private readonly bool _failAll; private readonly HttpListener _listener = new(); private readonly System.Collections.Concurrent.ConcurrentDictionary<string, int> _requests = new(StringComparer.OrdinalIgnoreCase); private Task? _loop;
+        public StaticFileHost(string root, int port, bool failAll = false) { _root = Path.GetFullPath(root); _failAll = failAll; _listener.Prefixes.Add($"http://127.0.0.1:{port}/"); }
         public Task StartAsync() { _listener.Start(); _loop = Task.Run(LoopAsync); return Task.CompletedTask; }
+        public int CountRequestsEndingWith(string suffix) => _requests.Where(item => item.Key.EndsWith(suffix, StringComparison.OrdinalIgnoreCase)).Sum(item => item.Value);
         private async Task LoopAsync()
         {
             while (_listener.IsListening)
@@ -1056,6 +1227,8 @@ public sealed class LauncherEditorTests
                 try
                 {
                     string requestPath = context.Request.Url!.AbsolutePath;
+                    _requests.AddOrUpdate(requestPath, 1, (_, count) => count + 1);
+                    if (_failAll) { context.Response.StatusCode = 503; continue; }
                     string relative = Uri.UnescapeDataString(requestPath.StartsWith("/api/file/", StringComparison.OrdinalIgnoreCase)
                         ? requestPath["/api/file/".Length..]
                         : requestPath.TrimStart('/')).Replace('/', Path.DirectorySeparatorChar);
