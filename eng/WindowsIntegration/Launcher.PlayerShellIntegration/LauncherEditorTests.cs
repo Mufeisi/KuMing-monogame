@@ -180,6 +180,25 @@ public sealed class LauncherEditorTests
         Assert.False(form.IsCanvasObjectVisibleForEvidence(LauncherControlId.LaunchButton));
         form.UndoCanvasForEvidence();
         Assert.True(form.IsCanvasObjectVisibleForEvidence(LauncherControlId.LaunchButton));
+        form.SelectObjectTreeForEvidence(LauncherControlId.ServerList, Keys.None);
+        form.SelectObjectTreeForEvidence(LauncherControlId.Announcements, Keys.Control);
+        LauncherPropertyInspectorSnapshot properties = form.CapturePropertiesForEvidence();
+        Assert.Equal(2, properties.SelectedCount);
+        Assert.Equal("多个值", properties.Width);
+        form.ApplyPropertyTextForEvidence("width", "240");
+        Assert.Equal(240, form.CaptureCanvasBoundsForEvidence(LauncherControlId.ServerList).Width);
+        Assert.Equal(240, form.CaptureCanvasBoundsForEvidence(LauncherControlId.Announcements).Width);
+        form.ApplyPropertyTextForEvidence("width", "不是数字");
+        Assert.Equal(240, form.CaptureCanvasBoundsForEvidence(LauncherControlId.ServerList).Width);
+        Assert.Equal(240, form.CaptureCanvasBoundsForEvidence(LauncherControlId.Announcements).Width);
+        form.UndoCanvasForEvidence();
+        Assert.NotEqual(240, form.CaptureCanvasBoundsForEvidence(LauncherControlId.ServerList).Width);
+        form.ApplyPropertyChoiceForEvidence("bold", "是");
+        Assert.Equal("是", form.CapturePropertiesForEvidence().Bold);
+        form.ApplyPropertyChoiceForEvidence("locked", "是");
+        Assert.Equal(0, form.CapturePropertiesForEvidence().EditableCount);
+        form.ApplyPropertyChoiceForEvidence("locked", "否");
+        Assert.Equal(2, form.CapturePropertiesForEvidence().EditableCount);
         form.Hide();
     }
 

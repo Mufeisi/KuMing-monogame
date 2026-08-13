@@ -269,7 +269,9 @@ internal sealed class MainForm : Form
         _canvasPanel = new LauncherCanvasEditorPanel(
             _canvasDocument,
             () => LauncherRuntimeHost.RenderCanvasForEditor(_project.Snapshot, root),
-            ImportQuickImage);
+            ImportQuickImage,
+            ImportCanvasControlImage,
+            LoadCanvasControlImage);
         _canvasPanel.WorkspaceStatusChanged += (_, status) =>
         {
             _selectionStatus.Text = status.Selection;
@@ -377,6 +379,32 @@ internal sealed class MainForm : Form
             RefreshPreview(); SetStatus("图片已导入并应用到画布；保存项目后永久生效");
         }
         catch (Exception ex) { ShowError(ex); }
+    }
+
+    private string? ImportCanvasControlImage()
+    {
+        if (_project is null) return null;
+        using var dialog = new OpenFileDialog { Title = "选择对象背景图片", Filter = "图片文件 (*.png;*.bmp;*.jpg;*.jpeg)|*.png;*.bmp;*.jpg;*.jpeg" };
+        if (dialog.ShowDialog(this) != DialogResult.OK) return null;
+        try
+        {
+            return ThemeAssetImporter.Import(_store.GetProjectDirectory(_project.Snapshot.ProjectId), dialog.FileName, _project.OptimizeImportedImages);
+        }
+        catch (Exception ex) { ShowError(ex); return null; }
+    }
+
+    private Image? LoadCanvasControlImage(string relative)
+    {
+        if (_project is null || string.IsNullOrWhiteSpace(relative)) return null;
+        try
+        {
+            string root = Path.GetFullPath(_store.GetProjectDirectory(_project.Snapshot.ProjectId));
+            string path = Path.GetFullPath(Path.Combine(root, relative.Replace('/', Path.DirectorySeparatorChar)));
+            if (!path.StartsWith(root + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase) || !File.Exists(path)) return null;
+            using Image source = Image.FromFile(path);
+            return new Bitmap(source);
+        }
+        catch { return null; }
     }
 
     private async void GenerateAllQuick()
@@ -672,6 +700,10 @@ internal sealed class MainForm : Form
     internal void SelectObjectTreeForEvidence(LauncherControlId id, Keys modifiers) => _canvasPanel!.SelectObjectTreeForEvidence(id, modifiers);
     internal bool IsCanvasObjectVisibleForEvidence(LauncherControlId id) => _canvasDocument!.Controls.Single(item => item.Id == id).Visible;
     internal void UndoCanvasForEvidence() => _canvasDocument!.Undo();
+    internal LauncherPropertyInspectorSnapshot CapturePropertiesForEvidence() => _canvasPanel!.CapturePropertiesForEvidence();
+    internal void ApplyPropertyTextForEvidence(string key, string value) => _canvasPanel!.ApplyPropertyTextForEvidence(key, value);
+    internal void ApplyPropertyChoiceForEvidence(string key, string value) => _canvasPanel!.ApplyPropertyChoiceForEvidence(key, value);
+    internal Rectangle CaptureCanvasBoundsForEvidence(LauncherControlId id) => _canvasDocument!.GetBounds(id);
     private void ShowError(Exception error) => MessageBox.Show(this, error.Message, "操作失败", MessageBoxButtons.OK, MessageBoxIcon.Error);
     private static string SafeFileName(string value)
     {

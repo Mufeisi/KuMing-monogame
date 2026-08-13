@@ -15,6 +15,8 @@ public sealed record LauncherCanvasStyleChange(
     int? OpacityPercent = null,
     string? BackgroundImage = null);
 
+public sealed record LauncherCanvasLayoutChange(int? X = null, int? Y = null, int? Width = null, int? Height = null);
+
 public sealed class LauncherCanvasDocument
 {
     private const int SnapDistance = 6;
@@ -78,6 +80,23 @@ public sealed class LauncherCanvasDocument
         if (IsLocked(id)) return;
         SnapGuides = Array.Empty<LauncherCanvasGuide>();
         Execute(() => ApplyBounds(Find(id), Clamp(bounds)));
+    }
+
+    public void ChangeSelectionLayout(LauncherCanvasLayoutChange change)
+    {
+        SnapGuides = Array.Empty<LauncherCanvasGuide>();
+        Execute(() =>
+        {
+            foreach (LauncherControlOverride control in EditableSelection())
+            {
+                Rectangle bounds = GetBounds(control.Id);
+                bounds.X = change.X ?? bounds.X;
+                bounds.Y = change.Y ?? bounds.Y;
+                bounds.Width = change.Width ?? bounds.Width;
+                bounds.Height = change.Height ?? bounds.Height;
+                ApplyBounds(control, Clamp(bounds));
+            }
+        });
     }
 
     public bool MoveSelection(int deltaX, int deltaY, bool snap)

@@ -13,19 +13,20 @@ internal sealed class LauncherCanvasEditorPanel : UserControl
     private readonly Action<ThemeImageUsage> _importImage;
     private readonly LauncherObjectTreeAdapter _tree;
     private readonly TextBox _search = new() { Dock = DockStyle.Top, PlaceholderText = "搜索对象", BorderStyle = BorderStyle.FixedSingle };
-    private readonly PropertyGrid _properties = new() { Dock = DockStyle.Fill, HelpVisible = true, ToolbarVisible = false, PropertySort = PropertySort.Categorized };
+    private readonly LauncherPropertyInspectorAdapter _properties;
     private readonly CanvasSurface _surface;
     private readonly Panel _canvasHost = new() { Dock = DockStyle.Fill, AutoScroll = true, BackColor = DesktopAuthoringTheme.CanvasViewport };
     private readonly ToolStripLabel _zoomLabel = new("100%") { Alignment = ToolStripItemAlignment.Right };
     private bool _snapEnabled = true;
     private bool _autoFit = true;
 
-    internal LauncherCanvasEditorPanel(LauncherCanvasDocument document, Func<Bitmap> render, Action<ThemeImageUsage> importImage)
+    internal LauncherCanvasEditorPanel(LauncherCanvasDocument document, Func<Bitmap> render, Action<ThemeImageUsage> importImage, Func<string?> importControlImage, Func<string, Image?> loadControlImage)
     {
         _document = document;
         _render = render;
         _importImage = importImage;
         _tree = new LauncherObjectTreeAdapter(document);
+        _properties = new LauncherPropertyInspectorAdapter(document, importControlImage, loadControlImage);
         _surface = new CanvasSurface(document) { SnapEnabled = _snapEnabled };
         Dock = DockStyle.Fill;
         BuildUi();
@@ -51,6 +52,9 @@ internal sealed class LauncherCanvasEditorPanel : UserControl
     internal void FilterObjectTreeForEvidence(string value) => _tree.Filter = value;
     internal void ToggleObjectVisibilityForEvidence(LauncherControlId id) => _tree.ToggleVisibilityForEvidence(id);
     internal void SelectObjectTreeForEvidence(LauncherControlId id, Keys modifiers) => _tree.SelectForEvidence(id, modifiers);
+    internal LauncherPropertyInspectorSnapshot CapturePropertiesForEvidence() => _properties.CaptureSnapshot();
+    internal void ApplyPropertyTextForEvidence(string key, string value) => _properties.ApplyTextForEvidence(key, value);
+    internal void ApplyPropertyChoiceForEvidence(string key, string value) => _properties.ApplyChoiceForEvidence(key, value);
 
     protected override void OnHandleCreated(EventArgs e)
     {
@@ -139,7 +143,7 @@ internal sealed class LauncherCanvasEditorPanel : UserControl
     {
         LauncherControlId[] selected = _document.Selection.ToArray();
         _tree.RefreshFromDocument();
-        _properties.SelectedObjects = selected.Select(id => (object)new CanvasControlPropertyView(_document, id)).ToArray();
+        _properties.RefreshFromDocument();
         Bitmap? previous = _surface.CanvasImage;
         try
         {
@@ -298,25 +302,4 @@ internal sealed class LauncherCanvasEditorPanel : UserControl
         }
     }
 
-    private sealed class CanvasControlPropertyView
-    {
-        private readonly LauncherCanvasDocument _document;
-        private readonly LauncherControlId _id;
-        internal CanvasControlPropertyView(LauncherCanvasDocument document, LauncherControlId id) { _document = document; _id = id; }
-        private LauncherControlOverride Value => _document.Controls.Single(x => x.Id == _id);
-        [Category("标识"), DisplayName("对象"), ReadOnly(true)] public string Name => EditorChineseText.Control(_id);
-        [Category("布局（像素）"), DisplayName("横向位置")] public int X { get => Value.X; set { Rectangle b = _document.GetBounds(_id); b.X = value; _document.SetBounds(_id, b); } }
-        [Category("布局（像素）"), DisplayName("纵向位置")] public int Y { get => Value.Y; set { Rectangle b = _document.GetBounds(_id); b.Y = value; _document.SetBounds(_id, b); } }
-        [Category("布局（像素）"), DisplayName("宽度")] public int Width { get => Value.Width; set { Rectangle b = _document.GetBounds(_id); b.Width = value; _document.SetBounds(_id, b); } }
-        [Category("布局（像素）"), DisplayName("高度")] public int Height { get => Value.Height; set { Rectangle b = _document.GetBounds(_id); b.Height = value; _document.SetBounds(_id, b); } }
-        [Category("状态"), DisplayName("显示"), TypeConverter(typeof(ChineseBooleanConverter))] public bool Visible { get => Value.Visible; set => _document.SetVisible([_id], value); }
-        [Category("状态"), DisplayName("锁定"), TypeConverter(typeof(ChineseBooleanConverter))] public bool Locked { get => _document.IsLocked(_id); set => _document.SetLocked([_id], value); }
-        [Category("外观"), DisplayName("文字颜色")] public string ForeColor { get => Value.ForeColor; set => _document.ChangeSelectionStyle(new(ForeColor: value)); }
-        [Category("外观"), DisplayName("背景颜色")] public string BackColor { get => Value.BackColor; set => _document.ChangeSelectionStyle(new(BackColor: value)); }
-        [Category("外观"), DisplayName("字体")] public string FontName { get => Value.FontName; set => _document.ChangeSelectionStyle(new(FontName: value)); }
-        [Category("外观"), DisplayName("字号")] public float FontSize { get => Value.FontSize; set => _document.ChangeSelectionStyle(new(FontSize: value)); }
-        [Category("外观"), DisplayName("粗体"), TypeConverter(typeof(ChineseBooleanConverter))] public bool Bold { get => Value.Bold; set => _document.ChangeSelectionStyle(new(Bold: value)); }
-        [Category("外观"), DisplayName("不透明度（%）")] public int OpacityPercent { get => Value.OpacityPercent; set => _document.ChangeSelectionStyle(new(OpacityPercent: value)); }
-        [Category("资源"), DisplayName("背景图片")] public string BackgroundImage { get => Value.BackgroundImage; set => _document.ChangeSelectionStyle(new(BackgroundImage: value)); }
-    }
 }
