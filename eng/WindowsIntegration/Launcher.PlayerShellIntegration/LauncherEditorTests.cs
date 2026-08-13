@@ -157,6 +157,10 @@ public sealed class LauncherEditorTests
         Assert.Equal(190, objectTreeWidth);
         Assert.Equal(250, propertiesWidth);
         Assert.Equal(new Size(801, 554), canvasSize);
+        (float zoom, bool snap, bool grid) = form.CaptureDesignViewportForEvidence();
+        Assert.InRange(zoom, .25F, 1F);
+        Assert.True(snap);
+        Assert.False(grid);
         form.Hide();
     }
 

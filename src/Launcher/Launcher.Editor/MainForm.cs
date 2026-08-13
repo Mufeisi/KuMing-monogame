@@ -14,6 +14,10 @@ internal sealed class MainForm : Form
     private readonly TabControl _tabs = new() { Dock = DockStyle.Fill };
     private readonly PictureBox _preview = new() { Dock = DockStyle.Fill, SizeMode = PictureBoxSizeMode.Zoom, BackColor = Color.FromArgb(28, 28, 32) };
     private readonly ToolStripStatusLabel _status = new() { Text = "就绪" };
+    private readonly ToolStripStatusLabel _selectionStatus = new() { Text = "未选择对象", BorderSides = ToolStripStatusLabelBorderSides.Left };
+    private readonly ToolStripStatusLabel _viewportStatus = new() { Text = "画布 --", BorderSides = ToolStripStatusLabelBorderSides.Left };
+    private readonly ToolStripStatusLabel _saveStatus = new() { Text = "已保存", BorderSides = ToolStripStatusLabelBorderSides.Left };
+    private readonly ToolStripStatusLabel _preflightStatus = new() { Text = "发布检查：待执行", BorderSides = ToolStripStatusLabelBorderSides.Left };
     private readonly ToolStrip _tools = new() { GripStyle = ToolStripGripStyle.Hidden };
     private EditorProject? _project;
     private BindingList<LauncherServer>? _servers;
@@ -39,6 +43,7 @@ internal sealed class MainForm : Form
         BuildUi();
         EnsureFirstProject();
         ReloadProjects();
+        DesktopAuthoringTheme.Apply(this);
     }
 
     private void BuildUi()
@@ -74,8 +79,12 @@ internal sealed class MainForm : Form
         AddAdvanced(advanced, "轮换签名密钥", RotateReleaseKey);
         tools.Items.Add(advanced);
         _projects.SelectedIndexChanged += (_, _) => LoadSelectedProject();
+        tools.AutoSize = false;
+        tools.Height = DesktopAuthoringTheme.AppBarHeight;
+        _status.Spring = true;
+        _status.TextAlign = ContentAlignment.MiddleLeft;
         Controls.Add(_tabs); Controls.Add(tools); tools.Dock = DockStyle.Top;
-        Controls.Add(new StatusStrip { Items = { _status } });
+        Controls.Add(new StatusStrip { AutoSize = false, Height = DesktopAuthoringTheme.StatusBarHeight, Items = { _status, _selectionStatus, _viewportStatus, _saveStatus, _preflightStatus } });
     }
 
     private static void AddTool(ToolStrip strip, string text, Action action)
@@ -167,6 +176,7 @@ internal sealed class MainForm : Form
         _tabs.TabPages.Add(CreateModePage("内容", CreateServerTab(), CreateAnnouncementTab(), CreateActionLinksTab(), new TabPage("玩家设置") { Controls = { new SettingsEditorPanel(_project.Snapshot.Defaults) } }));
         _tabs.TabPages.Add(CreateModePage("交付", CreatePropertyPage("项目默认微端", new DefaultMicroPropertyView(_project.Snapshot.DefaultMicro)), CreatePropertyPage("微端部署", new GatewayPropertyView(_project.Gateway)), CreatePropertyPage("签名与发布", new ReleasePropertyView(_project.Release))));
         _tabs.TabPages.Add(CreateModePage("诊断", CreatePreviewTab()));
+        DesktopAuthoringTheme.Apply(_tabs);
     }
 
     private TabPage CreatePropertyPage(string name, object value)
@@ -260,6 +270,12 @@ internal sealed class MainForm : Form
             _canvasDocument,
             () => LauncherRuntimeHost.RenderCanvasForEditor(_project.Snapshot, root),
             ImportQuickImage);
+        _canvasPanel.WorkspaceStatusChanged += (_, status) =>
+        {
+            _selectionStatus.Text = status.Selection;
+            _viewportStatus.Text = status.Viewport;
+            _saveStatus.Text = status.Dirty ? "未保存" : "已保存";
+        };
         return new TabPage("设计") { Controls = { _canvasPanel } };
     }
 
@@ -267,6 +283,7 @@ internal sealed class MainForm : Form
     {
         if (_project is null) return;
         _controlOverrides = new BindingList<LauncherControlOverride>(_project.Snapshot.Theme.Controls);
+        _saveStatus.Text = _canvasDocument?.IsDirty == true ? "未保存" : "已保存";
         RefreshPreview();
     }
 
@@ -293,7 +310,7 @@ internal sealed class MainForm : Form
     private void SaveProject()
     {
         if (_project is null) return;
-        try { SyncLists(); _store.Save(_project); _canvasDocument?.MarkSaved(); SetStatus("项目已原子保存"); }
+        try { SyncLists(); _store.Save(_project); _canvasDocument?.MarkSaved(); _saveStatus.Text = "已保存"; SetStatus("项目已原子保存"); }
         catch (Exception ex) { ShowError(ex); }
     }
 
@@ -447,6 +464,7 @@ internal sealed class MainForm : Form
             SyncLists();
             string root = _store.GetProjectDirectory(_project.Snapshot.ProjectId);
             IReadOnlyList<string> issues = EditorPreflightValidator.Validate(_project, root);
+            _preflightStatus.Text = issues.Count == 0 ? "发布检查：通过" : $"发布检查：{issues.Count} 项待处理";
             MessageBox.Show(this, issues.Count == 0 ? "发布前检查通过：四档界面缩放、控件边界、点击区域、素材和链接均有效。" : string.Join("\r\n", issues), "发布前检查", MessageBoxButtons.OK, issues.Count == 0 ? MessageBoxIcon.Information : MessageBoxIcon.Warning);
         }
         catch (Exception ex) { ShowError(ex); }
@@ -642,6 +660,11 @@ internal sealed class MainForm : Form
         TabPage design = _tabs.TabPages.Cast<TabPage>().Single(page => page.Text == "设计");
         var panel = design.Controls.OfType<LauncherCanvasEditorPanel>().Single();
         return panel.CaptureLayoutForEvidence();
+    }
+    internal (float Zoom, bool Snap, bool Grid) CaptureDesignViewportForEvidence()
+    {
+        TabPage design = _tabs.TabPages.Cast<TabPage>().Single(page => page.Text == "设计");
+        return design.Controls.OfType<LauncherCanvasEditorPanel>().Single().CaptureViewportForEvidence();
     }
     private void ShowError(Exception error) => MessageBox.Show(this, error.Message, "操作失败", MessageBoxButtons.OK, MessageBoxIcon.Error);
     private static string SafeFileName(string value)

@@ -38,6 +38,10 @@ internal static class Program
             using var canvasScreenshot = new Bitmap(form.Width, form.Height);
             form.DrawToBitmap(canvasScreenshot, new Rectangle(Point.Empty, canvasScreenshot.Size));
             canvasScreenshot.Save(Path.Combine(output, "可视化画布设计器.png"), ImageFormat.Png);
+            form.Size = new Size(1100, 700); Application.DoEvents();
+            using var minimumScreenshot = new Bitmap(form.Width, form.Height);
+            form.DrawToBitmap(minimumScreenshot, new Rectangle(Point.Empty, minimumScreenshot.Size));
+            minimumScreenshot.Save(Path.Combine(output, "最小窗口画布设计器.png"), ImageFormat.Png);
             form.Hide();
             return 0;
         }
