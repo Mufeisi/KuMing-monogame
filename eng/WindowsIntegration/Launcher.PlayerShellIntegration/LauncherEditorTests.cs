@@ -11,6 +11,7 @@ using System.Net.Sockets;
 using System.Text.Json;
 using Launcher.PlayerShell;
 using System.ComponentModel;
+using System.Windows.Forms;
 using Xunit;
 
 namespace Launcher.PlayerShellIntegration;
@@ -139,6 +140,24 @@ public sealed class LauncherEditorTests
 
         Assert.Equal(new Size(snapshot.Theme.CanvasWidth, snapshot.Theme.CanvasHeight), canvas.Size);
         Assert.All(layout.Values, bounds => Assert.True(new Rectangle(Point.Empty, canvas.Size).Contains(bounds)));
+    }
+
+    [Fact]
+    public void EditorShellUsesFiveStableModesAndSingleObjectTreeWorkspace()
+    {
+        using var scope = new EditorTempScope();
+        var store = new EditorProjectStore(scope.Root);
+        store.Create("shell-layout", "作者工具外壳", LauncherTemplateKind.Classic);
+        using var form = new MainForm(store) { StartPosition = FormStartPosition.Manual, Location = new Point(-32000, -32000), Size = new Size(1280, 800) };
+        form.Show();
+        form.PrepareCanvasEvidence();
+        (int objectTreeWidth, int propertiesWidth, Size canvasSize) = form.CaptureDesignWorkspaceLayoutForEvidence();
+
+        Assert.Equal(["概览", "设计", "内容", "交付", "诊断"], form.CaptureWorkspaceModesForEvidence());
+        Assert.Equal(190, objectTreeWidth);
+        Assert.Equal(250, propertiesWidth);
+        Assert.Equal(new Size(801, 554), canvasSize);
+        form.Hide();
     }
 
     [Fact]

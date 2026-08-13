@@ -11,14 +11,14 @@
 2. `LauncherCanvasEditorPanel.cs`：控件树、运行时预览画布、属性面板和四态资源入口。
 3. `LauncherRuntimeHost.CaptureControlLayoutForEditor`：从真实运行时提取编辑器初始布局。
 4. `Program --editor-smoke`：四档 DPI、画布截图、真实玩家入口、签名双版本、回滚、离线包和恢复包纵向冒烟。
-5. `LauncherEditorTests`：九项画布回归、客户区坐标和玩家快照兼容性保护。
+5. `LauncherEditorTests`：十项画布与外壳回归、客户区坐标和玩家快照兼容性保护。
 
 ## 验证结果
 
 ```text
 Launcher.Editor Release build: 通过，0 警告，0 错误
-画布局部回归: 通过 9，失败 0
-Launcher.PlayerShellIntegration.Windows 布局修正后最终全量: 通过 95，失败 0
+画布与外壳局部回归: 通过 10，失败 0
+Launcher.PlayerShellIntegration.Windows 设计基线后最终全量: 通过 96，失败 0
 Base05.Tests 全量: 通过 408，失败 0
 当前源码编辑器纵向冒烟: 退出码 0
 真实玩家入口: Client 进程响应正常，主窗口标题为“管理员离线配置器验收”
@@ -28,6 +28,7 @@ Base05.Tests 全量: 通过 408，失败 0
 
 - `eng/WindowsIntegration/Launcher.PlayerShellIntegration/TestResults/leg04-full-final.trx`
 - `eng/WindowsIntegration/Launcher.PlayerShellIntegration/TestResults/leg04-layoutfix-final.trx`
+- `eng/WindowsIntegration/Launcher.PlayerShellIntegration/TestResults/leg04-designbaseline-final.trx`
 - `Tests/Base05.Tests/TestResults/leg04-full.trx`
 
 ## 运行工件
@@ -40,7 +41,7 @@ Base05.Tests 全量: 通过 408，失败 0
 - `signed-publish/`：首发、第二版及回滚后的签名发布历史；
 - `smoke-project-离线发布.zip` 与密钥恢复包。
 
-用户目检反馈后的布局修正将项目选择收进顶部下拉框，左侧只保留控件树；画布改为客户区渲染以消除窗口边框偏移，工具栏压缩为菜单，属性区支持折叠并在多选时显示共同属性。最终布局截图位于本地 `artifacts/leg04-editor-ui-layoutfix-20260813/可视化画布设计器.png`。
+用户目检反馈后按本地参考作者工具、Microsoft Windows 与 Adobe Spectrum 官方规范重审设计基线：项目选择收进顶部下拉框，主工作区固定为概览、设计、内容、交付、诊断五种模式；设计页左侧只保留对象树，画布改为客户区渲染，工具栏压缩为上下文菜单，属性区支持折叠并在多选时显示共同属性。最终布局截图位于本地 `artifacts/leg04-editor-ui-designbaseline-20260813/可视化画布设计器.png`。
 
 ## 兼容性与回滚
 

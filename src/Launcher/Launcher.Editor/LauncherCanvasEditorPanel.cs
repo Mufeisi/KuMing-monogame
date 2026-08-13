@@ -27,6 +27,11 @@ internal sealed class LauncherCanvasEditorPanel : UserControl
     }
 
     internal LauncherCanvasDocument Document => _document;
+    internal (int ObjectTreeWidth, int PropertiesWidth, Size CanvasSize) CaptureLayoutForEvidence()
+    {
+        var main = Controls.OfType<TableLayoutPanel>().Single();
+        return ((int)main.ColumnStyles[0].Width, (int)main.ColumnStyles[2].Width, _surface.Size);
+    }
 
     private void OnDocumentChanged(object? sender, EventArgs e) => RefreshFromDocument();
 

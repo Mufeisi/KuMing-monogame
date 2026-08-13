@@ -21,7 +21,6 @@ internal sealed class MainForm : Form
     private BindingList<LauncherControlOverride>? _controlOverrides;
     private BindingList<LauncherActionLink>? _actionLinks;
     private float _previewScale = 1f;
-    private bool _advancedVisible;
     private QuickProductionPanel? _quickPanel;
     private string _lastQuickOutput = string.Empty;
     private CancellationTokenSource? _quickGenerationCancellation;
@@ -53,7 +52,9 @@ internal sealed class MainForm : Form
         AddTool(tools, "生成启动器成品", GenerateAllQuick);
         AddTool(tools, "快速制作首页", () => { if (_tabs.TabPages.Count > 0) _tabs.SelectedIndex = 0; });
         var advanced = new ToolStripDropDownButton("高级工具");
-        AddAdvanced(advanced, "显示高级设置", ShowAdvanced);
+        AddAdvanced(advanced, "进入设计工作区", ShowAdvanced);
+        AddAdvanced(advanced, "项目与品牌设置…", () => ShowPropertyDialog("项目与品牌设置", _project is null ? null : new ProjectBrandPropertyView(_project)));
+        AddAdvanced(advanced, "主题全局设置…", () => ShowPropertyDialog("主题全局设置", _project is null ? null : new ThemePropertyView(_project)));
         AddAdvanced(advanced, "保存项目", SaveProject);
         AddAdvanced(advanced, "导入旧客户端配置", ImportClient);
         AddAdvanced(advanced, "导入主题图片", ImportThemeImage);
@@ -161,26 +162,37 @@ internal sealed class MainForm : Form
 
         _quickPanel = new QuickProductionPanel(_project, SelectQuickResource, () => ImportQuickImage(ThemeImageUsage.Background), () => ImportQuickImage(ThemeImageUsage.ButtonBase), GenerateAllQuick, ShowAdvanced);
         _quickPanel.SetResult(_lastQuickOutput);
-        _tabs.TabPages.Add(new TabPage("快速制作") { Controls = { _quickPanel } });
-        if (!_advancedVisible) return;
-        AddPropertyTab("项目与品牌", new ProjectBrandPropertyView(_project));
-        AddPropertyTab("主题", new ThemePropertyView(_project));
+        _tabs.TabPages.Add(new TabPage("概览") { Controls = { _quickPanel } });
         _tabs.TabPages.Add(CreateControlLayoutTab());
-        _tabs.TabPages.Add(CreateServerTab());
-        _tabs.TabPages.Add(CreateAnnouncementTab());
-        _tabs.TabPages.Add(CreateActionLinksTab());
-        _tabs.TabPages.Add(new TabPage("玩家设置") { Controls = { new SettingsEditorPanel(_project.Snapshot.Defaults) } });
-        AddPropertyTab("项目默认微端", new DefaultMicroPropertyView(_project.Snapshot.DefaultMicro));
-        AddPropertyTab("微端部署", new GatewayPropertyView(_project.Gateway));
-        AddPropertyTab("签名与发布", new ReleasePropertyView(_project.Release));
-        _tabs.TabPages.Add(CreatePreviewTab());
+        _tabs.TabPages.Add(CreateModePage("内容", CreateServerTab(), CreateAnnouncementTab(), CreateActionLinksTab(), new TabPage("玩家设置") { Controls = { new SettingsEditorPanel(_project.Snapshot.Defaults) } }));
+        _tabs.TabPages.Add(CreateModePage("交付", CreatePropertyPage("项目默认微端", new DefaultMicroPropertyView(_project.Snapshot.DefaultMicro)), CreatePropertyPage("微端部署", new GatewayPropertyView(_project.Gateway)), CreatePropertyPage("签名与发布", new ReleasePropertyView(_project.Release))));
+        _tabs.TabPages.Add(CreateModePage("诊断", CreatePreviewTab()));
     }
 
-    private void AddPropertyTab(string name, object value)
+    private TabPage CreatePropertyPage(string name, object value)
     {
         var grid = new PropertyGrid { Dock = DockStyle.Fill, SelectedObject = value, HelpVisible = true, ToolbarVisible = true };
         grid.PropertyValueChanged += (_, _) => { SyncLists(); RefreshPreview(); };
-        _tabs.TabPages.Add(new TabPage(name) { Controls = { grid } });
+        return new TabPage(name) { Controls = { grid } };
+    }
+
+    private static TabPage CreateModePage(string name, params TabPage[] pages)
+    {
+        var sections = new TabControl { Dock = DockStyle.Fill };
+        sections.TabPages.AddRange(pages);
+        return new TabPage(name) { Controls = { sections } };
+    }
+
+    private void ShowPropertyDialog(string title, object? value)
+    {
+        if (value is null) return;
+        using var dialog = new Form { Text = title, StartPosition = FormStartPosition.CenterParent, MinimizeBox = false, MaximizeBox = true, Size = new Size(620, 720), MinimumSize = new Size(480, 520), ShowInTaskbar = false };
+        var grid = new PropertyGrid { Dock = DockStyle.Fill, SelectedObject = value, HelpVisible = true, ToolbarVisible = true };
+        grid.PropertyValueChanged += (_, _) => { SyncLists(); RefreshPreview(); };
+        var close = new Button { Text = "完成", Dock = DockStyle.Bottom, Height = 38 };
+        close.Click += (_, _) => dialog.Close();
+        dialog.Controls.Add(grid); dialog.Controls.Add(close);
+        dialog.ShowDialog(this);
     }
 
     private TabPage CreateServerTab()
@@ -248,7 +260,7 @@ internal sealed class MainForm : Form
             _canvasDocument,
             () => LauncherRuntimeHost.RenderCanvasForEditor(_project.Snapshot, root),
             ImportQuickImage);
-        return new TabPage("可视化画布") { Controls = { _canvasPanel } };
+        return new TabPage("设计") { Controls = { _canvasPanel } };
     }
 
     private void OnCanvasDocumentChanged(object? sender, EventArgs e)
@@ -309,7 +321,6 @@ internal sealed class MainForm : Form
     private void ShowAdvanced()
     {
         if (_project is null) { MessageBox.Show(this, "请先新建或选择启动器项目。", Text); return; }
-        if (!_advancedVisible) { _advancedVisible = true; RebuildTabs(); }
         if (_tabs.TabPages.Count > 1) _tabs.SelectedIndex = 1;
     }
 
@@ -615,14 +626,22 @@ internal sealed class MainForm : Form
     internal void PrepareCanvasEvidence()
     {
         if (_project is null) throw new InvalidOperationException("没有可用于画布证据的项目");
-        if (!_advancedVisible) { _advancedVisible = true; RebuildTabs(); }
-        TabPage canvas = _tabs.TabPages.Cast<TabPage>().Single(page => page.Text == "可视化画布");
+        TabPage canvas = _tabs.TabPages.Cast<TabPage>().Single(page => page.Text == "设计");
         _tabs.SelectedTab = canvas;
         _canvasDocument!.Select([LauncherControlId.ServerList, LauncherControlId.Announcements, LauncherControlId.LaunchButton]);
         _canvasDocument.MoveSelection(8, 8, snap: true);
         _canvasDocument.Undo();
         _canvasDocument.Redo();
         Application.DoEvents();
+    }
+
+    internal IReadOnlyList<string> CaptureWorkspaceModesForEvidence() => _tabs.TabPages.Cast<TabPage>().Select(page => page.Text).ToArray();
+
+    internal (int ObjectTreeWidth, int PropertiesWidth, Size CanvasSize) CaptureDesignWorkspaceLayoutForEvidence()
+    {
+        TabPage design = _tabs.TabPages.Cast<TabPage>().Single(page => page.Text == "设计");
+        var panel = design.Controls.OfType<LauncherCanvasEditorPanel>().Single();
+        return panel.CaptureLayoutForEvidence();
     }
     private void ShowError(Exception error) => MessageBox.Show(this, error.Message, "操作失败", MessageBoxButtons.OK, MessageBoxIcon.Error);
     private static string SafeFileName(string value)
