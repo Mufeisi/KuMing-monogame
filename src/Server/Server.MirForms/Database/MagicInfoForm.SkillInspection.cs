@@ -82,6 +82,29 @@ public partial class MagicInfoForm
         text.AppendLine($"说明：{spatial.Explanation}");
         text.AppendLine($"行为证据：{spatial.BehaviorEvidence}");
 
+        SkillTimelineProfile timeline = SkillTimelineInspector.Build(snapshot.Spell, sampleDistance: 5);
+        text.AppendLine();
+        text.AppendLine("表现时间线（距离 5 格样例）：");
+        text.AppendLine($"建模状态：{(timeline.IsModeled ? "已核对" : "未建模")}");
+        if (timeline.IsModeled)
+        {
+            foreach (SkillTimelineEvent item in timeline.Events)
+            {
+                string duration = item.DurationMilliseconds.HasValue ? $"，持续 {item.DurationMilliseconds.Value} ms" : string.Empty;
+                text.AppendLine($"- {FormatTimelinePhase(item.Phase)} @ {item.Timing}{duration}：{item.Description} [{(item.ServerAuthoritative ? "服务端权威" : "客户端表现")}] ");
+            }
+
+            text.AppendLine("资源引用：");
+            foreach (SkillResourceReference resource in timeline.Resources)
+            {
+                text.AppendLine($"- {resource.Kind}：{resource.LogicalReference}");
+                text.AppendLine($"  PC={resource.PcReference}；Android={resource.AndroidReference}；代码一致={resource.CodeParityVerified}；实体已核验={resource.PhysicalAssetVerified}");
+                text.AppendLine($"  {resource.VerificationNote}");
+            }
+        }
+        text.AppendLine($"说明：{timeline.Explanation}");
+        text.AppendLine($"行为证据：{timeline.BehaviorEvidence}");
+
         if (snapshot.Diagnostics.Count > 0)
         {
             text.AppendLine();
@@ -108,5 +131,15 @@ public partial class MagicInfoForm
         SkillCenterKind.SelectedLocation => "选定地图格",
         SkillCenterKind.Caster => "施法者格",
         _ => "未知，不推断"
+    };
+
+    private static string FormatTimelinePhase(SkillTimelinePhase phase) => phase switch
+    {
+        SkillTimelinePhase.Cast => "施法",
+        SkillTimelinePhase.Flight => "飞行",
+        SkillTimelinePhase.Hit => "命中",
+        SkillTimelinePhase.PersistentEffect => "持续效果",
+        SkillTimelinePhase.Sound => "音效",
+        _ => "未知"
     };
 }
