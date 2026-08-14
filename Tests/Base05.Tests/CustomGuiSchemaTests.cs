@@ -63,6 +63,41 @@ public sealed class CustomGuiSchemaTests
         Assert.Equal(expectedCode, error.Code);
     }
 
+    [Fact]
+    public void 共享布局引擎统一解析父级锚点拉伸与横向流()
+    {
+        CustomGuiRuntimeDocument document = new()
+        {
+            DocumentId = "layout",
+            Viewport = new(1000, 600, CustomGuiScaleMode.Fit, CustomGuiSafeAreaMode.Required),
+            Elements =
+            [
+                new CustomGuiWindow { Id = "root", Layout = new(0, 0, 400, 200, CustomGuiHorizontalAnchor.Center, CustomGuiVerticalAnchor.Center) },
+                new CustomGuiPanel { Id = "flow", ParentId = "root", Layout = new(10, 20, 20, 30, CustomGuiHorizontalAnchor.Stretch, CustomGuiVerticalAnchor.Stretch), Flow = new(CustomGuiFlowDirection.Horizontal, 5, new(10, 10, 10, 10)) },
+                new CustomGuiText { Id = "first", ParentId = "flow", Layout = new(99, 0, 50, 20, Margin: new(2, 3, 4, 5)), Content = "一" },
+                new CustomGuiText { Id = "second", ParentId = "flow", Layout = new(88, 0, 60, 20, Margin: new(1, 3, 2, 5)), Content = "二" },
+            ],
+        };
+
+        IReadOnlyDictionary<string, CustomGuiResolvedBounds> result = CustomGuiLayoutEngine.Resolve(document);
+
+        Assert.Equal(new CustomGuiResolvedBounds(300, 200, 400, 200), result["root"]);
+        Assert.Equal(new CustomGuiResolvedBounds(310, 220, 370, 150), result["flow"]);
+        Assert.Equal(new CustomGuiResolvedBounds(322, 233, 50, 20), result["first"]);
+        Assert.Equal(new CustomGuiResolvedBounds(382, 233, 60, 20), result["second"]);
+    }
+
+    [Fact]
+    public void 共享布局引擎对循环父级稳定失败关闭()
+    {
+        CustomGuiRuntimeDocument document = CreateDocument();
+        document.Elements[0].ParentId = "content";
+
+        CustomGuiLayoutException error = Assert.Throws<CustomGuiLayoutException>(() => CustomGuiLayoutEngine.Resolve(document));
+
+        Assert.Equal("GUI03-LAYOUT-001", error.Code);
+    }
+
     private static CustomGuiRuntimeDocument CreateDocument()
     {
         CustomGuiLayout root = new(0, 0, 960, 540, CustomGuiHorizontalAnchor.Center, CustomGuiVerticalAnchor.Center, CustomGuiThickness.Zero);

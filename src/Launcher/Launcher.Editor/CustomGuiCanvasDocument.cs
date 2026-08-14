@@ -41,11 +41,18 @@ internal sealed class CustomGuiCanvasDocument
 
         public CustomGuiRuntimeDocument Document { get; }
         public IReadOnlyList<string> ElementIds => Document.Elements.OrderBy(element => element.ZIndex).Select(element => element.Id).ToArray();
-        public CanvasBounds GetBounds(string id) => Resolve(id, []);
+        public CanvasBounds GetBounds(string id)
+        {
+            CustomGuiResolvedBounds value = CustomGuiLayoutEngine.Resolve(Document)[id];
+            return new CanvasBounds(value.X, value.Y, value.Width, value.Height);
+        }
         public void SetBounds(string id, CanvasBounds value)
         {
             CustomGuiElement element = Element(id);
-            CanvasBounds parent = ParentBounds(element, []);
+            CustomGuiResolvedBounds parentValue = string.IsNullOrWhiteSpace(element.ParentId)
+                ? new CustomGuiResolvedBounds(0, 0, Document.Viewport.ReferenceWidth, Document.Viewport.ReferenceHeight)
+                : CustomGuiLayoutEngine.Resolve(Document)[element.ParentId];
+            var parent = new CanvasBounds(parentValue.X, parentValue.Y, parentValue.Width, parentValue.Height);
             CustomGuiLayout layout = element.Layout;
             int x = layout.HorizontalAnchor switch
             {
@@ -86,37 +93,6 @@ internal sealed class CustomGuiCanvasDocument
                 pair.First.DocumentId == pair.Second.DocumentId && pair.First.ElementId == pair.Second.ElementId && pair.First.Locked == pair.Second.Locked);
 
         public CustomGuiElement Element(string id) => Document.Elements.Single(element => element.Id == id);
-        private CanvasBounds Resolve(string id, HashSet<string> path)
-        {
-            if (!path.Add(id)) throw new InvalidDataException("游戏 GUI 父级关系存在循环");
-            CustomGuiElement element = Element(id);
-            CanvasBounds parent = ParentBounds(element, path);
-            CustomGuiLayout layout = element.Layout;
-            int width = layout.HorizontalAnchor == CustomGuiHorizontalAnchor.Stretch
-                ? parent.Width - layout.Margin.Left - layout.Margin.Right - layout.X - layout.Width
-                : layout.Width;
-            int height = layout.VerticalAnchor == CustomGuiVerticalAnchor.Stretch
-                ? parent.Height - layout.Margin.Top - layout.Margin.Bottom - layout.Y - layout.Height
-                : layout.Height;
-            int x = layout.HorizontalAnchor switch
-            {
-                CustomGuiHorizontalAnchor.Center => parent.X + (parent.Width - width) / 2 + layout.X,
-                CustomGuiHorizontalAnchor.Right => parent.X + parent.Width - layout.Margin.Right - width - layout.X,
-                _ => parent.X + layout.Margin.Left + layout.X,
-            };
-            int y = layout.VerticalAnchor switch
-            {
-                CustomGuiVerticalAnchor.Center => parent.Y + (parent.Height - height) / 2 + layout.Y,
-                CustomGuiVerticalAnchor.Bottom => parent.Y + parent.Height - layout.Margin.Bottom - height - layout.Y,
-                _ => parent.Y + layout.Margin.Top + layout.Y,
-            };
-            path.Remove(id);
-            return new CanvasBounds(x, y, width, height);
-        }
-
-        private CanvasBounds ParentBounds(CustomGuiElement element, HashSet<string> path) => string.IsNullOrWhiteSpace(element.ParentId)
-            ? new CanvasBounds(0, 0, Document.Viewport.ReferenceWidth, Document.Viewport.ReferenceHeight)
-            : Resolve(element.ParentId, path);
         private CustomGuiCanvasControlState State(string id) => _states.Single(state => state.DocumentId == Document.DocumentId && state.ElementId == id);
         private static CustomGuiRuntimeDocument Clone(CustomGuiRuntimeDocument value) => CustomGuiDocumentCodec.Deserialize(CustomGuiDocumentCodec.Serialize(value));
         private static CustomGuiCanvasControlState Clone(CustomGuiCanvasControlState value) => new() { DocumentId = value.DocumentId, ElementId = value.ElementId, Locked = value.Locked };

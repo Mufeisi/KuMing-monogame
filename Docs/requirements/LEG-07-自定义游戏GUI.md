@@ -1,6 +1,6 @@
 # LEG-07：自定义游戏 GUI
 
-- 状态：已激活；`GUI-CORE-01..04` 与 `GUI-01..02` 已完成，`GATE-GUI-CORE` 已关闭，下一切片为 `GUI-03` PC Adapter
+- 状态：已激活；`GUI-CORE-01..04` 与 `GUI-01..03` 已完成，`GATE-GUI-CORE` 已关闭，下一切片为 `GUI-04` Android/FairyGUI Adapter
 - 负责人：项目所有者
 - 激活日期：2026-08-14
 - 最后复核日期：2026-08-14
@@ -53,7 +53,7 @@
 
 1. `GUI-01` 游戏 GUI 设计文档和运行描述 Schema：首版只包含 `Window/Panel`、`Image`、`Text/RichText`、`Button`、`TextInput`、`List`、`ProgressBar`、`ItemSlot` 及专项路线规定的布局能力；已完成，证据见 [`../Evidence/LEG-07-20260814/GUI-01.md`](../Evidence/LEG-07-20260814/GUI-01.md)。
 2. `GUI-02` 作者工具游戏 GUI Adapter，复用设计核心和既有三栏工作区，不增加新的永久平级侧栏；已完成，证据见 [`../Evidence/LEG-07-20260814/GUI-02.md`](../Evidence/LEG-07-20260814/GUI-02.md)。
-3. `GUI-03` PC Adapter，通过现有 `DXManager` 与 MirControls 映射静态控件。
+3. `GUI-03` PC Adapter，通过现有 `DXManager` 与 MirControls 映射静态控件；已完成，证据见 [`../Evidence/LEG-07-20260814/GUI-03.md`](../Evidence/LEG-07-20260814/GUI-03.md)。
 4. `GUI-04` 移动 Adapter，通过现有 FairyGUI 与 `SpriteBatchStack` 映射同一运行描述。
 5. `GUI-05` 资源、字体、图集、安全区、数量、层级、文本与总包大小校验；未知控件、未知属性、循环引用和超限资源失败关闭。
 6. `GUI-06` 静态“新手活动窗口”双端显示与签名发布冒烟。
@@ -144,7 +144,27 @@ Schema v1 可确定性往返全部首版控件与跨端布局；生产 Codec 严
 
 游戏 GUI 文档在现有专业作者工具三栏工作区中可见、可选、可编辑、可撤销并原子随项目保存重载；作者元数据与运行描述分离；启动器设计工作区及顶级五模式无回归；Windows 全量、Release 构建和后台 1280×800/1100×700 截图通过。
 
-## 10. 回滚
+## 10. 已完成切片 `GUI-03`
+
+### 做
+
+1. Shared 提供唯一的父级、锚点、拉伸、边距、间距和横纵流布局解析入口；作者 Adapter 与 PC Adapter 消费同一结果，不各自解释一套坐标语义。
+2. PC Adapter 将九个 Schema v1 控件类型物化为现有 `MirControl/MirLabel` 控件树；窗口、面板、图片、文本、按钮、输入占位、列表、进度和物品格均保留运行描述标识与静态内容。
+3. `fit` 视口按等比缩放和居中留边转换为目标像素；字体按目标比例直接生成，控件不依赖拉伸后的离屏截图。
+4. 图片和物品格只通过逻辑 `assetId` 解析为既有 `MLibrary`，实际绘制继续调用 `MLibrary/MirControl` 的 `DXManager` 接缝；Adapter 不拥有第二渲染器。
+5. Host 可显式附着到现有场景控件树并统一释放；父级循环在创建任何 MirControl 前以 `GUI03-LAYOUT-001` 失败关闭。
+
+### 不做
+
+1. 不实现 Android/FairyGUI 物化；属于 `GUI-04`。
+2. 不完成资源存在性、字体白名单、数量、深度和包体上限；属于 `GUI-05`。
+3. 不修改协议、服务端会话、脚本 Hook 或玩家状态；真实 PC 截图与双端对照在 `GUI-06` 阶段外环产生。
+
+### 完成定义
+
+同一 Schema v1 文档经共享布局引擎确定性解析，并在 PC 端形成可附着、可释放的 MirControls 控件树；九个首版类型、等比视口、资源接缝、父子坐标、静态列表、进度和失败关闭均有公共可观察测试，Base05 与 Windows Release 全量通过。
+
+## 11. 回滚
 
 1. 每个 `GUI-*` 切片独立提交，可按逆序回滚；不得用一次提交跨越两个阶段门禁。
 2. `GUI-CORE-*` 回滚必须恢复启动器 Adapter 与核心的匹配版本，禁止留下两套编辑逻辑。

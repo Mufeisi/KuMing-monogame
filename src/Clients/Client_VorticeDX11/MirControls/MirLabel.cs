@@ -63,7 +63,9 @@ namespace Client.MirControls
             get { return _font; }
             set
             {
-                _font = ScaleFont(value);
+                Font scaled = ScaleFont(value);
+                _font?.Dispose();
+                _font = scaled;
                 OnFontChanged(EventArgs.Empty);
             }
         }
