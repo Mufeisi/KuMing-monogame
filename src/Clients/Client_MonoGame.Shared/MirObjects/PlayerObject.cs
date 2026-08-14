@@ -2909,7 +2909,6 @@ namespace MonoShare.MirObjects
                                     #region FireBall
 
                                     case Spell.FireBall:
-                                        SoundManager.PlaySound(20000 + (ushort)Spell * 10 + 1);
                                         missile = CreateProjectile(10, Libraries.Magic, true, 6, 30, 4);
 
                                         if (missile.Target != null)
@@ -2918,7 +2917,6 @@ namespace MonoShare.MirObjects
                                             {
                                                 if (missile.Target.CurrentAction == MirAction.Dead) return;
                                                 missile.Target.Effects.Add(new Effect(Libraries.Magic, 170, 10, 600, missile.Target));
-                                                SoundManager.PlaySound(20000 + (ushort)Spell * 10 + 2);
                                             };
                                         }
                                         break;

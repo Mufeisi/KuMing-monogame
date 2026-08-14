@@ -15,7 +15,7 @@ public sealed class SkillTimelineInspectionTests
         Assert.Contains(profile.Events, item => item.Phase == SkillTimelinePhase.Flight);
         Assert.Contains(profile.Events, item => item.Phase == SkillTimelinePhase.Hit && item.ServerAuthoritative && item.Timing.Contains("750"));
         Assert.Contains(profile.Events, item => item.Phase == SkillTimelinePhase.PersistentEffect && item.DurationMilliseconds == 0);
-        Assert.Contains(profile.Events, item => item.Description.Contains("音效 +2"));
+        Assert.Contains(profile.Events, item => item.Phase == SkillTimelinePhase.Hit && item.Description.Contains("没有独立命中音效"));
     }
 
     [Fact]
