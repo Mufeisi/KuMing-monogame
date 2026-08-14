@@ -55,6 +55,10 @@ public static partial class ServiceInstanceProfileValidator
                 diagnostics.Add(Error("LEG09-PROFILE-TIMEOUT-001", source, "启动和停止超时必须在 1～300 秒之间。"));
             if (component.HealthProbe == ServiceHealthProbeKind.Http && !component.HealthPath.StartsWith('/'))
                 diagnostics.Add(Error("LEG09-PROFILE-HEALTH-001", source, "HTTP 健康路径必须以 / 开头。"));
+            if (component.StopPath.Length > 0 && !component.StopPath.StartsWith('/'))
+                diagnostics.Add(Error("LEG09-PROFILE-STOP-001", source, "HTTP 停止路径必须以 / 开头。"));
+            if (component.Arguments.Any(argument => SecretArgumentPattern().IsMatch(argument)))
+                diagnostics.Add(Error("LEG09-PROFILE-SECRET-003", source, "组件参数疑似包含秘密值；请改用秘密引用和受控注入入口。"));
             AddPort(component.BasePort, profile.PortOffset, source + ".BasePort", component.Id, ports, diagnostics);
 
             if (root is not null)
@@ -158,4 +162,7 @@ public static partial class ServiceInstanceProfileValidator
 
     [GeneratedRegex("^[a-z0-9](?:[a-z0-9-]{1,46}[a-z0-9])$")]
     private static partial Regex IdentifierPattern();
+
+    [GeneratedRegex("(?i)(password|passwd|token|secret|api[-_]?key)\\s*=")]
+    private static partial Regex SecretArgumentPattern();
 }

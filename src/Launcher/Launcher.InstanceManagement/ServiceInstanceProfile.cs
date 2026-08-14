@@ -56,6 +56,7 @@ public sealed class ServiceComponentProfile
     public int BasePort { get; set; }
     public ServiceHealthProbeKind HealthProbe { get; set; } = ServiceHealthProbeKind.Tcp;
     public string HealthPath { get; set; } = "/api/health";
+    public string StopPath { get; set; } = string.Empty;
     public int StartTimeoutSeconds { get; set; } = 30;
     public int StopTimeoutSeconds { get; set; } = 15;
     public string LogPath { get; set; } = string.Empty;

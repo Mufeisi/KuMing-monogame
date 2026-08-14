@@ -41,6 +41,7 @@ public sealed class ServiceInstanceProfileTests
         profile.LoginBasePort = 7000;
         profile.Components[0].BasePort = 7000;
         profile.Components[0].ExecutablePath = "..\\escape.exe";
+        profile.Components[0].Arguments.Add("--token=inline-value");
         profile.Components[0].DependsOn.Add("micro");
         profile.Components.Add(new ServiceComponentProfile
         {
@@ -58,6 +59,7 @@ public sealed class ServiceInstanceProfileTests
             Assert.Contains(diagnostics, item => item.Code == "LEG09-PROFILE-PORT-002");
             Assert.Contains(diagnostics, item => item.Code == "LEG09-PROFILE-PATH-003");
             Assert.Contains(diagnostics, item => item.Code == "LEG09-PROFILE-DEPENDENCY-002");
+            Assert.Contains(diagnostics, item => item.Code == "LEG09-PROFILE-SECRET-003");
             Assert.Throws<InvalidDataException>(() => new ServiceInstanceProfileStore(root).Save(profile));
         }
         finally { Directory.Delete(root, true); }
