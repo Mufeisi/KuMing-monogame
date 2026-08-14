@@ -36,6 +36,7 @@ internal sealed class MainForm : Form
     private CustomGuiCanvasEditorPanel? _gameGuiPanel;
     private TabControl? _designDocuments;
     private DistributionOverviewPanel? _distributionOverview;
+    private ServiceInstanceOperationsPanel? _instanceOperations;
     private bool _restoringProjectSelection;
 
     public MainForm(EditorProjectStore store)
@@ -181,6 +182,8 @@ internal sealed class MainForm : Form
         _tabs.TabPages.Add(CreateModePage("内容", CreateServerTab(), CreateAnnouncementTab(), CreateActionLinksTab(), new TabPage("玩家设置") { Controls = { new SettingsEditorPanel(_project.Snapshot.Defaults) } }));
         _distributionOverview = new DistributionOverviewPanel(_project, _store.GetProjectDirectory(_project.Snapshot.ProjectId), NavigateDistributionFix);
         _tabs.TabPages.Add(CreateModePage("交付", new TabPage("发行体概览") { Controls = { _distributionOverview } }, CreatePropertyPage("项目默认微端", new DefaultMicroPropertyView(_project.Snapshot.DefaultMicro)), CreatePropertyPage("微端部署", new GatewayPropertyView(_project.Gateway)), CreatePropertyPage("签名与发布", new ReleasePropertyView(_project.Release))));
+        _instanceOperations = new ServiceInstanceOperationsPanel(_store.GetProjectDirectory(_project.Snapshot.ProjectId));
+        _tabs.TabPages.Add(new TabPage("实例") { Controls = { _instanceOperations } });
         _tabs.TabPages.Add(CreateModePage("诊断", CreatePreviewTab()));
         DesktopAuthoringTheme.Apply(_tabs);
     }
@@ -753,6 +756,10 @@ internal sealed class MainForm : Form
     }
 
     internal DistributionOverviewSnapshot? CaptureDistributionOverviewForEvidence() => _distributionOverview?.Snapshot;
+
+    internal Task<ServiceInstanceOperationsEvidence> RunServiceInstanceEvidenceAsync() => _instanceOperations?.RunLifecycleForEvidenceAsync() ?? throw new InvalidOperationException("实例运行面板尚未创建");
+
+    internal ServiceInstanceOperationsEvidence CaptureServiceInstanceEvidence() => _instanceOperations?.CaptureForEvidence() ?? throw new InvalidOperationException("实例运行面板尚未创建");
 
     internal Task<IReadOnlyList<DistributionEndpointResult>> RunDistributionEndpointEvidenceAsync()
         => _distributionOverview?.RunEndpointPreflightAsync() ?? Task.FromResult<IReadOnlyList<DistributionEndpointResult>>(Array.Empty<DistributionEndpointResult>());

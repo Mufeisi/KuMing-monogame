@@ -20,6 +20,7 @@
     <ProjectReference Include="..\..\..\src\Clients\Client_VorticeDX11\Client_VorticeDX11.csproj" />
     <ProjectReference Include="..\..\..\src\Clients\Client_MonoGame.Shared\Client_MonoGame.Shared.csproj" AdditionalProperties="EnableAndroidTarget=false" Aliases="MonoClient" />
     <ProjectReference Include="..\..\..\src\Launcher\Launcher.Editor\Launcher.Editor.csproj" />
+    <ProjectReference Include="..\..\..\src\Launcher\Launcher.InstanceManagement\Launcher.InstanceManagement.csproj" />
     <ProjectReference Include="..\..\..\src\Launcher\Launcher.PlayerShell.Core\Launcher.PlayerShell.Core.csproj" />
     <ProjectReference Include="..\..\..\src\Launcher\Launcher.ThemeRuntime\Launcher.ThemeRuntime.csproj" />
     <ProjectReference Include="..\..\..\src\MicroGateway\MicroGateway.Core\MicroGateway.Core.csproj" />

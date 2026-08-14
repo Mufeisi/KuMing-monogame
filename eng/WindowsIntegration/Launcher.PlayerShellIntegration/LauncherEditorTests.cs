@@ -6,6 +6,7 @@ using System.Drawing;
 using System.Diagnostics;
 using Launcher.ThemeRuntime;
 using LyoCrystal.LauncherEditor;
+using LyoCrystal.InstanceManagement;
 using Shared.CustomGui;
 using Shared.Security;
 using Shared.Release;
@@ -496,7 +497,7 @@ public sealed class LauncherEditorTests
     }
 
     [Fact]
-    public void EditorShellUsesFiveStableModesAndSingleObjectTreeWorkspace()
+    public void EditorShellUsesSixStableModesAndSingleObjectTreeWorkspace()
     {
         using var scope = new EditorTempScope();
         var store = new EditorProjectStore(scope.Root);
@@ -506,7 +507,7 @@ public sealed class LauncherEditorTests
         form.PrepareCanvasEvidence();
         (int objectTreeWidth, int propertiesWidth, Size canvasSize) = form.CaptureDesignWorkspaceLayoutForEvidence();
 
-        Assert.Equal(["概览", "设计", "内容", "交付", "诊断"], form.CaptureWorkspaceModesForEvidence());
+        Assert.Equal(["概览", "设计", "内容", "交付", "实例", "诊断"], form.CaptureWorkspaceModesForEvidence());
         Assert.Equal(190, objectTreeWidth);
         Assert.Equal(250, propertiesWidth);
         Assert.Equal(new Size(801, 554), canvasSize);
@@ -550,6 +551,63 @@ public sealed class LauncherEditorTests
         form.ApplyPropertyChoiceForEvidence("locked", "否");
         Assert.Equal(2, form.CapturePropertiesForEvidence().EditableCount);
         form.Hide();
+    }
+
+    [Fact]
+    public async Task AuthorWorkbenchRunsIsolatedServiceInstanceThroughPreflightHealthLogsAndStop()
+    {
+        using var scope = new EditorTempScope();
+        string workspace = scope.Dir("workspace");
+        var projects = new EditorProjectStore(workspace);
+        EditorProject project = projects.Create("instance-operations", "实例运行工作台", LauncherTemplateKind.Classic);
+        string projectRoot = projects.GetProjectDirectory(project.Snapshot.ProjectId);
+        string runtimeRoot = scope.Dir("instance-runtime");
+        string runtimeDirectory = Path.Combine(runtimeRoot, "runtime");
+        Directory.CreateDirectory(runtimeDirectory);
+        File.Copy(Environment.GetEnvironmentVariable("ComSpec") ?? @"C:\Windows\System32\cmd.exe", Path.Combine(runtimeDirectory, "component.exe"));
+        File.WriteAllText(Path.Combine(runtimeDirectory, "component.ps1"),
+            "$listener=[Net.Sockets.TcpListener]::new([Net.IPAddress]::Loopback,[int]$env:LYOCRYSTAL_EFFECTIVE_PORT);" +
+            "$listener.Start();Write-Output 'component-ready';$client=$listener.AcceptTcpClient();$client.Close();" +
+            "Start-Sleep -Milliseconds 500;$listener.Stop();");
+        int loginPort = FreePort();
+        int componentPort;
+        do componentPort = FreePort(); while (componentPort == loginPort);
+        var profile = new ServiceInstanceProfile
+        {
+            InstanceId = "workbench-test",
+            Environment = ServiceEnvironmentKind.Test,
+            ServerId = "workbench-server",
+            RootDirectory = runtimeRoot,
+            LoginAddress = "127.0.0.1",
+            LoginBasePort = loginPort,
+            Components =
+            [
+                new ServiceComponentProfile
+                {
+                    Id = "probe-server",
+                    Role = ServiceComponentRole.GameServer,
+                    ExecutablePath = "runtime/component.exe",
+                    WorkingDirectory = "runtime",
+                    Arguments = ["/d", "/s", "/c", "powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File component.ps1"],
+                    BasePort = componentPort,
+                    HealthProbe = ServiceHealthProbeKind.Tcp,
+                    StartTimeoutSeconds = 10,
+                    StopTimeoutSeconds = 5,
+                    LogPath = "logs/probe-server.log"
+                }
+            ]
+        };
+        new ServiceInstanceProfileStore(projectRoot).Save(profile);
+
+        using var form = new MainForm(projects) { StartPosition = FormStartPosition.Manual, Location = new Point(-32000, -32000), Size = new Size(1280, 800) };
+        ServiceInstanceOperationsEvidence evidence = await form.RunServiceInstanceEvidenceAsync().ConfigureAwait(false);
+
+        Assert.Equal(1, evidence.ProfileCount);
+        Assert.Equal("workbench-test", evidence.SelectedInstanceId);
+        Assert.Equal(ServiceInstanceRuntimeState.Stopped, evidence.State);
+        Assert.Equal(1, evidence.ComponentCount);
+        Assert.True(evidence.HasLogs);
+        Assert.True(evidence.HasAudit);
     }
 
     [Fact]
@@ -604,7 +662,7 @@ public sealed class LauncherEditorTests
         CustomGuiWorkspaceSnapshot workspace = form.CaptureCustomGuiWorkspaceForEvidence();
 
         Assert.Equal(["启动器界面", "游戏界面"], form.CaptureDesignDocumentsForEvidence());
-        Assert.Equal(["概览", "设计", "内容", "交付", "诊断"], form.CaptureWorkspaceModesForEvidence());
+        Assert.Equal(["概览", "设计", "内容", "交付", "实例", "诊断"], form.CaptureWorkspaceModesForEvidence());
         Assert.Equal(190, workspace.ObjectTreeWidth);
         Assert.Equal(250, workspace.PropertiesWidth);
         Assert.Equal(new Size(1280, 720), workspace.CanvasSize);
