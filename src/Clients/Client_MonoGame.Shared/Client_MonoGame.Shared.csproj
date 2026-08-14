@@ -23,6 +23,8 @@
     <Compile Include="..\..\..\src\Shared\Shared\Release\BootstrapPackageManifestReader.cs" Link="Release\BootstrapPackageManifestReader.cs" />
     <Compile Include="Security\LoginSettingsIntegration.cs" />
     <Compile Include="Diagnostics\MobileCrashDiagnostics.cs" />
+    <Compile Include="CustomGui\**\*.cs" />
+    <Compile Include="..\..\..\src\Shared\Shared\CustomGui\**\*.cs" Link="CustomGui\Shared\%(RecursiveDir)%(Filename)%(Extension)" />
   </ItemGroup>
 
   <PropertyGroup Condition="'$(TargetFramework)' == 'net10.0-android'">

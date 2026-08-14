@@ -1,6 +1,6 @@
 # LEG-07：自定义游戏 GUI
 
-- 状态：已激活；`GUI-CORE-01..04` 与 `GUI-01..03` 已完成，`GATE-GUI-CORE` 已关闭，下一切片为 `GUI-04` Android/FairyGUI Adapter
+- 状态：已激活；`GUI-CORE-01..04` 与 `GUI-01..04` 已完成，`GATE-GUI-CORE` 已关闭，下一切片为 `GUI-05` 校验、签名与资源限制
 - 负责人：项目所有者
 - 激活日期：2026-08-14
 - 最后复核日期：2026-08-14
@@ -54,7 +54,7 @@
 1. `GUI-01` 游戏 GUI 设计文档和运行描述 Schema：首版只包含 `Window/Panel`、`Image`、`Text/RichText`、`Button`、`TextInput`、`List`、`ProgressBar`、`ItemSlot` 及专项路线规定的布局能力；已完成，证据见 [`../Evidence/LEG-07-20260814/GUI-01.md`](../Evidence/LEG-07-20260814/GUI-01.md)。
 2. `GUI-02` 作者工具游戏 GUI Adapter，复用设计核心和既有三栏工作区，不增加新的永久平级侧栏；已完成，证据见 [`../Evidence/LEG-07-20260814/GUI-02.md`](../Evidence/LEG-07-20260814/GUI-02.md)。
 3. `GUI-03` PC Adapter，通过现有 `DXManager` 与 MirControls 映射静态控件；已完成，证据见 [`../Evidence/LEG-07-20260814/GUI-03.md`](../Evidence/LEG-07-20260814/GUI-03.md)。
-4. `GUI-04` 移动 Adapter，通过现有 FairyGUI 与 `SpriteBatchStack` 映射同一运行描述。
+4. `GUI-04` 移动 Adapter，通过现有 FairyGUI 与 `SpriteBatchStack` 映射同一运行描述；已完成，证据见 [`../Evidence/LEG-07-20260814/GUI-04.md`](../Evidence/LEG-07-20260814/GUI-04.md)。
 5. `GUI-05` 资源、字体、图集、安全区、数量、层级、文本与总包大小校验；未知控件、未知属性、循环引用和超限资源失败关闭。
 6. `GUI-06` 静态“新手活动窗口”双端显示与签名发布冒烟。
 
@@ -164,7 +164,27 @@ Schema v1 可确定性往返全部首版控件与跨端布局；生产 Codec 严
 
 同一 Schema v1 文档经共享布局引擎确定性解析，并在 PC 端形成可附着、可释放的 MirControls 控件树；九个首版类型、等比视口、资源接缝、父子坐标、静态列表、进度和失败关闭均有公共可观察测试，Base05 与 Windows Release 全量通过。
 
-## 11. 回滚
+## 11. 已完成切片 `GUI-04`
+
+### 做
+
+1. 移动 Adapter 与 PC、作者工具共同消费 `Shared.CustomGui` Schema 和 `CustomGuiLayoutEngine`，统一父级、锚点、拉伸、边距和流布局语义。
+2. 可测试 Adapter 负责 `fit` 缩放、竖屏居中留边、父子树、层级、显隐及九类节点语义；Android 工厂仅将节点物化为仓库内嵌 FairyGUI 对象。
+3. Android 工厂使用 `GComponent/GLoader/GTextField/GRichTextField/GButton/GTextInput/GList/GProgressBar` 等既有类型；图片只接受 `assetId -> UIPackage URL` 解析接缝。
+4. Host 可附着到既有 FairyGUI 容器并由根节点统一释放；实际绘制继续进入 `FairyGuiHost -> Stage/FairyBatch`，并处于现有 `SpriteBatchStack` 主场景绘制之后的既定渲染序列。
+5. 运行描述在创建任何移动节点前先完成共享布局校验；工厂中途失败会释放已物化树，不遗留半成品窗口。
+
+### 不做
+
+1. 不完成资源存在性、字体白名单、安全区、数量、深度、文本和包体上限；属于 `GUI-05`。
+2. 不挂载静态示例包或产生真实 Android 截图；属于 `GUI-06` 与 `GATE-GUI-STATIC` 阶段外环。
+3. 不修改协议、服务端会话、脚本 Hook、玩家状态或 FairyGUI/SpriteBatchStack 运行时。
+
+### 完成定义
+
+同一 Schema v1 文档可确定性投影为移动控件树；九个首版类型、竖屏等比视口、父子坐标、静态内容、工厂失败清理和循环父级失败关闭均有公共行为证据；Android Release 目标、Base05 与 Windows Release 全量通过。
+
+## 12. 回滚
 
 1. 每个 `GUI-*` 切片独立提交，可按逆序回滚；不得用一次提交跨越两个阶段门禁。
 2. `GUI-CORE-*` 回滚必须恢复启动器 Adapter 与核心的匹配版本，禁止留下两套编辑逻辑。
