@@ -1,6 +1,6 @@
 # LEG-07：自定义游戏 GUI
 
-- 状态：已激活；`GUI-CORE-01..03` 已完成，下一切片为 `GUI-CORE-04` 内存 Adapter 与门禁收口
+- 状态：已激活；`GUI-CORE-01..04` 已完成，`GATE-GUI-CORE` 已关闭，下一切片为 `GUI-01` 游戏 GUI 设计文档与运行描述 Schema
 - 负责人：项目所有者
 - 激活日期：2026-08-14
 - 最后复核日期：2026-08-14
@@ -31,8 +31,8 @@
 
 ## 3. 当前基线与真实接缝
 
-1. 启动器作者画布的当前事实实现为 `src/Launcher/Launcher.Editor/LauncherCanvasDocument.cs`；选择、几何变换、吸附、对齐、层级、锁定、隐藏、撤销/重做和脏状态已经通过真实 UI 消费。
-2. `LauncherCanvasDocument` 当前位于 WinForms 项目，并直接依赖启动器 `LauncherTheme`/`LauncherControlId` 文档模型；它是 `GATE-GUI-CORE` 要渐进深化的对象，不得与新核心长期双轨存在。
+1. 通用设计行为的当前事实实现为 `src/Launcher/Launcher.DesignCore/CanvasDocument.cs` 及 `ICanvasDocument<TId>`；选择、几何变换、吸附、对齐、层级、锁定、隐藏、撤销/重做和脏状态已由启动器真实 UI 通过公共接口消费。
+2. `src/Launcher/Launcher.Editor/LauncherCanvasDocument.cs` 是启动器主题文档到设计核心的 Adapter；WinForms 对象树、画布和属性检查器不拥有第二套选择、历史或几何规则。
 3. PC 渲染必须走现有 `DXManager`/MirControls 接缝；移动渲染必须复用内嵌 FairyGUI 与 `SpriteBatchStack`。Adapter 只映射运行描述，不复制渲染器。
 4. GUI 包签名、摘要、防降级、主备源和原子切换复用现有 Bootstrap 清单与接受策略；不建立第二套信任根或下载器。
 5. 动态协议只允许在静态门禁关闭后，于 `src/Shared/Shared/Packet.cs` 的现有序列化体系中增加真实包；服务端玩家状态仍只由主线程修改。
@@ -44,9 +44,9 @@
 1. `GUI-CORE-01` 设计核心基线与接缝审计：固定当前启动器行为契约、依赖边界、公共接口、迁移顺序和回归入口；已完成，证据见 [`../Evidence/LEG-07-20260814/GUI-CORE-01.md`](../Evidence/LEG-07-20260814/GUI-CORE-01.md)。
 2. `GUI-CORE-02` 深模块提取：将文档、选择、命令、几何、历史、诊断和变更通知移入不引用 WinForms、FairyGUI、MonoGame 或 Vortice 的项目；已完成，证据见 [`../Evidence/LEG-07-20260814/GUI-CORE-02.md`](../Evidence/LEG-07-20260814/GUI-CORE-02.md)。
 3. `GUI-CORE-03` 启动器 Adapter 接回：对象树、画布、属性检查器仅通过核心接口修改文档，删除旧窗体内部重复逻辑；已完成，证据见 [`../Evidence/LEG-07-20260814/GUI-CORE-03.md`](../Evidence/LEG-07-20260814/GUI-CORE-03.md)。
-4. `GUI-CORE-04` 内存 Adapter 与门禁：设计行为测试只断言公共可观察结果，现有 `GATE-UXL` 行为和截图无回归。
+4. `GUI-CORE-04` 内存 Adapter 与门禁：设计行为测试只断言公共可观察结果，现有 `GATE-UXL` 行为和截图无回归；已完成，证据见 [`../Evidence/LEG-07-20260814/GUI-CORE-04.md`](../Evidence/LEG-07-20260814/GUI-CORE-04.md)。
 
-`GATE-GUI-CORE` 退出条件以专项路线为准：启动器无回归、核心无 UI/渲染依赖、测试只走接口、旧逻辑不与新核心并存。
+`GATE-GUI-CORE` 已关闭。退出条件以专项路线为准：启动器无回归、核心无 UI/渲染依赖、测试只走接口、旧逻辑不与新核心并存。
 
 ### 4.2 `GATE-GUI-STATIC`：双端静态窗口
 
@@ -104,14 +104,14 @@
 5. 客户端不能授予奖励、决定价格、伪造物品或绕过次数/距离/活动校验；玩家状态只在服务端主线程修改。
 6. 构建、领域测试、Windows 集成、双端运行、安全失败样例、测试服冒烟、截图/录屏和回滚证据全部通过。
 
-## 8. 已完成切片 `GUI-CORE-03`
+## 8. 已完成切片 `GUI-CORE-04`
 
 ### 做
 
-1. 定义 `ICanvasDocument<TId>`，把对象枚举、选择、布局、状态、层级、历史、诊断及 Adapter 扩展变更统一为无 UI 公共契约。
-2. 对象树、画布和属性检查器仅持有核心接口；启动器外观投影只提供单对象样式映射，批量选择、锁定过滤、历史和回滚仍由核心执行。
-3. `LauncherCanvasAdapter` 以标识字典查找控件和编辑状态，并在历史恢复时原子重建索引，删除生产路径中的重复线性查找。
-4. 保留启动器既有三栏布局、键盘、DPI、截图和编辑行为回归。
+1. 设计核心测试统一通过 `ICanvasDocument<TId>` 断言选择、布局、状态、层级、历史、诊断和失败回滚的公共可观察结果。
+2. 四档 DPI 门禁加入文字容纳与画布真实编辑后的预检，后台证据窗口消除宿主工作区限幅，真实运行时缩放行为保持不变。
+3. 点击区域验证按 WinForms 顶层同级控件的真实 Z 序确定命中，覆盖透明图像按钮与遮挡关系。
+4. 以正式自包含编辑器生成玩家入口、签名发布、回滚、离线包、密钥恢复包和 100/125/150/200% 截图，复核三栏工作区及最小窗口。
 
 ### 不做
 
@@ -122,7 +122,7 @@
 
 ### 完成定义
 
-对象树、画布和属性检查器不再依赖具体 `LauncherCanvasDocument` 或直接修改主题控件；所有通用修改经 `ICanvasDocument<TId>` 进入同一历史与回滚路径；生产 Adapter 使用标识索引；核心领域测试、Windows 集成和 Release 构建通过，并产生独立代码提交与证据文档。
+核心领域测试只通过公共接口观察结果；启动器四档 DPI、三栏布局、对象树、属性、画布、键盘、生成玩家入口、签名发布与回滚均无回归；正式后台工件和截图可复核；`GATE-GUI-CORE` 关闭后才允许进入 `GUI-01`。
 
 ## 9. 回滚
 

@@ -174,6 +174,27 @@ public sealed class LauncherEditorTests
     }
 
     [Fact]
+    public void CanvasEditedWidescreenProjectPassesFourDpiPreflightWithoutClipping()
+    {
+        using var scope = new EditorTempScope();
+        var store = new EditorProjectStore(scope.Root);
+        EditorProject project = store.Create("dpi-canvas", "DPI 画布门禁", LauncherTemplateKind.Widescreen);
+        project.Snapshot.Theme.ServerListMode = ServerListMode.Sidebar;
+        project.Snapshot.Servers[0].Name = "编辑器验收一区";
+        string projectRoot = store.GetProjectDirectory(project.Snapshot.ProjectId);
+        IReadOnlyDictionary<LauncherControlId, Rectangle> runtime = LauncherRuntimeHost.CaptureControlLayoutForEditor(project.Snapshot, projectRoot);
+        var document = new LauncherCanvasDocument(project.Snapshot.Theme, runtime, project.CanvasControls);
+        document.Select([LauncherControlId.ServerList, LauncherControlId.Announcements, LauncherControlId.LaunchButton]);
+        document.MoveSelection(8, 8, snap: true);
+        document.Undo();
+        document.Redo();
+
+        IReadOnlyList<string> issues = EditorPreflightValidator.Validate(project, projectRoot);
+
+        Assert.True(issues.All(issue => !issue.StartsWith("界面缩放", StringComparison.Ordinal)), string.Join(Environment.NewLine, issues));
+    }
+
+    [Fact]
     public void CanvasMoveResizeAndPropertyChangesRoundTripThroughUndoRedo()
     {
         LauncherSnapshot snapshot = LauncherTemplateCatalog.Create(LauncherTemplateKind.Compact);

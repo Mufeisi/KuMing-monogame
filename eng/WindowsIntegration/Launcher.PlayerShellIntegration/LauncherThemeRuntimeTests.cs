@@ -335,6 +335,7 @@ public sealed class LauncherThemeRuntimeTests
         Assert.Equal(dpi, result.ActualDpi);
         Assert.True(result.AllControlsInsideCanvas, $"{kind} {dpi} DPI 存在越界控件：{result.Details}");
         Assert.True(result.ClickTargetsMatch, $"{kind} {dpi} DPI 点击区域不一致：{result.Details}");
+        Assert.True(result.TextFits, $"{kind} {dpi} DPI 存在文字裁切：{result.Details}");
     }
 
     [Fact]

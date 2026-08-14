@@ -24,15 +24,15 @@ public sealed class CanvasDocumentTests
 
         Assert.Equal(10, document.GetBounds("middle").Y);
         Assert.Equal(55, document.GetBounds("middle").X);
-        Assert.False(adapter.IsVisible("first"));
-        Assert.True(adapter.IsVisible("last"));
-        Assert.Equal(["first", "last", "middle"], adapter.ElementIds);
+        Assert.False(document.IsVisible("first"));
+        Assert.True(document.IsVisible("last"));
+        Assert.Equal(["first", "last", "middle"], document.ElementIds);
         Assert.True(document.Undo());
-        Assert.Equal(["first", "middle", "last"], adapter.ElementIds);
+        Assert.Equal(["first", "middle", "last"], document.ElementIds);
         Assert.True(document.Undo());
-        Assert.True(adapter.IsVisible("first"));
+        Assert.True(document.IsVisible("first"));
         Assert.True(document.Undo());
-        Assert.False(adapter.IsLocked("last"));
+        Assert.False(document.IsLocked("last"));
     }
 
     [Fact]
@@ -42,13 +42,13 @@ public sealed class CanvasDocumentTests
             new Element("first", new CanvasBounds(10, 10, 20, 20)),
             new Element("locked", new CanvasBounds(40, 10, 20, 20), Locked: true),
             new Element("last", new CanvasBounds(70, 10, 20, 20)));
-        var document = new CanvasDocument<string, Element[]>(adapter, 120, 80);
+        ICanvasDocument<string> document = new CanvasDocument<string, Element[]>(adapter, 120, 80);
         document.Select(["locked"]);
 
         document.BringSelectionForward();
         document.SendSelectionBackward();
 
-        Assert.Equal(["first", "locked", "last"], adapter.ElementIds);
+        Assert.Equal(["first", "locked", "last"], document.ElementIds);
         Assert.False(document.CanUndo);
     }
 
@@ -56,7 +56,7 @@ public sealed class CanvasDocumentTests
     public void HistoryCapacityPreservesSavedCheckpointDirtySemanticsAfterEviction()
     {
         var adapter = new MemoryCanvasAdapter(new Element("button", new CanvasBounds(10, 10, 8, 8)));
-        var document = new CanvasDocument<string, Element[]>(adapter, 100, 100, historyCapacity: 3);
+        ICanvasDocument<string> document = new CanvasDocument<string, Element[]>(adapter, 100, 100, historyCapacity: 3);
         document.Select(["button"]);
         document.MoveSelection(1, 0, snap: false);
         document.MoveSelection(1, 0, snap: false);
@@ -75,7 +75,7 @@ public sealed class CanvasDocumentTests
         Assert.False(document.Undo());
 
         var initialCheckpointAdapter = new MemoryCanvasAdapter(new Element("button", new CanvasBounds(10, 10, 8, 8)));
-        var initialCheckpointDocument = new CanvasDocument<string, Element[]>(initialCheckpointAdapter, 100, 100, historyCapacity: 2);
+        ICanvasDocument<string> initialCheckpointDocument = new CanvasDocument<string, Element[]>(initialCheckpointAdapter, 100, 100, historyCapacity: 2);
         initialCheckpointDocument.Select(["button"]);
         for (int index = 0; index < 3; index++) initialCheckpointDocument.MoveSelection(1, 0, snap: false);
         Assert.True(initialCheckpointDocument.Undo());
@@ -91,12 +91,12 @@ public sealed class CanvasDocumentTests
             .Select(index => new Element(index.ToString(), new CanvasBounds(index % 20 * 10, index / 20 * 10, 8, 8)))
             .ToArray();
         var adapter = new MemoryCanvasAdapter(elements);
-        var document = new CanvasDocument<string, Element[]>(adapter, 400, 400);
-        document.Select(adapter.ElementIds);
+        ICanvasDocument<string> document = new CanvasDocument<string, Element[]>(adapter, 400, 400);
+        document.Select(document.ElementIds);
         for (int index = 0; index < 5; index++) document.MoveSelection(index % 2 == 0 ? 1 : -1, 0, snap: false);
 
         var stopwatch = System.Diagnostics.Stopwatch.StartNew();
-        document.Select(adapter.ElementIds);
+        document.Select(document.ElementIds);
         stopwatch.Stop();
         TimeSpan selectionLatency = stopwatch.Elapsed;
 
@@ -123,7 +123,7 @@ public sealed class CanvasDocumentTests
         var adapter = new MemoryCanvasAdapter(
             new Element("outside", new CanvasBounds(-1, 0, 20, 20)),
             new Element("empty", new CanvasBounds(10, 10, 0, 20)));
-        var document = new CanvasDocument<string, Element[]>(adapter, 100, 100);
+        ICanvasDocument<string> document = new CanvasDocument<string, Element[]>(adapter, 100, 100);
 
         IReadOnlyList<CanvasDiagnostic<string>> diagnostics = document.Validate();
 
@@ -137,7 +137,7 @@ public sealed class CanvasDocumentTests
         var adapter = new MemoryCanvasAdapter(
             new Element("peer", new CanvasBounds(0, 20, 100, 40)),
             new Element("button", new CanvasBounds(108, 20, 100, 40)));
-        var document = new CanvasDocument<string, Element[]>(adapter, 640, 480);
+        ICanvasDocument<string> document = new CanvasDocument<string, Element[]>(adapter, 640, 480);
 
         document.Select(["button"]);
         Assert.True(document.MoveSelection(-3, 0, snap: true));
@@ -159,7 +159,7 @@ public sealed class CanvasDocumentTests
             new Element("locked", new CanvasBounds(10, 10, 40, 40), Locked: true),
             new Element("hidden", new CanvasBounds(20, 20, 40, 40), Visible: false),
             new Element("active", new CanvasBounds(30, 30, 40, 40)));
-        var document = new CanvasDocument<string, Element[]>(adapter, 200, 100);
+        ICanvasDocument<string> document = new CanvasDocument<string, Element[]>(adapter, 200, 100);
 
         document.Select(["locked", "hidden"]);
         Assert.False(document.MoveSelection(10, 10, snap: false));
@@ -180,7 +180,7 @@ public sealed class CanvasDocumentTests
         document.ChangeEditableSelection(id => adapter.SetVisible(id, false));
 
         Assert.True(document.Undo());
-        Assert.True(adapter.IsVisible("button"));
+        Assert.True(document.IsVisible("button"));
         Assert.True(document.Undo());
         Assert.Equal(new CanvasBounds(10, 10, 40, 40), document.GetBounds("button"));
     }
@@ -189,7 +189,7 @@ public sealed class CanvasDocumentTests
     public void ReplacingSavedHistoryKeepsDocumentDirtyAndFailedChangeRollsBack()
     {
         var adapter = new MemoryCanvasAdapter(new Element("button", new CanvasBounds(10, 10, 40, 40)));
-        var document = new CanvasDocument<string, Element[]>(adapter, 200, 100);
+        ICanvasDocument<string> document = new CanvasDocument<string, Element[]>(adapter, 200, 100);
         document.Select(["button"]);
         document.MoveSelection(10, 0, snap: false);
         document.MoveSelection(10, 0, snap: false);
@@ -200,12 +200,12 @@ public sealed class CanvasDocumentTests
         Assert.True(document.IsDirty);
         CanvasBounds beforeFailure = document.GetBounds("button");
 
-        Assert.Throws<InvalidOperationException>(() => document.ApplyChange(() =>
+        Assert.Throws<InvalidOperationException>(() => document.ChangeEditableSelection(id =>
         {
-            adapter.SetVisible("button", false);
+            adapter.SetVisible(id, false);
             throw new InvalidOperationException("模拟 Adapter 失败");
         }));
-        Assert.True(adapter.IsVisible("button"));
+        Assert.True(document.IsVisible("button"));
         Assert.Equal(beforeFailure, document.GetBounds("button"));
     }
 
@@ -213,7 +213,7 @@ public sealed class CanvasDocumentTests
     public void FailedUndoRestoresCurrentFactsAndDoesNotAdvanceHistoryCursor()
     {
         var adapter = new MemoryCanvasAdapter(new Element("button", new CanvasBounds(10, 10, 40, 40)));
-        var document = new CanvasDocument<string, Element[]>(adapter, 200, 100);
+        ICanvasDocument<string> document = new CanvasDocument<string, Element[]>(adapter, 200, 100);
         document.Select(["button"]);
         document.MoveSelection(10, 0, snap: false);
         CanvasBounds changed = document.GetBounds("button");

@@ -629,8 +629,29 @@ internal sealed class LauncherForm : Form
     {
         const int WmDpiChanged = 0x02E0;
         Rectangle bounds = Bounds;
-        int width = (int)Math.Round(bounds.Width * dpi / (double)Math.Max(1, DeviceDpi));
-        int height = (int)Math.Round(bounds.Height * dpi / (double)Math.Max(1, DeviceDpi));
+        int width;
+        int height;
+        Size? evidenceClientSize = null;
+        if (_builtInClassicSkin)
+        {
+            width = (int)Math.Round(bounds.Width * dpi / (double)Math.Max(1, DeviceDpi));
+            height = (int)Math.Round(bounds.Height * dpi / (double)Math.Max(1, DeviceDpi));
+        }
+        else
+        {
+            int logicalWidth = _loaded.Snapshot.Theme.Template == LauncherTemplateKind.Widescreen
+                ? Math.Max(1100, _loaded.Snapshot.Theme.CanvasWidth)
+                : _loaded.Snapshot.Theme.Template == LauncherTemplateKind.Compact ? 760 : _loaded.Snapshot.Theme.CanvasWidth;
+            int logicalHeight = _loaded.Snapshot.Theme.Template == LauncherTemplateKind.Widescreen
+                ? Math.Max(650, _loaded.Snapshot.Theme.CanvasHeight)
+                : _loaded.Snapshot.Theme.Template == LauncherTemplateKind.Compact ? 520 : _loaded.Snapshot.Theme.CanvasHeight;
+            int currentDpi = Math.Max(1, DeviceDpi);
+            width = (int)Math.Round(logicalWidth * dpi / 96d + (bounds.Width - ClientSize.Width) * dpi / (double)currentDpi);
+            height = (int)Math.Round(logicalHeight * dpi / 96d + (bounds.Height - ClientSize.Height) * dpi / (double)currentDpi);
+            evidenceClientSize = new Size(
+                (int)Math.Round(logicalWidth * dpi / 96d),
+                (int)Math.Round(logicalHeight * dpi / 96d));
+        }
         var suggested = new NativeRect(bounds.Left, bounds.Top, bounds.Left + width, bounds.Top + height);
         nint memory = System.Runtime.InteropServices.Marshal.AllocHGlobal(System.Runtime.InteropServices.Marshal.SizeOf<NativeRect>());
         try
@@ -639,6 +660,13 @@ internal sealed class LauncherForm : Form
             nint packedDpi = (nint)(dpi | (dpi << 16));
             SendMessage(Handle, WmDpiChanged, packedDpi, memory);
             Application.DoEvents();
+            // 后台门禁窗口位于虚拟屏幕外，Windows 会把建议矩形限制在当前工作区。
+            // 恢复目标监视器应有的客户区，避免宿主桌面尺寸污染布局证据。
+            if (evidenceClientSize is Size targetClientSize && ClientSize != targetClientSize)
+            {
+                ClientSize = targetClientSize;
+                ApplyTemplate(initial: false);
+            }
             PerformLayout();
             Application.DoEvents();
         }
@@ -654,7 +682,10 @@ internal sealed class LauncherForm : Form
         bool hits = _clickTargets.Where(item => item.Visible && item != hidden).All(control =>
         {
             Point center = new(control.Left + control.Width / 2, control.Top + control.Height / 2);
-            Control? hit = GetChildAtPoint(center, GetChildAtPointSkip.Invisible | GetChildAtPointSkip.Disabled | GetChildAtPointSkip.Transparent);
+            Control? hit = Controls.Cast<Control>()
+                .Where(item => item.Visible && item.Enabled && item.Bounds.Contains(center))
+                .OrderBy(Controls.GetChildIndex)
+                .FirstOrDefault();
             if (hit != control) missed.Add($"{control.Text}/{control.GetType().Name}->{hit?.Text}/{hit?.GetType().Name}");
             return hit == control;
         });
