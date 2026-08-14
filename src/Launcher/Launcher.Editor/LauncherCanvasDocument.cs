@@ -65,7 +65,7 @@ public sealed class LauncherCanvasDocument
         return new Rectangle(value.X, value.Y, value.Width, value.Height);
     }
 
-    public bool IsLocked(LauncherControlId id) => State(id).Locked;
+    public bool IsLocked(LauncherControlId id) => _core.IsLocked(id);
 
     public void SetBounds(LauncherControlId id, Rectangle bounds)
     {
@@ -73,20 +73,7 @@ public sealed class LauncherCanvasDocument
     }
 
     public void ChangeSelectionLayout(LauncherCanvasLayoutChange change)
-    {
-        Execute(() =>
-        {
-            foreach (LauncherControlOverride control in EditableSelection())
-            {
-                Rectangle bounds = GetBounds(control.Id);
-                bounds.X = change.X ?? bounds.X;
-                bounds.Y = change.Y ?? bounds.Y;
-                bounds.Width = change.Width ?? bounds.Width;
-                bounds.Height = change.Height ?? bounds.Height;
-                ApplyBounds(control, Clamp(bounds));
-            }
-        });
-    }
+        => _core.ChangeSelectionBounds(new CanvasBoundsChange(change.X, change.Y, change.Width, change.Height));
 
     public bool MoveSelection(int deltaX, int deltaY, bool snap)
         => _core.MoveSelection(deltaX, deltaY, snap);
@@ -94,82 +81,31 @@ public sealed class LauncherCanvasDocument
     public bool ResizeSelection(int deltaWidth, int deltaHeight, bool snap)
         => _core.ResizeSelection(deltaWidth, deltaHeight, snap);
 
-    public void AlignSelection(LauncherCanvasAlignment alignment)
+    public void AlignSelection(LauncherCanvasAlignment alignment) => _core.AlignSelection(alignment switch
     {
-        LauncherControlOverride[] values = EditableSelection();
-        if (values.Length < 2) return;
-        Execute(() =>
-        {
-            int target = alignment switch
-            {
-                LauncherCanvasAlignment.Left => values.Min(x => x.X),
-                LauncherCanvasAlignment.HorizontalCenter => (int)Math.Round(values.Average(x => x.X + x.Width / 2d)),
-                LauncherCanvasAlignment.Right => values.Max(x => x.X + x.Width),
-                LauncherCanvasAlignment.Top => values.Min(x => x.Y),
-                LauncherCanvasAlignment.VerticalCenter => (int)Math.Round(values.Average(x => x.Y + x.Height / 2d)),
-                _ => values.Max(x => x.Y + x.Height),
-            };
-            foreach (LauncherControlOverride value in values)
-            {
-                Rectangle bounds = GetBounds(value.Id);
-                bounds.X = alignment switch { LauncherCanvasAlignment.Left => target, LauncherCanvasAlignment.HorizontalCenter => target - bounds.Width / 2, LauncherCanvasAlignment.Right => target - bounds.Width, _ => bounds.X };
-                bounds.Y = alignment switch { LauncherCanvasAlignment.Top => target, LauncherCanvasAlignment.VerticalCenter => target - bounds.Height / 2, LauncherCanvasAlignment.Bottom => target - bounds.Height, _ => bounds.Y };
-                ApplyBounds(value, Clamp(bounds));
-            }
-        });
-    }
+        LauncherCanvasAlignment.Left => CanvasAlignment.Left,
+        LauncherCanvasAlignment.HorizontalCenter => CanvasAlignment.HorizontalCenter,
+        LauncherCanvasAlignment.Right => CanvasAlignment.Right,
+        LauncherCanvasAlignment.Top => CanvasAlignment.Top,
+        LauncherCanvasAlignment.VerticalCenter => CanvasAlignment.VerticalCenter,
+        _ => CanvasAlignment.Bottom,
+    });
 
     public void DistributeSelection(LauncherCanvasDistribution direction)
-    {
-        LauncherControlOverride[] values = EditableSelection();
-        if (values.Length < 3) return;
-        Execute(() =>
-        {
-            LauncherControlOverride[] ordered = direction == LauncherCanvasDistribution.Horizontal ? values.OrderBy(x => x.X).ToArray() : values.OrderBy(x => x.Y).ToArray();
-            double first = direction == LauncherCanvasDistribution.Horizontal ? ordered[0].X : ordered[0].Y;
-            double last = direction == LauncherCanvasDistribution.Horizontal ? ordered[^1].X : ordered[^1].Y;
-            for (int index = 1; index < ordered.Length - 1; index++)
-            {
-                Rectangle bounds = GetBounds(ordered[index].Id);
-                int position = (int)Math.Round(first + (last - first) * index / (ordered.Length - 1));
-                if (direction == LauncherCanvasDistribution.Horizontal) bounds.X = position; else bounds.Y = position;
-                ApplyBounds(ordered[index], Clamp(bounds));
-            }
-        });
-    }
+        => _core.DistributeSelection(direction == LauncherCanvasDistribution.Horizontal ? CanvasDistribution.Horizontal : CanvasDistribution.Vertical);
 
-    public void SetLocked(IEnumerable<LauncherControlId> ids, bool locked) => Execute(() => { foreach (LauncherControlId id in ids) State(id).Locked = locked; });
-    public void SetVisible(IEnumerable<LauncherControlId> ids, bool visible) => Execute(() =>
-    {
-        foreach (LauncherControlId id in ids)
-            if (!IsLocked(id)) Find(id).Visible = visible;
-    });
-    public bool DeleteSelection()
-    {
-        LauncherControlId[] editable = Selection.Where(id => !IsLocked(id)).ToArray();
-        if (editable.Length == 0) return false;
-        SetVisible(editable, false);
-        return true;
-    }
-    public void AddOrShow(LauncherControlId id) { Select([id]); SetVisible([id], true); }
-    public void BringSelectionForward() => Execute(() =>
-    {
-        for (int index = _theme.Controls.Count - 2; index >= 0; index--)
-            if (Selection.Contains(_theme.Controls[index].Id) && !Selection.Contains(_theme.Controls[index + 1].Id))
-                (_theme.Controls[index], _theme.Controls[index + 1]) = (_theme.Controls[index + 1], _theme.Controls[index]);
-    });
-    public void SendSelectionBackward() => Execute(() =>
-    {
-        for (int index = 1; index < _theme.Controls.Count; index++)
-            if (Selection.Contains(_theme.Controls[index].Id) && !Selection.Contains(_theme.Controls[index - 1].Id))
-                (_theme.Controls[index], _theme.Controls[index - 1]) = (_theme.Controls[index - 1], _theme.Controls[index]);
-    });
+    public void SetLocked(IEnumerable<LauncherControlId> ids, bool locked) => _core.SetLocked(ids, locked);
+    public void SetVisible(IEnumerable<LauncherControlId> ids, bool visible) => _core.SetVisible(ids, visible);
+    public bool DeleteSelection() => _core.DeleteSelection();
+    public void AddOrShow(LauncherControlId id) => _core.AddOrShow(id);
+    public void BringSelectionForward() => _core.BringSelectionForward();
+    public void SendSelectionBackward() => _core.SendSelectionBackward();
 
     public void ChangeSelectionStyle(LauncherCanvasStyleChange change)
     {
         Execute(() =>
         {
-            foreach (LauncherControlOverride value in EditableSelection())
+            foreach (LauncherControlOverride value in _core.EditableSelection.Select(Find))
             {
                 if (change.ForeColor is not null) value.ForeColor = change.ForeColor;
                 if (change.BackColor is not null) value.BackColor = change.BackColor;
@@ -186,17 +122,7 @@ public sealed class LauncherCanvasDocument
     public bool Redo() => _core.Redo();
     private void Execute(Action change) => _core.ApplyChange(change);
 
-    private Rectangle Clamp(Rectangle value)
-    {
-        int width = Math.Clamp(value.Width, 8, _theme.CanvasWidth);
-        int height = Math.Clamp(value.Height, 8, _theme.CanvasHeight);
-        return new Rectangle(Math.Clamp(value.X, 0, _theme.CanvasWidth - width), Math.Clamp(value.Y, 0, _theme.CanvasHeight - height), width, height);
-    }
-
-    private LauncherControlOverride[] EditableSelection() => Selected().Where(x => !IsLocked(x.Id) && x.Visible).ToArray();
-    private LauncherControlOverride[] Selected() => Selection.Select(Find).ToArray();
     private LauncherControlOverride Find(LauncherControlId id) => _theme.Controls.Single(item => item.Id == id);
-    private LauncherCanvasControlState State(LauncherControlId id) => _editorStates.Single(item => item.Id == id);
     private static void ApplyBounds(LauncherControlOverride value, Rectangle bounds) { value.X = bounds.X; value.Y = bounds.Y; value.Width = bounds.Width; value.Height = bounds.Height; }
     private static CanvasBounds ToCore(Rectangle value) => new(value.X, value.Y, value.Width, value.Height);
     private static Rectangle ToRectangle(CanvasBounds value) => new(value.X, value.Y, value.Width, value.Height);
@@ -219,6 +145,10 @@ public sealed class LauncherCanvasDocument
         public void SetBounds(LauncherControlId id, CanvasBounds bounds) => ApplyBounds(Find(id), ToRectangle(bounds));
         public bool IsVisible(LauncherControlId id) => Find(id).Visible;
         public bool IsLocked(LauncherControlId id) => editorStates.Single(item => item.Id == id).Locked;
+        public void SetVisible(LauncherControlId id, bool visible) => Find(id).Visible = visible;
+        public void SetLocked(LauncherControlId id, bool locked) => editorStates.Single(item => item.Id == id).Locked = locked;
+        public void SetOrder(IReadOnlyList<LauncherControlId> ids)
+            => theme.Controls = ids.Select(Find).ToList();
         public DocumentState Capture() => new(
             theme.Controls.Select(Clone).ToList(),
             editorStates.Select(item => new LauncherCanvasControlState { Id = item.Id, Locked = item.Locked }).ToList());
