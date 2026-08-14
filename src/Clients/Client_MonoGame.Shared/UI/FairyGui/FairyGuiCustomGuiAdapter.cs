@@ -56,7 +56,7 @@ internal sealed class FairyGuiCustomGuiFactory : IMobileCustomGuiFactory
         value.SetSize(spec.Bounds.Width, spec.Bounds.Height);
         value.visible = spec.Visible;
         value.sortingOrder = spec.ZIndex;
-        return new FairyGuiCustomGuiNode(value);
+        return new FairyGuiCustomGuiNode(value, spec);
     }
 
     private static T Require<T>(MobileCustomGuiNodeSpec spec) where T : CustomGuiElement =>
@@ -252,11 +252,33 @@ internal sealed class FairyGuiCustomGuiFactory : IMobileCustomGuiFactory
     }
 }
 
-internal sealed class FairyGuiCustomGuiNode : IMobileCustomGuiNode
+internal sealed class FairyGuiCustomGuiNode : IMobileCustomGuiNode, IMobileCustomGuiInteractiveNode
 {
     private bool _disposed;
-    internal FairyGuiCustomGuiNode(GObject value) => Object = value;
+    private readonly MobileCustomGuiNodeKind _kind;
+    internal FairyGuiCustomGuiNode(GObject value, MobileCustomGuiNodeSpec spec)
+    {
+        Object = value;
+        _kind = spec.Kind;
+        if (_kind == MobileCustomGuiNodeKind.Button) Object.onClick.Add(Activate);
+        if (_kind == MobileCustomGuiNodeKind.List) WireListRows();
+    }
     internal GObject Object { get; }
+    public event Action? Activated;
+    public event Action<string>? SelectionChanged;
+
+    public void Activate()
+    {
+        if (!_disposed && Object.enabled) Activated?.Invoke();
+    }
+
+    public void Select(string itemId)
+    {
+        if (_disposed || _kind != MobileCustomGuiNodeKind.List || Object is not GList list ||
+            string.IsNullOrWhiteSpace(itemId) || list.GetChild(itemId) is null)
+            throw new CustomGuiStateProjectionException("GUI12-CLIENT-SELECTION", $"FairyGUI 选择项不存在：{itemId}");
+        SelectionChanged?.Invoke(itemId);
+    }
 
     public void AddChild(IMobileCustomGuiNode child)
     {
@@ -289,6 +311,7 @@ internal sealed class FairyGuiCustomGuiNode : IMobileCustomGuiNode
                 break;
             case CustomGuiStateKind.List:
                 ApplyList(Object as GList, state.ListItems);
+                WireListRows();
                 break;
             case CustomGuiStateKind.ItemSlots:
                 ApplyItemSlots(Object as GComponent, state.ItemSlots);
@@ -311,6 +334,17 @@ internal sealed class FairyGuiCustomGuiNode : IMobileCustomGuiNode
             var row = new GTextField { name = item.Id, text = string.IsNullOrWhiteSpace(item.SecondaryText) ? item.PrimaryText : $"{item.PrimaryText}  {item.SecondaryText}" };
             row.SetSize(Math.Max(1, list.width), 26);
             list.AddChild(row);
+        }
+    }
+
+    private void WireListRows()
+    {
+        if (Object is not GList list) return;
+        for (int index = 0; index < list.numChildren; index++)
+        {
+            GObject row = list.GetChildAt(index);
+            string itemId = row.name ?? string.Empty;
+            row.onClick.Add(() => Select(itemId));
         }
     }
 

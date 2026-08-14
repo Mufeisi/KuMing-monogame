@@ -2494,6 +2494,16 @@ namespace Server.MirObjects
 
                 switch (parts[0].ToUpper())
                 {
+                    case "GUIEXCHANGE":
+                    case "活动兑换":
+                        {
+                            Server.Scripting.CustomGuiScriptOpenResult opened = Envir.CSharpScripts.OpenCustomGui(
+                                this, Shared.CustomGui.CustomGuiActivityExchangeTemplate.DocumentId);
+                            if (!opened.Success)
+                                ReceiveChat(opened.Diagnostic, ChatType.System);
+                        }
+                        return;
+
                     case "LOGIN":
                         GMLogin = true;
                         ReceiveChat("请输入管理员密码！", ChatType.Hint);

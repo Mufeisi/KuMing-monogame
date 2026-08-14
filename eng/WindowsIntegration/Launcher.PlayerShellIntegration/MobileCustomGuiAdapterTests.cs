@@ -31,6 +31,46 @@ public sealed class MobileCustomGuiAdapterTests
     }
 
     [Fact]
+    public void SameActivityExchangeBytesSelectSubmitRefreshAndCloseThroughMobileHost()
+    {
+        byte[] sharedBytes = global::Shared.CustomGui.CustomGuiDocumentCodec.Serialize(
+            global::Shared.CustomGui.CustomGuiActivityExchangeTemplate.Create());
+        S.CustomGuiRuntimeDocument document = S.CustomGuiDocumentCodec.Deserialize(sharedBytes);
+        Assert.Equal(sharedBytes, S.CustomGuiDocumentCodec.Serialize(document));
+        var factory = new RecordingFactory();
+        using M.MobileCustomGuiHost host = M.MobileCustomGuiAdapter.Create(document, 720, 1280, factory);
+        var session = new S.CustomGuiClientStateSession(document, 1, host);
+        Guid nonce = Guid.NewGuid();
+        session.Open(new S.CustomGuiOpenState(
+            72, document.DocumentId, 1, 1, nonce,
+            DateTimeOffset.UtcNow.AddMinutes(1).ToUnixTimeMilliseconds(), 1,
+            [
+                S.CustomGuiStateEntry.Text("exchange.status", "活动可用"),
+                S.CustomGuiStateEntry.List("exchange.options", [new("credit.10", "兑换", "限一次", string.Empty)]),
+                S.CustomGuiStateEntry.ButtonEnabled("exchange.submit.enabled", true),
+            ]));
+        var sent = new List<S.CustomGuiClientAction>();
+        host.BindActions(session, sent.Add);
+
+        host.Select("exchange.options", "credit.10");
+        factory.ById["exchange.submit"].Activate();
+        S.CustomGuiClientAction action = Assert.Single(sent);
+
+        Assert.Equal(S.CustomGuiActionKind.SubmitSelection, action.Action);
+        Assert.Equal(new[] { "credit.10" }, action.SelectionIds);
+        session.ApplyDelta(new S.CustomGuiDeltaState(
+            72, document.DocumentId, 1, 1, nonce, 2,
+            [
+                S.CustomGuiStateEntry.Text("exchange.status", "兑换已完成"),
+                S.CustomGuiStateEntry.ButtonEnabled("exchange.submit.enabled", false),
+            ]));
+        session.AcceptActionResult(72, action.RequestSequence, 2, S.CustomGuiActionResultKind.Accepted, "兑换成功");
+        Assert.Equal("兑换已完成", factory.ById["exchange.status"].State!.TextValue);
+        Assert.True(session.Close(72));
+        Assert.False(session.IsOpen);
+    }
+
+    [Fact]
     public void AdapterProjectsEveryV1ElementThroughFactoryAtFitScale()
     {
         S.CustomGuiRuntimeDocument document = CreateDocument();
@@ -145,14 +185,25 @@ public sealed class MobileCustomGuiAdapterTests
         }
     }
 
-    private sealed class RecordingNode(M.MobileCustomGuiNodeSpec spec, string? failOnAddChildId) : M.IMobileCustomGuiNode
+    private sealed class RecordingNode(M.MobileCustomGuiNodeSpec spec, string? failOnAddChildId) : M.IMobileCustomGuiNode, M.IMobileCustomGuiInteractiveNode
     {
         private readonly List<RecordingNode> _children = [];
+        private readonly HashSet<string> _availableItems = new(
+            (spec.Element as S.CustomGuiList)?.Items.Select(item => item.Id) ?? [], StringComparer.Ordinal);
         public M.MobileCustomGuiNodeSpec Spec { get; } = spec;
         public RecordingNode? Parent { get; private set; }
         public bool Disposed { get; private set; }
         public List<S.CustomGuiStateEntry> States { get; } = [];
         public S.CustomGuiStateEntry? State => States.LastOrDefault();
+        public event Action? Activated;
+        public event Action<string>? SelectionChanged;
+
+        public void Activate() => Activated?.Invoke();
+        public void Select(string itemId)
+        {
+            if (!_availableItems.Contains(itemId)) throw new InvalidOperationException("测试选择项不存在");
+            SelectionChanged?.Invoke(itemId);
+        }
 
         public void AddChild(M.IMobileCustomGuiNode child)
         {
@@ -162,7 +213,13 @@ public sealed class MobileCustomGuiAdapterTests
             _children.Add(typed);
         }
 
-        public void ApplyState(S.CustomGuiStateEntry state) => States.Add(state);
+        public void ApplyState(S.CustomGuiStateEntry state)
+        {
+            States.Add(state);
+            if (state.Kind != S.CustomGuiStateKind.List) return;
+            _availableItems.Clear();
+            foreach (S.CustomGuiStateListItem item in state.ListItems) _availableItems.Add(item.Id);
+        }
 
         public void Dispose()
         {

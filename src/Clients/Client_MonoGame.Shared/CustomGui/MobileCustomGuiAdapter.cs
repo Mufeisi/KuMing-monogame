@@ -33,6 +33,14 @@ public interface IMobileCustomGuiNode : IDisposable
     void ApplyState(CustomGuiStateEntry state);
 }
 
+public interface IMobileCustomGuiInteractiveNode
+{
+    event Action? Activated;
+    event Action<string>? SelectionChanged;
+    void Activate();
+    void Select(string itemId);
+}
+
 public interface IMobileCustomGuiFactory
 {
     IMobileCustomGuiNode Create(MobileCustomGuiNodeSpec spec);
@@ -125,6 +133,11 @@ public sealed class MobileCustomGuiHost : IDisposable, ICustomGuiStateProjection
     private bool _disposed;
     private readonly IReadOnlyDictionary<string, string> _bindingTargets;
     private IReadOnlyDictionary<string, CustomGuiStateEntry> _state = new Dictionary<string, CustomGuiStateEntry>();
+    private readonly Dictionary<string, CustomGuiButton> _buttons;
+    private readonly Dictionary<string, HashSet<string>> _availableSelections;
+    private readonly Dictionary<string, string> _selections = new(StringComparer.Ordinal);
+    private CustomGuiClientStateSession? _actionSession;
+    private Action<CustomGuiClientAction>? _sendAction;
     internal MobileCustomGuiHost(
         IMobileCustomGuiNode root,
         IReadOnlyDictionary<string, IMobileCustomGuiNode> nodes,
@@ -136,6 +149,23 @@ public sealed class MobileCustomGuiHost : IDisposable, ICustomGuiStateProjection
         Root = root;
         Nodes = nodes;
         _bindingTargets = CustomGuiStateBindingCatalog.Create(document);
+        _buttons = (document.Elements ?? []).OfType<CustomGuiButton>()
+            .ToDictionary(button => button.Id, StringComparer.Ordinal);
+        _availableSelections = (document.Elements ?? []).OfType<CustomGuiList>()
+            .ToDictionary(list => list.Id,
+                list => new HashSet<string>((list.Items ?? []).Select(item => item.Id), StringComparer.Ordinal),
+                StringComparer.Ordinal);
+        foreach ((string id, IMobileCustomGuiNode node) in nodes)
+        {
+            if (node is not IMobileCustomGuiInteractiveNode interactive) continue;
+            if (_availableSelections.ContainsKey(id))
+                interactive.SelectionChanged += itemId => RecordSelection(id, itemId);
+            if (_buttons.ContainsKey(id))
+                interactive.Activated += () =>
+                {
+                    if (_actionSession is not null && _sendAction is not null) Submit(id, _actionSession, _sendAction);
+                };
+        }
         Scale = scale;
         ViewportOffsetX = viewportOffsetX;
         ViewportOffsetY = viewportOffsetY;
@@ -148,6 +178,31 @@ public sealed class MobileCustomGuiHost : IDisposable, ICustomGuiStateProjection
     public float ViewportOffsetY { get; }
     public bool IsDisposed => _disposed;
     public IReadOnlyDictionary<string, CustomGuiStateEntry> ProjectedState => _state;
+    public void BindActions(CustomGuiClientStateSession session, Action<CustomGuiClientAction> send)
+    {
+        _actionSession = session ?? throw new ArgumentNullException(nameof(session));
+        _sendAction = send ?? throw new ArgumentNullException(nameof(send));
+    }
+    public void Select(string listId, string itemId)
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        if (!Nodes.TryGetValue(listId, out IMobileCustomGuiNode? node) || node is not IMobileCustomGuiInteractiveNode interactive)
+            throw new CustomGuiStateProjectionException("GUI12-CLIENT-SELECTION", $"移动端列表不可交互：{listId}");
+        interactive.Select(itemId);
+    }
+    public CustomGuiClientAction Submit(
+        string buttonId,
+        CustomGuiClientStateSession session,
+        Action<CustomGuiClientAction> send)
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        if (!_buttons.TryGetValue(buttonId, out CustomGuiButton? button))
+            throw new CustomGuiStateProjectionException("GUI12-CLIENT-ACTION", $"移动端按钮不存在：{buttonId}");
+        if (_state.TryGetValue($"{buttonId}.enabled", out CustomGuiStateEntry? enabled) && !enabled.BooleanValue)
+            throw new CustomGuiStateProjectionException("GUI12-CLIENT-ACTION", "移动端按钮当前不可用");
+        List<string> selections = _selections.Values.Distinct(StringComparer.Ordinal).ToList();
+        return session.SendAction(send, button.Action, button.ActionId, selectionIds: selections);
+    }
     public void Apply(IReadOnlyDictionary<string, CustomGuiStateEntry> state)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
@@ -156,13 +211,32 @@ public sealed class MobileCustomGuiHost : IDisposable, ICustomGuiStateProjection
             if (!_bindingTargets.TryGetValue(key, out string? elementId) || !Nodes.ContainsKey(elementId))
                 throw new CustomGuiStateProjectionException("GUI10-STATE-BINDING", $"移动端不存在绑定目标：{key}");
         foreach ((string key, CustomGuiStateEntry value) in state)
+        {
             Nodes[_bindingTargets[key]].ApplyState(value);
+            if (value.Kind == CustomGuiStateKind.List)
+            {
+                string listId = _bindingTargets[key];
+                _availableSelections[listId] = new HashSet<string>((value.ListItems ?? []).Select(item => item.Id), StringComparer.Ordinal);
+                if (_selections.TryGetValue(listId, out string? selected) && !_availableSelections[listId].Contains(selected))
+                    _selections.Remove(listId);
+            }
+        }
         _state = state;
+    }
+    private void RecordSelection(string listId, string itemId)
+    {
+        if (!_availableSelections.TryGetValue(listId, out HashSet<string>? available) ||
+            string.IsNullOrWhiteSpace(itemId) || !available.Contains(itemId))
+            throw new CustomGuiStateProjectionException("GUI12-CLIENT-SELECTION", $"移动端选择项不存在：{itemId}");
+        _selections[listId] = itemId;
     }
     public void Dispose()
     {
         if (_disposed) return;
         Root.Dispose();
+        _actionSession = null;
+        _sendAction = null;
+        _selections.Clear();
         _disposed = true;
     }
 }

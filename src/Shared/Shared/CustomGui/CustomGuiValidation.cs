@@ -152,6 +152,7 @@ public static class CustomGuiValidationPolicy
             case CustomGuiButton button:
                 Text(element.Id, button.Text, 256, diagnostics);
                 StableValue(element.Id, button.ActionId, "动作", diagnostics, required: true);
+                if (!Enum.IsDefined(button.Action)) Add(diagnostics, "GUI05-DOC-001", element.Id, "动作类型无效");
                 Asset(element.Id, button.AssetId, false, resources, diagnostics);
                 break;
             case CustomGuiTextInput input:

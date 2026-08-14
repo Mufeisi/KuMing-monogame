@@ -67,7 +67,7 @@ internal static class PcCustomGuiAdapter
         CustomGuiPanel value => new PcCustomGuiPanelControl(value.BackgroundColor, value.ClipChildren),
         CustomGuiImage value => new PcCustomGuiImageControl(value.AssetId, value.AlternateText, value.Stretch, Resolve(value.AssetId, resolver), scale),
         CustomGuiText value => CreateLabel(value, scale),
-        CustomGuiButton value => new PcCustomGuiButtonControl(value.Text, value.ActionId, value.Enabled, scale),
+        CustomGuiButton value => new PcCustomGuiButtonControl(value.Text, value.ActionId, value.Action, value.Enabled, scale),
         CustomGuiTextInput value => new PcCustomGuiTextInputControl(value.Placeholder, value.MaxLength, value.Multiline, value.Password, value.BindingKey, scale),
         CustomGuiList value => new PcCustomGuiListControl(value.Orientation, value.Spacing, value.Items, scale),
         CustomGuiProgressBar value => new PcCustomGuiProgressBarControl(value.Minimum, value.Maximum, value.Value, value.Text, value.BindingKey, scale),
@@ -126,6 +126,35 @@ internal sealed class PcCustomGuiHost : IDisposable, ICustomGuiStateProjectionTa
     internal float Scale { get; }
     internal Point ViewportOffset { get; }
     internal IReadOnlyDictionary<string, CustomGuiStateEntry> ProjectedState => _state;
+    internal void BindActions(CustomGuiClientStateSession session, Action<CustomGuiClientAction> send)
+    {
+        ArgumentNullException.ThrowIfNull(session);
+        ArgumentNullException.ThrowIfNull(send);
+        foreach ((string id, MirControl control) in Controls)
+        {
+            if (control is not PcCustomGuiButtonControl button) continue;
+            button.Click += (_, _) => Submit(id, session, send);
+        }
+    }
+    internal void Select(string listId, string itemId)
+    {
+        if (!Controls.TryGetValue(listId, out MirControl? control) || control is not PcCustomGuiListControl list)
+            throw new CustomGuiStateProjectionException("GUI12-CLIENT-SELECTION", $"PC 端列表不存在：{listId}");
+        list.Select(itemId);
+    }
+    internal CustomGuiClientAction Submit(
+        string buttonId,
+        CustomGuiClientStateSession session,
+        Action<CustomGuiClientAction> send)
+    {
+        if (!Controls.TryGetValue(buttonId, out MirControl? control) || control is not PcCustomGuiButtonControl button)
+            throw new CustomGuiStateProjectionException("GUI12-CLIENT-ACTION", $"PC 端按钮不存在：{buttonId}");
+        if (!button.Enabled)
+            throw new CustomGuiStateProjectionException("GUI12-CLIENT-ACTION", "PC 端按钮当前不可用");
+        List<string> selections = Controls.Values.OfType<PcCustomGuiListControl>()
+            .SelectMany(list => list.SelectedItemIds).Distinct(StringComparer.Ordinal).ToList();
+        return session.SendAction(send, button.Action, button.ActionId, selectionIds: selections);
+    }
     public void Apply(IReadOnlyDictionary<string, CustomGuiStateEntry> state)
     {
         ArgumentNullException.ThrowIfNull(state);
@@ -247,16 +276,18 @@ internal sealed class PcCustomGuiButtonControl : PcCustomGuiPanelControl
 {
     private readonly MirLabel _label;
 
-    internal PcCustomGuiButtonControl(string text, string actionId, bool enabled, float scale) : base("#245D82", false)
+    internal PcCustomGuiButtonControl(string text, string actionId, CustomGuiActionKind action, bool enabled, float scale) : base("#245D82", false)
     {
         Text = text ?? string.Empty;
         ActionId = actionId ?? string.Empty;
+        Action = action;
         Enabled = enabled;
         _label = PcCustomGuiAdapter.ScaleLabel(new MirLabel { Text = Text, AutoSize = false, DrawFormat = TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter, Parent = this }, scale);
     }
 
     internal string Text { get; }
     internal string ActionId { get; }
+    internal CustomGuiActionKind Action { get; }
 
     protected override void OnSizeChanged()
     {
@@ -299,6 +330,8 @@ internal sealed class PcCustomGuiTextInputControl : PcCustomGuiPanelControl
 
 internal sealed class PcCustomGuiListControl : PcCustomGuiPanelControl
 {
+    private readonly HashSet<string> _availableItemIds = new(StringComparer.Ordinal);
+    private readonly HashSet<string> _selectedItemIds = new(StringComparer.Ordinal);
     internal PcCustomGuiListControl(CustomGuiListOrientation orientation, int spacing, IReadOnlyList<CustomGuiListItem> items, float scale) : base("#171D26", true)
     {
         Orientation = orientation;
@@ -308,6 +341,9 @@ internal sealed class PcCustomGuiListControl : PcCustomGuiPanelControl
         foreach (CustomGuiListItem item in StaticItems)
         {
             MirLabel label = PcCustomGuiAdapter.ScaleLabel(new MirLabel { Text = string.IsNullOrWhiteSpace(item.SecondaryText) ? item.PrimaryText : $"{item.PrimaryText}  {item.SecondaryText}", AutoSize = false, Parent = this }, scale);
+            _availableItemIds.Add(item.Id ?? string.Empty);
+            string itemId = item.Id ?? string.Empty;
+            label.Click += (_, _) => Select(itemId);
             int itemHeight = PcCustomGuiAdapter.ScaleMetric(24, scale), scaledSpacing = PcCustomGuiAdapter.ScaleMetric(spacing, scale);
             if (orientation == CustomGuiListOrientation.Vertical) { label.Location = new Point(PcCustomGuiAdapter.ScaleMetric(8, scale), offset); label.Size = new Size(PcCustomGuiAdapter.ScaleMetric(240, scale), itemHeight); offset += itemHeight + scaledSpacing; }
             else { int itemWidth = PcCustomGuiAdapter.ScaleMetric(120, scale); label.Location = new Point(offset, PcCustomGuiAdapter.ScaleMetric(8, scale)); label.Size = new Size(itemWidth, itemHeight); offset += itemWidth + scaledSpacing; }
@@ -317,15 +353,28 @@ internal sealed class PcCustomGuiListControl : PcCustomGuiPanelControl
     internal CustomGuiListOrientation Orientation { get; }
     internal int Spacing { get; }
     internal IReadOnlyList<CustomGuiListItem> StaticItems { get; }
+    internal IReadOnlyCollection<string> SelectedItemIds => _selectedItemIds.ToArray();
+    internal void Select(string itemId)
+    {
+        if (string.IsNullOrWhiteSpace(itemId) || !_availableItemIds.Contains(itemId))
+            throw new CustomGuiStateProjectionException("GUI12-CLIENT-SELECTION", $"PC 端选择项不存在：{itemId}");
+        _selectedItemIds.Clear();
+        _selectedItemIds.Add(itemId);
+    }
     internal void Apply(IReadOnlyList<CustomGuiStateListItem> items)
     {
         foreach (MirControl child in Controls.ToArray()) child.Dispose();
+        _availableItemIds.Clear();
         int y = 6;
         foreach (CustomGuiStateListItem item in items ?? [])
         {
-            new MirLabel { Text = string.IsNullOrWhiteSpace(item.SecondaryText) ? item.PrimaryText : $"{item.PrimaryText}  {item.SecondaryText}", AutoSize = false, Location = new Point(8, y), Size = new Size(Math.Max(1, Size.Width - 16), 24), Parent = this };
+            string itemId = item.Id ?? string.Empty;
+            _availableItemIds.Add(itemId);
+            var label = new MirLabel { Text = string.IsNullOrWhiteSpace(item.SecondaryText) ? item.PrimaryText : $"{item.PrimaryText}  {item.SecondaryText}", AutoSize = false, Location = new Point(8, y), Size = new Size(Math.Max(1, Size.Width - 16), 24), Parent = this };
+            label.Click += (_, _) => Select(itemId);
             y += 24 + Spacing;
         }
+        _selectedItemIds.RemoveWhere(itemId => !_availableItemIds.Contains(itemId));
     }
 }
 

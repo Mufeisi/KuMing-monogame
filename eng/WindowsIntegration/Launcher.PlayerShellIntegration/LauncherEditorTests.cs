@@ -23,6 +23,35 @@ namespace Launcher.PlayerShellIntegration;
 public sealed class LauncherEditorTests
 {
     [Fact]
+    public void ActivityExchangePublishesAsOneSignedDocumentForPcAndAndroid()
+    {
+        using var scope = new EditorTempScope();
+        var store = new EditorProjectStore(scope.Dir("workspace"));
+        EditorProject project = store.Create("gui12-exchange", "GUI-12 活动兑换", LauncherTemplateKind.Classic);
+        project.GameGuiDocuments[0] = CustomGuiActivityExchangeTemplate.Create();
+        AttachCrossPlatformResources(project, scope.Dir("resources"));
+        string publish = scope.Dir("publish");
+
+        TestResourceReleaseResult release = TestResourceReleasePublisher.Publish(
+            project, store.GetProjectDirectory(project.Snapshot.ProjectId), publish);
+        CustomGuiAcceptedPackage pc = CustomGuiSignedReleaseLoader.Load(new CustomGuiSignedReleaseRequest
+        {
+            PackagesRoot = Path.Combine(publish, "Packages"),
+            TrustedKeys = TrustedProjectKeys(project),
+            CurrentClientVersion = new Version(2, 0, 0),
+        });
+        byte[] signedDocumentBytes = CustomGuiDocumentCodec.Serialize(pc.Document);
+        MonoClient::Shared.CustomGui.CustomGuiRuntimeDocument android =
+            MonoClient::Shared.CustomGui.CustomGuiDocumentCodec.Deserialize(signedDocumentBytes);
+
+        Assert.Equal(release.Sequence, pc.Sequence);
+        Assert.Equal(CustomGuiActivityExchangeTemplate.DocumentId, pc.Document.DocumentId);
+        Assert.Equal(signedDocumentBytes, MonoClient::Shared.CustomGui.CustomGuiDocumentCodec.Serialize(android));
+        Assert.Equal(CustomGuiActivityExchangeTemplate.SubmitActionId,
+            Assert.Single(android.Elements.OfType<MonoClient::Shared.CustomGui.CustomGuiButton>()).ActionId);
+    }
+
+    [Fact]
     public void TestResourceReleaseProducesPcAndAndroidSignedIndexesFromProjectResources()
     {
         using var scope = new EditorTempScope();

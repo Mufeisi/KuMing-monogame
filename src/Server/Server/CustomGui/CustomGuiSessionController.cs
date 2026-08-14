@@ -192,6 +192,14 @@ public sealed class CustomGuiSessionController
                     ?? BuildActionResult(action, decision.StateRevision, CustomGuiActionResultKind.Rejected,
                         "GUI08-ACTION-UNHANDLED：服务端未返回动作结果");
                 ValidateActionResultIdentity(action, decision.StateRevision, resultPacket);
+                if (_sessions.TryGetValue(action.WindowInstanceId, out Session currentSession) &&
+                    currentSession.StateRevision != decision.StateRevision)
+                {
+                    resultPacket.StateRevision = currentSession.StateRevision;
+                    _ = resultPacket.GetPacketBytes().Count();
+                    decision = new CustomGuiSessionDecision(
+                        decision.Accepted, decision.Result, decision.Message, currentSession.StateRevision);
+                }
                 resultValidated = true;
             }
             catch (Exception error)
@@ -216,6 +224,37 @@ public sealed class CustomGuiSessionController
             SendClose(action.WindowInstanceId, CustomGuiCloseReason.Expired, decision.Message);
 
         return decision;
+    }
+
+    public S.CustomGuiStateDelta UpdateState(
+        ulong windowInstanceId,
+        uint expectedStateRevision,
+        List<CustomGuiStateEntry> state)
+    {
+        EnsurePlayerInGame();
+        EnsureFeatureEnabled();
+        ExpireDueSessions();
+        if (!_sessions.TryGetValue(windowInstanceId, out Session session))
+            throw new InvalidOperationException("GUI08-STATE-SESSION：窗口会话不存在");
+        if (session.StateRevision != expectedStateRevision)
+            throw new InvalidOperationException("GUI08-STATE-REVISION：窗口状态修订不匹配");
+        if (expectedStateRevision == uint.MaxValue)
+            throw new InvalidOperationException("GUI08-STATE-REVISION：窗口状态修订已达上限");
+
+        var packet = new S.CustomGuiStateDelta
+        {
+            WindowInstanceId = session.WindowInstanceId,
+            DocumentId = session.DocumentId,
+            DocumentRevision = session.DocumentRevision,
+            PackageSequence = session.PackageSequence,
+            SessionNonce = session.SessionNonce,
+            StateRevision = expectedStateRevision + 1,
+            State = CloneState(state)
+        };
+        _ = packet.GetPacketBytes().Count();
+        _send(packet);
+        session.StateRevision = packet.StateRevision;
+        return CloneDeltaPacket(packet);
     }
 
     public int ExpireDueSessions()
@@ -380,6 +419,17 @@ public sealed class CustomGuiSessionController
         PackageSequence = source.PackageSequence,
         SessionNonce = source.SessionNonce,
         ExpiresAtUnixMilliseconds = source.ExpiresAtUnixMilliseconds,
+        StateRevision = source.StateRevision,
+        State = CloneState(source.State)
+    };
+
+    private static S.CustomGuiStateDelta CloneDeltaPacket(S.CustomGuiStateDelta source) => new()
+    {
+        WindowInstanceId = source.WindowInstanceId,
+        DocumentId = source.DocumentId,
+        DocumentRevision = source.DocumentRevision,
+        PackageSequence = source.PackageSequence,
+        SessionNonce = source.SessionNonce,
         StateRevision = source.StateRevision,
         State = CloneState(source.State)
     };

@@ -257,6 +257,46 @@ public sealed class CustomGuiSessionGateTests
         Assert.Contains("GUI08-SESSION-DISABLED", blocked.Message);
     }
 
+    [Fact]
+    public void StateDeltaRequiresExactRevisionAndDoesNotAdvanceWhenSendFails()
+    {
+        long now = 100_000;
+        bool failDelta = false;
+        List<Packet> sent = new();
+        var controller = new CustomGuiSessionController(
+            packet =>
+            {
+                if (failDelta && packet is S.CustomGuiStateDelta) throw new IOException("发送失败");
+                sent.Add(packet);
+            },
+            () => true,
+            () => now,
+            () => Guid.Parse("33333333-3333-3333-3333-333333333333"),
+            () => 901);
+        S.CustomGuiOpen opened = controller.Open(
+            "activity.exchange", 1, 1, now + 1_000, 1,
+            new() { CustomGuiStateEntry.Text("exchange.status", "可兑换") });
+        sent.Clear();
+
+        S.CustomGuiStateDelta updated = controller.UpdateState(
+            opened.WindowInstanceId, expectedStateRevision: 1,
+            new() { CustomGuiStateEntry.Text("exchange.status", "兑换成功") });
+
+        Assert.Equal((uint)2, updated.StateRevision);
+        Assert.Equal(opened.SessionNonce, updated.SessionNonce);
+        Assert.Equal("兑换成功", Assert.IsType<S.CustomGuiStateDelta>(Assert.Single(sent)).State[0].TextValue);
+        Assert.Throws<InvalidOperationException>(() => controller.UpdateState(
+            opened.WindowInstanceId, expectedStateRevision: 1, new()));
+
+        failDelta = true;
+        Assert.Throws<IOException>(() => controller.UpdateState(
+            opened.WindowInstanceId, expectedStateRevision: 2, new()));
+        failDelta = false;
+        S.CustomGuiStateDelta retry = controller.UpdateState(
+            opened.WindowInstanceId, expectedStateRevision: 2, new());
+        Assert.Equal((uint)3, retry.StateRevision);
+    }
+
     private static CustomGuiSessionController CreateController(
         List<Packet> sent,
         Func<long> now,

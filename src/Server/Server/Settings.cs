@@ -131,6 +131,7 @@ namespace Server
         //C# Scripts (Roslyn + HotReload)
         public static bool CSharpScriptsEnabled = true;
         public static string CSharpScriptsPath = EnvirPath;
+        public static long CustomGuiPackageSequence = 1;
         public static bool CSharpScriptsHotReloadEnabled = true;
         public static bool CSharpScriptsPushModeEnabled = false;
         public static int CSharpScriptsDebounceMs = 500;
@@ -550,6 +551,7 @@ namespace Server
             //C# Scripts
             CSharpScriptsEnabled = Reader.ReadBoolean("CSharpScripts", "CSharpScriptsEnabled", CSharpScriptsEnabled);
             CSharpScriptsPath = Reader.ReadString("CSharpScripts", "CSharpScriptsPath", CSharpScriptsPath);
+            CustomGuiPackageSequence = Math.Max(1, Reader.ReadInt64("CSharpScripts", "CustomGuiPackageSequence", CustomGuiPackageSequence));
             CSharpScriptsHotReloadEnabled = Reader.ReadBoolean("CSharpScripts", "CSharpScriptsHotReloadEnabled", CSharpScriptsHotReloadEnabled);
             CSharpScriptsPushModeEnabled = Reader.ReadBoolean("CSharpScripts", "CSharpScriptsPushModeEnabled", CSharpScriptsPushModeEnabled);
             CSharpScriptsDebounceMs = Reader.ReadInt32("CSharpScripts", "CSharpScriptsDebounceMs", CSharpScriptsDebounceMs);
@@ -875,6 +877,7 @@ namespace Server
             //C# Scripts
             Reader.Write("CSharpScripts", "CSharpScriptsEnabled", CSharpScriptsEnabled);
             Reader.Write("CSharpScripts", "CSharpScriptsPath", CSharpScriptsPath);
+            Reader.Write("CSharpScripts", "CustomGuiPackageSequence", CustomGuiPackageSequence);
             Reader.Write("CSharpScripts", "CSharpScriptsHotReloadEnabled", CSharpScriptsHotReloadEnabled);
             Reader.Write("CSharpScripts", "CSharpScriptsPushModeEnabled", CSharpScriptsPushModeEnabled);
             Reader.Write("CSharpScripts", "CSharpScriptsDebounceMs", CSharpScriptsDebounceMs);

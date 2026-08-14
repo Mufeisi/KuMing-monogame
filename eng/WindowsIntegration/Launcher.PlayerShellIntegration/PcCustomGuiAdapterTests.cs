@@ -32,6 +32,43 @@ public sealed class PcCustomGuiAdapterTests
     }
 
     [Fact]
+    public void ActivityExchangeSelectsSubmitsRefreshesAndClosesThroughPcHost()
+    {
+        CustomGuiRuntimeDocument document = CustomGuiActivityExchangeTemplate.Create();
+        using PcCustomGuiHost host = PcCustomGuiAdapter.Create(document, new Size(1280, 720));
+        var session = new CustomGuiClientStateSession(document, 1, host);
+        Guid nonce = Guid.NewGuid();
+        session.Open(new CustomGuiOpenState(
+            71, document.DocumentId, 1, 1, nonce,
+            DateTimeOffset.UtcNow.AddMinutes(1).ToUnixTimeMilliseconds(), 1,
+            [
+                CustomGuiStateEntry.Text("exchange.status", "活动可用"),
+                CustomGuiStateEntry.List("exchange.options", [new(CustomGuiActivityExchangeTemplate.OfferId, "兑换", "限一次", string.Empty)]),
+                CustomGuiStateEntry.ButtonEnabled("exchange.submit.enabled", true),
+            ]));
+        var sent = new List<CustomGuiClientAction>();
+        host.BindActions(session, sent.Add);
+
+        host.Select("exchange.options", CustomGuiActivityExchangeTemplate.OfferId);
+        host.Controls["exchange.submit"].InvokeMouseClick(EventArgs.Empty);
+        CustomGuiClientAction action = Assert.Single(sent);
+
+        Assert.Equal(CustomGuiActionKind.SubmitSelection, action.Action);
+        Assert.Equal(new[] { CustomGuiActivityExchangeTemplate.OfferId }, action.SelectionIds);
+        session.ApplyDelta(new CustomGuiDeltaState(
+            71, document.DocumentId, 1, 1, nonce, 2,
+            [
+                CustomGuiStateEntry.Text("exchange.status", "兑换已完成"),
+                CustomGuiStateEntry.ButtonEnabled("exchange.submit.enabled", false),
+            ]));
+        session.AcceptActionResult(71, action.RequestSequence, 2, CustomGuiActionResultKind.Accepted, "兑换成功");
+        Assert.Equal("兑换已完成", Assert.IsType<MirLabel>(host.Controls["exchange.status"]).Text);
+        Assert.False(host.Controls["exchange.submit"].Enabled);
+        Assert.True(session.Close(71));
+        Assert.False(session.IsOpen);
+    }
+
+    [Fact]
     public void MirScenePacketPathOpensAdvancesAndClosesAcceptedPackageWindow()
     {
         CustomGuiRuntimeDocument document = CustomGuiAuthoringDefaults.Create();

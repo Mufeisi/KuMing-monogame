@@ -70,6 +70,7 @@ public sealed class CustomGuiButton : CustomGuiElement
 {
     public string Text { get; set; } = string.Empty;
     public string ActionId { get; set; }
+    public CustomGuiActionKind Action { get; set; } = CustomGuiActionKind.RequestAction;
     public string AssetId { get; set; }
     public bool Enabled { get; set; } = true;
 }

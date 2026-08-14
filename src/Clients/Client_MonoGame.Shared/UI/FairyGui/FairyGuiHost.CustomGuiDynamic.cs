@@ -56,6 +56,7 @@ internal static partial class FairyGuiHost
             var replacementSession = new CustomGuiClientStateSession(package.Document, package.Sequence, replacementHost);
             replacementSession.Open(new CustomGuiOpenState(packet.WindowInstanceId, packet.DocumentId, packet.DocumentRevision,
                 packet.PackageSequence, packet.SessionNonce, packet.ExpiresAtUnixMilliseconds, packet.StateRevision, packet.State));
+            replacementHost.BindActions(replacementSession, action => MirNetwork.Network.Enqueue(ToCustomGuiPacket(action)));
             CloseDynamicCustomGui();
             _customGuiHost = replacementHost;
             _customGuiSession = replacementSession;
@@ -69,5 +70,20 @@ internal static partial class FairyGuiHost
         _customGuiHost = null;
         _customGuiSession = null;
     }
+
+    private static ClientPackets.CustomGuiAction ToCustomGuiPacket(CustomGuiClientAction action) => new()
+    {
+        WindowInstanceId = action.WindowInstanceId,
+        DocumentId = action.DocumentId,
+        DocumentRevision = action.DocumentRevision,
+        PackageSequence = action.PackageSequence,
+        SessionNonce = action.SessionNonce,
+        RequestSequence = action.RequestSequence,
+        Action = action.Action,
+        ActionId = action.ActionId,
+        TextValue = action.TextValue,
+        SelectionIds = action.SelectionIds.ToList(),
+        ItemIds = action.ItemIds.ToList()
+    };
 }
 #endif

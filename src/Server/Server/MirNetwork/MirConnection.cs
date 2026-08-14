@@ -1190,6 +1190,19 @@ namespace Server.MirNetwork
                 "GUI11-HOOK-MAINTHREAD：游戏主线程不可用，脚本窗口未打开");
         }
 
+        internal S.CustomGuiStateDelta UpdateCustomGuiScriptState(
+            ulong windowInstanceId,
+            uint expectedStateRevision,
+            List<CustomGuiStateEntry> state)
+        {
+            S.CustomGuiStateDelta[] result = Envir.InvokeOnMainThread(() => new[]
+            {
+                _customGuiSessions.UpdateState(windowInstanceId, expectedStateRevision, state)
+            });
+            return result?[0] ?? throw new InvalidOperationException(
+                "GUI12-EXCHANGE-MAINTHREAD：游戏主线程不可用，兑换状态未刷新");
+        }
+
         internal void InvalidateCustomGuiScriptDocuments(IReadOnlySet<string> documentIds)
         {
             bool[] result = Envir.InvokeOnMainThread(() =>

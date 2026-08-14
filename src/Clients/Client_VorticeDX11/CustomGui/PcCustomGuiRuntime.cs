@@ -57,6 +57,7 @@ internal static class PcCustomGuiRuntime
             var replacementSession = new CustomGuiClientStateSession(package.Document, package.Sequence, replacementHost);
             replacementSession.Open(new CustomGuiOpenState(packet.WindowInstanceId, packet.DocumentId, packet.DocumentRevision,
                 packet.PackageSequence, packet.SessionNonce, packet.ExpiresAtUnixMilliseconds, packet.StateRevision, packet.State));
+            replacementHost.BindActions(replacementSession, action => Client.MirNetwork.Network.Enqueue(ToPacket(action)));
             replacementHost.AttachTo(scene);
             CloseCurrent();
             _host = replacementHost;
@@ -76,4 +77,19 @@ internal static class PcCustomGuiRuntime
     }
 
     private static void CloseCurrent() { _host?.Dispose(); _host = null; _session = null; }
+
+    private static ClientPackets.CustomGuiAction ToPacket(CustomGuiClientAction action) => new()
+    {
+        WindowInstanceId = action.WindowInstanceId,
+        DocumentId = action.DocumentId,
+        DocumentRevision = action.DocumentRevision,
+        PackageSequence = action.PackageSequence,
+        SessionNonce = action.SessionNonce,
+        RequestSequence = action.RequestSequence,
+        Action = action.Action,
+        ActionId = action.ActionId,
+        TextValue = action.TextValue,
+        SelectionIds = action.SelectionIds.ToList(),
+        ItemIds = action.ItemIds.ToList()
+    };
 }

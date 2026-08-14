@@ -83,6 +83,29 @@ public sealed class CustomGuiStateProjectionTests
         Assert.Empty(target.State);
     }
 
+    [Fact]
+    public void ClientActionOwnsSessionIdentityAndFailedSendDoesNotConsumeSequence()
+    {
+        CustomGuiRuntimeDocument document = CreateDocument();
+        var session = new CustomGuiClientStateSession(document, 9, new RecordingTarget());
+        Guid nonce = Guid.NewGuid();
+        session.Open(Open(document, nonce));
+
+        Assert.Throws<IOException>(() => session.SendAction(
+            _ => throw new IOException("网络队列失败"), CustomGuiActionKind.SubmitSelection, "claim", selectionIds: ["one"]));
+        CustomGuiClientAction first = session.SendAction(
+            _ => { }, CustomGuiActionKind.SubmitSelection, "claim", selectionIds: ["one"]);
+        CustomGuiClientAction second = session.SendAction(
+            _ => { }, CustomGuiActionKind.CloseWindow, "close");
+
+        Assert.Equal((uint)1, first.RequestSequence);
+        Assert.Equal((uint)2, second.RequestSequence);
+        Assert.Equal((ulong)41, first.WindowInstanceId);
+        Assert.Equal(document.DocumentId, first.DocumentId);
+        Assert.Equal(nonce, first.SessionNonce);
+        Assert.Equal(new[] { "one" }, first.SelectionIds);
+    }
+
     private static CustomGuiOpenState Open(CustomGuiRuntimeDocument document, Guid nonce) => new(
         41, document.DocumentId, 2, 9, nonce, DateTimeOffset.UtcNow.AddMinutes(1).ToUnixTimeMilliseconds(), 3,
         [CustomGuiStateEntry.Text("title", "初始")]);

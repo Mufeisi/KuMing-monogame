@@ -1,8 +1,9 @@
 using System.Runtime.CompilerServices;
-    using System.Reflection;
-    using Server.MirDatabase;
-    using Server.MirEnvir;
-    using Server.MirObjects;
+using System.Reflection;
+using Server.CustomGui;
+using Server.MirDatabase;
+using Server.MirEnvir;
+using Server.MirObjects;
 
 namespace Server.Scripting
 {
@@ -266,7 +267,12 @@ namespace Server.Scripting
             }
         }
 
-        private ScriptRegistry CreateRegistry() => new ScriptRegistry(ReportCustomGuiError);
+        private ScriptRegistry CreateRegistry()
+        {
+            var registry = new ScriptRegistry(ReportCustomGuiError);
+            ActivityExchangeWindow.Register(registry.CustomGui, packageSequence: Settings.CustomGuiPackageSequence);
+            return registry;
+        }
 
         private ScriptRegistry PublishRegistry(ScriptRegistry next)
         {

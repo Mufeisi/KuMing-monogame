@@ -19,6 +19,18 @@ public sealed record CustomGuiOpenState(
 public sealed record CustomGuiDeltaState(
     ulong WindowInstanceId, string DocumentId, uint DocumentRevision, long PackageSequence, Guid SessionNonce,
     uint StateRevision, IReadOnlyList<CustomGuiStateEntry> State);
+public sealed record CustomGuiClientAction(
+    ulong WindowInstanceId,
+    string DocumentId,
+    uint DocumentRevision,
+    long PackageSequence,
+    Guid SessionNonce,
+    uint RequestSequence,
+    CustomGuiActionKind Action,
+    string ActionId,
+    string TextValue,
+    IReadOnlyList<string> SelectionIds,
+    IReadOnlyList<long> ItemIds);
 
 public sealed class CustomGuiClientStateSession
 {
@@ -29,6 +41,7 @@ public sealed class CustomGuiClientStateSession
     private IReadOnlyDictionary<string, CustomGuiStateEntry> _state = new Dictionary<string, CustomGuiStateEntry>(StringComparer.Ordinal);
     private ulong _windowInstanceId;
     private Guid _sessionNonce;
+    private uint _lastRequestSequence;
 
     public CustomGuiClientStateSession(CustomGuiRuntimeDocument document, long packageSequence, ICustomGuiStateProjectionTarget target)
     {
@@ -65,6 +78,7 @@ public sealed class CustomGuiClientStateSession
         LastResultSequence = 0;
         LastResult = null;
         LastResultMessage = string.Empty;
+        _lastRequestSequence = 0;
     }
 
     public void ApplyDelta(CustomGuiDeltaState packet)
@@ -91,7 +105,41 @@ public sealed class CustomGuiClientStateSession
         _windowInstanceId = 0;
         _sessionNonce = Guid.Empty;
         StateRevision = 0;
+        _lastRequestSequence = 0;
         return true;
+    }
+
+    public CustomGuiClientAction SendAction(
+        Action<CustomGuiClientAction> send,
+        CustomGuiActionKind action,
+        string actionId,
+        string? textValue = null,
+        IReadOnlyList<string>? selectionIds = null,
+        IReadOnlyList<long>? itemIds = null)
+    {
+        ArgumentNullException.ThrowIfNull(send);
+        EnsureOpen();
+        if (_lastRequestSequence == uint.MaxValue)
+            throw Error("GUI10-ACTION-SEQUENCE", "动作序号已达上限");
+        string text = textValue ?? string.Empty;
+        List<string> selections = selectionIds?.ToList() ?? new();
+        List<long> items = itemIds?.ToList() ?? new();
+        CustomGuiProtocolCodec.ValidateActionPayload(action, text, selections, items);
+        var request = new CustomGuiClientAction(
+            _windowInstanceId,
+            _document.DocumentId,
+            (uint)_document.Revision,
+            _packageSequence,
+            _sessionNonce,
+            _lastRequestSequence + 1,
+            action,
+            actionId ?? string.Empty,
+            text,
+            selections,
+            items);
+        send(request);
+        _lastRequestSequence = request.RequestSequence;
+        return request;
     }
 
     public void AcceptActionResult(ulong windowInstanceId, uint requestSequence, uint stateRevision, CustomGuiActionResultKind result, string? message)
