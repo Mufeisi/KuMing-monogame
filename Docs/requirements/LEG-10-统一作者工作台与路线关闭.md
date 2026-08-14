@@ -1,6 +1,6 @@
 # LEG-10：统一作者工作台与路线关闭
 
-- 状态：进行中；`WORKBENCH-01`、`WORKBENCH-02` 已完成，当前切片 `WORKBENCH-03`
+- 状态：已完成并转入维护；`WORKBENCH-01`～`WORKBENCH-03` 全部关闭
 - 负责人：项目所有者
 - 激活日期：2026-08-14
 - 最后复核日期：2026-08-14
@@ -39,7 +39,7 @@
 
 ### `GATE-ROUTE-CLOSURE`
 
-- `WORKBENCH-03`：平行路径复核、文档同步、路线终审与完整回归。
+- `WORKBENCH-03`（已关闭）：平行路径复核、文档同步、路线终审与完整回归。证据见 [`../Evidence/LEG-10-20260814/WORKBENCH-03.md`](../Evidence/LEG-10-20260814/WORKBENCH-03.md)。
 
 退出条件：已激活阶段均有代码、测试和 Evidence；候选均已保留或关闭；不存在第二套协议、脚本、渲染、微端、发布或 Schema 系统；相关模块地图、开发指南和 Runbook 更新。
 

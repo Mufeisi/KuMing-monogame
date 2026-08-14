@@ -10,12 +10,12 @@
 | 状态范围 | 唯一事实源 | 当前生命周期 |
 |---|---|---|
 | 工程治理 | [`governance/工程治理实施路线.md`](governance/工程治理实施路线.md) | ENG-13 已完成，工程治理进入维护态 |
-| 当前产品任务 | [`requirements/LEG-10-统一作者工作台与路线关闭.md`](requirements/LEG-10-统一作者工作台与路线关闭.md) | LEG-10 已激活；当前切片 `WORKBENCH-01` |
+| 当前产品任务 | [`requirements/LEG-10-统一作者工作台与路线关闭.md`](requirements/LEG-10-统一作者工作台与路线关闭.md) | LEG-10 已完成并转入维护；当前无活动产品任务 |
 | PC 稳定与 Android 发布 P0～P5 | [`requirements/PRD-PC稳定与Android发布.md`](requirements/PRD-PC稳定与Android发布.md) | 已完成并转入维护，只保留历史验收事实 |
 | 启动器编辑器与独立微端 L0～L5 | [`design/launcher/启动器编辑器与独立微端实施规格.md`](design/launcher/启动器编辑器与独立微端实施规格.md)及对应 Evidence | 已完成；后续新增能力必须重新立项 |
 | 长期架构决定 | [`adr/`](adr/) | 已接受 ADR 为决定事实源；实施状态以代码、测试和证据为准 |
 
-当前活动产品任务为 LEG-10；范围、切片和状态以其专项规格为唯一事实源。LEG-09 已完成并转入维护。
+LEG-09、LEG-10 与传奇类参考源码吸收路线均已完成并转入维护；当前无活动产品任务。后续候选必须重新立项，不从历史 Evidence 或路线附录自动恢复。
 
 ## 首先阅读
 
@@ -30,7 +30,7 @@
 | [`governance/代码托管治理.md`](governance/代码托管治理.md) | PR、所有权、必需检查和主分支保护 | GitHub 治理目标与应用记录 |
 | [`requirements/PRD-PC稳定与Android发布.md`](requirements/PRD-PC稳定与Android发布.md) | 已完成发布阶段的产品目标、GATE、验收和历史快照 | P0～P5 历史事实源，不是活动队列 |
 | [`architecture/继续开发架构设计报告.md`](architecture/继续开发架构设计报告.md) | 2026-08-08 架构审计基线、目标架构和风险 | 历史架构基线；有效决定以 `adr/` 为准 |
-| [`requirements/传奇类参考源码吸收开发路线.md`](requirements/传奇类参考源码吸收开发路线.md) | 传奇类参考源码的候选吸收范围、总顺序、玩法差距终审、门禁与排除项 | 草案；不作为当前活动产品队列，具体阶段须重新立项 |
+| [`requirements/传奇类参考源码吸收开发路线.md`](requirements/传奇类参考源码吸收开发路线.md) | 传奇类参考源码的候选吸收范围、总顺序、玩法差距终审、门禁与排除项 | 已完成并转入维护；未激活候选仍须重新立项 |
 | [`../CONTEXT.md`](../CONTEXT.md) | 启动器与微端统一术语 | 领域语言 |
 | [`governance/执行纪律与防走偏铁律.md`](governance/执行纪律与防走偏铁律.md) | 防走偏、停止条件和验证成本 | 执行细则 |
 
