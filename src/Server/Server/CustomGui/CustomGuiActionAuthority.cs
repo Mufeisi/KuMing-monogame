@@ -105,22 +105,73 @@ public sealed class CustomGuiActionAuthority
 
     public void Register(CustomGuiActionRule rule)
     {
-        RegisteredRule candidate = ValidateAndCopy(rule);
-        var key = (candidate.DocumentId, candidate.ActionId);
-        if (_rules.TryGetValue(key, out RegisteredRule current))
+        RegisterBatch(new[] { rule });
+    }
+
+    public void RegisterBatch(IEnumerable<CustomGuiActionRule> rules)
+    {
+        if (rules == null) throw new ArgumentNullException(nameof(rules));
+        List<RegisteredRule> candidates = rules.Select(ValidateAndCopy).ToList();
+        if (candidates.Count == 0) return;
+
+        var next = new Dictionary<(string DocumentId, string ActionId), RegisteredRule>(_rules);
+        foreach (RegisteredRule candidate in candidates)
         {
-            bool newer = candidate.PackageSequence > current.PackageSequence ||
-                         candidate.PackageSequence == current.PackageSequence &&
-                         candidate.DocumentRevision > current.DocumentRevision;
-            if (!newer)
-                throw new InvalidOperationException("GUI09-RULE-VERSION：动作规则版本未前进");
-            _rules[key] = candidate;
-            return;
+            var key = (candidate.DocumentId, candidate.ActionId);
+            if (next.TryGetValue(key, out RegisteredRule current))
+            {
+                bool newer = candidate.PackageSequence > current.PackageSequence ||
+                             candidate.PackageSequence == current.PackageSequence &&
+                             candidate.DocumentRevision > current.DocumentRevision;
+                if (!newer)
+                    throw new InvalidOperationException("GUI09-RULE-VERSION：动作规则版本未前进");
+                next[key] = candidate;
+                continue;
+            }
+            next.Add(key, candidate);
         }
 
-        if (_rules.Count >= MaximumRegisteredRules)
+        if (next.Count > MaximumRegisteredRules)
             throw new InvalidOperationException("GUI09-RULE-LIMIT：动作规则数量超过上限");
-        _rules.Add(key, candidate);
+
+        _rules.Clear();
+        foreach (var pair in next) _rules.Add(pair.Key, pair.Value);
+    }
+
+    public void RegisterDocumentSnapshot(IEnumerable<CustomGuiActionRule> rules)
+    {
+        if (rules == null) throw new ArgumentNullException(nameof(rules));
+        List<RegisteredRule> candidates = rules.Select(ValidateAndCopy).ToList();
+        if (candidates.Count == 0)
+            throw new ArgumentException("GUI09-RULE-SNAPSHOT：文档动作快照不能为空", nameof(rules));
+
+        RegisteredRule first = candidates[0];
+        if (candidates.Any(candidate =>
+                !string.Equals(candidate.DocumentId, first.DocumentId, StringComparison.Ordinal) ||
+                candidate.DocumentRevision != first.DocumentRevision ||
+                candidate.PackageSequence != first.PackageSequence) ||
+            candidates.Select(candidate => candidate.ActionId).Distinct(StringComparer.Ordinal).Count() != candidates.Count)
+            throw new ArgumentException("GUI09-RULE-SNAPSHOT：文档动作快照身份不一致或动作重复", nameof(rules));
+
+        List<RegisteredRule> current = _rules.Values
+            .Where(rule => string.Equals(rule.DocumentId, first.DocumentId, StringComparison.Ordinal))
+            .ToList();
+        if (current.Any(rule =>
+                first.PackageSequence < rule.PackageSequence ||
+                first.PackageSequence == rule.PackageSequence && first.DocumentRevision < rule.DocumentRevision))
+            throw new InvalidOperationException("GUI09-RULE-VERSION：动作规则版本发生降级");
+
+        var next = new Dictionary<(string DocumentId, string ActionId), RegisteredRule>(_rules);
+        foreach (var key in next.Keys.Where(key =>
+                     string.Equals(key.DocumentId, first.DocumentId, StringComparison.Ordinal)).ToList())
+            next.Remove(key);
+        foreach (RegisteredRule candidate in candidates)
+            next.Add((candidate.DocumentId, candidate.ActionId), candidate);
+        if (next.Count > MaximumRegisteredRules)
+            throw new InvalidOperationException("GUI09-RULE-LIMIT：动作规则数量超过上限");
+
+        _rules.Clear();
+        foreach (var pair in next) _rules.Add(pair.Key, pair.Value);
     }
 
     public S.CustomGuiActionResult Handle(PlayerObject player, C.CustomGuiAction action, uint stateRevision)
@@ -198,6 +249,16 @@ public sealed class CustomGuiActionAuthority
             throw new ArgumentOutOfRangeException(nameof(currentPackageSequence));
         var stale = _rules.Where(pair => pair.Value.PackageSequence != currentPackageSequence)
             .Select(pair => pair.Key).ToList();
+        foreach (var key in stale) _rules.Remove(key);
+        return stale.Count;
+    }
+
+    public int RemoveDocuments(IReadOnlySet<string> documentIds)
+    {
+        if (documentIds == null || documentIds.Count == 0) return 0;
+        List<(string DocumentId, string ActionId)> stale = _rules.Keys
+            .Where(key => documentIds.Contains(key.DocumentId))
+            .ToList();
         foreach (var key in stale) _rules.Remove(key);
         return stale.Count;
     }

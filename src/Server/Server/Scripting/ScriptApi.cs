@@ -87,6 +87,13 @@ namespace Server.Scripting
             }
         }
 
+        public CustomGuiScriptOpenResult OpenCustomGui(PlayerObject player, string documentId)
+        {
+            if (Envir.CSharpScripts == null)
+                return CustomGuiScriptOpenResult.Rejected("GUI11-HOOK-DISABLED：C# 脚本系统未启用");
+            return Envir.CSharpScripts.OpenCustomGui(player, documentId);
+        }
+
         public int GetBagFreeSlotCount(PlayerObject player)
         {
             try

@@ -13,6 +13,7 @@ using Shared.Transport;
 using Server.Operations;
 using Server.CustomGui;
 using Shared.CustomGui;
+using Server.Scripting;
 
 namespace Server.MirNetwork
 {
@@ -1164,6 +1165,42 @@ namespace Server.MirNetwork
             });
             if (result == null || !result[0])
                 throw new InvalidOperationException("GUI09-AUTH-MAINTHREAD：游戏主线程不可用，规则未登记");
+        }
+
+        internal S.CustomGuiOpen OpenCustomGuiScriptSession(CustomGuiScriptOpenPlan plan)
+        {
+            if (plan == null) throw new ArgumentNullException(nameof(plan));
+            S.CustomGuiOpen[] result = Envir.InvokeOnMainThread(() =>
+            {
+                if (Stage != GameStage.Game || Player == null)
+                    throw new InvalidOperationException("GUI11-HOOK-PLAYER：玩家不在有效游戏会话");
+                _customGuiAuthority.RegisterDocumentSnapshot(plan.Actions);
+                return new[]
+                {
+                    _customGuiSessions.Open(
+                        plan.DocumentId,
+                        plan.DocumentRevision,
+                        plan.PackageSequence,
+                        plan.ExpiresAtUnixMilliseconds,
+                        plan.StateRevision,
+                        plan.State.ToList())
+                };
+            });
+            return result?[0] ?? throw new InvalidOperationException(
+                "GUI11-HOOK-MAINTHREAD：游戏主线程不可用，脚本窗口未打开");
+        }
+
+        internal void InvalidateCustomGuiScriptDocuments(IReadOnlySet<string> documentIds)
+        {
+            bool[] result = Envir.InvokeOnMainThread(() =>
+            {
+                _customGuiSessions.InvalidateDocuments(documentIds);
+                _customGuiAuthority.RemoveDocuments(documentIds);
+                return new[] { true };
+            });
+            if (result == null || !result[0])
+                throw new InvalidOperationException(
+                    "GUI11-HOOK-MAINTHREAD：游戏主线程不可用，脚本窗口未失效");
         }
 
         private void Turn(C.Turn p)

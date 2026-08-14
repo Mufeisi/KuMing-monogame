@@ -262,6 +262,21 @@ public sealed class CustomGuiSessionController
         return stale.Count;
     }
 
+    public int InvalidateDocuments(IReadOnlySet<string> documentIds)
+    {
+        if (documentIds == null || documentIds.Count == 0) return 0;
+        List<Session> stale = _sessions.Values
+            .Where(session => documentIds.Contains(session.DocumentId))
+            .ToList();
+        foreach (Session session in stale)
+        {
+            _sessions.Remove(session.WindowInstanceId);
+            SendClose(session.WindowInstanceId, CustomGuiCloseReason.VersionChanged,
+                "GUI11-HOOK-RELOAD：脚本窗口已随热重载失效");
+        }
+        return stale.Count;
+    }
+
     public void Clear() => _sessions.Clear();
 
     private void EnsurePlayerInGame()

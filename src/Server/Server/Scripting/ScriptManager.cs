@@ -9,7 +9,7 @@ namespace Server.Scripting
     public sealed class ScriptManager : IDisposable
     {
         private readonly object _gate = new object();
-        private ScriptRegistry _currentRegistry = new ScriptRegistry();
+        private ScriptRegistry _currentRegistry;
         private ScriptLoadContext _currentLoadContext;
         private readonly ScriptCompiler _compiler = new ScriptCompiler();
         private readonly ScriptContext _context = new ScriptContext();
@@ -20,6 +20,11 @@ namespace Server.Scripting
         private DateTime _lastCompileFailureLogUtc = DateTime.MinValue;
         private int _suppressedCompileFailureCount;
         private static readonly TimeSpan CompileFailureLogSuppressWindow = TimeSpan.FromSeconds(10);
+
+        public ScriptManager()
+        {
+            _currentRegistry = CreateRegistry();
+        }
 
         public bool Enabled { get; private set; }
         public long Version { get; private set; }
@@ -119,8 +124,8 @@ namespace Server.Scripting
                     {
                         ResetCompileFailureNoiseGate();
 
-                        var emptyRegistry = new ScriptRegistry();
-                        var oldRegistry = Interlocked.Exchange(ref _currentRegistry, emptyRegistry);
+                        var emptyRegistry = CreateRegistry();
+                        var oldRegistry = PublishRegistry(emptyRegistry);
                         oldRegistry = null;
 
                         var oldContext = _currentLoadContext;
@@ -171,7 +176,7 @@ namespace Server.Scripting
                             scriptAssembly = newContext.LoadFromStream(peStream, pdbStream);
                         }
 
-                        newRegistry = new ScriptRegistry();
+                        newRegistry = CreateRegistry();
                         RegisterModules(scriptAssembly, newRegistry);
                     }
                     catch
@@ -180,7 +185,7 @@ namespace Server.Scripting
                         throw;
                     }
 
-                    var oldRegistry2 = Interlocked.Exchange(ref _currentRegistry, newRegistry);
+                    var oldRegistry2 = PublishRegistry(newRegistry);
                     oldRegistry2 = null;
 
                     var oldContext2 = _currentLoadContext;
@@ -230,6 +235,69 @@ namespace Server.Scripting
             _lastCompileFailureFingerprint = string.Empty;
             _lastCompileFailureLogUtc = DateTime.MinValue;
             _suppressedCompileFailureCount = 0;
+        }
+
+        public CustomGuiScriptOpenResult OpenCustomGui(PlayerObject player, string documentId)
+        {
+            if (!Enabled)
+                return CustomGuiScriptOpenResult.Rejected("GUI11-HOOK-DISABLED：C# 脚本系统未启用");
+            if (player == null || player.Connection == null)
+                return CustomGuiScriptOpenResult.Rejected("GUI11-HOOK-PLAYER：玩家连接无效");
+
+            ScriptRegistry registry = CurrentRegistry;
+            try
+            {
+                CustomGuiScriptOpenResult result = Envir.Main.InvokeOnMainThread(() =>
+                {
+                    CustomGuiScriptPlanResult prepared = registry.CustomGui.PrepareOpen(
+                        _context, player, documentId, DateTimeOffset.UtcNow);
+                    if (!prepared.Success)
+                        return CustomGuiScriptOpenResult.Rejected(prepared.Diagnostic);
+                    return CustomGuiScriptOpenResult.Accepted(
+                        player.Connection.OpenCustomGuiScriptSession(prepared.Plan));
+                });
+                return result ?? CustomGuiScriptOpenResult.Rejected(
+                    "GUI11-HOOK-MAINTHREAD：游戏主线程不可用，脚本窗口未打开");
+            }
+            catch (Exception error)
+            {
+                ReportCustomGuiError("GUI11-HOOK-OPEN", error);
+                return CustomGuiScriptOpenResult.Rejected("GUI11-HOOK-OPEN：脚本窗口打开失败");
+            }
+        }
+
+        private ScriptRegistry CreateRegistry() => new ScriptRegistry(ReportCustomGuiError);
+
+        private ScriptRegistry PublishRegistry(ScriptRegistry next)
+        {
+            ScriptRegistry[] published = Envir.Main.InvokeOnMainThread(() =>
+            {
+                ScriptRegistry previous = CurrentRegistry;
+                var affectedDocuments = new HashSet<string>(
+                    previous.CustomGui.DocumentIds.Concat(next.CustomGui.DocumentIds),
+                    StringComparer.Ordinal);
+                if (affectedDocuments.Count > 0)
+                {
+                    lock (Envir.Main.Connections)
+                    {
+                        foreach (var connection in Envir.Main.Connections.ToArray())
+                            connection.InvalidateCustomGuiScriptDocuments(affectedDocuments);
+                    }
+                }
+                Interlocked.Exchange(ref _currentRegistry, next);
+                return new[] { previous };
+            });
+            return published?[0] ?? throw new InvalidOperationException(
+                "GUI11-HOOK-MAINTHREAD：游戏主线程不可用，脚本注册表未发布");
+        }
+
+        private static void ReportCustomGuiError(string code, Exception error)
+        {
+            try
+            {
+                MessageQueue.Instance.Enqueue($"[Scripts][{code}] 动态 GUI 旁路异常：{error.GetType().Name}");
+            }
+            catch { }
         }
 
         private bool ShouldLogCompileFailure(IReadOnlyList<ScriptDiagnostic> diagnostics, DateTime nowUtc, out string suppressedLogLine)
@@ -301,7 +369,15 @@ namespace Server.Scripting
             _watcher?.Dispose();
             _watcher = null;
 
-            var oldRegistry = Interlocked.Exchange(ref _currentRegistry, new ScriptRegistry());
+            ScriptRegistry oldRegistry;
+            try
+            {
+                oldRegistry = PublishRegistry(CreateRegistry());
+            }
+            catch when (!Envir.Main.Running)
+            {
+                oldRegistry = Interlocked.Exchange(ref _currentRegistry, CreateRegistry());
+            }
             oldRegistry = null;
 
             var oldContext = _currentLoadContext;

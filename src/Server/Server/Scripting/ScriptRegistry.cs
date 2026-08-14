@@ -27,6 +27,7 @@ namespace Server.Scripting
         public NpcShopRegistry NpcShops { get; } = new NpcShopRegistry();
         public PlayerRegionRegistry Regions { get; } = new PlayerRegionRegistry();
         public ActiveMapCoordRegistry ActiveMapCoords { get; } = new ActiveMapCoordRegistry();
+        public CustomGuiScriptRegistry CustomGui { get; }
 
         private IReadOnlyDictionary<string, ScriptModuleCatalogEntry> _moduleCatalog = new Dictionary<string, ScriptModuleCatalogEntry>(StringComparer.Ordinal);
         private readonly HashSet<string> _importedModuleKeys = new HashSet<string>(StringComparer.Ordinal);
@@ -38,7 +39,14 @@ namespace Server.Scripting
 
         public IReadOnlyCollection<string> CustomCommands => _customCommands;
 
+        public ScriptRegistry(Action<string, Exception> customGuiErrorSink = null)
+        {
+            CustomGui = new CustomGuiScriptRegistry(customGuiErrorSink);
+        }
+
         public void RegisterNpcShop(NpcShopDefinition definition) => NpcShops.Register(definition);
+
+        public void RegisterCustomGuiWindow(CustomGuiScriptWindowDefinition definition) => CustomGui.Register(definition);
 
         internal void SetModuleCatalog(IReadOnlyDictionary<string, ScriptModuleCatalogEntry> catalog)
         {
