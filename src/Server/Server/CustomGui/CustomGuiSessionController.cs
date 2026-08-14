@@ -46,6 +46,7 @@ public sealed class CustomGuiSessionController
     private readonly Func<ulong> _windowFactory;
     private readonly Func<C.CustomGuiAction, uint, S.CustomGuiActionResult> _acceptedActionHandler;
     private readonly Func<bool> _featureEnabled;
+    private readonly Action<Exception> _actionErrorSink;
     private readonly Dictionary<ulong, Session> _sessions = new();
 
     public CustomGuiSessionController(
@@ -55,7 +56,8 @@ public sealed class CustomGuiSessionController
         Func<Guid> nonceFactory = null,
         Func<ulong> windowFactory = null,
         Func<C.CustomGuiAction, uint, S.CustomGuiActionResult> acceptedActionHandler = null,
-        Func<bool> featureEnabled = null)
+        Func<bool> featureEnabled = null,
+        Action<Exception> actionErrorSink = null)
     {
         _send = send ?? throw new ArgumentNullException(nameof(send));
         _playerInGame = playerInGame ?? throw new ArgumentNullException(nameof(playerInGame));
@@ -64,6 +66,7 @@ public sealed class CustomGuiSessionController
         _windowFactory = windowFactory ?? CreateWindowInstanceId;
         _acceptedActionHandler = acceptedActionHandler;
         _featureEnabled = featureEnabled ?? (() => true);
+        _actionErrorSink = actionErrorSink;
     }
 
     public int ActiveCount => _sessions.Count;
@@ -191,8 +194,9 @@ public sealed class CustomGuiSessionController
                 ValidateActionResultIdentity(action, decision.StateRevision, resultPacket);
                 resultValidated = true;
             }
-            catch
+            catch (Exception error)
             {
+                try { _actionErrorSink?.Invoke(error); } catch { }
                 resultPacket = BuildActionResult(action, decision.StateRevision, CustomGuiActionResultKind.Rejected,
                     "GUI08-ACTION-ERROR：服务端动作处理失败");
             }

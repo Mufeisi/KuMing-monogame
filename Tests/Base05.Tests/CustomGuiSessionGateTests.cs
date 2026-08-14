@@ -205,6 +205,7 @@ public sealed class CustomGuiSessionGateTests
     public void ActionHandlerFailureIsContainedAndSequenceCannotBeRetried()
     {
         long now = 80_000;
+        Exception? observedError = null;
         List<Packet> sent = new();
         var controller = new CustomGuiSessionController(
             sent.Add,
@@ -212,7 +213,8 @@ public sealed class CustomGuiSessionGateTests
             () => now,
             () => Guid.NewGuid(),
             () => 700,
-            (_, _) => throw new InvalidOperationException("业务故障"));
+            (_, _) => throw new InvalidOperationException("业务故障"),
+            actionErrorSink: error => observedError = error);
         S.CustomGuiOpen opened = controller.Open("activity.exchange", 1, 601, now + 1_000, 1, new());
         sent.Clear();
 
@@ -221,6 +223,7 @@ public sealed class CustomGuiSessionGateTests
         Assert.True(decision.Accepted);
         Assert.Equal(CustomGuiActionResultKind.Rejected, failure.Result);
         Assert.Contains("GUI08-ACTION-ERROR", failure.Message);
+        Assert.IsType<InvalidOperationException>(observedError);
 
         sent.Clear();
         Assert.Equal(CustomGuiActionResultKind.Stale, controller.Handle(ActionFor(opened, 1)).Result);

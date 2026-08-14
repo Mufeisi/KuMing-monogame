@@ -43,6 +43,7 @@ namespace Server.MirNetwork
         private readonly PerformanceQueueTracker _retryQueueMetrics = new PerformanceQueueTracker();
         private readonly PerformanceQueueTracker _networkQueueMetrics = new PerformanceQueueTracker();
         private readonly CustomGuiSessionController _customGuiSessions;
+        private readonly CustomGuiActionAuthority _customGuiAuthority;
 
         private bool _disconnecting;
         public bool Connected;
@@ -112,10 +113,17 @@ namespace Server.MirNetwork
             _networkQueueMetrics.Enqueue();
             Envir.RecordNetworkQueueEnqueued(incoming: false);
             _retryList = new Queue<Packet>();
+            _customGuiAuthority = new CustomGuiActionAuthority(
+                errorSink: (code, error) => MessageQueue.Enqueue(
+                    $"[CustomGui][{code}] 会话 {SessionID} 权威动作异常：{error.GetType().Name}"));
             _customGuiSessions = new CustomGuiSessionController(
                 Enqueue,
                 () => Stage == GameStage.Game && Player != null,
-                featureEnabled: () => Envir.KillSwitches?.IsEnabled(KillSwitchFeature.Activities) != false);
+                acceptedActionHandler: (action, stateRevision) =>
+                    _customGuiAuthority.Handle(Player, action, stateRevision),
+                featureEnabled: () => Envir.KillSwitches?.IsEnabled(KillSwitchFeature.Activities) != false,
+                actionErrorSink: error => MessageQueue.Enqueue(
+                    $"[CustomGui][GUI09-AUTH-ERROR] 会话 {SessionID} 动作处理异常：{error.GetType().Name}"));
 
             Connected = true;
             BeginReceive();
@@ -846,6 +854,7 @@ namespace Server.MirNetwork
         public void SoftDisconnect(byte reason)
         {
             _customGuiSessions.Clear();
+            _customGuiAuthority.Clear();
             Stage = GameStage.Disconnected;
             TimeDisconnected = Envir.Time;
             
@@ -865,6 +874,7 @@ namespace Server.MirNetwork
             if (!Connected) return;
 
             _customGuiSessions.Clear();
+            _customGuiAuthority.Clear();
             Connected = false;
             PerformanceMetrics.Increment(PerformanceMetricKind.Disconnects);
             Envir.GatewayGovernance?.RemoveSession(SessionID);
@@ -1104,6 +1114,7 @@ namespace Server.MirNetwork
 
             Player.StopGame(23);
             _customGuiSessions.Clear();
+            _customGuiAuthority.Clear();
 
             Stage = GameStage.Select;
             Player = null;
@@ -1135,10 +1146,24 @@ namespace Server.MirNetwork
         {
             int[] result = Envir.InvokeOnMainThread(() => new[]
             {
-                _customGuiSessions.InvalidatePackageSequence(currentPackageSequence)
+                _customGuiSessions.InvalidatePackageSequence(currentPackageSequence),
+                _customGuiAuthority.InvalidatePackageSequence(currentPackageSequence)
             });
             return result?[0] ?? throw new InvalidOperationException(
                 "GUI08-SESSION-MAINTHREAD：游戏主线程不可用，版本失效未执行");
+        }
+
+        public void RegisterCustomGuiActionRule(CustomGuiActionRule rule)
+        {
+            bool[] result = Envir.InvokeOnMainThread(() =>
+            {
+                if (Stage != GameStage.Game || Player == null)
+                    throw new InvalidOperationException("GUI09-AUTH-PLAYER：玩家不在有效游戏会话");
+                _customGuiAuthority.Register(rule);
+                return new[] { true };
+            });
+            if (result == null || !result[0])
+                throw new InvalidOperationException("GUI09-AUTH-MAINTHREAD：游戏主线程不可用，规则未登记");
         }
 
         private void Turn(C.Turn p)

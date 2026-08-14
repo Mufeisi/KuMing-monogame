@@ -1,6 +1,6 @@
 # 游戏 GUI 动态协议规范
 
-- 状态：协议与服务端会话已实施（`GUI-07/08`）
+- 状态：协议、服务端会话与权威动作验证已实施（`GUI-07..09`）
 - 协议事实源：`src/Shared/Shared/CustomGui/CustomGuiProtocol.cs`、`CustomGuiPackets.cs`、`Enums.cs` 与 `Packet.cs`
 - 兼容审计：[`../../quality/protocol/PROTO-03-协议与资源兼容矩阵.md`](../../quality/protocol/PROTO-03-协议与资源兼容矩阵.md)
 - 语言：中文，代码标识符和协议类型名除外
@@ -62,6 +62,14 @@
 
 运维停用复用既有持久化 `Activities` Kill Switch。停用后拒绝新窗口，并在连接主循环以 `Invalidated` 原因关闭现有动态窗口；不增加第二份开关事实源。
 
-## 7. 回滚
+## 7. 服务端权威动作
+
+会话门卫通过后，`MirConnection` 在游戏主线程把动作交给 `CustomGuiActionAuthority`。只有服务端登记且与 `DocumentRevision/PackageSequence` 精确匹配的规则可执行；规则升级必须单调前进，签名包切换会同时失效旧窗口和旧规则。
+
+权威处理器按固定顺序重新检查玩家存活、动作类型、文本、选择白名单、背包物品所有权、当前 NPC 身份与距离、活动时间、`Account.Gold/Credit` 余额和服务端次数。客户端包不包含价格、余额、次数或奖励结果。规则最多 128 项，文本/选择/物品继续受 `GUI-07` 协议硬上限约束。
+
+全部前置条件通过后，业务处理器只能返回 `ICustomGuiActionTransaction`。`Prepare` 阶段只允许读取事实和构造回滚快照，不得写玩家状态；`Commit` 执行真实写入，提交或结果编码失败必须由 `Rollback` 恢复。稳定拒绝前缀为 `GUI09-RULE-*`、`GUI09-AUTH-*`；内部异常只记录类型化审计，不回传堆栈或敏感数据。
+
+## 8. 回滚
 
 回滚 `gui-wire-v2` 必须先通过既有 `Activities` Kill Switch 停止新开窗口并失效现有会话，再按独立提交逆序回滚；`wire-v1` 清单和旧包号不需要修改。进入生产兼容窗口后，不得复用 ID `145/275..278` 表达其他语义。
