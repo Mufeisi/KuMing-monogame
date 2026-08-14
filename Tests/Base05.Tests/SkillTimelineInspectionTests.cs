@@ -28,6 +28,29 @@ public sealed class SkillTimelineInspectionTests
         Assert.All(profile.Resources, resource => Assert.False(resource.PhysicalAssetVerified));
         Assert.Contains(profile.Resources, resource => resource.LogicalReference.Contains("Libraries.Magic"));
         Assert.Contains(profile.Resources, resource => resource.LogicalReference.Contains("20000"));
+
+        SkillVisualComparisonResult comparison = SkillVisualParityInspector.Compare(profile);
+        Assert.True(comparison.IsComparable);
+        Assert.Equal(new[] { "施法", "飞行", "命中", "音效" }, comparison.MatchingFields);
+        Assert.Empty(comparison.Differences);
+        Assert.Equal(2, comparison.VerificationGaps.Count);
+    }
+
+    [Fact]
+    public void 双端表现不一致_差异定位到两个平台拥有者()
+    {
+        SkillTimelineProfile original = SkillTimelineInspector.Build(Spell.FireBall);
+        SkillTimelineProfile changed = original with
+        {
+            AndroidContract = original.AndroidContract with { HitVisual = "Libraries.Magic[999]" }
+        };
+
+        SkillVisualComparisonResult comparison = SkillVisualParityInspector.Compare(changed);
+
+        SkillVisualDifference difference = Assert.Single(comparison.Differences);
+        Assert.Equal("命中", difference.Field);
+        Assert.Contains("Client_VorticeDX11", difference.OwningSource);
+        Assert.Contains("Client_MonoGame.Shared", difference.OwningSource);
     }
 
     [Fact]

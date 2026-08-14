@@ -105,6 +105,20 @@ public partial class MagicInfoForm
         text.AppendLine($"说明：{timeline.Explanation}");
         text.AppendLine($"行为证据：{timeline.BehaviorEvidence}");
 
+        SkillVisualComparisonResult parity = SkillVisualParityInspector.Compare(timeline);
+        text.AppendLine();
+        text.AppendLine("PC / Android 对比：");
+        text.AppendLine($"可比较：{parity.IsComparable}");
+        if (parity.MatchingFields.Count > 0)
+            text.AppendLine($"代码一致阶段：{string.Join("、", parity.MatchingFields)}");
+        foreach (SkillVisualDifference difference in parity.Differences)
+        {
+            text.AppendLine($"- 差异 {difference.Field}：PC={difference.PcValue}；Android={difference.AndroidValue}");
+            text.AppendLine($"  拥有者：{difference.OwningSource}");
+        }
+        foreach (string gap in parity.VerificationGaps)
+            text.AppendLine($"- 验证缺口：{gap}");
+
         if (snapshot.Diagnostics.Count > 0)
         {
             text.AppendLine();
