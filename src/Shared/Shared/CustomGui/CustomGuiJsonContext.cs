@@ -10,4 +10,5 @@ namespace Shared.CustomGui;
     UseStringEnumConverter = true,
     WriteIndented = false)]
 [JsonSerializable(typeof(CustomGuiRuntimeDocument))]
+[JsonSerializable(typeof(CustomGuiResourceBindingsDocument))]
 internal sealed partial class CustomGuiJsonContext : JsonSerializerContext;
