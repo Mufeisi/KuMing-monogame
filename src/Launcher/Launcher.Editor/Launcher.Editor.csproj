@@ -11,6 +11,7 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\Launcher.DesignCore\Launcher.DesignCore.csproj" />
+    <ProjectReference Include="..\Launcher.InstanceManagement\Launcher.InstanceManagement.csproj" />
     <ProjectReference Include="..\Launcher.PlayerShell.Core\Launcher.PlayerShell.Core.csproj" />
     <ProjectReference Include="..\Launcher.ThemeRuntime\Launcher.ThemeRuntime.csproj" />
     <ProjectReference Include="..\..\Shared\Shared\Shared.csproj" />
