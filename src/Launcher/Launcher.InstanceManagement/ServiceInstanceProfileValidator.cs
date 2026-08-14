@@ -31,6 +31,10 @@ public static partial class ServiceInstanceProfileValidator
             diagnostics.Add(Error("LEG09-PROFILE-SECRET-001", "SecretReference", "正式环境必须使用 secret:// 引用，档案不得包含秘密值。"));
         else if (profile.SecretReference.Length > 0 && !IsSecretReference(profile.SecretReference))
             diagnostics.Add(Error("LEG09-PROFILE-SECRET-002", "SecretReference", "秘密引用必须使用 secret:// 名称，不得写入秘密值。"));
+        if (profile.ExpectedSchemaVersion < 0)
+            diagnostics.Add(Error("LEG09-PROFILE-VERSION-001", "ExpectedSchemaVersion", "目标数据库 Schema 版本不得为负数。"));
+        if (profile.ExpectedScriptRevision.Length > 128 || profile.ExpectedScriptRevision.Any(char.IsControl))
+            diagnostics.Add(Error("LEG09-PROFILE-VERSION-002", "ExpectedScriptRevision", "目标脚本修订标识不得超过 128 个字符或包含控制字符。"));
 
         string? root = TryResolveRoot(profile.RootDirectory, diagnostics, inspectFileSystem);
         var componentIds = new HashSet<string>(StringComparer.Ordinal);

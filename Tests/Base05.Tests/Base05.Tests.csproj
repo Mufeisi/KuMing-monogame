@@ -10,6 +10,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\MicroGateway\MicroGateway.Core\MicroGateway.Core.csproj" />
     <ProjectReference Include="..\..\src\Launcher\Launcher.InstanceManagement\Launcher.InstanceManagement.csproj" />
+    <ProjectReference Include="..\..\src\Launcher\Launcher.Workbench\Launcher.Workbench.csproj" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="$(TestSdkVersion)" />
     <PackageReference Include="xunit" Version="$(XunitVersion)" />
     <PackageReference Include="xunit.runner.visualstudio" Version="$(XunitRunnerVisualStudioVersion)">

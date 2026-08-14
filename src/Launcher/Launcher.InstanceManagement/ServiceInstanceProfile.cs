@@ -41,6 +41,8 @@ public sealed class ServiceInstanceProfile
     public string LoginAddress { get; set; } = "127.0.0.1";
     public int LoginBasePort { get; set; } = 7000;
     public string SecretReference { get; set; } = string.Empty;
+    public int ExpectedSchemaVersion { get; set; }
+    public string ExpectedScriptRevision { get; set; } = string.Empty;
     public List<ServiceComponentProfile> Components { get; set; } = [];
 }
 

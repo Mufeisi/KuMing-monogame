@@ -7,6 +7,7 @@ using System.Diagnostics;
 using Launcher.ThemeRuntime;
 using LyoCrystal.LauncherEditor;
 using LyoCrystal.InstanceManagement;
+using LyoCrystal.Workbench;
 using Shared.CustomGui;
 using Shared.Security;
 using Shared.Release;
@@ -600,7 +601,7 @@ public sealed class LauncherEditorTests
         new ServiceInstanceProfileStore(projectRoot).Save(profile);
 
         using var form = new MainForm(projects) { StartPosition = FormStartPosition.Manual, Location = new Point(-32000, -32000), Size = new Size(1280, 800) };
-        ServiceInstanceOperationsEvidence evidence = await form.RunServiceInstanceEvidenceAsync().ConfigureAwait(false);
+        ServiceInstanceOperationsEvidence evidence = await form.RunServiceInstanceEvidenceAsync().ConfigureAwait(true);
 
         Assert.Equal(1, evidence.ProfileCount);
         Assert.Equal("workbench-test", evidence.SelectedInstanceId);
@@ -608,6 +609,52 @@ public sealed class LauncherEditorTests
         Assert.Equal(1, evidence.ComponentCount);
         Assert.True(evidence.HasLogs);
         Assert.True(evidence.HasAudit);
+    }
+
+    [Fact]
+    public async Task UnifiedWorkbenchShowsOwnedVersionsCapabilitiesAndAggregatedPreflights()
+    {
+        using var scope = new EditorTempScope();
+        var store = new EditorProjectStore(scope.Dir("workbench-overview"));
+        EditorProject project = store.Create("route-overview", "路线统一工作台", LauncherTemplateKind.Classic);
+        AttachCrossPlatformResources(project, scope.Dir("overview-resources"));
+        project.Snapshot.DefaultMicro.Enabled = false;
+        project.Brand.ProductVersion = "2.1.0.0";
+        project.Snapshot.DefaultMicro.ResourceVersion = "resource-21";
+        store.Save(project);
+        string instanceRoot = scope.Dir("overview-instance");
+        Directory.CreateDirectory(Path.Combine(instanceRoot, "runtime"));
+        File.WriteAllText(Path.Combine(instanceRoot, "runtime", "server.exe"), "fixture");
+        int overviewLoginPort = FreePort();
+        int overviewServerPort;
+        do overviewServerPort = FreePort(); while (overviewServerPort == overviewLoginPort);
+        new ServiceInstanceProfileStore(store.GetProjectDirectory(project.Snapshot.ProjectId)).Save(new ServiceInstanceProfile
+        {
+            InstanceId = "overview-test",
+            Environment = ServiceEnvironmentKind.Test,
+            ServerId = "overview-server",
+            RootDirectory = instanceRoot,
+            LoginAddress = "127.0.0.1",
+            LoginBasePort = overviewLoginPort,
+            ExpectedSchemaVersion = 17,
+            ExpectedScriptRevision = "content-v1",
+            Components = [new ServiceComponentProfile { Id = "server", Role = ServiceComponentRole.GameServer, ExecutablePath = "runtime/server.exe", WorkingDirectory = "runtime", BasePort = overviewServerPort, ExpectedVersion = "2.1.0" }]
+        });
+        using var form = new MainForm(store);
+
+        WorkbenchOverviewSnapshot snapshot = await form.RunWorkbenchPreflightEvidenceAsync().ConfigureAwait(true);
+        AuthorWorkbenchEvidence evidence = form.CaptureWorkbenchEvidence();
+
+        Assert.Contains(snapshot.Facts, item => item.Id == "player-entry" && item.Value == "2.1.0.0");
+        Assert.Contains(snapshot.Facts, item => item.Id == "instance/overview-test/schema" && item.Value == "17");
+        Assert.Contains(snapshot.Facts, item => item.Id == "instance/overview-test/scripts" && item.Value == "content-v1");
+        Assert.True(evidence.VersionCount >= 10);
+        Assert.True(evidence.CapabilityCount >= 6);
+        Assert.True(evidence.PreflightCount >= 4);
+        Assert.True(evidence.OwnerCount >= 6);
+        Assert.True(evidence.HasMergerClosure);
+        Assert.False(evidence.Passed);
+        Assert.Contains(snapshot.Facts, item => item.Owner == "项目发布预检" && item.Status == WorkbenchFactStatus.Failed);
     }
 
     [Fact]

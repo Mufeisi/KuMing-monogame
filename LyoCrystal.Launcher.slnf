@@ -8,6 +8,7 @@
       "src\\Launcher\\Launcher.ThemeRuntime\\Launcher.ThemeRuntime.csproj",
       "src\\Launcher\\Launcher.DesignCore\\Launcher.DesignCore.csproj",
       "src\\Launcher\\Launcher.InstanceManagement\\Launcher.InstanceManagement.csproj",
+      "src\\Launcher\\Launcher.Workbench\\Launcher.Workbench.csproj",
       "src\\Launcher\\Launcher.Editor\\Launcher.Editor.csproj",
       "src\\MicroGateway\\MicroGateway.Core\\MicroGateway.Core.csproj",
       "src\\MicroGateway\\MicroGateway.App\\MicroGateway.App.csproj",

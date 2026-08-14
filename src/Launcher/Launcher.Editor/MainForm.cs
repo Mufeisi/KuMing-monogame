@@ -4,6 +4,7 @@ using Launcher.ThemeRuntime;
 using Shared.Security;
 using System.Security.Cryptography;
 using System.Diagnostics;
+using LyoCrystal.Workbench;
 
 namespace LyoCrystal.LauncherEditor;
 
@@ -37,6 +38,7 @@ internal sealed class MainForm : Form
     private TabControl? _designDocuments;
     private DistributionOverviewPanel? _distributionOverview;
     private ServiceInstanceOperationsPanel? _instanceOperations;
+    private AuthorWorkbenchOverviewPanel? _workbenchOverview;
     private bool _restoringProjectSelection;
 
     public MainForm(EditorProjectStore store)
@@ -177,7 +179,8 @@ internal sealed class MainForm : Form
 
         _quickPanel = new QuickProductionPanel(_project, SelectQuickResource, () => ImportQuickImage(ThemeImageUsage.Background), () => ImportQuickImage(ThemeImageUsage.ButtonBase), GenerateAllQuick, ShowAdvanced);
         _quickPanel.SetResult(_lastQuickOutput);
-        _tabs.TabPages.Add(new TabPage("概览") { Controls = { _quickPanel } });
+        _workbenchOverview = new AuthorWorkbenchOverviewPanel(_project, _store.GetProjectDirectory(_project.Snapshot.ProjectId));
+        _tabs.TabPages.Add(CreateModePage("概览", new TabPage("统一工作台") { Controls = { _workbenchOverview } }, new TabPage("快速制作") { Controls = { _quickPanel } }));
         _tabs.TabPages.Add(CreateControlLayoutTab());
         _tabs.TabPages.Add(CreateModePage("内容", CreateServerTab(), CreateAnnouncementTab(), CreateActionLinksTab(), new TabPage("玩家设置") { Controls = { new SettingsEditorPanel(_project.Snapshot.Defaults) } }));
         _distributionOverview = new DistributionOverviewPanel(_project, _store.GetProjectDirectory(_project.Snapshot.ProjectId), NavigateDistributionFix);
@@ -760,6 +763,10 @@ internal sealed class MainForm : Form
     internal Task<ServiceInstanceOperationsEvidence> RunServiceInstanceEvidenceAsync() => _instanceOperations?.RunLifecycleForEvidenceAsync() ?? throw new InvalidOperationException("实例运行面板尚未创建");
 
     internal ServiceInstanceOperationsEvidence CaptureServiceInstanceEvidence() => _instanceOperations?.CaptureForEvidence() ?? throw new InvalidOperationException("实例运行面板尚未创建");
+
+    internal Task<WorkbenchOverviewSnapshot> RunWorkbenchPreflightEvidenceAsync() => _workbenchOverview?.RunFullPreflightForEvidenceAsync() ?? throw new InvalidOperationException("工作台总览尚未创建");
+
+    internal AuthorWorkbenchEvidence CaptureWorkbenchEvidence() => _workbenchOverview?.CaptureForEvidence() ?? throw new InvalidOperationException("工作台总览尚未创建");
 
     internal Task<IReadOnlyList<DistributionEndpointResult>> RunDistributionEndpointEvidenceAsync()
         => _distributionOverview?.RunEndpointPreflightAsync() ?? Task.FromResult<IReadOnlyList<DistributionEndpointResult>>(Array.Empty<DistributionEndpointResult>());
