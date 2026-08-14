@@ -1,5 +1,6 @@
 using System.Text.Json.Serialization;
 using Launcher.ThemeRuntime;
+using Shared.CustomGui;
 
 namespace LyoCrystal.LauncherEditor;
 
@@ -41,6 +42,8 @@ public sealed class EditorProject
     public GatewayDeploymentSettings Gateway { get; set; } = new();
     public ProjectReleaseMetadata Release { get; set; } = new();
     public List<LauncherCanvasControlState> CanvasControls { get; set; } = new();
+    public List<CustomGuiRuntimeDocument> GameGuiDocuments { get; set; } = new();
+    public List<CustomGuiCanvasControlState> GameGuiCanvasStates { get; set; } = new();
     public string ImportedClientDirectory { get; set; } = string.Empty;
     public bool OptimizeImportedImages { get; set; } = true;
     public ClientDeliveryMode DeliveryMode { get; set; }
@@ -65,6 +68,13 @@ public sealed class EditorProject
 public sealed class LauncherCanvasControlState
 {
     public LauncherControlId Id { get; set; }
+    public bool Locked { get; set; }
+}
+
+public sealed class CustomGuiCanvasControlState
+{
+    public string DocumentId { get; set; } = string.Empty;
+    public string ElementId { get; set; } = string.Empty;
     public bool Locked { get; set; }
 }
 

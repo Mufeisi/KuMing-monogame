@@ -32,6 +32,9 @@ internal sealed class MainForm : Form
     private bool _quickGenerationRunning;
     private LauncherCanvasDocument? _canvasDocument;
     private LauncherCanvasEditorPanel? _canvasPanel;
+    private CustomGuiCanvasDocument? _gameGuiDocument;
+    private CustomGuiCanvasEditorPanel? _gameGuiPanel;
+    private TabControl? _designDocuments;
     private DistributionOverviewPanel? _distributionOverview;
     private bool _restoringProjectSelection;
 
@@ -153,7 +156,8 @@ internal sealed class MainForm : Form
                 return;
             }
             if (_canvasDocument is not null) _canvasDocument.Changed -= OnCanvasDocumentChanged;
-            _project = _store.Load(id); _canvasDocument = null; RebuildTabs(); RefreshPreview(); SetStatus("已加载启动器：" + _project.Snapshot.ProjectName);
+            if (_gameGuiDocument is not null) _gameGuiDocument.Core.Changed -= OnGameGuiDocumentChanged;
+            _project = _store.Load(id); _canvasDocument = null; _gameGuiDocument = null; RebuildTabs(); RefreshPreview(); SetStatus("已加载启动器：" + _project.Snapshot.ProjectName);
         }
         catch (Exception ex) { ShowError(ex); }
     }
@@ -298,7 +302,16 @@ internal sealed class MainForm : Form
             _viewportStatus.Text = status.Viewport;
             _saveStatus.Text = status.Dirty ? "未保存" : "已保存";
         };
-        return new TabPage("设计") { Controls = { _canvasPanel } };
+        if (_project.GameGuiDocuments.Count == 0) _project.GameGuiDocuments.Add(CustomGuiAuthoringDefaults.Create());
+        _gameGuiDocument ??= new CustomGuiCanvasDocument(_project.GameGuiDocuments[0], _project.GameGuiCanvasStates);
+        _gameGuiDocument.Core.MarkSaved();
+        _gameGuiDocument.Core.Changed -= OnGameGuiDocumentChanged;
+        _gameGuiDocument.Core.Changed += OnGameGuiDocumentChanged;
+        _gameGuiPanel = new CustomGuiCanvasEditorPanel(_gameGuiDocument);
+        _designDocuments = new TabControl { Dock = DockStyle.Fill };
+        _designDocuments.TabPages.Add(new TabPage("启动器界面") { Controls = { _canvasPanel } });
+        _designDocuments.TabPages.Add(new TabPage("游戏界面") { Controls = { _gameGuiPanel } });
+        return new TabPage("设计") { Controls = { _designDocuments } };
     }
 
     private void OnCanvasDocumentChanged(object? sender, EventArgs e)
@@ -307,6 +320,13 @@ internal sealed class MainForm : Form
         _controlOverrides = new BindingList<LauncherControlOverride>(_project.Snapshot.Theme.Controls);
         _saveStatus.Text = _canvasDocument?.IsDirty == true ? "未保存" : "已保存";
         RefreshPreview();
+    }
+
+    private void OnGameGuiDocumentChanged(object? sender, EventArgs e)
+    {
+        _selectionStatus.Text = _gameGuiDocument?.Core.Selection.FirstOrDefault() is string id ? $"已选择 {id}" : "未选择对象";
+        _viewportStatus.Text = _gameGuiDocument is null ? "画布 --" : $"画布 {_gameGuiDocument.Runtime.Viewport.ReferenceWidth} × {_gameGuiDocument.Runtime.Viewport.ReferenceHeight}";
+        _saveStatus.Text = _gameGuiDocument?.Core.IsDirty == true ? "未保存" : "已保存";
     }
 
     private TabPage CreatePreviewTab()
@@ -332,7 +352,7 @@ internal sealed class MainForm : Form
     private void SaveProject()
     {
         if (_project is null) return;
-        try { SyncLists(); _store.Save(_project); _canvasDocument?.MarkSaved(); _saveStatus.Text = "已保存"; SetStatus("项目已原子保存"); }
+        try { SyncLists(); _store.Save(_project); _canvasDocument?.MarkSaved(); _gameGuiDocument?.Core.MarkSaved(); _saveStatus.Text = "已保存"; SetStatus("项目已原子保存"); }
         catch (Exception ex) { ShowError(ex); }
     }
 
@@ -698,6 +718,7 @@ internal sealed class MainForm : Form
         if (_project is null) throw new InvalidOperationException("没有可用于画布证据的项目");
         TabPage canvas = _tabs.TabPages.Cast<TabPage>().Single(page => page.Text == "设计");
         _tabs.SelectedTab = canvas;
+        _designDocuments!.SelectedIndex = 0;
         _canvasDocument!.Select([LauncherControlId.ServerList, LauncherControlId.Announcements, LauncherControlId.LaunchButton]);
         _canvasDocument.MoveSelection(8, 8, snap: true);
         _canvasDocument.Undo();
@@ -706,6 +727,21 @@ internal sealed class MainForm : Form
     }
 
     internal IReadOnlyList<string> CaptureWorkspaceModesForEvidence() => _tabs.TabPages.Cast<TabPage>().Select(page => page.Text).ToArray();
+    internal IReadOnlyList<string> CaptureDesignDocumentsForEvidence() => _designDocuments!.TabPages.Cast<TabPage>().Select(page => page.Text).ToArray();
+
+    internal void PrepareCustomGuiEvidence()
+    {
+        if (_gameGuiDocument is null || _gameGuiPanel is null) throw new InvalidOperationException("没有可用于游戏 GUI 证据的文档");
+        _tabs.SelectedTab = _tabs.TabPages.Cast<TabPage>().Single(page => page.Text == "设计");
+        _designDocuments!.SelectedIndex = 1;
+        _gameGuiPanel.Select("claim");
+        _gameGuiDocument.Core.MoveSelection(17, 9, snap: false);
+        _gameGuiDocument.Core.Undo();
+        _gameGuiDocument.Core.Redo();
+        Application.DoEvents();
+    }
+
+    internal CustomGuiWorkspaceSnapshot CaptureCustomGuiWorkspaceForEvidence() => _gameGuiPanel!.CaptureForEvidence();
 
     internal bool PrepareDistributionEvidence()
     {
@@ -723,14 +759,11 @@ internal sealed class MainForm : Form
 
     internal (int ObjectTreeWidth, int PropertiesWidth, Size CanvasSize) CaptureDesignWorkspaceLayoutForEvidence()
     {
-        TabPage design = _tabs.TabPages.Cast<TabPage>().Single(page => page.Text == "设计");
-        var panel = design.Controls.OfType<LauncherCanvasEditorPanel>().Single();
-        return panel.CaptureLayoutForEvidence();
+        return _canvasPanel!.CaptureLayoutForEvidence();
     }
     internal (float Zoom, bool Snap, bool Grid) CaptureDesignViewportForEvidence()
     {
-        TabPage design = _tabs.TabPages.Cast<TabPage>().Single(page => page.Text == "设计");
-        return design.Controls.OfType<LauncherCanvasEditorPanel>().Single().CaptureViewportForEvidence();
+        return _canvasPanel!.CaptureViewportForEvidence();
     }
     internal LauncherObjectTreeSnapshot CaptureObjectTreeForEvidence() => _canvasPanel!.CaptureObjectTreeForEvidence();
     internal void FilterObjectTreeForEvidence(string value) => _canvasPanel!.FilterObjectTreeForEvidence(value);
@@ -791,6 +824,7 @@ internal sealed class MainForm : Form
         if (disposing)
         {
             if (_canvasDocument is not null) _canvasDocument.Changed -= OnCanvasDocumentChanged;
+            if (_gameGuiDocument is not null) _gameGuiDocument.Core.Changed -= OnGameGuiDocumentChanged;
             _preview.Image?.Dispose();
         }
         base.Dispose(disposing);
@@ -811,11 +845,11 @@ internal sealed class MainForm : Form
 
     private bool ConfirmDiscardCanvasChanges()
     {
-        if (_canvasDocument?.IsDirty != true) return true;
+        if (_canvasDocument?.IsDirty != true && _gameGuiDocument?.Core.IsDirty != true) return true;
         DialogResult result = MessageBox.Show(this, "画布有尚未保存的修改。是否先保存？", "未保存的画布修改", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Warning);
         if (result == DialogResult.Cancel) return false;
         if (result == DialogResult.Yes) SaveProject();
-        return result != DialogResult.Yes || _canvasDocument?.IsDirty != true;
+        return result != DialogResult.Yes || (_canvasDocument?.IsDirty != true && _gameGuiDocument?.Core.IsDirty != true);
     }
 
     private sealed record ProjectListItem(string Id, string Name)

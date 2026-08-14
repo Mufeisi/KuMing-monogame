@@ -6,6 +6,7 @@ using System.Drawing;
 using System.Diagnostics;
 using Launcher.ThemeRuntime;
 using LyoCrystal.LauncherEditor;
+using Shared.CustomGui;
 using Shared.Security;
 using LyoCrystal.MicroGateway;
 using System.Net;
@@ -361,6 +362,68 @@ public sealed class LauncherEditorTests
         Assert.Equal(0, form.CapturePropertiesForEvidence().EditableCount);
         form.ApplyPropertyChoiceForEvidence("locked", "否");
         Assert.Equal(2, form.CapturePropertiesForEvidence().EditableCount);
+        form.Hide();
+    }
+
+    [Fact]
+    public void GameGuiAuthoringUsesDesignCoreAndPersistsAuthorMetadataSeparately()
+    {
+        using var scope = new EditorTempScope();
+        var store = new EditorProjectStore(scope.Root);
+        EditorProject project = store.Create("game-gui-core", "游戏界面项目", LauncherTemplateKind.Classic);
+        CustomGuiRuntimeDocument runtime = Assert.Single(project.GameGuiDocuments);
+        project.GameGuiCanvasStates.Add(new CustomGuiCanvasControlState { DocumentId = "other-document", ElementId = "peer", Locked = true });
+        var document = new CustomGuiCanvasDocument(runtime, project.GameGuiCanvasStates);
+        var original = document.Core.GetBounds("claim");
+
+        var originalWindow = document.Core.GetBounds("event");
+        document.Core.Select(["event", "claim"]);
+        Assert.True(document.Core.MoveSelection(10, 6, snap: false));
+        Assert.Equal(originalWindow.X + 10, document.Core.GetBounds("event").X);
+        Assert.Equal(original.X + 10, document.Core.GetBounds("claim").X);
+        Assert.True(document.Core.Undo());
+
+        document.Core.Select(["claim"]);
+        Assert.True(document.Core.MoveSelection(17, 9, snap: false));
+        Assert.True(document.Core.IsDirty);
+        document.Core.SetLocked(["claim"], true);
+        Assert.True(document.Core.Undo());
+        Assert.False(document.Core.IsLocked("claim"));
+        Assert.True(document.Core.Redo());
+        Assert.True(document.Core.IsLocked("claim"));
+        Assert.Contains(project.GameGuiCanvasStates, state => state.DocumentId == "other-document" && state.ElementId == "peer" && state.Locked);
+        store.Save(project);
+
+        EditorProject loaded = store.Load("game-gui-core");
+        CustomGuiRuntimeDocument restoredRuntime = Assert.Single(loaded.GameGuiDocuments);
+        var restored = new CustomGuiCanvasDocument(restoredRuntime, loaded.GameGuiCanvasStates);
+
+        Assert.Equal(original.X + 17, restored.Core.GetBounds("claim").X);
+        Assert.Equal(original.Y + 9, restored.Core.GetBounds("claim").Y);
+        Assert.True(restored.Core.IsLocked("claim"));
+        Assert.DoesNotContain("locked", System.Text.Encoding.UTF8.GetString(CustomGuiDocumentCodec.Serialize(restoredRuntime)), StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void DesignModeSwitchesBetweenLauncherAndGameGuiWithoutAddingWorkspaceSidebar()
+    {
+        using var scope = new EditorTempScope();
+        var store = new EditorProjectStore(scope.Root);
+        store.Create("game-gui-shell", "游戏界面工作区", LauncherTemplateKind.Classic);
+        using var form = new MainForm(store) { StartPosition = FormStartPosition.Manual, Location = new Point(-32000, -32000), Size = new Size(1280, 800) };
+        form.Show();
+
+        form.PrepareCustomGuiEvidence();
+        CustomGuiWorkspaceSnapshot workspace = form.CaptureCustomGuiWorkspaceForEvidence();
+
+        Assert.Equal(["启动器界面", "游戏界面"], form.CaptureDesignDocumentsForEvidence());
+        Assert.Equal(["概览", "设计", "内容", "交付", "诊断"], form.CaptureWorkspaceModesForEvidence());
+        Assert.Equal(190, workspace.ObjectTreeWidth);
+        Assert.Equal(250, workspace.PropertiesWidth);
+        Assert.Equal(new Size(1280, 720), workspace.CanvasSize);
+        Assert.Equal(9, workspace.ObjectCount);
+        Assert.Equal("claim", workspace.SelectedId);
+        Assert.True(workspace.Dirty);
         form.Hide();
     }
 

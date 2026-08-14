@@ -41,6 +41,7 @@ public sealed class EditorProjectStore
         Directory.CreateDirectory(assets);
         RejectReparsePath(assets);
         EditorProject project = new() { Snapshot = LauncherTemplateCatalog.Create(template) };
+        project.GameGuiDocuments.Add(CustomGuiAuthoringDefaults.Create());
         project.Snapshot.ProjectId = projectId;
         project.Snapshot.ProjectName = string.IsNullOrWhiteSpace(projectName) ? "未命名启动器" : projectName.Trim();
         project.Snapshot.Theme.ServerListMode = options.ServerListMode;

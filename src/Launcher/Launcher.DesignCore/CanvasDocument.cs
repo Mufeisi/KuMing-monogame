@@ -123,12 +123,13 @@ public sealed class CanvasDocument<TId, TSnapshot> : ICanvasDocument<TId> where 
     {
         TId[] selected = EditableSelectionArray();
         if (selected.Length == 0 || deltaX == 0 && deltaY == 0) return false;
+        Dictionary<TId, CanvasBounds> original = selected.ToDictionary(id => id, _adapter.GetBounds);
         if (!snap) SnapGuides = Array.Empty<CanvasGuide>();
         ApplyChange(() =>
         {
             foreach (TId id in selected)
             {
-                CanvasBounds current = _adapter.GetBounds(id);
+                CanvasBounds current = original[id];
                 CanvasBounds moved = current with { X = current.X + deltaX, Y = current.Y + deltaY };
                 _adapter.SetBounds(id, Clamp(snap ? Snap(moved, id) : moved));
             }
@@ -140,12 +141,13 @@ public sealed class CanvasDocument<TId, TSnapshot> : ICanvasDocument<TId> where 
     {
         TId[] selected = EditableSelectionArray();
         if (selected.Length == 0 || deltaWidth == 0 && deltaHeight == 0) return false;
+        Dictionary<TId, CanvasBounds> original = selected.ToDictionary(id => id, _adapter.GetBounds);
         if (!snap) SnapGuides = Array.Empty<CanvasGuide>();
         ApplyChange(() =>
         {
             foreach (TId id in selected)
             {
-                CanvasBounds current = _adapter.GetBounds(id);
+                CanvasBounds current = original[id];
                 CanvasBounds resized = current with
                 {
                     Width = Math.Max(MinimumSize, current.Width + deltaWidth),
@@ -160,12 +162,14 @@ public sealed class CanvasDocument<TId, TSnapshot> : ICanvasDocument<TId> where 
     public void ChangeSelectionBounds(CanvasBoundsChange change)
     {
         ArgumentNullException.ThrowIfNull(change);
+        TId[] selected = EditableSelectionArray();
+        Dictionary<TId, CanvasBounds> original = selected.ToDictionary(id => id, _adapter.GetBounds);
         SnapGuides = Array.Empty<CanvasGuide>();
         ApplyChange(() =>
         {
-            foreach (TId id in EditableSelectionArray())
+            foreach (TId id in selected)
             {
-                CanvasBounds bounds = _adapter.GetBounds(id);
+                CanvasBounds bounds = original[id];
                 _adapter.SetBounds(id, Clamp(new CanvasBounds(
                     change.X ?? bounds.X,
                     change.Y ?? bounds.Y,
@@ -191,9 +195,10 @@ public sealed class CanvasDocument<TId, TSnapshot> : ICanvasDocument<TId> where 
                 CanvasAlignment.VerticalCenter => (int)Math.Round(values.Average(value => value.Y + value.Height / 2d)),
                 _ => values.Max(value => value.Y + value.Height),
             };
-            foreach (TId id in ids)
+            for (int index = 0; index < ids.Length; index++)
             {
-                CanvasBounds bounds = _adapter.GetBounds(id);
+                TId id = ids[index];
+                CanvasBounds bounds = values[index];
                 int x = alignment switch { CanvasAlignment.Left => target, CanvasAlignment.HorizontalCenter => target - bounds.Width / 2, CanvasAlignment.Right => target - bounds.Width, _ => bounds.X };
                 int y = alignment switch { CanvasAlignment.Top => target, CanvasAlignment.VerticalCenter => target - bounds.Height / 2, CanvasAlignment.Bottom => target - bounds.Height, _ => bounds.Y };
                 _adapter.SetBounds(id, Clamp(bounds with { X = x, Y = y }));
@@ -210,12 +215,13 @@ public sealed class CanvasDocument<TId, TSnapshot> : ICanvasDocument<TId> where 
             TId[] ordered = direction == CanvasDistribution.Horizontal
                 ? ids.OrderBy(id => _adapter.GetBounds(id).X).ToArray()
                 : ids.OrderBy(id => _adapter.GetBounds(id).Y).ToArray();
-            double first = direction == CanvasDistribution.Horizontal ? _adapter.GetBounds(ordered[0]).X : _adapter.GetBounds(ordered[0]).Y;
-            double last = direction == CanvasDistribution.Horizontal ? _adapter.GetBounds(ordered[^1]).X : _adapter.GetBounds(ordered[^1]).Y;
+            Dictionary<TId, CanvasBounds> original = ordered.ToDictionary(id => id, _adapter.GetBounds);
+            double first = direction == CanvasDistribution.Horizontal ? original[ordered[0]].X : original[ordered[0]].Y;
+            double last = direction == CanvasDistribution.Horizontal ? original[ordered[^1]].X : original[ordered[^1]].Y;
             for (int index = 1; index < ordered.Length - 1; index++)
             {
                 TId id = ordered[index];
-                CanvasBounds bounds = _adapter.GetBounds(id);
+                CanvasBounds bounds = original[id];
                 int position = (int)Math.Round(first + (last - first) * index / (ordered.Length - 1));
                 _adapter.SetBounds(id, Clamp(direction == CanvasDistribution.Horizontal ? bounds with { X = position } : bounds with { Y = position }));
             }

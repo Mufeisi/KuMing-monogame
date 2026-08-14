@@ -48,6 +48,10 @@ internal static class Program
             using var canvasScreenshot = new Bitmap(form.Width, form.Height);
             form.DrawToBitmap(canvasScreenshot, new Rectangle(Point.Empty, canvasScreenshot.Size));
             canvasScreenshot.Save(Path.Combine(output, "可视化画布设计器.png"), ImageFormat.Png);
+            form.PrepareCustomGuiEvidence();
+            using var gameGuiScreenshot = new Bitmap(form.Width, form.Height);
+            form.DrawToBitmap(gameGuiScreenshot, new Rectangle(Point.Empty, gameGuiScreenshot.Size));
+            gameGuiScreenshot.Save(Path.Combine(output, "游戏GUI画布设计器.png"), ImageFormat.Png);
             form.Size = new Size(1100, 700); Application.DoEvents();
             using var minimumScreenshot = new Bitmap(form.Width, form.Height);
             form.DrawToBitmap(minimumScreenshot, new Rectangle(Point.Empty, minimumScreenshot.Size));
@@ -118,7 +122,7 @@ internal static class Program
             ProjectReleaseKeyStore.ExportRecovery(project, projectRoot, "Smoke-Recovery-Password-2026", Path.Combine(output, "smoke-project-密钥恢复包.lyorecovery"));
             using (var form = new MainForm(store) { WindowState = FormWindowState.Normal, Size = new Size(1400, 850), StartPosition = FormStartPosition.Manual, Location = new Point(-32000, -32000) })
             {
-                form.Show(); Application.DoEvents(); form.PrepareCanvasEvidence();
+                form.Show(); Application.DoEvents(); form.PrepareCustomGuiEvidence();
                 using var screenshot = new Bitmap(form.Width, form.Height);
                 form.DrawToBitmap(screenshot, new Rectangle(Point.Empty, screenshot.Size));
                 screenshot.Save(Path.Combine(output, "editor-ui.png"), ImageFormat.Png);
