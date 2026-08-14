@@ -6,6 +6,7 @@
       "src\\Launcher\\Launcher.PlayerShell.Core\\Launcher.PlayerShell.Core.csproj",
       "src\\Launcher\\Launcher.PlayerShell\\Launcher.PlayerShell.csproj",
       "src\\Launcher\\Launcher.ThemeRuntime\\Launcher.ThemeRuntime.csproj",
+      "src\\Launcher\\Launcher.DesignCore\\Launcher.DesignCore.csproj",
       "src\\Launcher\\Launcher.Editor\\Launcher.Editor.csproj",
       "src\\MicroGateway\\MicroGateway.Core\\MicroGateway.Core.csproj",
       "src\\MicroGateway\\MicroGateway.App\\MicroGateway.App.csproj",
@@ -13,7 +14,8 @@
       "eng\\WindowsIntegration\\Launcher.PlayerShellGateL0\\Launcher.PlayerShellGateL0.Windows.csproj",
       "eng\\WindowsIntegration\\Launcher.PlayerShellIntegration\\Launcher.PlayerShellIntegration.Windows.csproj",
       "eng\\WindowsIntegration\\Launcher.PlayerShellReplacementWorker\\Launcher.PlayerShellReplacementWorker.csproj",
-      "eng\\WindowsIntegration\\Launcher.RemoteListIntegration\\Launcher.RemoteListIntegration.Windows.csproj"
+      "eng\\WindowsIntegration\\Launcher.RemoteListIntegration\\Launcher.RemoteListIntegration.Windows.csproj",
+      "Tests\\Launcher.DesignCore.Tests\\Launcher.DesignCore.Tests.csproj"
     ]
   }
 }

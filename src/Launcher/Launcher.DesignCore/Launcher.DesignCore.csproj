@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AssemblyName>LyoCrystal.Launcher.DesignCore</AssemblyName>
+    <RootNamespace>LyoCrystal.DesignCore</RootNamespace>
+  </PropertyGroup>
+</Project>

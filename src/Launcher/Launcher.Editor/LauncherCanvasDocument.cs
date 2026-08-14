@@ -1,4 +1,5 @@
 using Launcher.ThemeRuntime;
+using LyoCrystal.DesignCore;
 
 namespace LyoCrystal.LauncherEditor;
 
@@ -19,13 +20,9 @@ public sealed record LauncherCanvasLayoutChange(int? X = null, int? Y = null, in
 
 public sealed class LauncherCanvasDocument
 {
-    private const int SnapDistance = 6;
     private readonly LauncherTheme _theme;
     private readonly IList<LauncherCanvasControlState> _editorStates;
-    private readonly List<HistoryEntry> _history = new();
-    private readonly HashSet<LauncherControlId> _selection = new();
-    private int _historyIndex;
-    private int _savedIndex;
+    private readonly CanvasDocument<LauncherControlId, DocumentState> _core;
 
     public LauncherCanvasDocument(LauncherTheme theme, IReadOnlyDictionary<LauncherControlId, Rectangle> runtimeLayout, IList<LauncherCanvasControlState>? editorStates = null)
     {
@@ -43,33 +40,28 @@ public sealed class LauncherCanvasDocument
         theme.Controls = materialized;
         foreach (LauncherControlId id in Enum.GetValues<LauncherControlId>())
             if (!_editorStates.Any(item => item.Id == id)) _editorStates.Add(new LauncherCanvasControlState { Id = id });
+        _core = new CanvasDocument<LauncherControlId, DocumentState>(
+            new LauncherCanvasAdapter(_theme, _editorStates),
+            _theme.CanvasWidth,
+            _theme.CanvasHeight);
+        _core.Changed += (_, _) => Changed?.Invoke(this, EventArgs.Empty);
     }
 
     public event EventHandler? Changed;
-    public IReadOnlyCollection<LauncherControlId> Selection => _selection;
+    public IReadOnlyCollection<LauncherControlId> Selection => _core.Selection;
     public IReadOnlyList<LauncherControlOverride> Controls => _theme.Controls.ToArray();
-    public IReadOnlyList<LauncherCanvasGuide> SnapGuides { get; private set; } = Array.Empty<LauncherCanvasGuide>();
-    public bool IsDirty => _historyIndex != _savedIndex;
-    public bool CanUndo => _historyIndex > 0;
-    public bool CanRedo => _historyIndex < _history.Count;
+    public IReadOnlyList<LauncherCanvasGuide> SnapGuides => _core.SnapGuides.Select(guide => new LauncherCanvasGuide(guide.Vertical, guide.Position)).ToArray();
+    public bool IsDirty => _core.IsDirty;
+    public bool CanUndo => _core.CanUndo;
+    public bool CanRedo => _core.CanRedo;
 
-    public void MarkSaved() => _savedIndex = _historyIndex;
-    public void MarkExternalChange()
-    {
-        if (_historyIndex == _savedIndex) _savedIndex = -1;
-        Changed?.Invoke(this, EventArgs.Empty);
-    }
-    public void Select(IEnumerable<LauncherControlId> ids, bool additive = false)
-    {
-        SnapGuides = Array.Empty<LauncherCanvasGuide>();
-        if (!additive) _selection.Clear();
-        foreach (LauncherControlId id in ids) if (Enum.IsDefined(id)) _selection.Add(id);
-        Changed?.Invoke(this, EventArgs.Empty);
-    }
+    public void MarkSaved() => _core.MarkSaved();
+    public void MarkExternalChange() => _core.MarkExternalChange();
+    public void Select(IEnumerable<LauncherControlId> ids, bool additive = false) => _core.Select(ids, additive);
 
     public Rectangle GetBounds(LauncherControlId id)
     {
-        LauncherControlOverride value = Find(id);
+        CanvasBounds value = _core.GetBounds(id);
         return new Rectangle(value.X, value.Y, value.Width, value.Height);
     }
 
@@ -77,14 +69,11 @@ public sealed class LauncherCanvasDocument
 
     public void SetBounds(LauncherControlId id, Rectangle bounds)
     {
-        if (IsLocked(id)) return;
-        SnapGuides = Array.Empty<LauncherCanvasGuide>();
-        Execute(() => ApplyBounds(Find(id), Clamp(bounds)));
+        _core.SetBounds(id, ToCore(bounds));
     }
 
     public void ChangeSelectionLayout(LauncherCanvasLayoutChange change)
     {
-        SnapGuides = Array.Empty<LauncherCanvasGuide>();
         Execute(() =>
         {
             foreach (LauncherControlOverride control in EditableSelection())
@@ -100,36 +89,10 @@ public sealed class LauncherCanvasDocument
     }
 
     public bool MoveSelection(int deltaX, int deltaY, bool snap)
-    {
-        LauncherControlOverride[] selected = EditableSelection();
-        if (selected.Length == 0 || deltaX == 0 && deltaY == 0) return false;
-        if (!snap) SnapGuides = Array.Empty<LauncherCanvasGuide>();
-        Execute(() =>
-        {
-            foreach (LauncherControlOverride control in selected)
-            {
-                Rectangle moved = new(control.X + deltaX, control.Y + deltaY, control.Width, control.Height);
-                ApplyBounds(control, Clamp(snap ? Snap(moved, control.Id) : moved));
-            }
-        });
-        return true;
-    }
+        => _core.MoveSelection(deltaX, deltaY, snap);
 
     public bool ResizeSelection(int deltaWidth, int deltaHeight, bool snap)
-    {
-        LauncherControlOverride[] selected = EditableSelection();
-        if (selected.Length == 0 || deltaWidth == 0 && deltaHeight == 0) return false;
-        if (!snap) SnapGuides = Array.Empty<LauncherCanvasGuide>();
-        Execute(() =>
-        {
-            foreach (LauncherControlOverride control in selected)
-            {
-                Rectangle resized = new(control.X, control.Y, Math.Max(8, control.Width + deltaWidth), Math.Max(8, control.Height + deltaHeight));
-                ApplyBounds(control, Clamp(snap ? Snap(resized, control.Id) : resized));
-            }
-        });
-        return true;
-    }
+        => _core.ResizeSelection(deltaWidth, deltaHeight, snap);
 
     public void AlignSelection(LauncherCanvasAlignment alignment)
     {
@@ -183,7 +146,7 @@ public sealed class LauncherCanvasDocument
     });
     public bool DeleteSelection()
     {
-        LauncherControlId[] editable = _selection.Where(id => !IsLocked(id)).ToArray();
+        LauncherControlId[] editable = Selection.Where(id => !IsLocked(id)).ToArray();
         if (editable.Length == 0) return false;
         SetVisible(editable, false);
         return true;
@@ -192,13 +155,13 @@ public sealed class LauncherCanvasDocument
     public void BringSelectionForward() => Execute(() =>
     {
         for (int index = _theme.Controls.Count - 2; index >= 0; index--)
-            if (_selection.Contains(_theme.Controls[index].Id) && !_selection.Contains(_theme.Controls[index + 1].Id))
+            if (Selection.Contains(_theme.Controls[index].Id) && !Selection.Contains(_theme.Controls[index + 1].Id))
                 (_theme.Controls[index], _theme.Controls[index + 1]) = (_theme.Controls[index + 1], _theme.Controls[index]);
     });
     public void SendSelectionBackward() => Execute(() =>
     {
         for (int index = 1; index < _theme.Controls.Count; index++)
-            if (_selection.Contains(_theme.Controls[index].Id) && !_selection.Contains(_theme.Controls[index - 1].Id))
+            if (Selection.Contains(_theme.Controls[index].Id) && !Selection.Contains(_theme.Controls[index - 1].Id))
                 (_theme.Controls[index], _theme.Controls[index - 1]) = (_theme.Controls[index - 1], _theme.Controls[index]);
     });
 
@@ -219,47 +182,9 @@ public sealed class LauncherCanvasDocument
         });
     }
 
-    public bool Undo()
-    {
-        if (!CanUndo) return false;
-        Restore(_history[--_historyIndex].Before); Changed?.Invoke(this, EventArgs.Empty); return true;
-    }
-
-    public bool Redo()
-    {
-        if (!CanRedo) return false;
-        Restore(_history[_historyIndex++].After); Changed?.Invoke(this, EventArgs.Empty); return true;
-    }
-
-    private void Execute(Action change)
-    {
-        DocumentState before = Capture();
-        change();
-        DocumentState after = Capture();
-        if (Equivalent(before, after)) return;
-        if (_historyIndex < _history.Count) _history.RemoveRange(_historyIndex, _history.Count - _historyIndex);
-        _history.Add(new HistoryEntry(before, after)); _historyIndex++;
-        Changed?.Invoke(this, EventArgs.Empty);
-    }
-
-    private Rectangle Snap(Rectangle bounds, LauncherControlId current)
-    {
-        int[] xTargets = [0, _theme.CanvasWidth - bounds.Width, .. _theme.Controls.Where(x => x.Id != current && x.Visible).SelectMany(x => new[] { x.X, x.X + x.Width, x.X - bounds.Width, x.X + x.Width - bounds.Width })];
-        int[] yTargets = [0, _theme.CanvasHeight - bounds.Height, .. _theme.Controls.Where(x => x.Id != current && x.Visible).SelectMany(x => new[] { x.Y, x.Y + x.Height, x.Y - bounds.Height, x.Y + x.Height - bounds.Height })];
-        int x = Nearest(bounds.X, xTargets, out bool snappedX), y = Nearest(bounds.Y, yTargets, out bool snappedY);
-        var guides = new List<LauncherCanvasGuide>(2);
-        if (snappedX) guides.Add(new LauncherCanvasGuide(true, x));
-        if (snappedY) guides.Add(new LauncherCanvasGuide(false, y));
-        SnapGuides = guides;
-        return new Rectangle(x, y, bounds.Width, bounds.Height);
-    }
-
-    private static int Nearest(int value, IEnumerable<int> targets, out bool snapped)
-    {
-        int target = targets.OrderBy(item => Math.Abs(item - value)).First();
-        snapped = Math.Abs(target - value) <= SnapDistance;
-        return snapped ? target : value;
-    }
+    public bool Undo() => _core.Undo();
+    public bool Redo() => _core.Redo();
+    private void Execute(Action change) => _core.ApplyChange(change);
 
     private Rectangle Clamp(Rectangle value)
     {
@@ -269,23 +194,42 @@ public sealed class LauncherCanvasDocument
     }
 
     private LauncherControlOverride[] EditableSelection() => Selected().Where(x => !IsLocked(x.Id) && x.Visible).ToArray();
-    private LauncherControlOverride[] Selected() => _selection.Select(Find).ToArray();
+    private LauncherControlOverride[] Selected() => Selection.Select(Find).ToArray();
     private LauncherControlOverride Find(LauncherControlId id) => _theme.Controls.Single(item => item.Id == id);
     private LauncherCanvasControlState State(LauncherControlId id) => _editorStates.Single(item => item.Id == id);
     private static void ApplyBounds(LauncherControlOverride value, Rectangle bounds) { value.X = bounds.X; value.Y = bounds.Y; value.Width = bounds.Width; value.Height = bounds.Height; }
-    private List<LauncherControlOverride> CloneControls() => _theme.Controls.Select(Clone).ToList();
-    private DocumentState Capture() => new(CloneControls(), _editorStates.Select(item => new LauncherCanvasControlState { Id = item.Id, Locked = item.Locked }).ToList());
-    private void Restore(DocumentState state)
-    {
-        _theme.Controls = state.Controls.Select(Clone).ToList();
-        _editorStates.Clear();
-        foreach (LauncherCanvasControlState item in state.EditorStates) _editorStates.Add(new LauncherCanvasControlState { Id = item.Id, Locked = item.Locked });
-    }
+    private static CanvasBounds ToCore(Rectangle value) => new(value.X, value.Y, value.Width, value.Height);
+    private static Rectangle ToRectangle(CanvasBounds value) => new(value.X, value.Y, value.Width, value.Height);
     private static bool Equivalent(DocumentState a, DocumentState b) =>
         a.Controls.Count == b.Controls.Count && a.Controls.Zip(b.Controls).All(pair => Properties(pair.First).SequenceEqual(Properties(pair.Second))) &&
         a.EditorStates.Count == b.EditorStates.Count && a.EditorStates.Zip(b.EditorStates).All(pair => pair.First.Id == pair.Second.Id && pair.First.Locked == pair.Second.Locked);
     private static object[] Properties(LauncherControlOverride x) => [x.Id, x.X, x.Y, x.Width, x.Height, x.Visible, x.ForeColor, x.BackColor, x.FontName, x.FontSize, x.Bold, x.OpacityPercent, x.BackgroundImage];
     private static LauncherControlOverride Clone(LauncherControlOverride x) => new() { Id = x.Id, X = x.X, Y = x.Y, Width = x.Width, Height = x.Height, Visible = x.Visible, ForeColor = x.ForeColor, BackColor = x.BackColor, FontName = x.FontName, FontSize = x.FontSize, Bold = x.Bold, OpacityPercent = x.OpacityPercent, BackgroundImage = x.BackgroundImage };
     private sealed record DocumentState(List<LauncherControlOverride> Controls, List<LauncherCanvasControlState> EditorStates);
-    private sealed record HistoryEntry(DocumentState Before, DocumentState After);
+
+    private sealed class LauncherCanvasAdapter(LauncherTheme theme, IList<LauncherCanvasControlState> editorStates)
+        : ICanvasDocumentAdapter<LauncherControlId, DocumentState>
+    {
+        public IReadOnlyList<LauncherControlId> ElementIds => theme.Controls.Select(item => item.Id).ToArray();
+        public CanvasBounds GetBounds(LauncherControlId id)
+        {
+            LauncherControlOverride value = Find(id);
+            return new CanvasBounds(value.X, value.Y, value.Width, value.Height);
+        }
+        public void SetBounds(LauncherControlId id, CanvasBounds bounds) => ApplyBounds(Find(id), ToRectangle(bounds));
+        public bool IsVisible(LauncherControlId id) => Find(id).Visible;
+        public bool IsLocked(LauncherControlId id) => editorStates.Single(item => item.Id == id).Locked;
+        public DocumentState Capture() => new(
+            theme.Controls.Select(Clone).ToList(),
+            editorStates.Select(item => new LauncherCanvasControlState { Id = item.Id, Locked = item.Locked }).ToList());
+        public void Restore(DocumentState state)
+        {
+            theme.Controls = state.Controls.Select(Clone).ToList();
+            editorStates.Clear();
+            foreach (LauncherCanvasControlState item in state.EditorStates)
+                editorStates.Add(new LauncherCanvasControlState { Id = item.Id, Locked = item.Locked });
+        }
+        public bool Equivalent(DocumentState left, DocumentState right) => LauncherCanvasDocument.Equivalent(left, right);
+        private LauncherControlOverride Find(LauncherControlId id) => theme.Controls.Single(item => item.Id == id);
+    }
 }
