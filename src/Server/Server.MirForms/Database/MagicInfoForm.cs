@@ -14,6 +14,7 @@ namespace Server
         {
             InitializeComponent();
             InitializeSkillInspection();
+            InitializeSkillSafeEditing();
             for (int i = 0; i < Envir.MagicInfoList.Count; i++)
                 MagiclistBox.Items.Add(Envir.MagicInfoList[i]);
             UpdateMagicForm();
@@ -56,7 +57,7 @@ namespace Server
                     $"实际伤害 0级伤害:{GetMinPower(0):000}-{GetMaxPower(0):000} → 1级伤害:{GetMinPower(1):000}-{GetMaxPower(1):000} →→ 2级伤害:{GetMinPower(2):000}-{GetMaxPower(2):000} →→→ 3级伤害:{GetMinPower(3):000}-{GetMaxPower(3):000}";
                  lblDamageExplained.Text =
                     $"伤害公式 {{随机(最小值<->最大值)+[<(随机({_selectedMagicInfo.MPowerBase}-{_selectedMagicInfo.MPowerBase + _selectedMagicInfo.MPowerBonus})/4)X(技能等级+1)>+随机<{_selectedMagicInfo.PowerBase}-{_selectedMagicInfo.PowerBonus + _selectedMagicInfo.PowerBase}>]}}X{{{_selectedMagicInfo.MultiplierBase}+(技能等级 * {_selectedMagicInfo.MultiplierBonus})}}";
-                 txtSkillIcon.Text = _selectedMagicInfo.Icon.ToString();
+                 txtSkillIcon.Text = (_skillEditingSession?.Draft.Icon ?? _selectedMagicInfo.Icon).ToString();
                  txtSkillLvl1Points.Text = _selectedMagicInfo.Need1.ToString();
                  txtSkillLvl1Req.Text = _selectedMagicInfo.Level1.ToString();
                  txtSkillLvl2Points.Text = _selectedMagicInfo.Need2.ToString();
@@ -86,7 +87,7 @@ namespace Server
                     lblBookValid.Text = "物品库没有对应的技能书";
                      lblBookValid.BackColor = Color.Red;
                  }
-                this.textBoxName.Text = _selectedMagicInfo.Name;
+                this.textBoxName.Text = _skillEditingSession?.Draft.Name ?? _selectedMagicInfo.Name;
              }
 
              RefreshSkillInspection();
@@ -723,12 +724,12 @@ namespace Server
 
         private void MagicInfoForm_FormClosed(object sender, FormClosedEventArgs e)
         {
-            //do something to save it all
-            Envir.SaveDB();
+            // 未显式保存的白名单草稿随窗口关闭丢弃；不得在关闭时隐式写回。
         }
 
         private void MagiclistBox_SelectedIndexChanged(object sender, EventArgs e)
         {
+            BeginSkillEditingSession(MagiclistBox.SelectedItem as MagicInfo);
             UpdateMagicForm();
         }
 
@@ -778,11 +779,12 @@ namespace Server
             if (!IsValid(ref temp)) return;
 
             ActiveControl.BackColor = SystemColors.Window;
-            _selectedMagicInfo.Icon = temp;
+            ObserveSkillDraft(textBoxName.Text, temp);
         }
 
         private void txtSkillLvl1Req_TextChanged(object sender, EventArgs e)
         {
+            if (_skillSafeEditingEnabled) return;
             if (ActiveControl != sender) return;
             byte temp = 0;
             if (!IsValid(ref temp)) return;
@@ -793,6 +795,7 @@ namespace Server
 
         private void txtSkillLvl2Req_TextChanged(object sender, EventArgs e)
         {
+            if (_skillSafeEditingEnabled) return;
             if (ActiveControl != sender) return;
             byte temp = 0;
             if (!IsValid(ref temp)) return;
@@ -803,6 +806,7 @@ namespace Server
 
         private void txtSkillLvl3Req_TextChanged(object sender, EventArgs e)
         {
+            if (_skillSafeEditingEnabled) return;
             if (ActiveControl != sender) return;
             byte temp = 0;
             if (!IsValid(ref temp)) return;
@@ -813,6 +817,7 @@ namespace Server
 
         private void txtSkillLvl1Points_TextChanged(object sender, EventArgs e)
         {
+            if (_skillSafeEditingEnabled) return;
             if (ActiveControl != sender) return;
             ushort temp = 0;
             if (!IsValid(ref temp)) return;
@@ -823,6 +828,7 @@ namespace Server
 
         private void txtSkillLvl2Points_TextChanged(object sender, EventArgs e)
         {
+            if (_skillSafeEditingEnabled) return;
             if (ActiveControl != sender) return;
             ushort temp = 0;
             if (!IsValid(ref temp)) return;
@@ -833,6 +839,7 @@ namespace Server
 
         private void txtSkillLvl3Points_TextChanged(object sender, EventArgs e)
         {
+            if (_skillSafeEditingEnabled) return;
             if (ActiveControl != sender) return;
             ushort temp = 0;
             if (!IsValid(ref temp)) return;
@@ -843,6 +850,7 @@ namespace Server
 
         private void txtMPBase_TextChanged(object sender, EventArgs e)
         {
+            if (_skillSafeEditingEnabled) return;
             if (ActiveControl != sender) return;
             byte temp = 0;
             if (!IsValid(ref temp)) return;
@@ -853,6 +861,7 @@ namespace Server
 
         private void txtMPIncrease_TextChanged(object sender, EventArgs e)
         {
+            if (_skillSafeEditingEnabled) return;
             if (ActiveControl != sender) return;
             byte temp = 0;
             if (!IsValid(ref temp)) return;
@@ -863,6 +872,7 @@ namespace Server
 
         private void txtDmgBaseMin_TextChanged(object sender, EventArgs e)
         {
+            if (_skillSafeEditingEnabled) return;
             if (ActiveControl != sender) return;
             ushort temp = 0;
             if (!IsValid(ref temp)) return;
@@ -874,6 +884,7 @@ namespace Server
 
         private void txtDmgBaseMax_TextChanged(object sender, EventArgs e)
         {
+            if (_skillSafeEditingEnabled) return;
             if (ActiveControl != sender) return;
             ushort temp = 0;
             if (!IsValid(ref temp)) return;
@@ -889,6 +900,7 @@ namespace Server
 
         private void txtDmgBonusMin_TextChanged(object sender, EventArgs e)
         {
+            if (_skillSafeEditingEnabled) return;
             if (ActiveControl != sender) return;
             ushort temp = 0;
             if (!IsValid(ref temp)) return;
@@ -900,6 +912,7 @@ namespace Server
 
         private void txtDmgBonusMax_TextChanged(object sender, EventArgs e)
         {
+            if (_skillSafeEditingEnabled) return;
             if (ActiveControl != sender) return;
             ushort temp = 0;
             if (!IsValid(ref temp)) return;
@@ -916,6 +929,7 @@ namespace Server
 
         private void txtDelayBase_TextChanged(object sender, EventArgs e)
         {
+            if (_skillSafeEditingEnabled) return;
             if (ActiveControl != sender) return;
             uint temp = 0;
             if (!IsValid(ref temp)) return;
@@ -926,6 +940,7 @@ namespace Server
 
         private void txtDelayReduction_TextChanged(object sender, EventArgs e)
         {
+            if (_skillSafeEditingEnabled) return;
             if (ActiveControl != sender) return;
             uint temp = 0;
             if (!IsValid(ref temp)) return;
@@ -936,6 +951,7 @@ namespace Server
 
         private void txtRange_TextChanged(object sender, EventArgs e)
         {
+            if (_skillSafeEditingEnabled) return;
             if (ActiveControl != sender) return;
             byte temp = 0;
             if (!IsValid(ref temp)) return;
@@ -946,6 +962,7 @@ namespace Server
 
         private void txtDmgMultBase_TextChanged(object sender, EventArgs e)
         {
+            if (_skillSafeEditingEnabled) return;
             if (ActiveControl != sender) return;
             float temp = 0;
             if (!IsValid(ref temp)) return;
@@ -958,6 +975,7 @@ namespace Server
 
         private void txtDmgMultBoost_TextChanged(object sender, EventArgs e)
         {
+            if (_skillSafeEditingEnabled) return;
             if (ActiveControl != sender) return;
             float temp = 0;
             if (!IsValid(ref temp)) return;
@@ -970,9 +988,9 @@ namespace Server
         private void textBoxName_TextChanged(object sender, EventArgs e)
         {
             if (ActiveControl != sender) return;
-            _selectedMagicInfo.Name = ActiveControl.Text;
-            UpdateMagicForm();
-            if (ActiveControl.Text == "")
+            byte icon = _skillEditingSession?.Draft.Icon ?? _selectedMagicInfo?.Icon ?? (byte)0;
+            ObserveSkillDraft(textBoxName.Text, icon);
+            if (textBoxName.Text == "")
             {
                 ActiveControl.BackColor = Color.Red;
             }
