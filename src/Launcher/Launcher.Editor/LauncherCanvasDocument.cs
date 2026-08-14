@@ -18,10 +18,27 @@ public sealed record LauncherCanvasStyleChange(
 
 public sealed record LauncherCanvasLayoutChange(int? X = null, int? Y = null, int? Width = null, int? Height = null);
 
+internal sealed record LauncherControlAppearance(
+    LauncherControlId Id,
+    string ForeColor,
+    string BackColor,
+    string FontName,
+    float FontSize,
+    bool Bold,
+    int OpacityPercent,
+    string BackgroundImage);
+
+internal interface ILauncherCanvasAppearance
+{
+    LauncherControlAppearance GetAppearance(LauncherControlId id);
+    void SetStyle(LauncherControlId id, LauncherCanvasStyleChange change);
+}
+
 public sealed class LauncherCanvasDocument
 {
     private readonly LauncherTheme _theme;
     private readonly IList<LauncherCanvasControlState> _editorStates;
+    private readonly LauncherCanvasAdapter _adapter;
     private readonly CanvasDocument<LauncherControlId, DocumentState> _core;
 
     public LauncherCanvasDocument(LauncherTheme theme, IReadOnlyDictionary<LauncherControlId, Rectangle> runtimeLayout, IList<LauncherCanvasControlState>? editorStates = null)
@@ -40,14 +57,18 @@ public sealed class LauncherCanvasDocument
         theme.Controls = materialized;
         foreach (LauncherControlId id in Enum.GetValues<LauncherControlId>())
             if (!_editorStates.Any(item => item.Id == id)) _editorStates.Add(new LauncherCanvasControlState { Id = id });
+        _adapter = new LauncherCanvasAdapter(_theme, _editorStates);
+        Appearance = new LauncherCanvasAppearance(this);
         _core = new CanvasDocument<LauncherControlId, DocumentState>(
-            new LauncherCanvasAdapter(_theme, _editorStates),
+            _adapter,
             _theme.CanvasWidth,
             _theme.CanvasHeight);
         _core.Changed += (_, _) => Changed?.Invoke(this, EventArgs.Empty);
     }
 
     public event EventHandler? Changed;
+    internal ICanvasDocument<LauncherControlId> Core => _core;
+    internal ILauncherCanvasAppearance Appearance { get; }
     public IReadOnlyCollection<LauncherControlId> Selection => _core.Selection;
     public IReadOnlyList<LauncherControlOverride> Controls => _theme.Controls.ToArray();
     public IReadOnlyList<LauncherCanvasGuide> SnapGuides => _core.SnapGuides.Select(guide => new LauncherCanvasGuide(guide.Vertical, guide.Position)).ToArray();
@@ -102,27 +123,29 @@ public sealed class LauncherCanvasDocument
     public void SendSelectionBackward() => _core.SendSelectionBackward();
 
     public void ChangeSelectionStyle(LauncherCanvasStyleChange change)
+        => _core.ChangeEditableSelection(id => SetStyle(id, change));
+
+    private void SetStyle(LauncherControlId id, LauncherCanvasStyleChange change)
     {
-        Execute(() =>
-        {
-            foreach (LauncherControlOverride value in _core.EditableSelection.Select(Find))
-            {
-                if (change.ForeColor is not null) value.ForeColor = change.ForeColor;
-                if (change.BackColor is not null) value.BackColor = change.BackColor;
-                if (change.FontName is not null) value.FontName = change.FontName;
-                if (change.FontSize.HasValue) value.FontSize = change.FontSize.Value;
-                if (change.Bold.HasValue) value.Bold = change.Bold.Value;
-                if (change.OpacityPercent.HasValue) value.OpacityPercent = Math.Clamp(change.OpacityPercent.Value, 0, 100);
-                if (change.BackgroundImage is not null) value.BackgroundImage = change.BackgroundImage;
-            }
-        });
+        LauncherControlOverride value = Find(id);
+        if (change.ForeColor is not null) value.ForeColor = change.ForeColor;
+        if (change.BackColor is not null) value.BackColor = change.BackColor;
+        if (change.FontName is not null) value.FontName = change.FontName;
+        if (change.FontSize.HasValue) value.FontSize = change.FontSize.Value;
+        if (change.Bold.HasValue) value.Bold = change.Bold.Value;
+        if (change.OpacityPercent.HasValue) value.OpacityPercent = Math.Clamp(change.OpacityPercent.Value, 0, 100);
+        if (change.BackgroundImage is not null) value.BackgroundImage = change.BackgroundImage;
+    }
+
+    private LauncherControlAppearance GetAppearance(LauncherControlId id)
+    {
+        LauncherControlOverride value = _adapter.Control(id);
+        return new LauncherControlAppearance(value.Id, value.ForeColor, value.BackColor, value.FontName, value.FontSize, value.Bold, value.OpacityPercent, value.BackgroundImage);
     }
 
     public bool Undo() => _core.Undo();
     public bool Redo() => _core.Redo();
-    private void Execute(Action change) => _core.ApplyChange(change);
-
-    private LauncherControlOverride Find(LauncherControlId id) => _theme.Controls.Single(item => item.Id == id);
+    private LauncherControlOverride Find(LauncherControlId id) => _adapter.Control(id);
     private static void ApplyBounds(LauncherControlOverride value, Rectangle bounds) { value.X = bounds.X; value.Y = bounds.Y; value.Width = bounds.Width; value.Height = bounds.Height; }
     private static CanvasBounds ToCore(Rectangle value) => new(value.X, value.Y, value.Width, value.Height);
     private static Rectangle ToRectangle(CanvasBounds value) => new(value.X, value.Y, value.Width, value.Height);
@@ -133,33 +156,57 @@ public sealed class LauncherCanvasDocument
     private static LauncherControlOverride Clone(LauncherControlOverride x) => new() { Id = x.Id, X = x.X, Y = x.Y, Width = x.Width, Height = x.Height, Visible = x.Visible, ForeColor = x.ForeColor, BackColor = x.BackColor, FontName = x.FontName, FontSize = x.FontSize, Bold = x.Bold, OpacityPercent = x.OpacityPercent, BackgroundImage = x.BackgroundImage };
     private sealed record DocumentState(List<LauncherControlOverride> Controls, List<LauncherCanvasControlState> EditorStates);
 
-    private sealed class LauncherCanvasAdapter(LauncherTheme theme, IList<LauncherCanvasControlState> editorStates)
-        : ICanvasDocumentAdapter<LauncherControlId, DocumentState>
+    private sealed class LauncherCanvasAppearance(LauncherCanvasDocument owner) : ILauncherCanvasAppearance
     {
-        public IReadOnlyList<LauncherControlId> ElementIds => theme.Controls.Select(item => item.Id).ToArray();
+        public LauncherControlAppearance GetAppearance(LauncherControlId id) => owner.GetAppearance(id);
+        public void SetStyle(LauncherControlId id, LauncherCanvasStyleChange change) => owner.SetStyle(id, change);
+    }
+
+    private sealed class LauncherCanvasAdapter : ICanvasDocumentAdapter<LauncherControlId, DocumentState>
+    {
+        private readonly LauncherTheme _theme;
+        private readonly IList<LauncherCanvasControlState> _editorStates;
+        private Dictionary<LauncherControlId, LauncherControlOverride> _controls;
+        private Dictionary<LauncherControlId, LauncherCanvasControlState> _states;
+
+        public LauncherCanvasAdapter(LauncherTheme theme, IList<LauncherCanvasControlState> editorStates)
+        {
+            _theme = theme;
+            _editorStates = editorStates;
+            _controls = theme.Controls.ToDictionary(item => item.Id);
+            _states = editorStates.ToDictionary(item => item.Id);
+        }
+
+        public IReadOnlyList<LauncherControlId> ElementIds => _theme.Controls.Select(item => item.Id).ToArray();
         public CanvasBounds GetBounds(LauncherControlId id)
         {
-            LauncherControlOverride value = Find(id);
+            LauncherControlOverride value = Control(id);
             return new CanvasBounds(value.X, value.Y, value.Width, value.Height);
         }
-        public void SetBounds(LauncherControlId id, CanvasBounds bounds) => ApplyBounds(Find(id), ToRectangle(bounds));
-        public bool IsVisible(LauncherControlId id) => Find(id).Visible;
-        public bool IsLocked(LauncherControlId id) => editorStates.Single(item => item.Id == id).Locked;
-        public void SetVisible(LauncherControlId id, bool visible) => Find(id).Visible = visible;
-        public void SetLocked(LauncherControlId id, bool locked) => editorStates.Single(item => item.Id == id).Locked = locked;
+        public void SetBounds(LauncherControlId id, CanvasBounds bounds) => ApplyBounds(Control(id), ToRectangle(bounds));
+        public bool IsVisible(LauncherControlId id) => Control(id).Visible;
+        public bool IsLocked(LauncherControlId id) => State(id).Locked;
+        public void SetVisible(LauncherControlId id, bool visible) => Control(id).Visible = visible;
+        public void SetLocked(LauncherControlId id, bool locked) => State(id).Locked = locked;
         public void SetOrder(IReadOnlyList<LauncherControlId> ids)
-            => theme.Controls = ids.Select(Find).ToList();
+            => _theme.Controls = ids.Select(Control).ToList();
         public DocumentState Capture() => new(
-            theme.Controls.Select(Clone).ToList(),
-            editorStates.Select(item => new LauncherCanvasControlState { Id = item.Id, Locked = item.Locked }).ToList());
+            _theme.Controls.Select(Clone).ToList(),
+            _editorStates.Select(item => new LauncherCanvasControlState { Id = item.Id, Locked = item.Locked }).ToList());
         public void Restore(DocumentState state)
         {
-            theme.Controls = state.Controls.Select(Clone).ToList();
-            editorStates.Clear();
-            foreach (LauncherCanvasControlState item in state.EditorStates)
-                editorStates.Add(new LauncherCanvasControlState { Id = item.Id, Locked = item.Locked });
+            List<LauncherControlOverride> controls = state.Controls.Select(Clone).ToList();
+            List<LauncherCanvasControlState> states = state.EditorStates.Select(item => new LauncherCanvasControlState { Id = item.Id, Locked = item.Locked }).ToList();
+            Dictionary<LauncherControlId, LauncherControlOverride> controlIndex = controls.ToDictionary(item => item.Id);
+            Dictionary<LauncherControlId, LauncherCanvasControlState> stateIndex = states.ToDictionary(item => item.Id);
+            _theme.Controls = controls;
+            _editorStates.Clear();
+            foreach (LauncherCanvasControlState item in states) _editorStates.Add(item);
+            _controls = controlIndex;
+            _states = stateIndex;
         }
         public bool Equivalent(DocumentState left, DocumentState right) => LauncherCanvasDocument.Equivalent(left, right);
-        private LauncherControlOverride Find(LauncherControlId id) => theme.Controls.Single(item => item.Id == id);
+        internal LauncherControlOverride Control(LauncherControlId id) => _controls[id];
+        private LauncherCanvasControlState State(LauncherControlId id) => _states[id];
     }
 }

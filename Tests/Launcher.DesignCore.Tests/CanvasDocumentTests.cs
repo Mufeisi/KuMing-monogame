@@ -12,7 +12,7 @@ public sealed class CanvasDocumentTests
             new Element("first", new CanvasBounds(10, 10, 20, 20)),
             new Element("middle", new CanvasBounds(40, 40, 20, 20)),
             new Element("last", new CanvasBounds(100, 80, 20, 20)));
-        var document = new CanvasDocument<string, Element[]>(adapter, 200, 120);
+        ICanvasDocument<string> document = new CanvasDocument<string, Element[]>(adapter, 200, 120);
         document.Select(["first", "middle", "last"]);
 
         document.AlignSelection(CanvasAlignment.Top);
@@ -173,11 +173,11 @@ public sealed class CanvasDocumentTests
     public void AdapterChangesShareTheSameUndoHistoryAsGeometryCommands()
     {
         var adapter = new MemoryCanvasAdapter(new Element("button", new CanvasBounds(10, 10, 40, 40)));
-        var document = new CanvasDocument<string, Element[]>(adapter, 200, 100);
+        ICanvasDocument<string> document = new CanvasDocument<string, Element[]>(adapter, 200, 100);
         document.Select(["button"]);
 
         document.MoveSelection(10, 0, snap: false);
-        document.ApplyChange(() => adapter.SetVisible("button", false));
+        document.ChangeEditableSelection(id => adapter.SetVisible(id, false));
 
         Assert.True(document.Undo());
         Assert.True(adapter.IsVisible("button"));

@@ -1,4 +1,5 @@
 using Launcher.ThemeRuntime;
+using LyoCrystal.DesignCore;
 
 namespace LyoCrystal.LauncherEditor;
 
@@ -6,7 +7,8 @@ internal sealed record LauncherPropertyInspectorSnapshot(string Summary, int Sel
 
 internal sealed class LauncherPropertyInspectorAdapter : UserControl
 {
-    private readonly LauncherCanvasDocument _document;
+    private readonly ICanvasDocument<LauncherControlId> _document;
+    private readonly ILauncherCanvasAppearance _appearance;
     private readonly Func<string?> _importImage;
     private readonly Func<string, Image?> _loadImage;
     private readonly ErrorProvider _errors = new() { BlinkStyle = ErrorBlinkStyle.NeverBlink };
@@ -21,9 +23,10 @@ internal sealed class LauncherPropertyInspectorAdapter : UserControl
     private readonly PictureBox _imagePreview = new() { Dock = DockStyle.Fill, SizeMode = PictureBoxSizeMode.Zoom, BackColor = DesktopAuthoringTheme.AppBackground, BorderStyle = BorderStyle.FixedSingle, AccessibleName = "背景图片缩略图" };
     private bool _refreshing;
 
-    internal LauncherPropertyInspectorAdapter(LauncherCanvasDocument document, Func<string?> importImage, Func<string, Image?> loadImage)
+    internal LauncherPropertyInspectorAdapter(ICanvasDocument<LauncherControlId> document, ILauncherCanvasAppearance appearance, Func<string?> importImage, Func<string, Image?> loadImage)
     {
         _document = document;
+        _appearance = appearance;
         _importImage = importImage;
         _loadImage = loadImage;
         _errors.ContainerControl = this;
@@ -38,8 +41,8 @@ internal sealed class LauncherPropertyInspectorAdapter : UserControl
         _refreshing = true;
         try
         {
-            LauncherControlOverride[] selected = Selected();
-            LauncherControlOverride[] editable = selected.Where(item => !_document.IsLocked(item.Id) && item.Visible).ToArray();
+            SelectedControl[] selected = Selected();
+            SelectedControl[] editable = selected.Where(item => !_document.IsLocked(item.Id) && item.Visible).ToArray();
             _empty.Visible = selected.Length == 0;
             _content.Visible = selected.Length > 0;
             if (selected.Length == 0) return;
@@ -68,7 +71,7 @@ internal sealed class LauncherPropertyInspectorAdapter : UserControl
 
     internal LauncherPropertyInspectorSnapshot CaptureSnapshot()
     {
-        LauncherControlOverride[] selected = Selected();
+        SelectedControl[] selected = Selected();
         return new LauncherPropertyInspectorSnapshot(_summary.Text, selected.Length, selected.Count(item => !_document.IsLocked(item.Id) && item.Visible), _text["width"].Text, _choices["bold"].Text, _text["image"].Text);
     }
 
@@ -98,7 +101,7 @@ internal sealed class LauncherPropertyInspectorAdapter : UserControl
         AddText(fields, "字号", "fontSize", suffix: "pt");
         AddChoice(fields, "粗体", "bold");
         AddText(fields, "不透明度", "opacity", suffix: "%");
-        _appearanceCommands.Add(AddCommand(fields, "", "重置外观", "把所选可编辑对象的外观恢复为主题默认值", () => _document.ChangeSelectionStyle(new(ForeColor: string.Empty, BackColor: string.Empty, FontName: string.Empty, FontSize: 0F, Bold: false, OpacityPercent: 100, BackgroundImage: string.Empty))));
+        _appearanceCommands.Add(AddCommand(fields, "", "重置外观", "把所选可编辑对象的外观恢复为主题默认值", () => ChangeStyle(new(ForeColor: string.Empty, BackColor: string.Empty, FontName: string.Empty, FontSize: 0F, Bold: false, OpacityPercent: 100, BackgroundImage: string.Empty))));
         AddSection(fields, "状态");
         AddChoice(fields, "显示", "visible");
         AddChoice(fields, "锁定", "locked");
@@ -158,9 +161,9 @@ internal sealed class LauncherPropertyInspectorAdapter : UserControl
         var value = new TextBox { Dock = DockStyle.Fill, BorderStyle = BorderStyle.FixedSingle, ReadOnly = true, AccessibleName = "背景图片" };
         _text["image"] = value;
         var replace = new Button { Text = "替换…", Dock = DockStyle.Fill, AccessibleName = "替换背景图片" };
-        replace.Click += (_, _) => { string? path = _importImage(); if (path is not null) _document.ChangeSelectionStyle(new(BackgroundImage: path)); };
+        replace.Click += (_, _) => { string? path = _importImage(); if (path is not null) ChangeStyle(new(BackgroundImage: path)); };
         var clear = new Button { Text = "清除", Dock = DockStyle.Fill, AccessibleName = "清除背景图片" };
-        clear.Click += (_, _) => _document.ChangeSelectionStyle(new(BackgroundImage: string.Empty));
+        clear.Click += (_, _) => ChangeStyle(new(BackgroundImage: string.Empty));
         _imageCommands.Add(replace); _imageCommands.Add(clear);
         panel.Controls.Add(_imagePreview, 0, 0); panel.SetColumnSpan(_imagePreview, 2);
         panel.Controls.Add(value, 0, 1); panel.SetColumnSpan(value, 2); panel.Controls.Add(replace, 0, 2); panel.Controls.Add(clear, 1, 2);
@@ -189,13 +192,13 @@ internal sealed class LauncherPropertyInspectorAdapter : UserControl
         string value = input.Text.Trim();
         bool valid = key switch
         {
-            "x" => ApplyInteger(value, number => _document.ChangeSelectionLayout(new(X: number))),
-            "y" => ApplyInteger(value, number => _document.ChangeSelectionLayout(new(Y: number))),
-            "width" => ApplyInteger(value, number => _document.ChangeSelectionLayout(new(Width: number)), 8),
-            "height" => ApplyInteger(value, number => _document.ChangeSelectionLayout(new(Height: number)), 8),
-            "fontSize" => ApplyFloat(value, number => _document.ChangeSelectionStyle(new(FontSize: number)), 6F, 72F),
-            "opacity" => ApplyInteger(value, number => _document.ChangeSelectionStyle(new(OpacityPercent: number)), 0, 100),
-            "font" => ApplyString(value, text => _document.ChangeSelectionStyle(new(FontName: text))),
+            "x" => ApplyInteger(value, number => _document.ChangeSelectionBounds(new(X: number))),
+            "y" => ApplyInteger(value, number => _document.ChangeSelectionBounds(new(Y: number))),
+            "width" => ApplyInteger(value, number => _document.ChangeSelectionBounds(new(Width: number)), 8),
+            "height" => ApplyInteger(value, number => _document.ChangeSelectionBounds(new(Height: number)), 8),
+            "fontSize" => ApplyFloat(value, number => ChangeStyle(new(FontSize: number)), 6F, 72F),
+            "opacity" => ApplyInteger(value, number => ChangeStyle(new(OpacityPercent: number)), 0, 100),
+            "font" => ApplyString(value, text => ChangeStyle(new(FontName: text))),
             _ => true,
         };
         input.BackColor = valid ? DesktopAuthoringTheme.InputBackground : Color.MistyRose;
@@ -212,7 +215,7 @@ internal sealed class LauncherPropertyInspectorAdapter : UserControl
         {
             case "visible": _document.SetVisible(_document.Selection, value); break;
             case "locked": _document.SetLocked(_document.Selection, value); break;
-            case "bold": _document.ChangeSelectionStyle(new(Bold: value)); break;
+            case "bold": ChangeStyle(new(Bold: value)); break;
         }
     }
 
@@ -223,7 +226,7 @@ internal sealed class LauncherPropertyInspectorAdapter : UserControl
         if (TryParseColor(_colors[key].Text, out Color current)) dialog.Color = current;
         if (dialog.ShowDialog(this) != DialogResult.OK) return;
         string value = $"#{dialog.Color.R:X2}{dialog.Color.G:X2}{dialog.Color.B:X2}";
-        _document.ChangeSelectionStyle(key == "fore" ? new(ForeColor: value) : new(BackColor: value));
+        ChangeStyle(key == "fore" ? new(ForeColor: value) : new(BackColor: value));
     }
 
     private void SetEditability(bool editable, bool stateEditable)
@@ -254,8 +257,15 @@ internal sealed class LauncherPropertyInspectorAdapter : UserControl
         _colors[key].ForeColor = _colors[key].BackColor.GetBrightness() < .5F ? Color.White : DesktopAuthoringTheme.TextPrimary;
     }
 
-    private LauncherControlOverride[] Selected() => _document.Selection.Select(id => _document.Controls.Single(item => item.Id == id)).ToArray();
-    private void RefreshImagePreview(LauncherControlOverride[] selected)
+    private SelectedControl[] Selected() => _document.Selection.Select(id =>
+    {
+        CanvasBounds bounds = _document.GetBounds(id);
+        LauncherControlAppearance appearance = _appearance.GetAppearance(id);
+        return new SelectedControl(id, bounds.X, bounds.Y, bounds.Width, bounds.Height, _document.IsVisible(id), appearance.ForeColor, appearance.BackColor, appearance.FontName, appearance.FontSize, appearance.Bold, appearance.OpacityPercent, appearance.BackgroundImage);
+    }).ToArray();
+    private void ChangeStyle(LauncherCanvasStyleChange change)
+        => _document.ChangeEditableSelection(id => _appearance.SetStyle(id, change));
+    private void RefreshImagePreview(SelectedControl[] selected)
     {
         Image? next = null;
         string? common = Common(selected, item => item.BackgroundImage)?.ToString();
@@ -265,7 +275,7 @@ internal sealed class LauncherPropertyInspectorAdapter : UserControl
         _imagePreview.AccessibleDescription = next is null ? common is null ? "多个背景图片值" : "未设置背景图片" : "已加载背景图片缩略图";
         previous?.Dispose();
     }
-    private static object? Common<T>(LauncherControlOverride[] selected, Func<LauncherControlOverride, T> select)
+    private static object? Common<T>(SelectedControl[] selected, Func<SelectedControl, T> select)
     {
         T first = select(selected[0]);
         return selected.Skip(1).All(item => EqualityComparer<T>.Default.Equals(first, select(item))) ? first : null;
@@ -298,4 +308,19 @@ internal sealed class LauncherPropertyInspectorAdapter : UserControl
         }
         base.Dispose(disposing);
     }
+
+    private sealed record SelectedControl(
+        LauncherControlId Id,
+        int X,
+        int Y,
+        int Width,
+        int Height,
+        bool Visible,
+        string ForeColor,
+        string BackColor,
+        string FontName,
+        float FontSize,
+        bool Bold,
+        int OpacityPercent,
+        string BackgroundImage);
 }

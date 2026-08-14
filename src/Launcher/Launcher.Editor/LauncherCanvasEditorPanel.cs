@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Drawing.Drawing2D;
 using Launcher.ThemeRuntime;
+using LyoCrystal.DesignCore;
 
 namespace LyoCrystal.LauncherEditor;
 
@@ -8,7 +9,7 @@ internal sealed record LauncherWorkspaceStatus(string Selection, string Viewport
 
 internal sealed class LauncherCanvasEditorPanel : UserControl
 {
-    private readonly LauncherCanvasDocument _document;
+    private readonly ICanvasDocument<LauncherControlId> _document;
     private readonly Func<Bitmap> _render;
     private readonly Action<ThemeImageUsage> _importImage;
     private readonly LauncherObjectTreeAdapter _tree;
@@ -20,13 +21,13 @@ internal sealed class LauncherCanvasEditorPanel : UserControl
     private bool _snapEnabled = true;
     private bool _autoFit = true;
 
-    internal LauncherCanvasEditorPanel(LauncherCanvasDocument document, Func<Bitmap> render, Action<ThemeImageUsage> importImage, Func<string?> importControlImage, Func<string, Image?> loadControlImage)
+    internal LauncherCanvasEditorPanel(ICanvasDocument<LauncherControlId> document, ILauncherCanvasAppearance appearance, Func<Bitmap> render, Action<ThemeImageUsage> importImage, Func<string?> importControlImage, Func<string, Image?> loadControlImage)
     {
         _document = document;
         _render = render;
         _importImage = importImage;
         _tree = new LauncherObjectTreeAdapter(document);
-        _properties = new LauncherPropertyInspectorAdapter(document, importControlImage, loadControlImage);
+        _properties = new LauncherPropertyInspectorAdapter(document, appearance, importControlImage, loadControlImage);
         _surface = new CanvasSurface(document) { SnapEnabled = _snapEnabled };
         Dock = DockStyle.Fill;
         BuildUi();
@@ -39,7 +40,7 @@ internal sealed class LauncherCanvasEditorPanel : UserControl
     }
 
     internal event EventHandler<LauncherWorkspaceStatus>? WorkspaceStatusChanged;
-    internal LauncherCanvasDocument Document => _document;
+    internal ICanvasDocument<LauncherControlId> Document => _document;
 
     internal (int ObjectTreeWidth, int PropertiesWidth, Size CanvasSize) CaptureLayoutForEvidence()
     {
@@ -70,8 +71,8 @@ internal sealed class LauncherCanvasEditorPanel : UserControl
         Add(tools, "撤销", () => _document.Undo(), "撤销上一步画布修改");
         Add(tools, "重做", () => _document.Redo(), "恢复刚撤销的画布修改");
         tools.Items.Add(new ToolStripSeparator());
-        AddMenu(tools, "对齐", ("左对齐", () => _document.AlignSelection(LauncherCanvasAlignment.Left)), ("水平居中", () => _document.AlignSelection(LauncherCanvasAlignment.HorizontalCenter)), ("右对齐", () => _document.AlignSelection(LauncherCanvasAlignment.Right)), ("顶对齐", () => _document.AlignSelection(LauncherCanvasAlignment.Top)), ("垂直居中", () => _document.AlignSelection(LauncherCanvasAlignment.VerticalCenter)), ("底对齐", () => _document.AlignSelection(LauncherCanvasAlignment.Bottom)));
-        AddMenu(tools, "分布", ("水平等距", () => _document.DistributeSelection(LauncherCanvasDistribution.Horizontal)), ("垂直等距", () => _document.DistributeSelection(LauncherCanvasDistribution.Vertical)));
+        AddMenu(tools, "对齐", ("左对齐", () => _document.AlignSelection(CanvasAlignment.Left)), ("水平居中", () => _document.AlignSelection(CanvasAlignment.HorizontalCenter)), ("右对齐", () => _document.AlignSelection(CanvasAlignment.Right)), ("顶对齐", () => _document.AlignSelection(CanvasAlignment.Top)), ("垂直居中", () => _document.AlignSelection(CanvasAlignment.VerticalCenter)), ("底对齐", () => _document.AlignSelection(CanvasAlignment.Bottom)));
+        AddMenu(tools, "分布", ("水平等距", () => _document.DistributeSelection(CanvasDistribution.Horizontal)), ("垂直等距", () => _document.DistributeSelection(CanvasDistribution.Vertical)));
         AddMenu(tools, "层级", ("上移一层", _document.BringSelectionForward), ("下移一层", _document.SendSelectionBackward));
         AddMenu(tools, "对象状态", ("锁定", () => _document.SetLocked(_document.Selection, true)), ("解锁", () => _document.SetLocked(_document.Selection, false)), ("显示", () => _document.SetVisible(_document.Selection, true)), ("隐藏", () => _document.SetVisible(_document.Selection, false)));
         AddMenu(tools, "素材", ("背景素材…", () => _importImage(ThemeImageUsage.Background)), ("按钮基础图…", () => _importImage(ThemeImageUsage.ButtonBase)), ("悬停图…", () => _importImage(ThemeImageUsage.ButtonHover)), ("按下图…", () => _importImage(ThemeImageUsage.ButtonPressed)), ("禁用图…", () => _importImage(ThemeImageUsage.ButtonDisabled)));
@@ -201,13 +202,13 @@ internal sealed class LauncherCanvasEditorPanel : UserControl
 
     private sealed class CanvasSurface : Control
     {
-        private readonly LauncherCanvasDocument _document;
+        private readonly ICanvasDocument<LauncherControlId> _document;
         private Point _mouseDown;
         private bool _resizing;
         private Bitmap? _canvasImage;
         private float _zoom = 1F;
 
-        internal CanvasSurface(LauncherCanvasDocument document)
+        internal CanvasSurface(ICanvasDocument<LauncherControlId> document)
         {
             _document = document;
             DoubleBuffered = true; TabStop = true; BackColor = Color.FromArgb(18, 20, 28);
@@ -220,7 +221,9 @@ internal sealed class LauncherCanvasEditorPanel : UserControl
         internal bool GridVisible { get; set; }
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         internal bool SnapEnabled { get; set; } = true;
-        internal Size ThemeSize => _canvasImage?.Size ?? new Size(Math.Max(640, _document.Controls.Max(x => x.X + x.Width)), Math.Max(420, _document.Controls.Max(x => x.Y + x.Height)));
+        internal Size ThemeSize => _canvasImage?.Size ?? new Size(
+            Math.Max(640, _document.ElementIds.Max(id => _document.GetBounds(id).X + _document.GetBounds(id).Width)),
+            Math.Max(420, _document.ElementIds.Max(id => _document.GetBounds(id).Y + _document.GetBounds(id).Height)));
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         internal float Zoom
         {
@@ -248,14 +251,14 @@ internal sealed class LauncherCanvasEditorPanel : UserControl
             }
             using var selectedPen = new Pen(DesktopAuthoringTheme.Accent, 2F / Zoom);
             using var guidePen = new Pen(DesktopAuthoringTheme.Guide, 1F / Zoom) { DashStyle = DashStyle.Dash };
-            foreach (LauncherCanvasGuide guide in _document.SnapGuides)
+            foreach (CanvasGuide guide in _document.SnapGuides)
                 if (guide.Vertical) e.Graphics.DrawLine(guidePen, guide.Position, 0, guide.Position, ThemeSize.Height);
                 else e.Graphics.DrawLine(guidePen, 0, guide.Position, ThemeSize.Width, guide.Position);
-            foreach (LauncherControlOverride item in _document.Controls.Where(item => _document.Selection.Contains(item.Id)))
+            foreach (LauncherControlId id in _document.ElementIds.Where(_document.Selection.Contains))
             {
-                Rectangle bounds = _document.GetBounds(item.Id);
+                Rectangle bounds = ToRectangle(_document.GetBounds(id));
                 e.Graphics.DrawRectangle(selectedPen, bounds);
-                if (!_document.IsLocked(item.Id)) e.Graphics.FillRectangle(Brushes.White, bounds.Right - 7, bounds.Bottom - 7, 7, 7);
+                if (!_document.IsLocked(id)) e.Graphics.FillRectangle(Brushes.White, bounds.Right - 7, bounds.Bottom - 7, 7, 7);
             }
         }
 
@@ -263,11 +266,11 @@ internal sealed class LauncherCanvasEditorPanel : UserControl
         {
             base.OnMouseDown(e); Focus();
             Point logical = ToLogical(e.Location);
-            LauncherControlOverride? hit = _document.Controls.Reverse().FirstOrDefault(item => item.Visible && _document.GetBounds(item.Id).Contains(logical));
-            if (hit is null) { _document.Select([]); return; }
+            LauncherControlId? hit = _document.ElementIds.Reverse().Cast<LauncherControlId?>().FirstOrDefault(id => id.HasValue && _document.IsVisible(id.Value) && ToRectangle(_document.GetBounds(id.Value)).Contains(logical));
+            if (!hit.HasValue) { _document.Select([]); return; }
             bool additive = (ModifierKeys & Keys.Control) != 0;
-            if (!_document.Selection.Contains(hit.Id) || !additive) _document.Select([hit.Id], additive);
-            Rectangle bounds = _document.GetBounds(hit.Id);
+            if (!_document.Selection.Contains(hit.Value) || !additive) _document.Select([hit.Value], additive);
+            Rectangle bounds = ToRectangle(_document.GetBounds(hit.Value));
             _resizing = logical.X >= bounds.Right - 12 && logical.Y >= bounds.Bottom - 12;
             _mouseDown = logical; Capture = true;
         }
@@ -289,6 +292,7 @@ internal sealed class LauncherCanvasEditorPanel : UserControl
         }
 
         private Point ToLogical(Point point) => new((int)Math.Round(point.X / Zoom), (int)Math.Round(point.Y / Zoom));
+        private static Rectangle ToRectangle(CanvasBounds value) => new(value.X, value.Y, value.Width, value.Height);
         protected override bool IsInputKey(Keys keyData) => keyData is Keys.Left or Keys.Right or Keys.Up or Keys.Down || base.IsInputKey(keyData);
 
         protected override void OnKeyDown(KeyEventArgs e)

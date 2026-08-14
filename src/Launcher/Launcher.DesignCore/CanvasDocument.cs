@@ -22,7 +22,41 @@ public interface ICanvasDocumentAdapter<TId, TSnapshot> where TId : notnull
     bool Equivalent(TSnapshot left, TSnapshot right);
 }
 
-public sealed class CanvasDocument<TId, TSnapshot> where TId : notnull
+public interface ICanvasDocument<TId> where TId : notnull
+{
+    event EventHandler? Changed;
+    IReadOnlyList<TId> ElementIds { get; }
+    IReadOnlyCollection<TId> Selection { get; }
+    IReadOnlyCollection<TId> EditableSelection { get; }
+    IReadOnlyList<CanvasGuide> SnapGuides { get; }
+    bool IsDirty { get; }
+    bool CanUndo { get; }
+    bool CanRedo { get; }
+    void MarkSaved();
+    void MarkExternalChange();
+    void Select(IEnumerable<TId> ids, bool additive = false);
+    CanvasBounds GetBounds(TId id);
+    bool IsVisible(TId id);
+    bool IsLocked(TId id);
+    void SetBounds(TId id, CanvasBounds bounds);
+    void ChangeSelectionBounds(CanvasBoundsChange change);
+    bool MoveSelection(int deltaX, int deltaY, bool snap);
+    bool ResizeSelection(int deltaWidth, int deltaHeight, bool snap);
+    void AlignSelection(CanvasAlignment alignment);
+    void DistributeSelection(CanvasDistribution direction);
+    void SetLocked(IEnumerable<TId> ids, bool locked);
+    void SetVisible(IEnumerable<TId> ids, bool visible);
+    void ChangeEditableSelection(Action<TId> change);
+    bool DeleteSelection();
+    void AddOrShow(TId id);
+    void BringSelectionForward();
+    void SendSelectionBackward();
+    IReadOnlyList<CanvasDiagnostic<TId>> Validate();
+    bool Undo();
+    bool Redo();
+}
+
+public sealed class CanvasDocument<TId, TSnapshot> : ICanvasDocument<TId> where TId : notnull
 {
     private const int SnapDistance = 6;
     private const int MinimumSize = 8;
@@ -47,6 +81,7 @@ public sealed class CanvasDocument<TId, TSnapshot> where TId : notnull
     }
 
     public event EventHandler? Changed;
+    public IReadOnlyList<TId> ElementIds => _adapter.ElementIds;
     public IReadOnlyCollection<TId> Selection => _selection.ToArray();
     public IReadOnlyCollection<TId> EditableSelection => EditableSelectionArray();
     public IReadOnlyList<CanvasGuide> SnapGuides { get; private set; } = Array.Empty<CanvasGuide>();
@@ -197,6 +232,17 @@ public sealed class CanvasDocument<TId, TSnapshot> where TId : notnull
         foreach (TId id in Existing(ids))
             if (!_adapter.IsLocked(id)) _adapter.SetVisible(id, visible);
     });
+
+    public void ChangeEditableSelection(Action<TId> change)
+    {
+        ArgumentNullException.ThrowIfNull(change);
+        TId[] ids = EditableSelectionArray();
+        if (ids.Length == 0) return;
+        ApplyChange(() =>
+        {
+            foreach (TId id in ids) change(id);
+        });
+    }
 
     public bool DeleteSelection()
     {

@@ -1,6 +1,7 @@
 using System.Drawing.Drawing2D;
 using System.ComponentModel;
 using Launcher.ThemeRuntime;
+using LyoCrystal.DesignCore;
 
 namespace LyoCrystal.LauncherEditor;
 
@@ -10,7 +11,7 @@ internal sealed record LauncherObjectNode(LauncherControlId Id, string DisplayNa
 internal sealed class LauncherObjectTreeAdapter : UserControl
 {
     private const int StateTargetWidth = 24;
-    private readonly LauncherCanvasDocument _document;
+    private readonly ICanvasDocument<LauncherControlId> _document;
     private readonly TreeView _tree = new()
     {
         Dock = DockStyle.Fill,
@@ -31,7 +32,7 @@ internal sealed class LauncherObjectTreeAdapter : UserControl
     private string _filter = string.Empty;
     private bool _synchronizing;
 
-    internal LauncherObjectTreeAdapter(LauncherCanvasDocument document)
+    internal LauncherObjectTreeAdapter(ICanvasDocument<LauncherControlId> document)
     {
         _document = document;
         Dock = DockStyle.Fill;
@@ -100,8 +101,7 @@ internal sealed class LauncherObjectTreeAdapter : UserControl
         {
             string text = EditorChineseText.Control(id);
             if (_filter.Length > 0 && !text.Contains(_filter, StringComparison.CurrentCultureIgnoreCase)) continue;
-            LauncherControlOverride control = _document.Controls.Single(item => item.Id == id);
-            string accessibleState = $"{text} {(control.Visible ? "显示" : "隐藏")} {(_document.IsLocked(id) ? "锁定" : "未锁")}";
+            string accessibleState = $"{text} {(_document.IsVisible(id) ? "显示" : "隐藏")} {(_document.IsLocked(id) ? "锁定" : "未锁")}";
             group.Nodes.Add(new TreeNode(accessibleState) { Tag = new LauncherObjectNode(id, text), Name = id.ToString(), ToolTipText = accessibleState });
         }
         if (group.Nodes.Count > 0) root.Nodes.Add(group);
@@ -182,8 +182,7 @@ internal sealed class LauncherObjectTreeAdapter : UserControl
 
     private void ToggleVisibility(LauncherControlId id)
     {
-        LauncherControlOverride control = _document.Controls.Single(item => item.Id == id);
-        _document.SetVisible([id], !control.Visible);
+        _document.SetVisible([id], !_document.IsVisible(id));
     }
 
     private void ToggleLocked(LauncherControlId id) => _document.SetLocked([id], !_document.IsLocked(id));
@@ -238,7 +237,7 @@ internal sealed class LauncherObjectTreeAdapter : UserControl
         TextRenderer.DrawText(e.Graphics, displayText, e.Node.NodeFont ?? _tree.Font, textBounds, DesktopAuthoringTheme.TextPrimary, TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis | TextFormatFlags.SingleLine);
         if (id.HasValue)
         {
-            DrawVisibility(e.Graphics, new Rectangle(_tree.ClientSize.Width - StateTargetWidth * 2, row.Top, StateTargetWidth, row.Height), _document.Controls.Single(item => item.Id == id.Value).Visible);
+            DrawVisibility(e.Graphics, new Rectangle(_tree.ClientSize.Width - StateTargetWidth * 2, row.Top, StateTargetWidth, row.Height), _document.IsVisible(id.Value));
             DrawLock(e.Graphics, new Rectangle(_tree.ClientSize.Width - StateTargetWidth, row.Top, StateTargetWidth, row.Height), _document.IsLocked(id.Value));
         }
         if ((e.State & TreeNodeStates.Focused) != 0) ControlPaint.DrawFocusRectangle(e.Graphics, row, DesktopAuthoringTheme.TextPrimary, background);

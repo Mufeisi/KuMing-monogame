@@ -286,7 +286,8 @@ internal sealed class MainForm : Form
             _canvasDocument.Changed += OnCanvasDocumentChanged;
         }
         _canvasPanel = new LauncherCanvasEditorPanel(
-            _canvasDocument,
+            _canvasDocument.Core,
+            _canvasDocument.Appearance,
             () => LauncherRuntimeHost.RenderCanvasForEditor(_project.Snapshot, root),
             ImportQuickImage,
             ImportCanvasControlImage,
