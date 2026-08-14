@@ -70,6 +70,18 @@ public partial class MagicInfoForm
         text.AppendLine($"服务端行为拥有者：{SkillInspectionSnapshot.RuntimeOwner}");
         text.AppendLine($"客户端数据：{SkillInspectionSnapshot.ClientProjection}");
 
+        SkillSpatialProfile spatial = SkillSpatialInspector.Build(snapshot.Spell, skillLevel: 3);
+        text.AppendLine();
+        text.AppendLine("空间档案（3 级，朝上预览）：");
+        text.AppendLine($"建模状态：{(spatial.IsModeled ? "已核对" : "未建模")}");
+        text.AppendLine($"目标条件：{FormatTargetCondition(spatial.TargetCondition)}");
+        text.AppendLine($"中心类型：{FormatCenterKind(spatial.CenterKind)}");
+        text.AppendLine($"方向：{spatial.Orientation}");
+        text.AppendLine(spatial.RenderGrid());
+        text.AppendLine("图例：中=中心，主=主要作用点，附=等级附加点，·=不在档案内");
+        text.AppendLine($"说明：{spatial.Explanation}");
+        text.AppendLine($"行为证据：{spatial.BehaviorEvidence}");
+
         if (snapshot.Diagnostics.Count > 0)
         {
             text.AppendLine();
@@ -80,4 +92,21 @@ public partial class MagicInfoForm
 
         _skillInspectionText.Text = text.ToString();
     }
+
+    private static string FormatTargetCondition(SkillTargetCondition condition) => condition switch
+    {
+        SkillTargetCondition.HostileObject => "敌对对象（服务端复核）",
+        SkillTargetCondition.HostileObjectWithFlightPath => "敌对对象且飞行路径可达（服务端复核）",
+        SkillTargetCondition.MapLocation => "地图坐标（对象仍由服务端过滤）",
+        SkillTargetCondition.SelfDirection => "施法者与朝向",
+        _ => "未知，不推断"
+    };
+
+    private static string FormatCenterKind(SkillCenterKind center) => center switch
+    {
+        SkillCenterKind.Target => "目标格",
+        SkillCenterKind.SelectedLocation => "选定地图格",
+        SkillCenterKind.Caster => "施法者格",
+        _ => "未知，不推断"
+    };
 }
