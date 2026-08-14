@@ -8,6 +8,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Shared.CustomGui;
 using Microsoft.Xna.Framework;
 using Shared.Security;
 
@@ -168,7 +169,7 @@ namespace MonoShare
 
                 // 移动端必需包：在“无随包携带 UI”的策略下，首次启动必须确保 UI 包可下载并安装。
                 // 注意：Windows 的 SmokeTest 通过 Settings.UIProfileId=Mobile 来模拟移动端行为。
-                string[] requiredPackages = { "fui-retro" };
+                string[] requiredPackages = { "fui-retro", CustomGuiAcceptedReleaseStore.ResourcePackageName, CustomGuiAcceptedReleaseStore.GuiPackageName };
 
                 var existing = new HashSet<string>(
                     updates.Where(item => item != null && !string.IsNullOrWhiteSpace(item.Name)).Select(item => item.Name),
@@ -190,13 +191,18 @@ namespace MonoShare
                     if (string.IsNullOrWhiteSpace(remoteSha))
                         continue;
 
+                    bool customGuiActivationPackage = packageName is CustomGuiAcceptedReleaseStore.ResourcePackageName or CustomGuiAcceptedReleaseStore.GuiPackageName;
+                    if (customGuiActivationPackage &&
+                        CustomGuiAcceptedReleaseStore.HasCurrentPackageSha256(ClientResourceLayout.CustomGuiAcceptedRoot, packageName, remoteSha))
+                        continue;
+
                     string localSha = BootstrapPackageUpdateRuntime.GetInstalledSha256(packageName);
 
                     // 若本地无“已安装版本记录”，说明从未安装过该包（或版本记录丢失），需要在预登录阶段强制安装。
-                    bool needInstall = string.IsNullOrWhiteSpace(localSha);
+                    bool needInstall = customGuiActivationPackage || string.IsNullOrWhiteSpace(localSha);
 
                     // 若版本记录存在但包目录缺失（例如用户清空缓存），同样需要修复安装。
-                    if (!needInstall)
+                    if (!needInstall && !customGuiActivationPackage)
                     {
                         string stagedMarker = Path.Combine(ClientResourceLayout.PackageCacheRoot, packageName, "Assets", "UI", "复古", "UI_fui.bytes");
                         if (!File.Exists(stagedMarker))

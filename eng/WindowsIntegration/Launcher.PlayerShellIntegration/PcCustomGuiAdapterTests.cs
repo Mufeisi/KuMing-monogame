@@ -16,7 +16,8 @@ public sealed class PcCustomGuiAdapterTests
         CustomGuiRuntimeDocument document = CustomGuiAuthoringDefaults.Create();
         using PcCustomGuiHost host = PcCustomGuiAdapter.Create(document, new Size(1280, 720));
         var session = new CustomGuiClientStateSession(document, 7, host);
-        session.Open(new CustomGuiOpenState(1, document.DocumentId, (uint)document.Revision, 7, Guid.NewGuid(),
+        Guid nonce = Guid.NewGuid();
+        session.Open(new CustomGuiOpenState(1, document.DocumentId, (uint)document.Revision, 7, nonce,
             DateTimeOffset.UtcNow.AddMinutes(1).ToUnixTimeMilliseconds(), 1,
             [
                 CustomGuiStateEntry.Text("title", "服务端活动"),
@@ -29,6 +30,13 @@ public sealed class PcCustomGuiAdapterTests
         Assert.Equal("6/7", Assert.IsType<MirLabel>(host.Controls["progress"].Controls[1]).Text);
         Assert.False(host.Controls["claim"].Visible);
         Assert.False(host.Controls["claim"].Enabled);
+
+        session.ApplyDelta(new CustomGuiDeltaState(1, document.DocumentId, (uint)document.Revision, 7,
+            nonce, 2, [CustomGuiStateEntry.Progress("event.loginDays", 0, 7)]));
+        MirControl progressFill = host.Controls["progress"].Controls[0];
+        Assert.False(progressFill.Visible);
+        Assert.True(progressFill.Size.Width > 0);
+        Assert.True(progressFill.Size.Height > 0);
     }
 
     [Fact]

@@ -23,6 +23,65 @@ namespace Launcher.PlayerShellIntegration;
 public sealed class LauncherEditorTests
 {
     [Fact]
+    public void AcceptedCustomGuiReleaseActivatesOnlyAfterBothSignedArchivesAndKeepsPreviousOnFailure()
+    {
+        using var scope = new EditorTempScope();
+        var store = new EditorProjectStore(scope.Dir("workspace"));
+        EditorProject project = store.Create("gui13-store", "GUI-13 启动恢复", LauncherTemplateKind.Classic);
+        project.GameGuiDocuments = [CustomGuiActivityExchangeTemplate.Create()];
+        AttachCrossPlatformResources(project, scope.Dir("resources"));
+        string publish = scope.Dir("publish");
+        TestResourceReleasePublisher.Publish(project, store.GetProjectDirectory(project.Snapshot.ProjectId), publish);
+        string packages = Path.Combine(publish, "Packages");
+        string acceptanceState = Path.Combine(scope.Root, "acceptance.json");
+        IReadOnlyDictionary<string, BootstrapManifestTrustedKey> keys = TrustedProjectKeys(project);
+        BootstrapManifestAcceptanceStore.VerifyAndAccept(
+            File.ReadAllText(Path.Combine(packages, "bootstrap-package-index.signed.json")),
+            acceptanceState, keys, new Version(2, 0, 0));
+        var request = new CustomGuiAcceptedReleaseStoreRequest
+        {
+            StoreRoot = scope.Dir("accepted"),
+            AcceptanceStatePath = acceptanceState,
+            TrustedKeys = keys,
+            CurrentClientVersion = new Version(2, 0, 0),
+        };
+
+        Assert.False(CustomGuiAcceptedReleaseStore.StagePackage(
+            request, "core-startup", Path.Combine(packages, "core-startup.zip")));
+        Assert.Null(CustomGuiAcceptedReleaseStore.TryLoadCurrent(request));
+        Assert.True(CustomGuiAcceptedReleaseStore.StagePackage(
+            request, "custom-gui", Path.Combine(packages, "custom-gui.zip")));
+        CustomGuiAcceptedPackage current = Assert.IsType<CustomGuiAcceptedPackage>(
+            CustomGuiAcceptedReleaseStore.TryLoadCurrent(request));
+        Assert.Equal(CustomGuiActivityExchangeTemplate.DocumentId, current.Document.DocumentId);
+
+        string corrupt = Path.Combine(scope.Root, "custom-gui-corrupt.zip");
+        File.WriteAllBytes(corrupt, [1, 2, 3]);
+        Assert.ThrowsAny<Exception>(() => CustomGuiAcceptedReleaseStore.StagePackage(request, "custom-gui", corrupt));
+        Assert.Equal(current.PackageSha256, CustomGuiAcceptedReleaseStore.TryLoadCurrent(request)!.PackageSha256);
+
+        string? evidenceClientRoot = Environment.GetEnvironmentVariable("LYOCRYSTAL_GUI13_EVIDENCE_CLIENT_ROOT");
+        if (!string.IsNullOrWhiteSpace(evidenceClientRoot))
+        {
+            string runtime = Path.Combine(Path.GetFullPath(evidenceClientRoot), "Cache", "PC", "Runtime");
+            string targetState = Path.Combine(runtime, "BootstrapManifestSecurityState.json");
+            string manifestJson = File.ReadAllText(Path.Combine(packages, "bootstrap-package-index.signed.json"));
+            BootstrapManifestAcceptanceStore.VerifyAndAccept(manifestJson, targetState, keys, new Version(1, 0, 0));
+            var targetRequest = new CustomGuiAcceptedReleaseStoreRequest
+            {
+                StoreRoot = Path.Combine(runtime, "AcceptedCustomGui"),
+                AcceptanceStatePath = targetState,
+                TrustedKeys = keys,
+                CurrentClientVersion = new Version(1, 0, 0),
+            };
+            CustomGuiAcceptedReleaseStore.StagePackage(targetRequest, "core-startup", Path.Combine(packages, "core-startup.zip"));
+            Assert.True(CustomGuiAcceptedReleaseStore.StagePackage(targetRequest, "custom-gui", Path.Combine(packages, "custom-gui.zip")));
+            File.WriteAllLines(Path.Combine(runtime, "GUI13SmokeTrustedKey.txt"),
+                new[] { project.Release.CurrentKeyId, project.Release.CurrentPublicKey });
+        }
+    }
+
+    [Fact]
     public void ActivityExchangePublishesAsOneSignedDocumentForPcAndAndroid()
     {
         using var scope = new EditorTempScope();
@@ -201,6 +260,15 @@ public sealed class LauncherEditorTests
             {
                 Client.Bootstrap.PcBootstrapApplyResultView first = await Client.Bootstrap.PcBootstrapPreLoginUpdateService.TryRunPreLoginUpdateAsync(null, CancellationToken.None);
                 Assert.True(first.Completed, first.Message); Assert.Equal(release.ResourceVersion, first.ResourceVersion);
+                Assert.NotNull(CustomGuiAcceptedReleaseStore.TryLoadCurrent(new CustomGuiAcceptedReleaseStoreRequest
+                {
+                    StoreRoot = Client.Bootstrap.PcBootstrapLayout.CustomGuiAcceptedRoot,
+                    AcceptanceStatePath = Client.Bootstrap.PcBootstrapLayout.ManifestSecurityStatePath,
+                    TrustedKeys = keys,
+                    CurrentClientVersion = Client.Bootstrap.PcBootstrapLayout.ClientCompatibilityVersion,
+                }));
+                Client.CustomGui.PcCustomGuiRuntime.Reset();
+                Assert.True(Client.CustomGui.PcCustomGuiRuntime.TryRestoreAcceptedPackage());
                 Assert.True(primary.CountRequestsEndingWith("bootstrap-package-index.json") > 0);
                 Assert.Equal($"http://127.0.0.1:{primaryPort}/api/", Client.Settings.MicroBaseUrl);
                 int zipRequests = backup.CountRequestsEndingWith(".zip");
@@ -252,10 +320,18 @@ public sealed class LauncherEditorTests
             using (MonoClient::MonoShare.BootstrapAcceptanceContext.UseTrustedKeys(keys))
             {
                 MonoClient::MonoShare.BootstrapPreLoginUpdatePlanView first = await MonoClient::MonoShare.BootstrapPackageUpdateService.TryEnsurePreLoginUpdateQueueAsync(CancellationToken.None);
-                Assert.False(first.Failed); Assert.Equal(release.ResourceVersion, first.ResourceVersion); Assert.Equal(2, first.PackagesToUpdate.Count);
+                Assert.False(first.Failed); Assert.Equal(release.ResourceVersion, first.ResourceVersion); Assert.Equal(3, first.PackagesToUpdate.Count);
                 Assert.True(primary.CountRequestsEndingWith("bootstrap-package-index.signed.json") > 0);
                 Assert.Contains($":{backupPort}/", first.RepositoryRoot, StringComparison.Ordinal);
                 await MonoClient::MonoShare.BootstrapPackageDownloader.DownloadPendingPackagesForAcceptanceAsync(CancellationToken.None);
+                Assert.NotNull(MonoClient::Shared.CustomGui.CustomGuiAcceptedReleaseStore.TryLoadCurrent(
+                    new MonoClient::Shared.CustomGui.CustomGuiAcceptedReleaseStoreRequest
+                    {
+                        StoreRoot = MonoClient::MonoShare.ClientResourceLayout.CustomGuiAcceptedRoot,
+                        AcceptanceStatePath = MonoClient::MonoShare.ClientResourceLayout.ManifestSecurityStatePath,
+                        TrustedKeys = keys,
+                        CurrentClientVersion = MonoClient::MonoShare.ClientResourceLayout.BootstrapClientCompatibilityVersion,
+                    }));
                 MonoClient::MonoShare.BootstrapPackageApplyBundleResultView applied = MonoClient::MonoShare.ClientResourceLayout.ApplyBundleInboxForAcceptance();
                 Assert.True(applied.Completed);
                 int zipRequests = backup.CountRequestsEndingWith(".zip");

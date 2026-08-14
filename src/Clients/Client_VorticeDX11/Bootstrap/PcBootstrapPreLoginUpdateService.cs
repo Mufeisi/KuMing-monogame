@@ -6,6 +6,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Shared.CustomGui;
 
 namespace Client.Bootstrap
 {
@@ -109,6 +110,8 @@ namespace Client.Bootstrap
                     }
                 }
 
+                AppendCustomGuiActivationPackages(remoteByName, updates);
+
                 string resourceVersion = remoteIndex.ResourceVersion ?? remoteIndex.GeneratedAtUtc ?? string.Empty;
 
                 if (updates.Count == 0)
@@ -193,6 +196,7 @@ namespace Client.Bootstrap
                 }
 
                 var preparedPackages = new List<KeyValuePair<string, string>>();
+                var acceptedPackageSources = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
                 var temporaryFiles = new List<string>();
                 var temporaryDirectories = new List<string>();
                 int maxRetries = Math.Max(0, Settings.BootstrapRetryCount);
@@ -218,6 +222,10 @@ namespace Client.Bootstrap
                                 temporaryFiles.Add(localZipPath);
                                 if (!PcBootstrapHttp.VerifyZipSha256(packageName, localZipPath, desiredSha))
                                     throw new InvalidDataException("SHA256 校验失败。");
+                                if (packageName is CustomGuiAcceptedReleaseStore.ResourcePackageName or CustomGuiAcceptedReleaseStore.GuiPackageName)
+                                    acceptedPackageSources[packageName] = localZipPath;
+                                if (packageName == CustomGuiAcceptedReleaseStore.GuiPackageName)
+                                    break;
                                 string stagingRoot = PcBootstrapZipInstaller.ExtractZipToStaging(localZipPath, packageName);
                                 temporaryDirectories.Add(stagingRoot);
                                 preparedPackages.Add(new KeyValuePair<string, string>(packageName, stagingRoot));
@@ -235,6 +243,10 @@ namespace Client.Bootstrap
                     temporaryDirectories.Add(stateStaging);
                     var stateEntries = PcBootstrapUpdateRuntime.BuildReleaseCommitEntries(queue, stateStaging);
                     int installedFiles = PcBootstrapZipInstaller.InstallExtractedPackagesToClient(preparedPackages, stateEntries);
+                    foreach (KeyValuePair<string, string> acceptedSource in acceptedPackageSources)
+                    {
+                        CustomGuiAcceptedReleaseStore.StagePackage(CreateCustomGuiStoreRequest(), acceptedSource.Key, acceptedSource.Value);
+                    }
                     var updatedPackages = queue.Packages.Select(item => item.Name).ToList();
                     TryAppendLog($"OK | ResourceVersion={queue.ResourceVersion} | Packages={updatedPackages.Count} | InstalledFiles={installedFiles}");
                     return new PcBootstrapApplyResultView
@@ -262,6 +274,38 @@ namespace Client.Bootstrap
                 return PcBootstrapApplyResultView.Fail(ex.Message);
             }
         }
+
+        private static void AppendCustomGuiActivationPackages(
+            IReadOnlyDictionary<string, PcBootstrapPackageIndexPackageView> remoteByName,
+            ICollection<BootstrapPackageUpdateEntryView> updates)
+        {
+            var existing = new HashSet<string>(updates.Select(item => item.Name), StringComparer.OrdinalIgnoreCase);
+            string[] required = { CustomGuiAcceptedReleaseStore.ResourcePackageName, CustomGuiAcceptedReleaseStore.GuiPackageName };
+            foreach (string packageName in required)
+            {
+                if (existing.Contains(packageName) || !remoteByName.TryGetValue(packageName, out PcBootstrapPackageIndexPackageView remote))
+                    continue;
+                string remoteSha = (remote.Sha256 ?? string.Empty).Trim();
+                if (string.IsNullOrWhiteSpace(remoteSha) ||
+                    CustomGuiAcceptedReleaseStore.HasCurrentPackageSha256(PcBootstrapLayout.CustomGuiAcceptedRoot, packageName, remoteSha))
+                    continue;
+                updates.Add(new BootstrapPackageUpdateEntryView
+                {
+                    Name = packageName,
+                    DesiredSha256 = remoteSha,
+                    Reason = "签名 GUI 启动版本尚未激活",
+                });
+                existing.Add(packageName);
+            }
+        }
+
+        private static CustomGuiAcceptedReleaseStoreRequest CreateCustomGuiStoreRequest() => new CustomGuiAcceptedReleaseStoreRequest
+        {
+            StoreRoot = PcBootstrapLayout.CustomGuiAcceptedRoot,
+            AcceptanceStatePath = PcBootstrapLayout.ManifestSecurityStatePath,
+            TrustedKeys = PcBootstrapAcceptanceContext.TrustedKeys,
+            CurrentClientVersion = PcBootstrapLayout.ClientCompatibilityVersion,
+        };
 
         public static async Task<PcBootstrapApplyResultView> TryRunPreLoginUpdateAsync(IProgress<PcBootstrapProgress> progress, CancellationToken cancellationToken)
         {

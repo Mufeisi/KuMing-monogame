@@ -25,6 +25,7 @@ namespace Client.Bootstrap
 
         public static string CacheRoot => Path.Combine(ClientRoot, "Cache", "PC");
         public static string RuntimeRoot => Path.Combine(CacheRoot, "Runtime");
+        public static string CustomGuiAcceptedRoot => Path.Combine(RuntimeRoot, "AcceptedCustomGui");
 
         public static string DownloadsRoot => Path.Combine(CacheRoot, "Downloads");
         public static string DownloadPackagesRoot => Path.Combine(DownloadsRoot, "Packages");
@@ -49,6 +50,7 @@ namespace Client.Bootstrap
                 PackageManifestDirectory,
                 CacheRoot,
                 RuntimeRoot,
+                CustomGuiAcceptedRoot,
                 DownloadsRoot,
                 DownloadPackagesRoot,
                 BundleStagingRoot,

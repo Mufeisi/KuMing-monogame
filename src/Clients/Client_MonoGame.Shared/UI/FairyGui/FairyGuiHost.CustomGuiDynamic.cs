@@ -19,6 +19,20 @@ internal static partial class FairyGuiHost
         _customGuiPackage = package;
     }
 
+    internal static bool TryRestoreAcceptedCustomGuiPackage()
+    {
+        CustomGuiAcceptedPackage? accepted = CustomGuiAcceptedReleaseStore.TryLoadCurrent(new CustomGuiAcceptedReleaseStoreRequest
+        {
+            StoreRoot = ClientResourceLayout.CustomGuiAcceptedRoot,
+            AcceptanceStatePath = ClientResourceLayout.ManifestSecurityStatePath,
+            TrustedKeys = BootstrapAcceptanceContext.TrustedKeys,
+            CurrentClientVersion = ClientResourceLayout.BootstrapClientCompatibilityVersion,
+        });
+        if (accepted is null) return false;
+        RegisterAcceptedCustomGuiPackage(accepted);
+        return true;
+    }
+
     internal static void ProcessCustomGuiPacket(Packet packet)
     {
         try
@@ -48,6 +62,7 @@ internal static partial class FairyGuiHost
 
     private static void OpenDynamicCustomGui(ServerPackets.CustomGuiOpen packet)
     {
+        if (_customGuiPackage is null) TryRestoreAcceptedCustomGuiPackage();
         CustomGuiAcceptedPackage package = _customGuiPackage
             ?? throw new CustomGuiStateProjectionException("GUI10-STATE-PACKAGE", "客户端尚未接受签名 GUI 包");
         MobileCustomGuiHost replacementHost = AttachCustomGui(package.Document);

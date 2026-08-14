@@ -12,6 +12,7 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using Shared.CustomGui;
 
 namespace MonoShare
 {
@@ -125,7 +126,8 @@ namespace MonoShare
                 await DownloadSinglePackageAsync(packageName, repositoryRoot, useMicroAuth, cancellationToken);
                 BootstrapDownloadStateSnapshot snapshot = GetStateSnapshot();
                 BootstrapDownloadPackageState state = snapshot.Packages.LastOrDefault(item => string.Equals(item.Name, packageName, StringComparison.OrdinalIgnoreCase));
-                if (!string.Equals(state?.Status, "inbox", StringComparison.OrdinalIgnoreCase))
+                if (!string.Equals(state?.Status, "inbox", StringComparison.OrdinalIgnoreCase) &&
+                    !string.Equals(state?.Status, "installed", StringComparison.OrdinalIgnoreCase))
                     throw new IOException($"资源包 {packageName} 下载失败：{state?.ErrorMessage ?? snapshot.LastError}");
             }
         }
@@ -229,6 +231,17 @@ namespace MonoShare
                         VerifySha256(zipPath, expectedSha256);
                 }
 
+                if (packageName == CustomGuiAcceptedReleaseStore.GuiPackageName)
+                {
+                    StageCustomGuiActivationPackage(packageName, zipPath);
+                    BootstrapPackageUpdateRuntime.UpsertInstalledVersion(packageName, expectedSha256 ?? string.Empty, "signed-gui-release");
+                    BootstrapPackageUpdateRuntime.RemovePackagesFromUpdateQueue(new[] { packageName });
+                    TryDeleteFile(zipPath);
+                    UpdatePackageStatus(packageName, "installed", stage: "accepted-gui", errorMessage: null);
+                    TryAppendLog($"OK | Pack={packageName} | SignedGui=accepted");
+                    return;
+                }
+
                 UpdatePackageStatus(packageName, "extracting", stage: "unzip", errorMessage: null);
                 string stagingDirectory = CreateBundleStagingDirectory(packageName);
                 ExtractZipSafely(zipPath, stagingDirectory);
@@ -244,6 +257,11 @@ namespace MonoShare
                     DownloadedAtUtc = DateTime.UtcNow.ToString("o"),
                     RepositoryRoot = normalizedRepository,
                 });
+
+                if (packageName is CustomGuiAcceptedReleaseStore.ResourcePackageName or CustomGuiAcceptedReleaseStore.GuiPackageName)
+                {
+                    StageCustomGuiActivationPackage(packageName, zipPath);
+                }
 
                 TryDeleteFile(zipPath);
 
@@ -287,6 +305,17 @@ namespace MonoShare
                     _activeTotalBytes = 0;
                 }
             }
+        }
+
+        private static void StageCustomGuiActivationPackage(string packageName, string zipPath)
+        {
+            CustomGuiAcceptedReleaseStore.StagePackage(new CustomGuiAcceptedReleaseStoreRequest
+            {
+                StoreRoot = ClientResourceLayout.CustomGuiAcceptedRoot,
+                AcceptanceStatePath = ClientResourceLayout.ManifestSecurityStatePath,
+                TrustedKeys = BootstrapAcceptanceContext.TrustedKeys,
+                CurrentClientVersion = ClientResourceLayout.BootstrapClientCompatibilityVersion,
+            }, packageName, zipPath);
         }
 
         private static string NormalizeRepositoryRoot(string repositoryRoot)

@@ -3826,6 +3826,19 @@ namespace Server.MirEnvir
             Start(EnvirStartOptions.FromSettings());
         }
 
+        public void StartHeadlessTestServer()
+        {
+            if (!Settings.TestServer)
+                throw new InvalidOperationException("隐藏测试服模式只允许在 General/TestServer=True 时启动");
+            Start(new EnvirStartOptions
+            {
+                StartScripts = Settings.CSharpScriptsEnabled,
+                StartHttp = Settings.StartHTTPService,
+                Multithreaded = Settings.Multithreaded,
+                EnforceProductionSecurity = false,
+            });
+        }
+
         internal void Start(EnvirStartOptions options)
         {
             if (Running || _thread != null) return;
@@ -4962,11 +4975,12 @@ namespace Server.MirEnvir
 
         private void StatusConnection(IAsyncResult result)
         {
-            if (!Running || !_StatusPort.Server.IsBound) return;
+            TcpListener listener = _StatusPort;
+            if (!Running || listener is null || !listener.Server.IsBound) return;
 
             try
             {
-                var tempTcpClient = _StatusPort.EndAcceptTcpClient(result);
+                var tempTcpClient = listener.EndAcceptTcpClient(result);
                 lock (StatusConnections)
                     StatusConnections.Add(new MirStatusConnection(tempTcpClient));
             }
@@ -4979,8 +4993,8 @@ namespace Server.MirEnvir
                 while (StatusConnections.Count >= 5) //dont allow to many status port connections it's just an abuse thing
                     Thread.Sleep(1);
 
-                if (Running && _StatusPort.Server.IsBound)
-                    _StatusPort.BeginAcceptTcpClient(StatusConnection, null);
+                if (Running && listener.Server.IsBound)
+                    listener.BeginAcceptTcpClient(StatusConnection, null);
             }
         }
 

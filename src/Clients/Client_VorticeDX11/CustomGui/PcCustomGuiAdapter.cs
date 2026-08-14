@@ -397,15 +397,22 @@ internal sealed class PcCustomGuiProgressBarControl : PcCustomGuiPanelControl
     internal void Apply(long current, long maximum)
     {
         decimal ratio = maximum <= 0 ? 0 : Math.Clamp((decimal)current / maximum, 0, 1);
-        if (Controls.Count > 0) Controls[0].Size = new Size((int)Math.Round(Size.Width * ratio), Size.Height);
+        if (Controls.Count > 0) ApplyFillBounds(Controls[0], ratio);
         if (Controls.Count > 1 && Controls[1] is MirLabel label) label.Text = $"{current}/{maximum}";
     }
 
     protected override void OnSizeChanged()
     {
         base.OnSizeChanged();
-        if (Controls.Count > 0) Controls[0].Size = new Size((int)Math.Round(Size.Width * Ratio), Size.Height);
+        if (Controls.Count > 0) ApplyFillBounds(Controls[0], Ratio);
         if (Controls.Count > 1) Controls[1].Size = Size;
+    }
+
+    private void ApplyFillBounds(MirControl fill, decimal ratio)
+    {
+        int width = (int)Math.Round(Size.Width * ratio);
+        fill.Visible = width > 0 && Size.Height > 0;
+        fill.Size = new Size(Math.Max(1, width), Math.Max(1, Size.Height));
     }
 }
 

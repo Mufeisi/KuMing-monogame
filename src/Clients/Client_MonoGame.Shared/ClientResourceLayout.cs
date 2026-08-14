@@ -61,6 +61,7 @@ namespace MonoShare
         public static string SoundRoot => CombineClientPath("Sound");
         public static string CacheRoot => CombineClientPath(Path.Combine("Cache", "Mobile"));
         public static string RuntimeRoot => Path.Combine(CacheRoot, "Runtime");
+        public static string CustomGuiAcceptedRoot => Path.Combine(RuntimeRoot, "AcceptedCustomGui");
         public static string PackageCacheRoot => Path.Combine(CacheRoot, "Packages");
         public static string DownloadRoot => Path.Combine(CacheRoot, "Downloads");
         public static string DownloadPackageRoot => Path.Combine(DownloadRoot, "Packages");

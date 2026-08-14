@@ -304,6 +304,24 @@ public static partial class BootstrapManifestAcceptanceStore
         }
     }
 
+    public static string ReadAcceptedManifestJson(
+        string statePath,
+        IReadOnlyDictionary<string, BootstrapManifestTrustedKey> trustedKeys = null,
+        Version currentClientVersion = null)
+    {
+        if (string.IsNullOrWhiteSpace(statePath)) throw new ArgumentException("防降级状态路径不能为空", nameof(statePath));
+        lock (Gate)
+        {
+            BootstrapManifestSecurityState state = LoadState(
+                statePath,
+                trustedKeys ?? BootstrapManifestTrustConfiguration.TrustedKeys,
+                currentClientVersion ?? BootstrapManifestTrustConfiguration.CurrentClientCompatibilityVersion);
+            if (state.Sequence <= 0 || string.IsNullOrWhiteSpace(state.ManifestJson))
+                throw new InvalidDataException("尚无已接受的签名资源清单");
+            return state.ManifestJson;
+        }
+    }
+
     public static BootstrapSignedManifest VerifyAndAccept(
         string json,
         string statePath,

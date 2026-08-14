@@ -1,0 +1,10 @@
+2026-08-14 16:47:44 | 进图成功 | Map=0 | Location=288,614
+2026-08-14 16:47:44 | GUI-13 打开 | 已发送活动兑换命令
+2026-08-14 16:47:46 | GUI-13 非法动作 | Result=Rejected
+2026-08-14 16:47:46 | GUI-13 合法兑换 | Result=Accepted
+2026-08-14 16:47:46 | GUI-13 关闭 | Result=Success
+2026-08-14 16:47:46 | 移动成功 | From=288,614 | To=288,613
+2026-08-14 16:47:52 | 客户端退出 | Result=Success
+2026-08-14 16:48:47 | 服务端停止 | Result=Success
+持久化复核 | Gold=4000 | Credit=10 | Flag[1998]=1 | Location=288,613
+清理复核 | Port7000=Closed | Port7777=Closed | CustomGuiPackageSequence临时覆盖=Removed

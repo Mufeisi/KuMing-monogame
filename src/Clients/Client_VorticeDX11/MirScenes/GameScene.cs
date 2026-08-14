@@ -1313,6 +1313,7 @@ namespace Client.MirScenes
         private void ProcessSmokeTestMoveAndExit()
         {
             if (!Settings.SmokeTestAutoMoveAndExit) return;
+            if (!Client.CustomGui.PcCustomGuiRuntime.ProcessSmokeTest()) return;
             if (_smokeTestMoveConfirmed)
             {
                 if (!_smokeTestScreenshotCaptured && CMain.Time >= _smokeTestScreenshotTime)

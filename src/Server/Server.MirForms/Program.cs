@@ -1,7 +1,9 @@
 ﻿using log4net;
 using Server.Persistence.Sql;
 using Server.Diagnostics;
+using Server.MirEnvir;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 namespace Server.MirForms
@@ -24,8 +26,9 @@ namespace Server.MirForms
                 return;
             }
 
-            // winform aot
-            ComWrappers.RegisterForMarshalling(WinFormsComInterop.WinFormsComWrappers.Instance);
+            // WinFormsComInterop 仅供 Native AOT；动态 .NET 运行时使用框架自带 COM marshalling。
+            if (!RuntimeFeature.IsDynamicCodeSupported)
+                ComWrappers.RegisterForMarshalling(WinFormsComInterop.WinFormsComWrappers.Instance);
 
             Packet.IsServer = true;
 
@@ -50,6 +53,9 @@ namespace Server.MirForms
 
         private static int RunCommandLine(string[] args)
         {
+            if (string.Equals(args[0], "--headless-smoke-server", StringComparison.OrdinalIgnoreCase))
+                return RunHeadlessSmokeServer(args);
+
             if (!string.Equals(args[0], "--restore-sqlite", StringComparison.OrdinalIgnoreCase) ||
                 (args.Length != 2 && args.Length != 4) ||
                 (args.Length == 4 && !string.Equals(args[2], "--target", StringComparison.OrdinalIgnoreCase)))
@@ -79,6 +85,36 @@ namespace Server.MirForms
             {
                 Console.Error.WriteLine($"SQLite恢复失败：{ex.GetType().Name}：{ex.Message}");
                 return 1;
+            }
+        }
+
+        private static int RunHeadlessSmokeServer(string[] args)
+        {
+            if (args.Length != 2 || !int.TryParse(args[1], out int durationSeconds) || durationSeconds is < 30 or > 600)
+            {
+                Console.Error.WriteLine("用法：Server.exe --headless-smoke-server <30..600秒>");
+                return 2;
+            }
+
+            Packet.IsServer = true;
+            Settings.Load();
+            if (!Envir.Edit.LoadDB())
+            {
+                Console.Error.WriteLine("隐藏测试服加载数据库失败。");
+                return 3;
+            }
+
+            try
+            {
+                Envir.Main.StartHeadlessTestServer();
+                DateTime deadline = DateTime.UtcNow.AddSeconds(durationSeconds);
+                while (DateTime.UtcNow < deadline && Envir.Main.Running)
+                    Thread.Sleep(200);
+                return Envir.Main.Running ? 0 : 4;
+            }
+            finally
+            {
+                if (Envir.Main.Running) Envir.Main.Stop();
             }
         }
     }
