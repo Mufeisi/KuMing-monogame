@@ -10,7 +10,7 @@
 | 状态范围 | 唯一事实源 | 当前生命周期 |
 |---|---|---|
 | 工程治理 | [`governance/工程治理实施路线.md`](governance/工程治理实施路线.md) | ENG-13 已完成，工程治理进入维护态 |
-| 当前产品任务 | [`requirements/LEG-07-自定义游戏GUI.md`](requirements/LEG-07-自定义游戏GUI.md) | LEG-07 已激活；`GUI-CORE-01..04` 与 `GUI-01..06` 已完成，`GATE-GUI-CORE`、`GATE-GUI-STATIC` 已关闭，下一切片为 `GUI-07` Shared 真实协议包与严格上限 |
+| 当前产品任务 | [`requirements/LEG-07-自定义游戏GUI.md`](requirements/LEG-07-自定义游戏GUI.md) | LEG-07 已激活；`GUI-CORE-01..04` 与 `GUI-01..07` 已完成，`GATE-GUI-CORE`、`GATE-GUI-STATIC` 已关闭，下一切片为 `GUI-08` 服务端窗口会话、版本绑定和重放保护 |
 | PC 稳定与 Android 发布 P0～P5 | [`requirements/PRD-PC稳定与Android发布.md`](requirements/PRD-PC稳定与Android发布.md) | 已完成并转入维护，只保留历史验收事实 |
 | 启动器编辑器与独立微端 L0～L5 | [`design/launcher/启动器编辑器与独立微端实施规格.md`](design/launcher/启动器编辑器与独立微端实施规格.md)及对应 Evidence | 已完成；后续新增能力必须重新立项 |
 | 长期架构决定 | [`adr/`](adr/) | 已接受 ADR 为决定事实源；实施状态以代码、测试和证据为准 |
@@ -52,6 +52,7 @@
 | 协议 | [`quality/protocol/`](quality/protocol/)、[`generated/protocol/`](generated/protocol/) | 协议与资源兼容；manifest 为生成审计物 |
 | 启动器/微端 | [`design/launcher/`](design/launcher/)、[`requirements/`](requirements/) | 产品设计、实施规格和候选路线 |
 | 桌面作者工具 GUI | [`design/launcher/桌面作者工具GUI设计规范.md`](design/launcher/桌面作者工具GUI设计规范.md) | 启动器编辑器及后续桌面作者工具的信息架构、设计令牌、交互、无障碍与验收唯一规范 |
+| 自定义游戏 GUI | [`design/custom-gui/游戏GUI运行描述规范.md`](design/custom-gui/游戏GUI运行描述规范.md)、[`design/custom-gui/游戏GUI动态协议规范.md`](design/custom-gui/游戏GUI动态协议规范.md) | 静态运行描述、动态协议、上限和失败关闭语义 |
 | 构建/Android | [`runbooks/build/`](runbooks/build/) | 平台构建与打包专项说明 |
 
 ## 证据与历史

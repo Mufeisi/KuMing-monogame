@@ -143,6 +143,11 @@ internal static class Program
         ];
         return roots.Select(path => Path.Combine(shared, path.Replace('/', Path.DirectorySeparatorChar)))
             .Concat(Directory.GetFiles(Path.Combine(shared, "Data"), "*.cs", SearchOption.TopDirectoryOnly))
+            .Concat(new[]
+            {
+                Path.Combine(shared, "CustomGui", "CustomGuiPackets.cs"),
+                Path.Combine(shared, "CustomGui", "CustomGuiProtocol.cs"),
+            })
             .OrderBy(path => path, StringComparer.Ordinal)
             .ToArray();
     }

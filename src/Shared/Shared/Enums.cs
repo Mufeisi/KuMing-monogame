@@ -2325,7 +2325,11 @@ public enum ServerPacketIds : short
     SetCompass = 271,
     GroupMembersMap = 272,
     SendMemberLocation = 273,
-    Fg = 274
+    Fg = 274,
+    CustomGuiOpen = 275,
+    CustomGuiStateDelta = 276,
+    CustomGuiActionResult = 277,
+    CustomGuiClose = 278
 }
 
 public enum ClientPacketIds : short
@@ -2474,7 +2478,8 @@ public enum ClientPacketIds : short
     ItemRentalLockFee = 141,
     ItemRentalLockItem = 142,
     ConfirmItemRental = 143,
-    Fg = 144
+    Fg = 144,
+    CustomGuiAction = 145
 }
 
 public enum ConquestType : byte

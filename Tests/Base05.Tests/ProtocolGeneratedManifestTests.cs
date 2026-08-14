@@ -17,14 +17,14 @@ public sealed class ProtocolGeneratedManifestTests
 
         Assert.Equal("PROTO-02.generated-wire-manifest.v2", root.GetProperty("schemaVersion").GetString());
         JsonElement coverage = root.GetProperty("coverage");
-        Assert.Equal(145, coverage.GetProperty("clientPacketCount").GetInt32());
-        Assert.Equal(275, coverage.GetProperty("serverPacketCount").GetInt32());
-        Assert.Equal(64, coverage.GetProperty("enumCount").GetInt32());
+        Assert.Equal(146, coverage.GetProperty("clientPacketCount").GetInt32());
+        Assert.Equal(279, coverage.GetProperty("serverPacketCount").GetInt32());
+        Assert.Equal(76, coverage.GetProperty("enumCount").GetInt32());
 
         JsonElement.ArrayEnumerator packetEnumerator = root.GetProperty("packets").EnumerateArray();
         JsonElement[] packets = packetEnumerator.ToArray();
-        Assert.Equal(420, packets.Length);
-        Assert.Equal(420, packets.Select(packet =>
+        Assert.Equal(425, packets.Length);
+        Assert.Equal(425, packets.Select(packet =>
             $"{packet.GetProperty("direction").GetString()}:{packet.GetProperty("id").GetInt32()}").Distinct().Count());
         Assert.All(packets, packet =>
         {
@@ -33,11 +33,13 @@ public sealed class ProtocolGeneratedManifestTests
         });
 
         JsonElement[] sources = root.GetProperty("sources").EnumerateArray().ToArray();
-        Assert.Equal(17, sources.Length);
+        Assert.Equal(19, sources.Length);
         Assert.Contains(sources, source => source.GetProperty("path").GetString() == "src/Shared/Shared/Packet.cs");
         Assert.Contains(sources, source => source.GetProperty("path").GetString() == "src/Shared/Shared/ClientPackets.cs");
         Assert.Contains(sources, source => source.GetProperty("path").GetString() == "src/Shared/Shared/ServerPackets.cs");
         Assert.Contains(sources, source => source.GetProperty("path").GetString() == "src/Shared/Shared/Enums.cs");
+        Assert.Contains(sources, source => source.GetProperty("path").GetString() == "src/Shared/Shared/CustomGui/CustomGuiPackets.cs");
+        Assert.Contains(sources, source => source.GetProperty("path").GetString() == "src/Shared/Shared/CustomGui/CustomGuiProtocol.cs");
         Assert.All(sources, source => AssertHash(source.GetProperty("sha256").GetString()));
         Assert.All(sources, source =>
         {
@@ -47,7 +49,7 @@ public sealed class ProtocolGeneratedManifestTests
             string expected = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(normalized))).ToLowerInvariant();
             Assert.Equal(expected, source.GetProperty("sha256").GetString());
         });
-        Assert.Equal(64, root.GetProperty("enums").GetArrayLength());
+        Assert.Equal(76, root.GetProperty("enums").GetArrayLength());
     }
 
     [Fact]
@@ -81,12 +83,17 @@ public sealed class ProtocolGeneratedManifestTests
             .Descendants("Compile")
             .Select(item => ((string?)item.Attribute("Include") ?? string.Empty).Replace('/', '\\'))
             .ToArray();
+        string[] allIncludes = project.Descendants("Compile")
+            .Select(item => ((string?)item.Attribute("Include") ?? string.Empty).Replace('/', '\\'))
+            .ToArray();
 
         Assert.DoesNotContain(androidIncludes, include => include.Contains("Share\\**\\*.cs", StringComparison.OrdinalIgnoreCase));
         Assert.Contains("..\\..\\..\\src\\Shared\\Shared\\Packet.cs", androidIncludes);
         Assert.Contains("..\\..\\..\\src\\Shared\\Shared\\ClientPackets.cs", androidIncludes);
         Assert.Contains("..\\..\\..\\src\\Shared\\Shared\\ServerPackets.cs", androidIncludes);
         Assert.Contains("..\\..\\..\\src\\Shared\\Shared\\Enums.cs", androidIncludes);
+        Assert.Contains("..\\..\\..\\src\\Shared\\Shared\\CustomGui\\**\\*.cs", allIncludes);
+        Assert.Contains("..\\..\\..\\src\\Shared\\Shared\\CustomGui\\CustomGuiPackets.cs", androidIncludes);
         Assert.Contains("Share\\Language.cs", androidIncludes);
         Assert.Contains("Share\\Functions\\IniReader.cs", androidIncludes);
 

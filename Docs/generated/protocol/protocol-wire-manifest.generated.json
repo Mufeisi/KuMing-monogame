@@ -1,9 +1,9 @@
 {
   "schemaVersion": "PROTO-02.generated-wire-manifest.v2",
   "coverage": {
-    "clientPacketCount": 145,
-    "serverPacketCount": 275,
-    "enumCount": 64
+    "clientPacketCount": 146,
+    "serverPacketCount": 279,
+    "enumCount": 76
   },
   "sources": [
     {
@@ -13,6 +13,14 @@
     {
       "path": "src/Shared/Shared/ClientPackets.cs",
       "sha256": "1c8aa9a96c90e7617298c344f0a69dbc6137e5d1675a3db23dd1369a4462def1"
+    },
+    {
+      "path": "src/Shared/Shared/CustomGui/CustomGuiPackets.cs",
+      "sha256": "d86b0dcf2cd892da384cced2448d964f30b6e0d0cb42ec538839c6130b3ee6ae"
+    },
+    {
+      "path": "src/Shared/Shared/CustomGui/CustomGuiProtocol.cs",
+      "sha256": "73e4325a5b859d679de472fdc8267f266020579bc70287f3cf2b20bd629019e1"
     },
     {
       "path": "src/Shared/Shared/Data/ClientData.cs",
@@ -44,7 +52,7 @@
     },
     {
       "path": "src/Shared/Shared/Enums.cs",
-      "sha256": "adbc53adab771c9eed62a7ecab2104c1dc647039440b391025a8bbaa59a9eb51"
+      "sha256": "2f2afed30177b80f2aa47421a7045bd68a904cbea0372cbbe27dfd7eaeba357d"
     },
     {
       "path": "src/Shared/Shared/Extensions/ExtensionMethods.cs",
@@ -68,7 +76,7 @@
     },
     {
       "path": "src/Shared/Shared/Packet.cs",
-      "sha256": "b9db200fc7f156e7d7fa590a2f63b2efea2db7a4423477dc14a59f396167b243"
+      "sha256": "6c852fe3af3ecbb0e544b5c66a901be7e455848522f68bfa712a39b652ec7542"
     },
     {
       "path": "src/Shared/Shared/ServerPackets.cs",
@@ -2463,6 +2471,60 @@
       ],
       "readIlSha256": "58d5c00c49662fbb81d37727f421336d0984e513b33b589134a560fc89591068",
       "writeIlSha256": "b7dcb7dbc52de227abfe54e913eaf721d7782059cba62a360d1332a7f1816238"
+    },
+    {
+      "direction": "clientToServer",
+      "id": 145,
+      "type": "ClientPackets.CustomGuiAction",
+      "compressed": false,
+      "fields": [
+        {
+          "name": "WindowInstanceId",
+          "type": "System.UInt64"
+        },
+        {
+          "name": "DocumentId",
+          "type": "System.String"
+        },
+        {
+          "name": "DocumentRevision",
+          "type": "System.UInt32"
+        },
+        {
+          "name": "PackageSequence",
+          "type": "System.Int64"
+        },
+        {
+          "name": "SessionNonce",
+          "type": "System.Guid"
+        },
+        {
+          "name": "RequestSequence",
+          "type": "System.UInt32"
+        },
+        {
+          "name": "Action",
+          "type": "Shared.CustomGui.CustomGuiActionKind"
+        },
+        {
+          "name": "ActionId",
+          "type": "System.String"
+        },
+        {
+          "name": "TextValue",
+          "type": "System.String"
+        },
+        {
+          "name": "SelectionIds",
+          "type": "System.Collections.Generic.List\u003CSystem.String\u003E"
+        },
+        {
+          "name": "ItemIds",
+          "type": "System.Collections.Generic.List\u003CSystem.Int64\u003E"
+        }
+      ],
+      "readIlSha256": "75696e56963cf6ead17bc0ff675edd387513a9bbb888d4dd7cfa8f08c889844a",
+      "writeIlSha256": "a5f13d39f6559e0e6d26802308bbbfd1fd183406b11cc0d0aed872ce723714af"
     },
     {
       "direction": "serverToClient",
@@ -7869,6 +7931,138 @@
       ],
       "readIlSha256": "51c965dafb30a902c15eb342a3637907ebf6e7d50aa5c7676149f7445e472cfa",
       "writeIlSha256": "9191820fdc60e981ff6f3aca74bd6d06a6733ee97bdc3e454ac3f514d53b4e2d"
+    },
+    {
+      "direction": "serverToClient",
+      "id": 275,
+      "type": "ServerPackets.CustomGuiOpen",
+      "compressed": false,
+      "fields": [
+        {
+          "name": "WindowInstanceId",
+          "type": "System.UInt64"
+        },
+        {
+          "name": "DocumentId",
+          "type": "System.String"
+        },
+        {
+          "name": "DocumentRevision",
+          "type": "System.UInt32"
+        },
+        {
+          "name": "PackageSequence",
+          "type": "System.Int64"
+        },
+        {
+          "name": "SessionNonce",
+          "type": "System.Guid"
+        },
+        {
+          "name": "ExpiresAtUnixMilliseconds",
+          "type": "System.Int64"
+        },
+        {
+          "name": "StateRevision",
+          "type": "System.UInt32"
+        },
+        {
+          "name": "State",
+          "type": "System.Collections.Generic.List\u003CShared.CustomGui.CustomGuiStateEntry\u003E"
+        }
+      ],
+      "readIlSha256": "729ae632605617809739f934318f143a70803df663d92f057d4dbb3bb441cfc5",
+      "writeIlSha256": "5a2b7ebc6c5e6413ae0f3914a98ef13550c69a80c2c45ca8de871aa051dd9b29"
+    },
+    {
+      "direction": "serverToClient",
+      "id": 276,
+      "type": "ServerPackets.CustomGuiStateDelta",
+      "compressed": false,
+      "fields": [
+        {
+          "name": "WindowInstanceId",
+          "type": "System.UInt64"
+        },
+        {
+          "name": "DocumentId",
+          "type": "System.String"
+        },
+        {
+          "name": "DocumentRevision",
+          "type": "System.UInt32"
+        },
+        {
+          "name": "PackageSequence",
+          "type": "System.Int64"
+        },
+        {
+          "name": "SessionNonce",
+          "type": "System.Guid"
+        },
+        {
+          "name": "StateRevision",
+          "type": "System.UInt32"
+        },
+        {
+          "name": "State",
+          "type": "System.Collections.Generic.List\u003CShared.CustomGui.CustomGuiStateEntry\u003E"
+        }
+      ],
+      "readIlSha256": "06941acdb9cf4715bbf7d9803bf9fcc0f9cccfcac39c588b81885cbda3a06e34",
+      "writeIlSha256": "bcec0a12d247945b63d2f02069092fe5bd531dd70bdf585ff014c7478900e4c4"
+    },
+    {
+      "direction": "serverToClient",
+      "id": 277,
+      "type": "ServerPackets.CustomGuiActionResult",
+      "compressed": false,
+      "fields": [
+        {
+          "name": "WindowInstanceId",
+          "type": "System.UInt64"
+        },
+        {
+          "name": "RequestSequence",
+          "type": "System.UInt32"
+        },
+        {
+          "name": "StateRevision",
+          "type": "System.UInt32"
+        },
+        {
+          "name": "Result",
+          "type": "Shared.CustomGui.CustomGuiActionResultKind"
+        },
+        {
+          "name": "Message",
+          "type": "System.String"
+        }
+      ],
+      "readIlSha256": "cf93b4d054b3b4e0ece4badfc8a93b044fca9b615b48174384fd620853e37352",
+      "writeIlSha256": "cada077949ec2c6da69f49b9621d718fb0c2de4f9decc534be4fdf77a3a82d52"
+    },
+    {
+      "direction": "serverToClient",
+      "id": 278,
+      "type": "ServerPackets.CustomGuiClose",
+      "compressed": false,
+      "fields": [
+        {
+          "name": "WindowInstanceId",
+          "type": "System.UInt64"
+        },
+        {
+          "name": "Reason",
+          "type": "Shared.CustomGui.CustomGuiCloseReason"
+        },
+        {
+          "name": "Message",
+          "type": "System.String"
+        }
+      ],
+      "readIlSha256": "38a5fbb48e1678e417691255995d35544731e3a6ee446d654c894e3ca1187f73",
+      "writeIlSha256": "e49f535c9c05c28320f7cd99b6acb8abaa10a468a61404582f73f78f75776a36"
     }
   ],
   "enums": [
@@ -9461,6 +9655,10 @@
         {
           "name": "Fg",
           "value": "144"
+        },
+        {
+          "name": "CustomGuiAction",
+          "value": "145"
         }
       ]
     },
@@ -15563,6 +15761,282 @@
         {
           "name": "Fg",
           "value": "274"
+        },
+        {
+          "name": "CustomGuiOpen",
+          "value": "275"
+        },
+        {
+          "name": "CustomGuiStateDelta",
+          "value": "276"
+        },
+        {
+          "name": "CustomGuiActionResult",
+          "value": "277"
+        },
+        {
+          "name": "CustomGuiClose",
+          "value": "278"
+        }
+      ]
+    },
+    {
+      "type": "Shared.CustomGui.CustomGuiActionKind",
+      "underlyingType": "System.Byte",
+      "values": [
+        {
+          "name": "CloseWindow",
+          "value": "0"
+        },
+        {
+          "name": "OpenWindow",
+          "value": "1"
+        },
+        {
+          "name": "SwitchPage",
+          "value": "2"
+        },
+        {
+          "name": "SubmitText",
+          "value": "3"
+        },
+        {
+          "name": "SubmitSelection",
+          "value": "4"
+        },
+        {
+          "name": "SubmitItems",
+          "value": "5"
+        },
+        {
+          "name": "RequestAction",
+          "value": "6"
+        }
+      ]
+    },
+    {
+      "type": "Shared.CustomGui.CustomGuiActionResultKind",
+      "underlyingType": "System.Byte",
+      "values": [
+        {
+          "name": "Accepted",
+          "value": "0"
+        },
+        {
+          "name": "Rejected",
+          "value": "1"
+        },
+        {
+          "name": "Expired",
+          "value": "2"
+        },
+        {
+          "name": "Stale",
+          "value": "3"
+        },
+        {
+          "name": "Invalid",
+          "value": "4"
+        }
+      ]
+    },
+    {
+      "type": "Shared.CustomGui.CustomGuiCloseReason",
+      "underlyingType": "System.Byte",
+      "values": [
+        {
+          "name": "Requested",
+          "value": "0"
+        },
+        {
+          "name": "Expired",
+          "value": "1"
+        },
+        {
+          "name": "Replaced",
+          "value": "2"
+        },
+        {
+          "name": "VersionChanged",
+          "value": "3"
+        },
+        {
+          "name": "ServerShutdown",
+          "value": "4"
+        },
+        {
+          "name": "Invalidated",
+          "value": "5"
+        }
+      ]
+    },
+    {
+      "type": "Shared.CustomGui.CustomGuiFlowDirection",
+      "underlyingType": "System.Int32",
+      "values": [
+        {
+          "name": "None",
+          "value": "0"
+        },
+        {
+          "name": "Horizontal",
+          "value": "1"
+        },
+        {
+          "name": "Vertical",
+          "value": "2"
+        }
+      ]
+    },
+    {
+      "type": "Shared.CustomGui.CustomGuiHorizontalAnchor",
+      "underlyingType": "System.Int32",
+      "values": [
+        {
+          "name": "Left",
+          "value": "0"
+        },
+        {
+          "name": "Center",
+          "value": "1"
+        },
+        {
+          "name": "Right",
+          "value": "2"
+        },
+        {
+          "name": "Stretch",
+          "value": "3"
+        }
+      ]
+    },
+    {
+      "type": "Shared.CustomGui.CustomGuiImageStretch",
+      "underlyingType": "System.Int32",
+      "values": [
+        {
+          "name": "None",
+          "value": "0"
+        },
+        {
+          "name": "Fill",
+          "value": "1"
+        },
+        {
+          "name": "Uniform",
+          "value": "2"
+        },
+        {
+          "name": "UniformToFill",
+          "value": "3"
+        }
+      ]
+    },
+    {
+      "type": "Shared.CustomGui.CustomGuiListOrientation",
+      "underlyingType": "System.Int32",
+      "values": [
+        {
+          "name": "Horizontal",
+          "value": "0"
+        },
+        {
+          "name": "Vertical",
+          "value": "1"
+        }
+      ]
+    },
+    {
+      "type": "Shared.CustomGui.CustomGuiSafeAreaMode",
+      "underlyingType": "System.Int32",
+      "values": [
+        {
+          "name": "Required",
+          "value": "0"
+        }
+      ]
+    },
+    {
+      "type": "Shared.CustomGui.CustomGuiScaleMode",
+      "underlyingType": "System.Int32",
+      "values": [
+        {
+          "name": "Fit",
+          "value": "0"
+        }
+      ]
+    },
+    {
+      "type": "Shared.CustomGui.CustomGuiStateKind",
+      "underlyingType": "System.Byte",
+      "values": [
+        {
+          "name": "Text",
+          "value": "0"
+        },
+        {
+          "name": "Boolean",
+          "value": "1"
+        },
+        {
+          "name": "Integer",
+          "value": "2"
+        },
+        {
+          "name": "Progress",
+          "value": "3"
+        },
+        {
+          "name": "List",
+          "value": "4"
+        },
+        {
+          "name": "ItemSlots",
+          "value": "5"
+        },
+        {
+          "name": "ButtonVisible",
+          "value": "6"
+        },
+        {
+          "name": "ButtonEnabled",
+          "value": "7"
+        }
+      ]
+    },
+    {
+      "type": "Shared.CustomGui.CustomGuiTextFormat",
+      "underlyingType": "System.Int32",
+      "values": [
+        {
+          "name": "Plain",
+          "value": "0"
+        },
+        {
+          "name": "Rich",
+          "value": "1"
+        }
+      ]
+    },
+    {
+      "type": "Shared.CustomGui.CustomGuiVerticalAnchor",
+      "underlyingType": "System.Int32",
+      "values": [
+        {
+          "name": "Top",
+          "value": "0"
+        },
+        {
+          "name": "Center",
+          "value": "1"
+        },
+        {
+          "name": "Bottom",
+          "value": "2"
+        },
+        {
+          "name": "Stretch",
+          "value": "3"
         }
       ]
     },

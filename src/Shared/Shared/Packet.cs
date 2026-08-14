@@ -388,6 +388,8 @@ public abstract class Packet
                 return new C.ConfirmItemRental();
             case (short)ClientPacketIds.Fg:
                 return new C.Fg();
+            case (short)ClientPacketIds.CustomGuiAction:
+                return new C.CustomGuiAction();
             default:
                 return null;
         }
@@ -947,6 +949,14 @@ public abstract class Packet
                 return new S.SetCompass();
             case (short)ServerPacketIds.Fg:
                 return new S.Fg();
+            case (short)ServerPacketIds.CustomGuiOpen:
+                return new S.CustomGuiOpen();
+            case (short)ServerPacketIds.CustomGuiStateDelta:
+                return new S.CustomGuiStateDelta();
+            case (short)ServerPacketIds.CustomGuiActionResult:
+                return new S.CustomGuiActionResult();
+            case (short)ServerPacketIds.CustomGuiClose:
+                return new S.CustomGuiClose();
             default:
                 return null;
         }
