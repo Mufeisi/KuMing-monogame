@@ -1,0 +1,117 @@
+{
+  "schemaVersion": 1,
+  "documentId": "new-player-event",
+  "revision": 1,
+  "viewport": {
+    "referenceWidth": 1280,
+    "referenceHeight": 720,
+    "scaleMode": "fit",
+    "safeArea": "required"
+  },
+  "elements": [
+    {
+      "type": "window",
+      "id": "root",
+      "layout": { "x": 0, "y": 0, "width": 960, "height": 540, "horizontalAnchor": "center", "verticalAnchor": "center", "margin": { "left": 0, "top": 0, "right": 0, "bottom": 0 } },
+      "visible": true,
+      "zIndex": 0,
+      "title": "新手活动",
+      "modal": true
+    },
+    {
+      "type": "panel",
+      "id": "content",
+      "parentId": "root",
+      "layout": { "x": 0, "y": 0, "width": 0, "height": 0, "horizontalAnchor": "stretch", "verticalAnchor": "stretch", "margin": { "left": 24, "top": 64, "right": 24, "bottom": 24 } },
+      "visible": true,
+      "zIndex": 0,
+      "flow": { "direction": "vertical", "spacing": 12, "padding": { "left": 16, "top": 16, "right": 16, "bottom": 16 } },
+      "clipChildren": true,
+      "backgroundColor": "#202430"
+    },
+    {
+      "type": "image",
+      "id": "banner",
+      "parentId": "content",
+      "layout": { "x": 0, "y": 0, "width": 600, "height": 160, "horizontalAnchor": "left", "verticalAnchor": "top", "margin": { "left": 0, "top": 0, "right": 0, "bottom": 0 } },
+      "visible": true,
+      "zIndex": 0,
+      "assetId": "activity/banner",
+      "stretch": "uniformToFill",
+      "alternateText": "新手活动横幅"
+    },
+    {
+      "type": "text",
+      "id": "description",
+      "parentId": "content",
+      "layout": { "x": 0, "y": 0, "width": 600, "height": 48, "horizontalAnchor": "left", "verticalAnchor": "top", "margin": { "left": 0, "top": 0, "right": 0, "bottom": 0 } },
+      "visible": true,
+      "zIndex": 0,
+      "content": "欢迎参加新手活动",
+      "format": "rich",
+      "fontId": "default-cn",
+      "fontSize": 18,
+      "color": "#FFFFFF"
+    },
+    {
+      "type": "list",
+      "id": "rewards",
+      "parentId": "content",
+      "layout": { "x": 0, "y": 0, "width": 600, "height": 150, "horizontalAnchor": "left", "verticalAnchor": "top", "margin": { "left": 0, "top": 0, "right": 0, "bottom": 0 } },
+      "visible": true,
+      "zIndex": 0,
+      "orientation": "horizontal",
+      "spacing": 8,
+      "items": [
+        { "id": "reward-1", "primaryText": "木剑", "secondaryText": "数量 1", "assetId": "items/wood-sword" }
+      ]
+    },
+    {
+      "type": "itemSlot",
+      "id": "reward-slot",
+      "parentId": "content",
+      "layout": { "x": 0, "y": 0, "width": 48, "height": 48, "horizontalAnchor": "left", "verticalAnchor": "top", "margin": { "left": 0, "top": 0, "right": 0, "bottom": 0 } },
+      "visible": true,
+      "zIndex": 0,
+      "assetId": "items/wood-sword",
+      "displayName": "木剑",
+      "quantity": 1
+    },
+    {
+      "type": "progressBar",
+      "id": "progress",
+      "parentId": "content",
+      "layout": { "x": 0, "y": 0, "width": 600, "height": 24, "horizontalAnchor": "left", "verticalAnchor": "top", "margin": { "left": 0, "top": 0, "right": 0, "bottom": 0 } },
+      "visible": true,
+      "zIndex": 0,
+      "minimum": 0,
+      "maximum": 100,
+      "value": 35,
+      "text": "35%"
+    },
+    {
+      "type": "textInput",
+      "id": "code",
+      "parentId": "content",
+      "layout": { "x": 0, "y": 0, "width": 280, "height": 40, "horizontalAnchor": "left", "verticalAnchor": "top", "margin": { "left": 0, "top": 0, "right": 0, "bottom": 0 } },
+      "visible": true,
+      "zIndex": 0,
+      "placeholder": "输入兑换码",
+      "maxLength": 32,
+      "multiline": false,
+      "password": false,
+      "bindingKey": "exchangeCode"
+    },
+    {
+      "type": "button",
+      "id": "claim",
+      "parentId": "content",
+      "layout": { "x": 0, "y": 0, "width": 180, "height": 48, "horizontalAnchor": "left", "verticalAnchor": "top", "margin": { "left": 0, "top": 0, "right": 0, "bottom": 0 } },
+      "visible": true,
+      "zIndex": 0,
+      "text": "领取",
+      "actionId": "claim",
+      "enabled": true
+    }
+  ]
+}
