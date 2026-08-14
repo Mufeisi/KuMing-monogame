@@ -68,6 +68,10 @@ public sealed class PcCustomGuiAdapterTests
         Assert.Equal(new Point(32, 30), host.Controls["header"].Location);
         Assert.Equal(new Point(400, 344), host.Controls["claim"].Location);
         Assert.Equal(before, CustomGuiDocumentCodec.Serialize(document));
+        PcCustomGuiImageControl fallback = Assert.IsType<PcCustomGuiImageControl>(host.Controls["banner"]);
+        Assert.False(fallback.AssetResolved);
+        Assert.NotEqual(Color.Transparent, fallback.BackColour);
+        Assert.Contains(fallback.Controls, control => control is MirLabel label && label.Text == "活动横幅");
     }
 
     [Fact]

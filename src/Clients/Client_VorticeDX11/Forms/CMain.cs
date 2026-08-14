@@ -14,6 +14,7 @@ using Shared.Diagnostics;
 using Vortice.WinForms;
 using Vortice.Direct3D11;
 using Font = System.Drawing.Font;
+using Client.CustomGui;
 
 namespace Client
 {
@@ -95,6 +96,15 @@ namespace Client
                 Client.Utils.ResolutionTrace.LogClientState("CMain.Load", "Before ApplyWindowMode");
                 ApplyWindowMode();
                 Client.Utils.ResolutionTrace.LogClientState("CMain.Load", "After ApplyWindowMode");
+
+                if (PcCustomGuiRenderSmoke.IsConfigured)
+                {
+                    Location = new Point(-32000, -32000);
+                    ShowInTaskbar = false;
+                    DXManager.Create();
+                    PcCustomGuiRenderSmoke.AttachScene();
+                    return;
+                }
 
                 LoadMouseCursors();
                 SetMouseCursor(MouseCursor.Default);
@@ -851,6 +861,46 @@ namespace Client
             catch (Exception ex)
             {
                 SaveError(ex.ToString());
+            }
+            finally
+            {
+                staging?.Dispose();
+                backbuffer?.Dispose();
+            }
+        }
+
+        internal bool SaveBackBuffer(string outputPath)
+        {
+            if (DXManager.DXGISwapChain == null || DXManager.Device == null || DXManager.DeviceContext == null)
+                return false;
+            Vortice.Direct3D11.ID3D11Texture2D backbuffer = null;
+            Vortice.Direct3D11.ID3D11Texture2D staging = null;
+            try
+            {
+                backbuffer = DXManager.DXGISwapChain.GetBuffer<Vortice.Direct3D11.ID3D11Texture2D>(0);
+                var description = backbuffer.Description;
+                var stagingDescription = description;
+                stagingDescription.Usage = ResourceUsage.Staging;
+                stagingDescription.BindFlags = BindFlags.None;
+                stagingDescription.CPUAccessFlags = CpuAccessFlags.Read;
+                stagingDescription.MiscFlags = ResourceOptionFlags.None;
+                stagingDescription.MipLevels = 1;
+                stagingDescription.ArraySize = 1;
+                stagingDescription.SampleDescription = new Vortice.DXGI.SampleDescription(1, 0);
+                staging = DXManager.Device.CreateTexture2D(stagingDescription);
+                DXManager.DeviceContext.CopyResource(staging, backbuffer);
+                var mapped = DXManager.DeviceContext.Map(staging, 0, MapMode.Read, MapFlags.None);
+                try
+                {
+                    using var source = new Bitmap((int)description.Width, (int)description.Height, (int)mapped.RowPitch, PixelFormat.Format32bppPArgb, mapped.DataPointer);
+                    using var image = new Bitmap(source);
+                    image.Save(outputPath, ImageFormat.Png);
+                }
+                finally
+                {
+                    DXManager.DeviceContext.Unmap(staging, 0);
+                }
+                return true;
             }
             finally
             {

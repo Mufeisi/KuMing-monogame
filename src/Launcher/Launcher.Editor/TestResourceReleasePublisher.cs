@@ -2,6 +2,8 @@ using System.IO.Compression;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using Shared.CustomGui;
+using Shared.Release;
 using Shared.Security;
 
 namespace LyoCrystal.LauncherEditor;
@@ -31,13 +33,41 @@ public static class TestResourceReleasePublisher
                 new TestPackageSpec("core-startup", "core", ["Data/Title.Lib", "Data/ChrSel.Lib", "Data/Prguse.Lib"]),
                 new TestPackageSpec("fui-retro", "ui", ["Assets/UI/复古/UI_fui.bytes"]),
             };
-            string packageManifest = JsonSerializer.Serialize(new
+            var resourceManifest = new BootstrapPackageManifestDocument
             {
-                RepositoryRoot = "", BootstrapRoot = "", TotalAssets = specs.Sum(item => item.Assets.Count), TotalBytes = 0L,
-                Packs = specs.Select(item => new { item.Name, Kind = item.Kind, Description = "作者工具测试资源", AssetCount = item.Assets.Count, TotalBytes = 0L, ManifestPath = "", InstallRootHint = $"Cache/Mobile/Packages/{item.Name}/", Assets = item.Assets }).ToArray(),
-            });
+                Packs = specs.Select(item => new BootstrapPackageManifestEntry
+                {
+                    Name = item.Name,
+                    Kind = item.Kind,
+                    Description = "作者工具测试资源",
+                    AssetCount = item.Assets.Count,
+                    TotalBytes = 0L,
+                    ManifestPath = string.Empty,
+                    InstallRootHint = $"Cache/Mobile/Packages/{item.Name}/",
+                    Assets = item.Assets.ToList(),
+                }).ToList(),
+            };
+            string packageManifest = JsonSerializer.Serialize(resourceManifest);
             var packages = new List<BootstrapSignedPackage>();
             foreach (TestPackageSpec spec in specs) AddPackage(sourceRoot, packagesRoot, spec.Name, spec.Assets, packageManifest, packages);
+            CustomGuiRuntimeDocument guiDocument = project.GameGuiDocuments.FirstOrDefault()
+                ?? throw new InvalidDataException("项目缺少游戏 GUI 文档");
+            var guiBindings = new CustomGuiResourceBindingsDocument
+            {
+                Assets =
+                [
+                    new("event-banner", "core-startup", "Data/Title.Lib"),
+                    new("starter-sword", "core-startup", "Data/Prguse.Lib"),
+                ],
+            };
+            string guiPath = Path.Combine(packagesRoot, CustomGuiStaticPackagePublisher.PackageName + ".zip");
+            CustomGuiStaticPackagePublisher.Publish(guiPath, guiDocument, guiBindings, resourceManifest);
+            packages.Add(new BootstrapSignedPackage
+            {
+                Name = CustomGuiStaticPackagePublisher.PackageName,
+                Sha256 = Hash(guiPath),
+                Size = new FileInfo(guiPath).Length,
+            });
 
             long sequence = Math.Max(1, DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
             string resourceVersion = $"{project.Snapshot.ProjectId}-test-{sequence}";

@@ -546,6 +546,7 @@ namespace MonoShare
 
 #if ANDROID || IOS
             FairyGuiHost.TryInitialize(this);
+            MobileCustomGuiRenderSmoke.TryAttach();
 #endif
         }
 
@@ -1479,6 +1480,7 @@ namespace MonoShare
 
 #if ANDROID || IOS
             FairyGuiHost.Draw(gameTime);
+            MobileCustomGuiRenderSmoke.TryCaptureAfterDraw(this);
 #endif
 
             if (Settings.DebugMode)

@@ -1,3 +1,5 @@
+#nullable enable
+
 using Client.MirControls;
 using Client.MirGraphics;
 using Shared.CustomGui;
@@ -13,7 +15,7 @@ internal interface IPcCustomGuiAssetResolver
 
 internal static class PcCustomGuiAdapter
 {
-    internal static PcCustomGuiHost Create(CustomGuiRuntimeDocument document, Size viewport, IPcCustomGuiAssetResolver assetResolver = null)
+    internal static PcCustomGuiHost Create(CustomGuiRuntimeDocument document, Size viewport, IPcCustomGuiAssetResolver? assetResolver = null)
     {
         ArgumentNullException.ThrowIfNull(document);
         if (viewport.Width <= 0 || viewport.Height <= 0) throw new ArgumentOutOfRangeException(nameof(viewport));
@@ -59,11 +61,11 @@ internal static class PcCustomGuiAdapter
         }
     }
 
-    private static MirControl CreateControl(CustomGuiElement element, float scale, IPcCustomGuiAssetResolver resolver) => element switch
+    private static MirControl CreateControl(CustomGuiElement element, float scale, IPcCustomGuiAssetResolver? resolver) => element switch
     {
         CustomGuiWindow value => new PcCustomGuiWindowControl(value.Title, value.Modal, scale),
         CustomGuiPanel value => new PcCustomGuiPanelControl(value.BackgroundColor, value.ClipChildren),
-        CustomGuiImage value => new PcCustomGuiImageControl(value.AssetId, value.Stretch, Resolve(value.AssetId, resolver)),
+        CustomGuiImage value => new PcCustomGuiImageControl(value.AssetId, value.AlternateText, value.Stretch, Resolve(value.AssetId, resolver), scale),
         CustomGuiText value => CreateLabel(value, scale),
         CustomGuiButton value => new PcCustomGuiButtonControl(value.Text, value.ActionId, value.Enabled, scale),
         CustomGuiTextInput value => new PcCustomGuiTextInputControl(value.Placeholder, value.MaxLength, value.Multiline, value.Password, value.BindingKey, scale),
@@ -85,7 +87,7 @@ internal static class PcCustomGuiAdapter
         return label;
     }
 
-    private static PcCustomGuiAsset? Resolve(string assetId, IPcCustomGuiAssetResolver resolver) =>
+    private static PcCustomGuiAsset? Resolve(string assetId, IPcCustomGuiAssetResolver? resolver) =>
         resolver is not null && !string.IsNullOrWhiteSpace(assetId) && resolver.TryResolve(assetId, out PcCustomGuiAsset asset) ? asset : null;
 
     internal static Color ParseColor(string value, Color fallback)
@@ -144,7 +146,7 @@ internal class PcCustomGuiPanelControl : MirControl
 
 internal sealed class PcCustomGuiWindowControl : PcCustomGuiPanelControl
 {
-    private readonly MirLabel _title;
+    private readonly MirLabel? _title;
     private readonly int _horizontalPadding;
     private readonly int _titleHeight;
 
@@ -170,17 +172,39 @@ internal sealed class PcCustomGuiWindowControl : PcCustomGuiPanelControl
 internal sealed class PcCustomGuiImageControl : MirControl
 {
     private readonly PcCustomGuiAsset? _asset;
+    private readonly MirLabel? _fallback;
 
-    internal PcCustomGuiImageControl(string assetId, CustomGuiImageStretch stretch, PcCustomGuiAsset? asset)
+    internal PcCustomGuiImageControl(string assetId, string alternateText, CustomGuiImageStretch stretch, PcCustomGuiAsset? asset, float scale)
     {
         AssetId = assetId ?? string.Empty;
         Stretch = stretch;
         _asset = asset;
+        if (!_asset.HasValue)
+        {
+            BackColour = Color.FromArgb(44, 57, 72);
+            Border = true;
+            BorderColour = Color.FromArgb(92, 112, 136);
+            DrawControlTexture = true;
+            _fallback = PcCustomGuiAdapter.ScaleLabel(new MirLabel
+            {
+                Text = string.IsNullOrWhiteSpace(alternateText) ? "图片资源" : alternateText,
+                AutoSize = false,
+                ForeColour = Color.FromArgb(196, 208, 220),
+                DrawFormat = TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter,
+                Parent = this,
+            }, scale);
+        }
     }
 
     internal string AssetId { get; }
     internal CustomGuiImageStretch Stretch { get; }
     internal bool AssetResolved => _asset.HasValue;
+
+    protected override void OnSizeChanged()
+    {
+        base.OnSizeChanged();
+        if (_fallback is not null) _fallback.Size = Size;
+    }
 
     protected internal override void DrawControl()
     {
@@ -302,7 +326,7 @@ internal sealed class PcCustomGuiItemSlotControl : PcCustomGuiPanelControl
         _padding = PcCustomGuiAdapter.ScaleMetric(4, scale);
         _labelHeight = PcCustomGuiAdapter.ScaleMetric(20, scale);
         _labelReserve = PcCustomGuiAdapter.ScaleMetric(28, scale);
-        new PcCustomGuiImageControl(AssetId, CustomGuiImageStretch.Uniform, asset) { Location = new Point(PcCustomGuiAdapter.ScaleMetric(4, scale), PcCustomGuiAdapter.ScaleMetric(4, scale)), Parent = this };
+        new PcCustomGuiImageControl(AssetId, DisplayName, CustomGuiImageStretch.Uniform, asset, scale) { Location = new Point(PcCustomGuiAdapter.ScaleMetric(4, scale), PcCustomGuiAdapter.ScaleMetric(4, scale)), Parent = this };
         PcCustomGuiAdapter.ScaleLabel(new MirLabel { Text = Quantity > 1 ? $"{DisplayName} × {Quantity}" : DisplayName, AutoSize = false, Parent = this }, scale);
     }
 

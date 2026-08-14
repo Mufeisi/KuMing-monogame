@@ -8,6 +8,7 @@ using Launcher.ThemeRuntime;
 using LyoCrystal.LauncherEditor;
 using Shared.CustomGui;
 using Shared.Security;
+using Shared.Release;
 using LyoCrystal.MicroGateway;
 using System.Net;
 using System.Net.Sockets;
@@ -48,7 +49,8 @@ public sealed class LauncherEditorTests
         Assert.Equal(pcIndex, androidIndex);
         Assert.True(File.Exists(Path.Combine(output, "Packages", "core-startup.zip")));
         Assert.True(File.Exists(Path.Combine(output, "Packages", "fui-retro.zip")));
-        Assert.Equal(2, result.PackageCount);
+        Assert.True(File.Exists(Path.Combine(output, "Packages", "custom-gui.zip")));
+        Assert.Equal(3, result.PackageCount);
         var trusted = new Dictionary<string, BootstrapManifestTrustedKey>
         {
             [project.Release.CurrentKeyId] = new() { KeyId = project.Release.CurrentKeyId, SubjectPublicKeyInfo = project.Release.CurrentPublicKey, NotBeforeSequence = project.Release.CurrentKeyNotBeforeSequence },
@@ -56,6 +58,86 @@ public sealed class LauncherEditorTests
         BootstrapManifestVerificationResult verified = BootstrapManifestSignaturePolicy.Verify(pcIndex, trusted, new Version(2, 0, 0));
         Assert.True(verified.IsValid, verified.Error);
         Assert.Equal(result.ResourceVersion, verified.Manifest.ResourceVersion);
+        CustomGuiAcceptedPackage gui = CustomGuiSignedReleaseLoader.Load(new CustomGuiSignedReleaseRequest
+        {
+            PackagesRoot = Path.Combine(output, "Packages"),
+            TrustedKeys = trusted,
+            CurrentClientVersion = new Version(2, 0, 0),
+        });
+        Assert.Equal(project.GameGuiDocuments[0].DocumentId, gui.Document.DocumentId);
+        Assert.Contains(gui.Document.Elements, element => element is CustomGuiImage);
+        Assert.Contains(gui.Document.Elements, element => element is CustomGuiList);
+        Assert.Contains(gui.Document.Elements, element => element is CustomGuiProgressBar);
+        Assert.Contains(gui.Document.Elements, element => element is CustomGuiButton);
+    }
+
+    [Fact]
+    public void FailedStaticGuiReleasePreservesPreviouslyAcceptedSignedRelease()
+    {
+        using var scope = new EditorTempScope();
+        var store = new EditorProjectStore(scope.Dir("workspace"));
+        EditorProject project = store.Create("gui06-rollback", "GUI-06 发布失败恢复", LauncherTemplateKind.Classic);
+        string resources = scope.Dir("resources");
+        AttachCrossPlatformResources(project, resources);
+        string acceptedRoot = Path.Combine(scope.Root, "accepted");
+        TestResourceReleasePublisher.Publish(project, store.GetProjectDirectory(project.Snapshot.ProjectId), acceptedRoot);
+
+        File.Delete(Path.Combine(resources, "Data", "Title.Lib"));
+        string failedRoot = Path.Combine(scope.Root, "failed");
+        Assert.ThrowsAny<Exception>(() => TestResourceReleasePublisher.Publish(
+            project,
+            store.GetProjectDirectory(project.Snapshot.ProjectId),
+            failedRoot));
+        Assert.False(Directory.Exists(failedRoot));
+
+        CustomGuiAcceptedPackage accepted = CustomGuiSignedReleaseLoader.Load(new CustomGuiSignedReleaseRequest
+        {
+            PackagesRoot = Path.Combine(acceptedRoot, "Packages"),
+            TrustedKeys = TrustedProjectKeys(project),
+            CurrentClientVersion = new Version(2, 0, 0),
+        });
+        Assert.Equal(project.GameGuiDocuments[0].DocumentId, accepted.Document.DocumentId);
+    }
+
+    [Fact]
+    public void SignedStaticGuiPackageRendersInActualPcClient()
+    {
+        using var scope = new EditorTempScope();
+        var store = new EditorProjectStore(scope.Dir("workspace"));
+        EditorProject project = store.Create("gui06-pc", "GUI-06 PC 运行冒烟", LauncherTemplateKind.Classic);
+        AttachCrossPlatformResources(project, scope.Dir("resources"));
+        string publish = scope.Dir("publish");
+        TestResourceReleasePublisher.Publish(project, store.GetProjectDirectory(project.Snapshot.ProjectId), publish);
+        string screenshot = Path.Combine(scope.Root, "pc-custom-gui.png");
+        string executable = Path.Combine(AppContext.BaseDirectory, "Client.exe");
+        var start = new ProcessStartInfo(executable)
+        {
+            WorkingDirectory = AppContext.BaseDirectory,
+            UseShellExecute = false,
+            CreateNoWindow = true,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+        };
+        start.ArgumentList.Add("--custom-gui-render-smoke");
+        start.ArgumentList.Add(Path.Combine(publish, "Packages"));
+        start.ArgumentList.Add(project.Release.CurrentKeyId);
+        start.ArgumentList.Add(project.Release.CurrentPublicKey);
+        start.ArgumentList.Add(screenshot);
+        using Process process = Process.Start(start) ?? throw new InvalidOperationException("无法启动 PC 客户端 GUI 冒烟");
+        Assert.True(process.WaitForExit(30_000), "PC 客户端 GUI 冒烟超时");
+        string error = process.StandardError.ReadToEnd();
+        Assert.Equal(0, process.ExitCode);
+        Assert.True(File.Exists(screenshot), error);
+        using var image = new Bitmap(screenshot);
+        Assert.Equal(new Size(1280, 720), image.Size);
+        Assert.NotEqual(image.GetPixel(0, 0), image.GetPixel(image.Width / 2, image.Height / 2));
+
+        string? evidenceRoot = Environment.GetEnvironmentVariable("LYOCRYSTAL_GUI06_EVIDENCE_DIR");
+        if (!string.IsNullOrWhiteSpace(evidenceRoot))
+        {
+            Directory.CreateDirectory(evidenceRoot);
+            File.Copy(screenshot, Path.Combine(evidenceRoot, "GUI-06-PC-1280x720.png"), overwrite: true);
+        }
     }
 
     [Fact]

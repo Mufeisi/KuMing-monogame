@@ -83,7 +83,7 @@ internal sealed class FairyGuiCustomGuiFactory : IMobileCustomGuiFactory
         return panel;
     }
 
-    private GLoader CreateImage(CustomGuiImage source)
+    private GObject CreateImage(CustomGuiImage source)
     {
         var loader = new GLoader
         {
@@ -97,8 +97,13 @@ internal sealed class FairyGuiCustomGuiFactory : IMobileCustomGuiFactory
                 _ => FillType.Scale,
             },
         };
-        if (_assetResolver is not null && _assetResolver.TryResolve(source.AssetId, out string packageUrl)) loader.url = packageUrl;
-        return loader;
+        if (_assetResolver is not null && _assetResolver.TryResolve(source.AssetId, out string packageUrl))
+        {
+            loader.url = packageUrl;
+            return loader;
+        }
+        loader.Dispose();
+        return new CustomGuiImagePlaceholder(source.AlternateText);
     }
 
     private static GObject CreateText(CustomGuiText source, float scale)
@@ -117,7 +122,7 @@ internal sealed class FairyGuiCustomGuiFactory : IMobileCustomGuiFactory
         AddBackground(button, spec.Bounds, new Color(36, 93, 130, 255));
         if (!string.IsNullOrWhiteSpace(source.AssetId))
         {
-            GLoader image = CreateImage(new CustomGuiImage { AssetId = source.AssetId, Stretch = CustomGuiImageStretch.Fill });
+            GObject image = CreateImage(new CustomGuiImage { AssetId = source.AssetId, AlternateText = source.Text, Stretch = CustomGuiImageStretch.Fill });
             image.SetSize(spec.Bounds.Width, spec.Bounds.Height);
             image.touchable = false;
             button.AddChild(image);
@@ -161,7 +166,7 @@ internal sealed class FairyGuiCustomGuiFactory : IMobileCustomGuiFactory
             if (!string.IsNullOrWhiteSpace(item.AssetId))
             {
                 float iconSize = Math.Min(rowHeight, 22F * spec.Scale);
-                GLoader icon = CreateImage(new CustomGuiImage { AssetId = item.AssetId, Stretch = CustomGuiImageStretch.Uniform });
+                GObject icon = CreateImage(new CustomGuiImage { AssetId = item.AssetId, AlternateText = item.PrimaryText, Stretch = CustomGuiImageStretch.Uniform });
                 icon.SetSize(iconSize, iconSize);
                 icon.touchable = false;
                 row.AddChild(icon);
@@ -209,7 +214,7 @@ internal sealed class FairyGuiCustomGuiFactory : IMobileCustomGuiFactory
     {
         var slot = new CustomGuiClippedComponent(false) { opaque = true };
         AddBackground(slot, spec.Bounds, new Color(24, 30, 39, 255));
-        GLoader image = CreateImage(new CustomGuiImage { AssetId = source.AssetId, Stretch = CustomGuiImageStretch.Uniform });
+        GObject image = CreateImage(new CustomGuiImage { AssetId = source.AssetId, AlternateText = source.DisplayName, Stretch = CustomGuiImageStretch.Uniform });
         float labelHeight = Math.Min(spec.Bounds.Height, 22F * spec.Scale);
         image.SetPosition(4F * spec.Scale, 4F * spec.Scale);
         image.SetSize(Math.Max(1F, spec.Bounds.Width - 8F * spec.Scale), Math.Max(1F, spec.Bounds.Height - labelHeight - 8F * spec.Scale));
@@ -277,5 +282,35 @@ internal sealed class CustomGuiClippedComponent : GComponent
     internal CustomGuiClippedComponent(bool clipChildren)
     {
         if (clipChildren) SetupOverflow(OverflowType.Hidden);
+    }
+}
+
+internal sealed class CustomGuiImagePlaceholder : GComponent
+{
+    private readonly GGraph _background;
+    private readonly GTextField _label;
+
+    internal CustomGuiImagePlaceholder(string? alternateText)
+    {
+        opaque = true;
+        _background = new GGraph { touchable = false };
+        _label = new GTextField
+        {
+            text = string.IsNullOrWhiteSpace(alternateText) ? "图片资源" : alternateText,
+            color = new Color(196, 208, 220, 255),
+            align = AlignType.Center,
+            verticalAlign = VertAlignType.Middle,
+            touchable = false,
+        };
+        _background.DrawRect(1, 1, 1, new Color(92, 112, 136, 255), new Color(44, 57, 72, 255));
+        AddChild(_background);
+        AddChild(_label);
+    }
+
+    protected override void HandleSizeChanged()
+    {
+        base.HandleSizeChanged();
+        _background.SetSize(Math.Max(1F, width), Math.Max(1F, height));
+        _label.SetSize(Math.Max(1F, width), Math.Max(1F, height));
     }
 }

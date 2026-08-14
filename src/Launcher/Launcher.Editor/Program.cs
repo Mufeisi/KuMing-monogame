@@ -11,6 +11,7 @@ internal static class Program
         ApplicationConfiguration.Initialize();
         if (args.Length == 2 && args[0] == "--editor-smoke") return RunSmoke(args[1]);
         if (args.Length == 2 && args[0] == "--editor-ui-smoke") return RunUiSmoke(args[1]);
+        if (args.Length == 2 && args[0] == "--gui06-static-smoke") return RunCustomGuiStaticSmoke(args[1]);
         string workspace = args.Length == 2 && args[0] == "--workspace" ? args[1] : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "传奇启动器项目");
         Application.Run(new MainForm(new EditorProjectStore(workspace)));
         return 0;
@@ -66,6 +67,51 @@ internal static class Program
         }
     }
 
+    private static int RunCustomGuiStaticSmoke(string outputDirectory)
+    {
+        string output = Path.GetFullPath(outputDirectory);
+        try
+        {
+            Directory.CreateDirectory(output);
+            var store = new EditorProjectStore(Path.Combine(output, "workspace"));
+            EditorProject project = store.ListProjectIds().Contains("gui06-static", StringComparer.OrdinalIgnoreCase)
+                ? store.Load("gui06-static")
+                : store.Create("gui06-static", "新手活动窗口", LauncherTemplateKind.Widescreen);
+            string resources = Path.Combine(output, "resources");
+            foreach (string relative in new[] { "Data/Title.Lib", "Data/ChrSel.Lib", "Data/Prguse.Lib", "Assets/UI/复古/UI_fui.bytes" })
+            {
+                string path = Path.Combine(resources, relative.Replace('/', Path.DirectorySeparatorChar));
+                Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+                if (!File.Exists(path)) File.WriteAllBytes(path, System.Text.Encoding.UTF8.GetBytes("GUI-06-" + relative));
+            }
+            project.Gateway.ResourceDirectory = resources;
+            store.Save(project);
+            string projectRoot = store.GetProjectDirectory(project.Snapshot.ProjectId);
+            TestResourceReleasePublisher.Publish(project, projectRoot, Path.Combine(output, "signed-resource-publish"));
+            store.Save(project);
+            using var form = new MainForm(store)
+            {
+                WindowState = FormWindowState.Normal,
+                Size = new Size(1280, 800),
+                StartPosition = FormStartPosition.Manual,
+                Location = new Point(-32000, -32000),
+            };
+            form.Show();
+            Application.DoEvents();
+            form.PrepareCustomGuiEvidence();
+            using var screenshot = new Bitmap(form.Width, form.Height);
+            form.DrawToBitmap(screenshot, new Rectangle(Point.Empty, screenshot.Size));
+            screenshot.Save(Path.Combine(output, "GUI-06-Designer-1280x800.png"), ImageFormat.Png);
+            form.Hide();
+            return File.Exists(Path.Combine(output, "signed-resource-publish", "Packages", "custom-gui.zip")) ? 0 : 2;
+        }
+        catch (Exception error)
+        {
+            try { Directory.CreateDirectory(output); File.WriteAllText(Path.Combine(output, "gui06-error.txt"), error.ToString()); } catch { }
+            return 1;
+        }
+    }
+
     private static int RunSmoke(string outputDirectory)
     {
         string output = Path.GetFullPath(outputDirectory);
@@ -83,7 +129,7 @@ internal static class Program
             if (string.IsNullOrWhiteSpace(project.ImportedClientDirectory))
             {
                 project.ImportedClientDirectory = Path.Combine(output, "smoke-client");
-                foreach (string relative in new[] { "Data/Title.Lib", "Data/ChrSel.Lib", "Data/Prguse.Lib" })
+                foreach (string relative in new[] { "Data/Title.Lib", "Data/ChrSel.Lib", "Data/Prguse.Lib", "Assets/UI/复古/UI_fui.bytes" })
                 {
                     string path = Path.Combine(project.ImportedClientDirectory, relative.Replace('/', Path.DirectorySeparatorChar));
                     Directory.CreateDirectory(Path.GetDirectoryName(path)!);
@@ -120,6 +166,9 @@ internal static class Program
             store.Save(project);
             ProjectReleasePublisher.CreateOfflineDeploymentPackage(publish, Path.Combine(output, "smoke-project-离线发布.zip"));
             ProjectReleaseKeyStore.ExportRecovery(project, projectRoot, "Smoke-Recovery-Password-2026", Path.Combine(output, "smoke-project-密钥恢复包.lyorecovery"));
+            string resourcePublish = Path.Combine(output, "signed-resource-publish");
+            TestResourceReleasePublisher.Publish(project, projectRoot, resourcePublish);
+            store.Save(project);
             using (var form = new MainForm(store) { WindowState = FormWindowState.Normal, Size = new Size(1400, 850), StartPosition = FormStartPosition.Manual, Location = new Point(-32000, -32000) })
             {
                 form.Show(); Application.DoEvents(); form.PrepareCustomGuiEvidence();
@@ -128,7 +177,7 @@ internal static class Program
                 screenshot.Save(Path.Combine(output, "editor-ui.png"), ImageFormat.Png);
                 form.Hide();
             }
-            return new[] { "100", "125", "150", "200" }.All(label => File.Exists(Path.Combine(output, $"editor-preview-{label}.png"))) && File.Exists(Path.Combine(output, "editor-ui.png")) && File.Exists(player) && File.Exists(Path.Combine(output, "smoke-project-离线发布.zip")) && File.Exists(Path.Combine(output, "smoke-project-密钥恢复包.lyorecovery")) ? 0 : 2;
+            return new[] { "100", "125", "150", "200" }.All(label => File.Exists(Path.Combine(output, $"editor-preview-{label}.png"))) && File.Exists(Path.Combine(output, "editor-ui.png")) && File.Exists(player) && File.Exists(Path.Combine(output, "smoke-project-离线发布.zip")) && File.Exists(Path.Combine(output, "smoke-project-密钥恢复包.lyorecovery")) && File.Exists(Path.Combine(resourcePublish, "Packages", "custom-gui.zip")) ? 0 : 2;
         }
         catch (Exception ex)
         {

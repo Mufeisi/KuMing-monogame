@@ -12,6 +12,9 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Drawing.Imaging;
+using Client.CustomGui;
+using Shared.CustomGui;
+using Shared.Security;
 
 namespace Client
 {
@@ -43,6 +46,16 @@ namespace Client
             if (classicRenderIndex >= 0 && classicRenderIndex + 1 < args.Length)
             {
                 Environment.Exit(RenderNativeClassicEvidence(args[classicRenderIndex + 1]));
+                return;
+            }
+            int customGuiRenderIndex = Array.FindIndex(args, item => string.Equals(item, "--custom-gui-render-smoke", StringComparison.OrdinalIgnoreCase));
+            if (customGuiRenderIndex >= 0 && customGuiRenderIndex + 4 < args.Length)
+            {
+                Environment.Exit(RunCustomGuiRenderSmoke(
+                    args[customGuiRenderIndex + 1],
+                    args[customGuiRenderIndex + 2],
+                    args[customGuiRenderIndex + 3],
+                    args[customGuiRenderIndex + 4]));
                 return;
             }
 
@@ -182,6 +195,47 @@ namespace Client
             Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(outputPath))!);
             bitmap.Save(outputPath, ImageFormat.Png);
             return form.ClientSize == new Size(801, 554) && form.Text == "酷明传奇" ? 0 : 2;
+        }
+
+        private static int RunCustomGuiRenderSmoke(string packagesRoot, string keyId, string publicKey, string outputPath)
+        {
+            try
+            {
+                var trusted = new Dictionary<string, BootstrapManifestTrustedKey>(StringComparer.Ordinal)
+                {
+                    [keyId] = new BootstrapManifestTrustedKey { KeyId = keyId, SubjectPublicKeyInfo = publicKey, NotBeforeSequence = 1 },
+                };
+                CustomGuiAcceptedPackage accepted = CustomGuiSignedReleaseLoader.Load(new CustomGuiSignedReleaseRequest
+                {
+                    PackagesRoot = packagesRoot,
+                    TrustedKeys = trusted,
+                    CurrentClientVersion = new Version(2, 0, 0),
+                });
+                string output = Path.GetFullPath(outputPath);
+                Directory.CreateDirectory(Path.GetDirectoryName(output)!);
+                Settings.FullScreen = false;
+                Settings.Borderless = false;
+                Settings.TopMost = false;
+                Settings.UseMouseCursors = false;
+                Settings.ApplyResolutionSetting(1280);
+                Packet.IsServer = false;
+                PcCustomGuiRenderSmoke.Configure(accepted.Document, output);
+                System.Windows.Forms.Application.SetHighDpiMode(System.Windows.Forms.HighDpiMode.PerMonitorV2);
+                System.Windows.Forms.Application.EnableVisualStyles();
+                System.Windows.Forms.Application.SetCompatibleTextRenderingDefault(false);
+                System.Windows.Forms.Application.Run(Form = new CMain());
+                if (PcCustomGuiRenderSmoke.Failure is not null) throw new InvalidOperationException("PC GUI 截图冒烟失败", PcCustomGuiRenderSmoke.Failure);
+                return File.Exists(output) && new FileInfo(output).Length > 0 ? 0 : 2;
+            }
+            catch (Exception error)
+            {
+                Console.Error.WriteLine(error);
+                return 1;
+            }
+            finally
+            {
+                PcCustomGuiRenderSmoke.Reset();
+            }
         }
 
         private static void RunOriginalClassicLauncher(LoadedLauncherSnapshot loaded, string executableDirectory, string resourceDirectory)

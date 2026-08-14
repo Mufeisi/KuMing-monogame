@@ -68,6 +68,19 @@ public sealed class MainActivity : AndroidGameActivity
             return;
         }
 
+#if DEBUG
+        if (Intent?.GetBooleanExtra("gui06StaticRenderProbe", false) == true)
+        {
+            string keyId = Intent?.GetStringExtra("gui06KeyId") ?? string.Empty;
+            string publicKey = Intent?.GetStringExtra("gui06PublicKey") ?? string.Empty;
+            MobileCustomGuiRenderSmoke.Configure(
+                Path.Combine(FileSystem.AppDataDirectory, "gui06-packages"),
+                keyId,
+                publicKey,
+                Path.Combine(FileSystem.AppDataDirectory, "gui06-android.png"));
+        }
+#endif
+
         _game = new CMain(FileSystem.AppDataDirectory)
         {
             IsMouseVisible = false,
