@@ -265,6 +265,64 @@ internal sealed class FairyGuiCustomGuiNode : IMobileCustomGuiNode
         parent.AddChild(typed.Object);
     }
 
+    public void ApplyState(CustomGuiStateEntry state)
+    {
+        ArgumentNullException.ThrowIfNull(state);
+        switch (state.Kind)
+        {
+            case CustomGuiStateKind.Text:
+                if (Object is GTextField text) text.text = state.TextValue;
+                else if (Object is GTextInput input) input.text = state.TextValue;
+                break;
+            case CustomGuiStateKind.Integer:
+                if (Object is GTextField integer) integer.text = state.IntegerValue.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                break;
+            case CustomGuiStateKind.Boolean:
+                Object.visible = state.BooleanValue;
+                break;
+            case CustomGuiStateKind.Progress:
+                if (Object is GProgressBar progress)
+                {
+                    progress.max = Math.Max(1, state.MaximumValue);
+                    progress.value = Math.Clamp(state.CurrentValue, 0, progress.max);
+                }
+                break;
+            case CustomGuiStateKind.List:
+                ApplyList(Object as GList, state.ListItems);
+                break;
+            case CustomGuiStateKind.ItemSlots:
+                ApplyItemSlots(Object as GComponent, state.ItemSlots);
+                break;
+            case CustomGuiStateKind.ButtonVisible:
+                Object.visible = state.BooleanValue;
+                break;
+            case CustomGuiStateKind.ButtonEnabled:
+                Object.enabled = state.BooleanValue;
+                break;
+        }
+    }
+
+    private static void ApplyList(GList? list, IReadOnlyList<CustomGuiStateListItem> items)
+    {
+        if (list is null) return;
+        list.RemoveChildren(0, -1, dispose: true);
+        foreach (CustomGuiStateListItem item in items ?? [])
+        {
+            var row = new GTextField { name = item.Id, text = string.IsNullOrWhiteSpace(item.SecondaryText) ? item.PrimaryText : $"{item.PrimaryText}  {item.SecondaryText}" };
+            row.SetSize(Math.Max(1, list.width), 26);
+            list.AddChild(row);
+        }
+    }
+
+    private static void ApplyItemSlots(GComponent? slot, IReadOnlyList<CustomGuiStateItemSlot> items)
+    {
+        if (slot is null) return;
+        CustomGuiStateItemSlot? first = items?.FirstOrDefault();
+        slot.enabled = first?.Enabled ?? false;
+        GTextField? label = slot.GetChildAt(slot.numChildren - 1) as GTextField;
+        if (label is not null) label.text = first is null ? string.Empty : first.Quantity > 1 ? $"{first.DisplayName} × {first.Quantity}" : first.DisplayName;
+    }
+
     public void Dispose()
     {
         if (_disposed || Object._disposed)

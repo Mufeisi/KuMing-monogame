@@ -11,6 +11,66 @@ namespace Launcher.PlayerShellIntegration;
 public sealed class PcCustomGuiAdapterTests
 {
     [Fact]
+    public void DynamicStateProjectsIntoExistingMirControls()
+    {
+        CustomGuiRuntimeDocument document = CustomGuiAuthoringDefaults.Create();
+        using PcCustomGuiHost host = PcCustomGuiAdapter.Create(document, new Size(1280, 720));
+        var session = new CustomGuiClientStateSession(document, 7, host);
+        session.Open(new CustomGuiOpenState(1, document.DocumentId, (uint)document.Revision, 7, Guid.NewGuid(),
+            DateTimeOffset.UtcNow.AddMinutes(1).ToUnixTimeMilliseconds(), 1,
+            [
+                CustomGuiStateEntry.Text("title", "服务端活动"),
+                CustomGuiStateEntry.Progress("event.loginDays", 6, 7),
+                CustomGuiStateEntry.ButtonVisible("claim.visible", false),
+                CustomGuiStateEntry.ButtonEnabled("claim.enabled", false),
+            ]));
+
+        Assert.Equal("服务端活动", Assert.IsType<MirLabel>(host.Controls["title"]).Text);
+        Assert.Equal("6/7", Assert.IsType<MirLabel>(host.Controls["progress"].Controls[1]).Text);
+        Assert.False(host.Controls["claim"].Visible);
+        Assert.False(host.Controls["claim"].Enabled);
+    }
+
+    [Fact]
+    public void MirScenePacketPathOpensAdvancesAndClosesAcceptedPackageWindow()
+    {
+        CustomGuiRuntimeDocument document = CustomGuiAuthoringDefaults.Create();
+        PcCustomGuiRuntime.Reset();
+        PcCustomGuiRuntime.RegisterAcceptedPackage(new CustomGuiAcceptedPackage(
+            "gui10-test", 7, document, "package", "document", CustomGuiResourceCatalog.Empty));
+        using var scene = new TestScene { Size = new Size(1280, 720) };
+        Guid nonce = Guid.NewGuid();
+
+        scene.ProcessPacket(new ServerPackets.CustomGuiOpen
+        {
+            WindowInstanceId = 90, DocumentId = document.DocumentId, DocumentRevision = (uint)document.Revision,
+            PackageSequence = 7, SessionNonce = nonce, StateRevision = 1,
+            ExpiresAtUnixMilliseconds = DateTimeOffset.UtcNow.AddMinutes(1).ToUnixTimeMilliseconds(),
+            State = [CustomGuiStateEntry.Text("title", "收包打开")],
+        });
+        scene.ProcessPacket(new ServerPackets.CustomGuiStateDelta
+        {
+            WindowInstanceId = 90, DocumentId = document.DocumentId, DocumentRevision = (uint)document.Revision,
+            PackageSequence = 7, SessionNonce = nonce, StateRevision = 2,
+            State = [CustomGuiStateEntry.ButtonEnabled("claim.enabled", false)],
+        });
+        scene.ProcessPacket(new ServerPackets.CustomGuiStateDelta
+        {
+            WindowInstanceId = 90, DocumentId = document.DocumentId, DocumentRevision = (uint)document.Revision,
+            PackageSequence = 7, SessionNonce = nonce, StateRevision = 4,
+            State = [CustomGuiStateEntry.Text("title", "跳号不应生效")],
+        });
+
+        Assert.True(PcCustomGuiRuntime.IsOpen);
+        Assert.Equal((uint)2, PcCustomGuiRuntime.StateRevision);
+        Assert.Single(scene.Controls);
+        scene.ProcessPacket(new ServerPackets.CustomGuiClose { WindowInstanceId = 90, Reason = CustomGuiCloseReason.Requested });
+        Assert.False(PcCustomGuiRuntime.IsOpen);
+        Assert.Empty(scene.Controls);
+        PcCustomGuiRuntime.Reset();
+    }
+
+    [Fact]
     public void AdapterMaterializesEveryV1ElementAsMirControlAtFitScale()
     {
         CustomGuiRuntimeDocument document = CustomGuiAuthoringDefaults.Create();
@@ -93,4 +153,6 @@ public sealed class PcCustomGuiAdapterTests
             return !string.IsNullOrWhiteSpace(assetId);
         }
     }
+
+    private sealed class TestScene : MirScene { public override void Process() { } }
 }

@@ -52,7 +52,7 @@ internal static class PcCustomGuiAdapter
                 }
                 if (pending.Count == before) throw new CustomGuiLayoutException("运行描述的父级顺序无法物化");
             }
-            return new PcCustomGuiHost(root, controls, scale, offset);
+            return new PcCustomGuiHost(root, controls, document, scale, offset);
         }
         catch
         {
@@ -108,20 +108,49 @@ internal static class PcCustomGuiAdapter
     private static int Scale(int value, float scale) => (int)Math.Round(value * scale);
 }
 
-internal sealed class PcCustomGuiHost : IDisposable
+internal sealed class PcCustomGuiHost : IDisposable, ICustomGuiStateProjectionTarget
 {
-    internal PcCustomGuiHost(MirControl root, IReadOnlyDictionary<string, MirControl> controls, float scale, Point viewportOffset)
+    private readonly IReadOnlyDictionary<string, string> _bindingTargets;
+    private IReadOnlyDictionary<string, CustomGuiStateEntry> _state = new Dictionary<string, CustomGuiStateEntry>();
+    internal PcCustomGuiHost(MirControl root, IReadOnlyDictionary<string, MirControl> controls, CustomGuiRuntimeDocument document, float scale, Point viewportOffset)
     {
         Root = root;
         Controls = controls;
         Scale = scale;
         ViewportOffset = viewportOffset;
+        _bindingTargets = CustomGuiStateBindingCatalog.Create(document);
     }
 
     internal MirControl Root { get; }
     internal IReadOnlyDictionary<string, MirControl> Controls { get; }
     internal float Scale { get; }
     internal Point ViewportOffset { get; }
+    internal IReadOnlyDictionary<string, CustomGuiStateEntry> ProjectedState => _state;
+    public void Apply(IReadOnlyDictionary<string, CustomGuiStateEntry> state)
+    {
+        ArgumentNullException.ThrowIfNull(state);
+        foreach (string key in state.Keys)
+            if (!_bindingTargets.TryGetValue(key, out string? id) || !Controls.ContainsKey(id))
+                throw new CustomGuiStateProjectionException("GUI10-STATE-BINDING", $"PC 端不存在绑定目标：{key}");
+        foreach ((string key, CustomGuiStateEntry value) in state) ApplyToControl(Controls[_bindingTargets[key]], value);
+        _state = state;
+    }
+
+    private static void ApplyToControl(MirControl control, CustomGuiStateEntry state)
+    {
+        switch (state.Kind)
+        {
+            case CustomGuiStateKind.Text when control is MirLabel text: text.Text = state.TextValue; break;
+            case CustomGuiStateKind.Text when control is PcCustomGuiTextInputControl input: input.ApplyText(state.TextValue); break;
+            case CustomGuiStateKind.Integer when control is MirLabel integer: integer.Text = state.IntegerValue.ToString(System.Globalization.CultureInfo.InvariantCulture); break;
+            case CustomGuiStateKind.Boolean: control.Visible = state.BooleanValue; break;
+            case CustomGuiStateKind.Progress when control is PcCustomGuiProgressBarControl progress: progress.Apply(state.CurrentValue, state.MaximumValue); break;
+            case CustomGuiStateKind.List when control is PcCustomGuiListControl list: list.Apply(state.ListItems); break;
+            case CustomGuiStateKind.ItemSlots when control is PcCustomGuiItemSlotControl slot: slot.Apply(state.ItemSlots); break;
+            case CustomGuiStateKind.ButtonVisible: control.Visible = state.BooleanValue; break;
+            case CustomGuiStateKind.ButtonEnabled: control.Enabled = state.BooleanValue; break;
+        }
+    }
     internal void AttachTo(MirControl parent)
     {
         ArgumentNullException.ThrowIfNull(parent);
@@ -259,6 +288,7 @@ internal sealed class PcCustomGuiTextInputControl : PcCustomGuiPanelControl
     internal bool Multiline { get; }
     internal bool Password { get; }
     internal string BindingKey { get; }
+    internal void ApplyText(string value) { _placeholder.Text = value ?? string.Empty; _placeholder.ForeColour = Color.White; }
 
     protected override void OnSizeChanged()
     {
@@ -287,6 +317,16 @@ internal sealed class PcCustomGuiListControl : PcCustomGuiPanelControl
     internal CustomGuiListOrientation Orientation { get; }
     internal int Spacing { get; }
     internal IReadOnlyList<CustomGuiListItem> StaticItems { get; }
+    internal void Apply(IReadOnlyList<CustomGuiStateListItem> items)
+    {
+        foreach (MirControl child in Controls.ToArray()) child.Dispose();
+        int y = 6;
+        foreach (CustomGuiStateListItem item in items ?? [])
+        {
+            new MirLabel { Text = string.IsNullOrWhiteSpace(item.SecondaryText) ? item.PrimaryText : $"{item.PrimaryText}  {item.SecondaryText}", AutoSize = false, Location = new Point(8, y), Size = new Size(Math.Max(1, Size.Width - 16), 24), Parent = this };
+            y += 24 + Spacing;
+        }
+    }
 }
 
 internal sealed class PcCustomGuiProgressBarControl : PcCustomGuiPanelControl
@@ -305,6 +345,12 @@ internal sealed class PcCustomGuiProgressBarControl : PcCustomGuiPanelControl
     internal decimal Ratio { get; }
     internal string Text { get; }
     internal string BindingKey { get; }
+    internal void Apply(long current, long maximum)
+    {
+        decimal ratio = maximum <= 0 ? 0 : Math.Clamp((decimal)current / maximum, 0, 1);
+        if (Controls.Count > 0) Controls[0].Size = new Size((int)Math.Round(Size.Width * ratio), Size.Height);
+        if (Controls.Count > 1 && Controls[1] is MirLabel label) label.Text = $"{current}/{maximum}";
+    }
 
     protected override void OnSizeChanged()
     {
@@ -334,6 +380,13 @@ internal sealed class PcCustomGuiItemSlotControl : PcCustomGuiPanelControl
     internal string DisplayName { get; }
     internal int Quantity { get; }
     internal string BindingKey { get; }
+    internal void Apply(IReadOnlyList<CustomGuiStateItemSlot> items)
+    {
+        CustomGuiStateItemSlot? first = items?.FirstOrDefault();
+        Enabled = first?.Enabled ?? false;
+        if (Controls.Count > 1 && Controls[1] is MirLabel label)
+            label.Text = first is null ? string.Empty : first.Quantity > 1 ? $"{first.DisplayName} × {first.Quantity}" : first.DisplayName;
+    }
 
     protected override void OnSizeChanged()
     {

@@ -9,6 +9,28 @@ namespace Launcher.PlayerShellIntegration;
 public sealed class MobileCustomGuiAdapterTests
 {
     [Fact]
+    public void DynamicStateProjectsThroughMobileHostWithSameRevisionRules()
+    {
+        S.CustomGuiRuntimeDocument document = CreateDocument();
+        var factory = new RecordingFactory();
+        using M.MobileCustomGuiHost host = M.MobileCustomGuiAdapter.Create(document, 720, 1280, factory);
+        var session = new S.CustomGuiClientStateSession(document, 7, host);
+        session.Open(new S.CustomGuiOpenState(1, document.DocumentId, (uint)document.Revision, 7, Guid.NewGuid(),
+            DateTimeOffset.UtcNow.AddMinutes(1).ToUnixTimeMilliseconds(), 1,
+            [
+                S.CustomGuiStateEntry.Text("title", "服务端活动"),
+                S.CustomGuiStateEntry.Progress("progress", 6, 7),
+                S.CustomGuiStateEntry.ButtonVisible("claim.visible", false),
+                S.CustomGuiStateEntry.ButtonEnabled("claim.enabled", false),
+            ]));
+
+        Assert.Equal("服务端活动", factory.ById["title"].State!.TextValue);
+        Assert.Equal(6, factory.ById["progress"].State!.CurrentValue);
+        Assert.False(factory.ById["claim"].States.Single(value => value.Kind == S.CustomGuiStateKind.ButtonVisible).BooleanValue);
+        Assert.False(factory.ById["claim"].States.Single(value => value.Kind == S.CustomGuiStateKind.ButtonEnabled).BooleanValue);
+    }
+
+    [Fact]
     public void AdapterProjectsEveryV1ElementThroughFactoryAtFitScale()
     {
         S.CustomGuiRuntimeDocument document = CreateDocument();
@@ -129,6 +151,8 @@ public sealed class MobileCustomGuiAdapterTests
         public M.MobileCustomGuiNodeSpec Spec { get; } = spec;
         public RecordingNode? Parent { get; private set; }
         public bool Disposed { get; private set; }
+        public List<S.CustomGuiStateEntry> States { get; } = [];
+        public S.CustomGuiStateEntry? State => States.LastOrDefault();
 
         public void AddChild(M.IMobileCustomGuiNode child)
         {
@@ -137,6 +161,8 @@ public sealed class MobileCustomGuiAdapterTests
             typed.Parent = this;
             _children.Add(typed);
         }
+
+        public void ApplyState(S.CustomGuiStateEntry state) => States.Add(state);
 
         public void Dispose()
         {

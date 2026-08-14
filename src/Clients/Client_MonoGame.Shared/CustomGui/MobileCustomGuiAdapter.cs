@@ -30,6 +30,7 @@ public sealed record MobileCustomGuiNodeSpec(
 public interface IMobileCustomGuiNode : IDisposable
 {
     void AddChild(IMobileCustomGuiNode child);
+    void ApplyState(CustomGuiStateEntry state);
 }
 
 public interface IMobileCustomGuiFactory
@@ -94,7 +95,7 @@ public static class MobileCustomGuiAdapter
                 }
                 if (pending.Count == before) throw new CustomGuiLayoutException("移动 Adapter 无法物化父级顺序");
             }
-            return new MobileCustomGuiHost(root, nodes, scale, offsetX, offsetY);
+            return new MobileCustomGuiHost(root, nodes, document, scale, offsetX, offsetY);
         }
         catch (Exception error)
         {
@@ -119,18 +120,22 @@ public static class MobileCustomGuiAdapter
     };
 }
 
-public sealed class MobileCustomGuiHost : IDisposable
+public sealed class MobileCustomGuiHost : IDisposable, ICustomGuiStateProjectionTarget
 {
     private bool _disposed;
+    private readonly IReadOnlyDictionary<string, string> _bindingTargets;
+    private IReadOnlyDictionary<string, CustomGuiStateEntry> _state = new Dictionary<string, CustomGuiStateEntry>();
     internal MobileCustomGuiHost(
         IMobileCustomGuiNode root,
         IReadOnlyDictionary<string, IMobileCustomGuiNode> nodes,
+        CustomGuiRuntimeDocument document,
         float scale,
         float viewportOffsetX,
         float viewportOffsetY)
     {
         Root = root;
         Nodes = nodes;
+        _bindingTargets = CustomGuiStateBindingCatalog.Create(document);
         Scale = scale;
         ViewportOffsetX = viewportOffsetX;
         ViewportOffsetY = viewportOffsetY;
@@ -142,6 +147,18 @@ public sealed class MobileCustomGuiHost : IDisposable
     public float ViewportOffsetX { get; }
     public float ViewportOffsetY { get; }
     public bool IsDisposed => _disposed;
+    public IReadOnlyDictionary<string, CustomGuiStateEntry> ProjectedState => _state;
+    public void Apply(IReadOnlyDictionary<string, CustomGuiStateEntry> state)
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        ArgumentNullException.ThrowIfNull(state);
+        foreach (string key in state.Keys)
+            if (!_bindingTargets.TryGetValue(key, out string? elementId) || !Nodes.ContainsKey(elementId))
+                throw new CustomGuiStateProjectionException("GUI10-STATE-BINDING", $"移动端不存在绑定目标：{key}");
+        foreach ((string key, CustomGuiStateEntry value) in state)
+            Nodes[_bindingTargets[key]].ApplyState(value);
+        _state = state;
+    }
     public void Dispose()
     {
         if (_disposed) return;

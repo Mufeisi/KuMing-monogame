@@ -177,6 +177,7 @@ namespace MonoShare.MirControls
             switch (p.Index)
             {
                 case (short)ServerPacketIds.Disconnect: // Disconnected
+                    FairyGuiHost.CloseAllDynamicCustomGuiWindows();
                     string disconnectMessage = GetDisconnectMessage((S.Disconnect)p);
                     Network.Disconnect();
                     ReturnToLoginScene(disconnectMessage);
@@ -192,6 +193,12 @@ namespace MonoShare.MirControls
                     break;
                 case (short)ServerPacketIds.NewRecipeInfo:
                     NewRecipeInfo((S.NewRecipeInfo)p);
+                    break;
+                case (short)ServerPacketIds.CustomGuiOpen:
+                case (short)ServerPacketIds.CustomGuiStateDelta:
+                case (short)ServerPacketIds.CustomGuiActionResult:
+                case (short)ServerPacketIds.CustomGuiClose:
+                    FairyGuiHost.ProcessCustomGuiPacket(p);
                     break;
             }
         }

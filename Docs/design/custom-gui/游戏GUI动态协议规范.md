@@ -1,6 +1,6 @@
 # 游戏 GUI 动态协议规范
 
-- 状态：协议、服务端会话与权威动作验证已实施（`GUI-07..09`）
+- 状态：协议、服务端会话、权威动作验证与双端状态投影已实施（`GUI-07..10`）
 - 协议事实源：`src/Shared/Shared/CustomGui/CustomGuiProtocol.cs`、`CustomGuiPackets.cs`、`Enums.cs` 与 `Packet.cs`
 - 兼容审计：[`../../quality/protocol/PROTO-03-协议与资源兼容矩阵.md`](../../quality/protocol/PROTO-03-协议与资源兼容矩阵.md)
 - 语言：中文，代码标识符和协议类型名除外
@@ -70,6 +70,14 @@
 
 全部前置条件通过后，业务处理器只能返回 `ICustomGuiActionTransaction`。`Prepare` 阶段只允许读取事实和构造回滚快照，不得写玩家状态；`Commit` 执行真实写入，提交或结果编码失败必须由 `Rollback` 恢复。稳定拒绝前缀为 `GUI09-RULE-*`、`GUI09-AUTH-*`；内部异常只记录类型化审计，不回传堆栈或敏感数据。
 
-## 8. 回滚
+## 8. 客户端状态投影
+
+PC 与 Android 共用 `CustomGuiClientStateSession`。打开包必须精确匹配客户端已接受签名文档的 `DocumentId/DocumentRevision/PackageSequence`，且窗口未过期；增量还必须匹配窗口实例和随机数，并以 `当前修订 + 1` 严格推进。全部条目先验证并深拷贝，再调用平台 Host 替换投影；验证或平台投影失败不推进共享状态修订。
+
+首版绑定规则固定如下：文本/整数、面板布尔和列表以元素 `id` 绑定；输入、进度和物品槽优先使用其显式 `bindingKey`，为空时使用元素 `id`；按钮可见和可用分别使用 `<button-id>.visible` 与 `<button-id>.enabled`。未在签名运行描述中声明或类型不匹配的绑定以 `GUI10-STATE-BINDING` 失败，不允许动态创建控件或解释表达式。
+
+PC 只投影到既有 MirControls，Android 只投影到既有 FairyGUI 节点。打开、增量、动作结果、关闭和断线均由两端既有收包主线程分派；服务端关闭、断线或更高签名包替换会释放当前窗口树。动作结果仅记录严格递增请求序号和当前或下一状态修订，不赋予客户端业务权威。
+
+## 9. 回滚
 
 回滚 `gui-wire-v2` 必须先通过既有 `Activities` Kill Switch 停止新开窗口并失效现有会话，再按独立提交逆序回滚；`wire-v1` 清单和旧包号不需要修改。进入生产兼容窗口后，不得复用 ID `145/275..278` 表达其他语义。

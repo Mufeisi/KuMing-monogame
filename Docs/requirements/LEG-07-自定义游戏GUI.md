@@ -1,6 +1,6 @@
 # LEG-07：自定义游戏 GUI
 
-- 状态：已激活；`GUI-CORE-01..04` 与 `GUI-01..09` 已完成，`GATE-GUI-CORE`、`GATE-GUI-STATIC` 已关闭，下一切片为 `GUI-10` PC/Android 动态状态投影
+- 状态：已激活；`GUI-CORE-01..04` 与 `GUI-01..10` 已完成，`GATE-GUI-CORE`、`GATE-GUI-STATIC` 已关闭，下一切片为 `GUI-11` 脚本旁路 Hook
 - 负责人：项目所有者
 - 激活日期：2026-08-14
 - 最后复核日期：2026-08-14
@@ -65,7 +65,7 @@
 1. `GUI-07` Shared 真实协议包与严格上限；已完成，协议规范见 [`../design/custom-gui/游戏GUI动态协议规范.md`](../design/custom-gui/游戏GUI动态协议规范.md)，证据见 [`../Evidence/LEG-07-20260814/GUI-07.md`](../Evidence/LEG-07-20260814/GUI-07.md)。
 2. `GUI-08` 服务端窗口会话、GUI 版本绑定、随机数和重放保护；已完成，证据见 [`../Evidence/LEG-07-20260814/GUI-08.md`](../Evidence/LEG-07-20260814/GUI-08.md)。
 3. `GUI-09` 主线程验证动作、文本、选择、物品所有权、距离、NPC、活动、货币和次数；已完成，证据见 [`../Evidence/LEG-07-20260814/GUI-09.md`](../Evidence/LEG-07-20260814/GUI-09.md)。
-4. `GUI-10` PC/Android 状态投影和有界增量更新。
+4. `GUI-10` PC/Android 状态投影和有界增量更新；已完成，证据见 [`../Evidence/LEG-07-20260814/GUI-10.md`](../Evidence/LEG-07-20260814/GUI-10.md)。
 5. `GUI-11` 脚本旁路 Hook，只允许声明窗口、提供数据和处理登记的白名单动作。
 6. `GUI-12` 一个活动兑换窗口完成 PC/Android/服务端真实闭环。
 
@@ -284,7 +284,25 @@ Schema v1 可确定性往返全部首版控件与跨端布局；生产 Codec 严
 
 真实连接主线程中，只有会话身份与服务端规则同时通过的动作才能进入事务；文本、选择、物品所有权、NPC/距离、活动期、货币和次数均有失败不改事实的公共行为证据；协议/会话/权威组合、Base05 全量、Windows 全量和服务端构建通过。
 
-## 17. 回滚
+## 17. 已完成切片 `GUI-10`
+
+### 做
+
+1. `CustomGuiClientStateSession` 以已接受签名文档和包序列为边界，深拷贝初始状态，以严格连续修订原子替换增量；未知绑定、类型不匹配、窗口/随机数/包身份不匹配、过期和跳号全部稳定失败。
+2. PC 继续使用既有 `PcCustomGuiHost`/MirControls，Android 继续使用既有 `MobileCustomGuiHost`/FairyGUI；两端实现同一 `ICustomGuiStateProjectionTarget`，没有新增渲染器或第二状态事实源。
+3. 两端 `MirScene.ProcessPacket` 接入打开、增量、动作结果和关闭包；断线、服务端关闭及签名包替换释放窗口树，非法增量保留上一有效投影。
+4. 八种有界状态覆盖文本、布尔、整数、进度、列表、物品槽、按钮可见和按钮可用；动作结果序号单调推进且不能引用超前状态修订。
+
+### 不做
+
+1. 不新增任意表达式、脚本执行、反射目标或业务权威；脚本只能通过 `GUI-11` 的旁路白名单 Hook 提供声明和数据。
+2. 不在客户端计算价格、奖励、余额、次数或物品所有权；真实活动事务属于 `GUI-12`。
+
+### 完成定义
+
+同一服务端打开/增量经共享状态会话后投影到 PC MirControls 与 Android FairyGUI；身份、修订和绑定错误保持上一有效界面；断线/关闭/版本替换释放窗口；领域、Windows、PC Release 和 Android Release 门禁通过。
+
+## 18. 回滚
 
 1. 每个 `GUI-*` 切片独立提交，可按逆序回滚；不得用一次提交跨越两个阶段门禁。
 2. `GUI-CORE-*` 回滚必须恢复启动器 Adapter 与核心的匹配版本，禁止留下两套编辑逻辑。

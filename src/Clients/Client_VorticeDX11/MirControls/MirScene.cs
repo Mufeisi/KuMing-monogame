@@ -1,6 +1,7 @@
 ﻿using Client.MirGraphics;
 using Client.MirNetwork;
 using Client.MirScenes;
+using Client.CustomGui;
 using S = ServerPackets;
 
 namespace Client.MirControls
@@ -183,6 +184,7 @@ namespace Client.MirControls
             switch (p.Index)
             {
                 case (short)ServerPacketIds.Disconnect: // Disconnected
+                    PcCustomGuiRuntime.CloseAllWindows();
                     Disconnect((S.Disconnect) p);
                     Network.Disconnect();
                     break;
@@ -200,6 +202,12 @@ namespace Client.MirControls
                     break;
                 case (short)ServerPacketIds.NewHeroInfo:
                     NewHeroInfo((S.NewHeroInfo)p);
+                    break;
+                case (short)ServerPacketIds.CustomGuiOpen:
+                case (short)ServerPacketIds.CustomGuiStateDelta:
+                case (short)ServerPacketIds.CustomGuiActionResult:
+                case (short)ServerPacketIds.CustomGuiClose:
+                    PcCustomGuiRuntime.Process(p, this);
                     break;
             }
         }
