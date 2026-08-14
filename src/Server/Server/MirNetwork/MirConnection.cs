@@ -11,6 +11,8 @@ using Server.Utils;
 using Shared.Diagnostics;
 using Shared.Transport;
 using Server.Operations;
+using Server.CustomGui;
+using Shared.CustomGui;
 
 namespace Server.MirNetwork
 {
@@ -40,6 +42,7 @@ namespace Server.MirNetwork
         private readonly PerformanceQueueTracker _sendQueueMetrics = new PerformanceQueueTracker();
         private readonly PerformanceQueueTracker _retryQueueMetrics = new PerformanceQueueTracker();
         private readonly PerformanceQueueTracker _networkQueueMetrics = new PerformanceQueueTracker();
+        private readonly CustomGuiSessionController _customGuiSessions;
 
         private bool _disconnecting;
         public bool Connected;
@@ -109,6 +112,10 @@ namespace Server.MirNetwork
             _networkQueueMetrics.Enqueue();
             Envir.RecordNetworkQueueEnqueued(incoming: false);
             _retryList = new Queue<Packet>();
+            _customGuiSessions = new CustomGuiSessionController(
+                Enqueue,
+                () => Stage == GameStage.Game && Player != null,
+                featureEnabled: () => Envir.KillSwitches?.IsEnabled(KillSwitchFeature.Activities) != false);
 
             Connected = true;
             BeginReceive();
@@ -297,6 +304,9 @@ namespace Server.MirNetwork
                 SendDisconnect(23);
                 return;
             }
+
+            _customGuiSessions.EnforceAvailability();
+            _customGuiSessions.ExpireDueSessions();
 
             while (!_receiveList.IsEmpty && !Disconnecting)
             {
@@ -824,6 +834,9 @@ namespace Server.MirNetwork
                 case (short)ClientPacketIds.ConfirmItemRental:
                     ConfirmItemRental();
                     break;
+                case (short)ClientPacketIds.CustomGuiAction:
+                    _customGuiSessions.Handle((C.CustomGuiAction)p);
+                    break;
                 default:
                     MessageQueue.Enqueue(string.Format("接收到的数据包无效 ID: {0}", p.Index));
                     break;
@@ -832,6 +845,7 @@ namespace Server.MirNetwork
 
         public void SoftDisconnect(byte reason)
         {
+            _customGuiSessions.Clear();
             Stage = GameStage.Disconnected;
             TimeDisconnected = Envir.Time;
             
@@ -850,6 +864,7 @@ namespace Server.MirNetwork
         {
             if (!Connected) return;
 
+            _customGuiSessions.Clear();
             Connected = false;
             PerformanceMetrics.Increment(PerformanceMetricKind.Disconnects);
             Envir.GatewayGovernance?.RemoveSession(SessionID);
@@ -1088,11 +1103,42 @@ namespace Server.MirNetwork
             }
 
             Player.StopGame(23);
+            _customGuiSessions.Clear();
 
             Stage = GameStage.Select;
             Player = null;
 
             Enqueue(new S.LogOutSuccess { Characters = Account.GetSelectInfo() });
+        }
+
+        public S.CustomGuiOpen OpenCustomGuiSession(
+            string documentId,
+            uint documentRevision,
+            long packageSequence,
+            long expiresAtUnixMilliseconds,
+            uint stateRevision,
+            List<CustomGuiStateEntry> state)
+        {
+            S.CustomGuiOpen opened = Envir.InvokeOnMainThread(() =>
+                _customGuiSessions.Open(
+                    documentId,
+                    documentRevision,
+                    packageSequence,
+                    expiresAtUnixMilliseconds,
+                    stateRevision,
+                    state));
+            return opened ?? throw new InvalidOperationException(
+                "GUI08-SESSION-MAINTHREAD：游戏主线程不可用，窗口未打开");
+        }
+
+        public int InvalidateCustomGuiPackageSequence(long currentPackageSequence)
+        {
+            int[] result = Envir.InvokeOnMainThread(() => new[]
+            {
+                _customGuiSessions.InvalidatePackageSequence(currentPackageSequence)
+            });
+            return result?[0] ?? throw new InvalidOperationException(
+                "GUI08-SESSION-MAINTHREAD：游戏主线程不可用，版本失效未执行");
         }
 
         private void Turn(C.Turn p)
