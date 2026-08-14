@@ -13,6 +13,7 @@ namespace Server
         public MagicInfoForm()
         {
             InitializeComponent();
+            InitializeSkillInspection();
             for (int i = 0; i < Envir.MagicInfoList.Count; i++)
                 MagiclistBox.Items.Add(Envir.MagicInfoList[i]);
             UpdateMagicForm();
@@ -87,6 +88,8 @@ namespace Server
                  }
                 this.textBoxName.Text = _selectedMagicInfo.Name;
              }
+
+             RefreshSkillInspection();
         }
 
         private int GetMaxPower(byte level)
