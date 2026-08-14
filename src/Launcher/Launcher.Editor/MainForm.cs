@@ -768,6 +768,12 @@ internal sealed class MainForm : Form
 
     internal AuthorWorkbenchEvidence CaptureWorkbenchEvidence() => _workbenchOverview?.CaptureForEvidence() ?? throw new InvalidOperationException("工作台总览尚未创建");
 
+    internal WorkbenchStoredSnapshot SaveWorkbenchSnapshotForEvidence(string label) => _workbenchOverview?.SaveSnapshotForEvidence(label) ?? throw new InvalidOperationException("工作台总览尚未创建");
+
+    internal IReadOnlyList<WorkbenchVersionChange> CompareWorkbenchSnapshotsForEvidence() => _workbenchOverview?.CompareLatestSnapshotsForEvidence() ?? throw new InvalidOperationException("工作台总览尚未创建");
+
+    internal WorkbenchTestReleaseReview PublishWorkbenchTestReleaseForEvidence(string outputRoot) => _workbenchOverview?.PublishTestReleaseForEvidence(outputRoot) ?? throw new InvalidOperationException("工作台总览尚未创建");
+
     internal Task<IReadOnlyList<DistributionEndpointResult>> RunDistributionEndpointEvidenceAsync()
         => _distributionOverview?.RunEndpointPreflightAsync() ?? Task.FromResult<IReadOnlyList<DistributionEndpointResult>>(Array.Empty<DistributionEndpointResult>());
 

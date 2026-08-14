@@ -36,6 +36,27 @@ public sealed class WorkbenchOverviewTests
         Assert.Equal(WorkbenchVersionChangeKind.Unchanged, changes.Single(item => item.Id == "same").Change);
     }
 
+    [Fact]
+    public void 工作台快照与已验签测试发布结果_原子保存并可重载()
+    {
+        string root = Path.Combine(Path.GetTempPath(), "LEG10-review-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        var store = new WorkbenchReviewStore(root);
+        try
+        {
+            WorkbenchStoredSnapshot stored = store.SaveSnapshot(Snapshot(Version("resource", "v1")), "第一次审查");
+            var release = new WorkbenchTestReleaseReview("release-001", DateTimeOffset.UtcNow, "resource-test-1", "key-one", 1, 3, Path.Combine(root, "release"), true);
+            store.SaveTestRelease(release);
+
+            Assert.Equal("v1", store.LoadSnapshot(stored.Id).Snapshot.Facts.Single().Value);
+            Assert.Equal("resource-test-1", store.LoadTestRelease("release-001").ResourceVersion);
+            Assert.Single(store.ListSnapshotIds());
+            Assert.Single(store.ListTestReleaseIds());
+            Assert.Empty(Directory.EnumerateFiles(Path.Combine(root, "workbench-reviews"), "*.tmp-*", SearchOption.AllDirectories));
+        }
+        finally { Directory.Delete(root, true); }
+    }
+
     private static WorkbenchFact Version(string id, string value) => new(id, WorkbenchFactKind.Version, id, value, "版本源", WorkbenchFactStatus.Passed);
     private static WorkbenchOverviewSnapshot Snapshot(params WorkbenchFact[] facts) => new(DateTimeOffset.UtcNow, facts);
 

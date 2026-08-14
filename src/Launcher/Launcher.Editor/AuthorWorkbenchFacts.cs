@@ -46,15 +46,24 @@ internal static class AuthorWorkbenchFacts
     private static IReadOnlyList<WorkbenchFact> Capabilities(EditorProject project, string projectRoot)
     {
         int instanceCount = new ServiceInstanceProfileStore(projectRoot).ListInstanceIds().Count;
-        return
-        [
+        var facts = new List<WorkbenchFact>
+        {
             Capability("launcher-authoring", "启动器可视化编辑", true, "Launcher.Editor"),
             Capability("custom-gui", "游戏 GUI 编辑", project.GameGuiDocuments.Count > 0, "Shared.CustomGui"),
             Capability("micro-distribution", "微端按需发行", project.Snapshot.DefaultMicro.Enabled, "Launcher.ThemeRuntime"),
             Capability("signed-release", "签名发布与回滚", !string.IsNullOrWhiteSpace(project.Release.CurrentKeyId), "ProjectReleasePublisher"),
             Capability("service-instances", "服务实例运行", instanceCount > 0, "Launcher.InstanceManagement", $"档案 {instanceCount} 个"),
             new WorkbenchFact("multi-region-merger", WorkbenchFactKind.Capability, "跨区合服候选", "关闭", "LEG-10 候选门禁", WorkbenchFactStatus.Warning, "真实运营区、角色模型和脱敏演练条件尚未满足。")
-        ];
+        };
+        var reviews = new WorkbenchReviewStore(projectRoot);
+        string? latestId = reviews.ListTestReleaseIds().LastOrDefault();
+        if (latestId is not null)
+        {
+            WorkbenchTestReleaseReview latest = reviews.LoadTestRelease(latestId);
+            facts.Add(new WorkbenchFact("test-release-latest", WorkbenchFactKind.Capability, "最近测试发布", latest.ResourceVersion, "TestResourceReleasePublisher", WorkbenchFactStatus.Passed, $"序列 {latest.Sequence}｜包 {latest.PackageCount}｜签名 {latest.KeyId}"));
+        }
+        else facts.Add(new WorkbenchFact("test-release-latest", WorkbenchFactKind.Capability, "最近测试发布", "尚未生成", "TestResourceReleasePublisher", WorkbenchFactStatus.Warning));
+        return facts;
     }
 
     private static IReadOnlyList<WorkbenchFact> InstanceVersions(string projectRoot)

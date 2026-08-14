@@ -628,7 +628,8 @@ public sealed class LauncherEditorTests
         int overviewLoginPort = FreePort();
         int overviewServerPort;
         do overviewServerPort = FreePort(); while (overviewServerPort == overviewLoginPort);
-        new ServiceInstanceProfileStore(store.GetProjectDirectory(project.Snapshot.ProjectId)).Save(new ServiceInstanceProfile
+        var instanceStore = new ServiceInstanceProfileStore(store.GetProjectDirectory(project.Snapshot.ProjectId));
+        instanceStore.Save(new ServiceInstanceProfile
         {
             InstanceId = "overview-test",
             Environment = ServiceEnvironmentKind.Test,
@@ -643,10 +644,18 @@ public sealed class LauncherEditorTests
         using var form = new MainForm(store);
 
         WorkbenchOverviewSnapshot snapshot = await form.RunWorkbenchPreflightEvidenceAsync().ConfigureAwait(true);
+        form.SaveWorkbenchSnapshotForEvidence("before");
+        ServiceInstanceProfile changedProfile = instanceStore.Load("overview-test");
+        changedProfile.ExpectedSchemaVersion = 18;
+        instanceStore.Save(changedProfile);
+        snapshot = await form.RunWorkbenchPreflightEvidenceAsync().ConfigureAwait(true);
+        form.SaveWorkbenchSnapshotForEvidence("after");
+        IReadOnlyList<WorkbenchVersionChange> changes = form.CompareWorkbenchSnapshotsForEvidence();
+        WorkbenchTestReleaseReview release = form.PublishWorkbenchTestReleaseForEvidence(Path.Combine(scope.Root, "reviewed-test-release"));
         AuthorWorkbenchEvidence evidence = form.CaptureWorkbenchEvidence();
 
         Assert.Contains(snapshot.Facts, item => item.Id == "player-entry" && item.Value == "2.1.0.0");
-        Assert.Contains(snapshot.Facts, item => item.Id == "instance/overview-test/schema" && item.Value == "17");
+        Assert.Contains(snapshot.Facts, item => item.Id == "instance/overview-test/schema" && item.Value == "18");
         Assert.Contains(snapshot.Facts, item => item.Id == "instance/overview-test/scripts" && item.Value == "content-v1");
         Assert.True(evidence.VersionCount >= 10);
         Assert.True(evidence.CapabilityCount >= 6);
@@ -655,6 +664,10 @@ public sealed class LauncherEditorTests
         Assert.True(evidence.HasMergerClosure);
         Assert.False(evidence.Passed);
         Assert.Contains(snapshot.Facts, item => item.Owner == "项目发布预检" && item.Status == WorkbenchFactStatus.Failed);
+        Assert.Contains(changes, item => item.Id == "instance/overview-test/schema" && item.Change == WorkbenchVersionChangeKind.Changed && item.Before == "17" && item.After == "18");
+        Assert.True(release.SignatureVerified);
+        Assert.Equal(3, release.PackageCount);
+        Assert.True(File.Exists(Path.Combine(store.GetProjectDirectory(project.Snapshot.ProjectId), "workbench-reviews", "test-releases", release.Id + ".json")));
     }
 
     [Fact]
