@@ -631,7 +631,7 @@ namespace Client.MirScenes
                         CharacterDialog.Hide();
                         OptionDialog.Hide();
                         MenuDialog.Hide();
-                        if (NPCDialog.Visible) NPCDialog.Hide();
+                        if (NPCDialog.Visible) NPCDialog.CloseConversation();
                         HelpDialog.Hide();
                         KeyboardLayoutDialog.Hide();
                         RankingDialog.Hide();

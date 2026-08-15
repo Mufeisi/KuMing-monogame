@@ -31,6 +31,7 @@
         CheckPkPoint,
         CheckRange,
         Check,
+        Variable,
         CheckHum,
         CheckMon,
         CheckExactMon,

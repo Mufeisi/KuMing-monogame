@@ -3,6 +3,7 @@ using System.Drawing;
 using Server.MirEnvir;
 using System.Globalization;
 using System.Text.RegularExpressions;
+using Server.Scripting.Variables;
 using S = ServerPackets;
 using Timer = Server.MirEnvir.Timer;
 
@@ -24,6 +25,58 @@ namespace Server.MirObjects
         {
             var scriptsRuntimeActive = Settings.CSharpScriptsEnabled && Envir.CSharpScripts.Enabled;
             return !scriptsRuntimeActive || Settings.CSharpScriptsFallbackToTxt;
+        }
+
+        private static bool TryParsePVariableReference(
+            string text,
+            out ScriptVariableReference reference)
+        {
+            return ScriptVariableReferenceParser.TryParse(text, out reference) &&
+                   reference.Scope == ScriptVariableScope.P;
+        }
+
+        private bool TryFormatScriptVariable(PlayerObject player, string expression, out string text)
+        {
+            text = string.Empty;
+            if (player == null || player.NPCObjectID == 0 || string.IsNullOrWhiteSpace(expression))
+                return false;
+
+            Match str = Regex.Match(
+                expression, @"^STR\(([^,()]+)\)$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+            Match format = Regex.Match(
+                expression, @"^FORMAT\(([^,()]+),(\d+)\)$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+            string referenceText;
+            int? digits;
+            if (str.Success)
+            {
+                referenceText = str.Groups[1].Value.Trim();
+                digits = null;
+            }
+            else if (format.Success && int.TryParse(
+                         format.Groups[2].Value, NumberStyles.None,
+                         CultureInfo.InvariantCulture, out var parsedDigits))
+            {
+                referenceText = format.Groups[1].Value.Trim();
+                digits = parsedDigits;
+            }
+            else
+            {
+                return false;
+            }
+
+            if (!TryParsePVariableReference(referenceText, out _)) return false;
+            var context = ScriptVariableContext.ForConversation(player, player.NPCObjectID);
+            ScriptVariableTextResult result = Envir.CSharpScripts.VariableCommands.Format(
+                context, referenceText, digits);
+            if (!result.Success)
+            {
+                MessageQueue.Enqueue(
+                    $"[Variables][TXT] 显示失败：{result.ErrorCode} {result.Diagnostic}，页码：{Key}");
+                return false;
+            }
+
+            text = result.Text;
+            return true;
         }
 
         public NPCPage Page;
@@ -242,6 +295,12 @@ namespace Server.MirObjects
                 //cant use stored var
                 case "CHECK":
                     if (parts.Length < 3) return;
+                    if (TryParsePVariableReference(parts[1], out _))
+                    {
+                        if (parts.Length < 4) return;
+                        CheckList.Add(new NPCChecks(CheckType.Variable, parts[1], parts[2], parts[3]));
+                        break;
+                    }
                     var match = regexFlag.Match(parts[1]);
                     if (match.Success)
                     {
@@ -898,9 +957,38 @@ namespace Server.MirObjects
                     if (quoteMatch.Success)
                         valueToStore = quoteMatch.Groups[1].Captures[0].Value;
 
-                    if (match.Success)
+                    if (TryParsePVariableReference(parts[1], out _))
+                    {
+                        string conversion = parts[2].ToUpperInvariant();
+                        if (parts.Length >= 4 &&
+                            (conversion == "ROUND" || conversion == "FLOOR" ||
+                             conversion == "CEIL" || conversion == "TRUNC") &&
+                            TryParsePVariableReference(parts[3], out _))
+                        {
+                            acts.Add(new NPCActions(
+                                ActionType.VariableConvert, parts[1], conversion, parts[3]));
+                        }
+                        else
+                        {
+                            acts.Add(new NPCActions(ActionType.VariableMutate, parts[1], "MOV", valueToStore));
+                        }
+                    }
+                    else if (match.Success)
                         acts.Add(new NPCActions(ActionType.Mov, parts[1], valueToStore));
 
+                    break;
+
+                case "INC":
+                case "DEC":
+                case "MUL":
+                case "DIV":
+                    if (parts.Length < 3 || !TryParsePVariableReference(parts[1], out _)) return;
+                    quoteMatch = regexQuote.Match(line);
+                    valueToStore = quoteMatch.Success
+                        ? quoteMatch.Groups[1].Captures[0].Value
+                        : parts[2];
+                    acts.Add(new NPCActions(
+                        ActionType.VariableMutate, parts[1], parts[0].ToUpperInvariant(), valueToStore));
                     break;
 
                 case "CALC":
@@ -1210,6 +1298,9 @@ namespace Server.MirObjects
             var match = regex.Match(param);
 
             if (!match.Success) return param;
+
+            if (TryFormatScriptVariable(player, match.Groups[1].Value, out var variableText))
+                return param.Replace(match.Value, variableText);
 
             string innerMatch = match.Groups[1].Captures[0].Value.ToUpper();
 
@@ -2405,6 +2496,22 @@ namespace Server.MirObjects
                         {
                             MessageQueue.Enqueue(string.Format("以玩家为对象的NPC命令CHECKCALC中错误使用 {0} 操作符, 页码: {1} ", param[1], Key));
                             return true;
+                        }
+                        break;
+                    case CheckType.Variable:
+                        {
+                            if (player.NPCObjectID == 0)
+                            {
+                                failed = true;
+                                break;
+                            }
+
+                            var context = ScriptVariableContext.ForConversation(player, player.NPCObjectID);
+                            ScriptVariableCheckResult result = Envir.CSharpScripts.VariableCommands.Check(
+                                context, param[0], param[1], param[2]);
+                            failed = !result.Success || !result.Matched;
+                            if (!result.Success)
+                                MessageQueue.Enqueue($"[Variables][TXT] CHECK 失败：{result.ErrorCode} {result.Diagnostic}，页码：{Key}");
                         }
                         break;
                     case CheckType.InGuild:
@@ -3734,6 +3841,28 @@ namespace Server.MirObjects
                             {
                                 AddVariable(player, param[3].Replace("-", ""), param[0] + param[2]);
                             }
+                        }
+                        break;
+
+                    case ActionType.VariableMutate:
+                        {
+                            if (player.NPCObjectID == 0) return;
+                            var context = ScriptVariableContext.ForConversation(player, player.NPCObjectID);
+                            ScriptVariableMutationResult result = Envir.CSharpScripts.VariableCommands.Mutate(
+                                context, param[0], param[1], param[2]);
+                            if (!result.Success)
+                                MessageQueue.Enqueue($"[Variables][TXT] {param[1]} 失败：{result.ErrorCode} {result.Diagnostic}，页码：{Key}");
+                        }
+                        break;
+
+                    case ActionType.VariableConvert:
+                        {
+                            if (player.NPCObjectID == 0) return;
+                            var context = ScriptVariableContext.ForConversation(player, player.NPCObjectID);
+                            ScriptVariableMutationResult result = Envir.CSharpScripts.VariableCommands.Convert(
+                                context, param[0], param[1], param[2]);
+                            if (!result.Success)
+                                MessageQueue.Enqueue($"[Variables][TXT] {param[1]} 失败：{result.ErrorCode} {result.Diagnostic}，页码：{Key}");
                         }
                         break;
 

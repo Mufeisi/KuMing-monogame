@@ -12,6 +12,8 @@
 [Dd]ebugPublic/
 [Rr]elease/
 [Rr]eleases/
+!Manual/Engine/docs/releases/
+!Manual/Engine/docs/releases/*.md
 !src/Shared/Shared/Release/
 !src/Shared/Shared/Release/TransactionalFileDeployment.cs
 x64/

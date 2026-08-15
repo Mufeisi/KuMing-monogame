@@ -57,6 +57,8 @@
         DelayGoto,
         Mov,
         Calc,
+        VariableMutate,
+        VariableConvert,
         GiveBuff,
         RemoveBuff,
         AddToGuild,

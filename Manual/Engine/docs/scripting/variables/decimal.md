@@ -1,7 +1,7 @@
 # 命名小数变量
 
-- 功能状态：规划中
-- 首次支持版本：尚未确定
+- 功能状态：实验性（当前支持 P）
+- 首次支持版本：开发版 2026-08-15
 - 数值实现：十进制 `Decimal`，不是二进制浮点
 
 ## 最小用法
@@ -20,8 +20,8 @@ DIV U.DropRate 3
 ## 显示
 
 ```text
-<$STR(U.DropRate)>
-<$FORMAT(U.DropRate, 2)>
+<$STR(P.DropRate)>
+<$FORMAT(P.DropRate,2)>
 ```
 
 假设变量是 `12.5`：
@@ -34,10 +34,10 @@ DIV U.DropRate 3
 整数与小数混合计算时结果提升为小数。写回整数必须显式取整：
 
 ```text
-MOV U.Result ROUND U.DropRate
-MOV U.Result FLOOR U.DropRate
-MOV U.Result CEIL U.DropRate
-MOV U.Result TRUNC U.DropRate
+MOV P0 ROUND P.DropRate
+MOV P0 FLOOR P.DropRate
+MOV P0 CEIL P.DropRate
+MOV P0 TRUNC P.DropRate
 ```
 
 禁止静默截断，避免 `1.9` 在脚本作者不知情时变成 `1`。
@@ -48,7 +48,7 @@ MOV U.Result TRUNC U.DropRate
 
 ```text
 MOV U.DropRate 12.5
-你的掉落几率：<$STR(U.DropRate)>%
+你的掉落几率：<$STR(P.DropRate)>%
 ```
 
 这里 `12.5` 明确表示 `12.5%`。概率判定由引擎转换为整数阈值，不使用 `double` 直接比较。

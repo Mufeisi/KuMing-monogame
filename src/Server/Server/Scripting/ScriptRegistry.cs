@@ -1,3 +1,5 @@
+using Server.Scripting.Variables;
+
 namespace Server.Scripting
 {
     public sealed class ScriptRegistry
@@ -28,6 +30,12 @@ namespace Server.Scripting
         public PlayerRegionRegistry Regions { get; } = new PlayerRegionRegistry();
         public ActiveMapCoordRegistry ActiveMapCoords { get; } = new ActiveMapCoordRegistry();
         public CustomGuiScriptRegistry CustomGui { get; }
+        public ScriptVariableRegistry Variables { get; } = new ScriptVariableRegistry();
+
+        /// <summary>
+        /// 当前脚本注册表的变量声明只读快照。注册表发布后不再被修改。
+        /// </summary>
+        public ScriptVariableDeclarationSnapshot VariableDeclarations => Variables.CreateSnapshot();
 
         private IReadOnlyDictionary<string, ScriptModuleCatalogEntry> _moduleCatalog = new Dictionary<string, ScriptModuleCatalogEntry>(StringComparer.Ordinal);
         private readonly HashSet<string> _importedModuleKeys = new HashSet<string>(StringComparer.Ordinal);
@@ -46,6 +54,18 @@ namespace Server.Scripting
 
         public void RegisterNpcShop(NpcShopDefinition definition) => NpcShops.Register(definition);
 
+        public void RegisterVariable(ScriptVariableDeclaration declaration) => Variables.Register(declaration);
+
+        public void RegisterVariable(
+            ScriptVariableScope scope,
+            string key,
+            ScriptVariableKind kind,
+            string defaultValue,
+            string sourceFile = "",
+            int sourceLine = 0) =>
+            Variables.Register(new ScriptVariableDeclaration(
+                scope, key, kind, defaultValue, sourceFile, sourceLine));
+
         public void RegisterCustomGuiWindow(CustomGuiScriptWindowDefinition definition) => CustomGui.Register(definition);
 
         internal void SetModuleCatalog(IReadOnlyDictionary<string, ScriptModuleCatalogEntry> catalog)
@@ -54,6 +74,8 @@ namespace Server.Scripting
             _importedModuleKeys.Clear();
             _importingModuleKeys.Clear();
         }
+
+        internal void SealVariableDeclarations() => Variables.Seal();
 
         /// <summary>
         /// 组合导入其它脚本模块（用于替代 legacy 的 #INSERT/#INCLUDE 文本拼接）。

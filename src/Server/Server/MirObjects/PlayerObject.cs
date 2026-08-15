@@ -269,6 +269,9 @@ namespace Server.MirObjects
 
         public void StopGame(byte reason)
         {
+            if (NPCObjectID != 0)
+                EndNpcConversation(NPCObjectID);
+
             if (Node == null) return;
 
             for (int i = Pets.Count - 1; i >= 0; i--)
@@ -9233,6 +9236,23 @@ namespace Server.MirObjects
             }
 
             CallNPCNextPage();
+        }
+
+        public void EndNpcConversation(uint objectID)
+        {
+            if (objectID == 0 || objectID != NPCObjectID) return;
+
+            if (Envir.CSharpScripts != null)
+            {
+                var context = Server.Scripting.Variables.ScriptVariableContext.ForConversation(this, objectID);
+                Envir.CSharpScripts.VariableModule.Reset(
+                    context,
+                    Server.Scripting.Variables.ScriptVariableSelector.Conversation());
+            }
+
+            NPCObjectID = 0;
+            NPCScriptID = 0;
+            NPCPage = null;
         }
         private void CallNPCNextPage()
         {

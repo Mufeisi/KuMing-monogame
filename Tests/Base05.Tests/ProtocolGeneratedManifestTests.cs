@@ -17,14 +17,14 @@ public sealed class ProtocolGeneratedManifestTests
 
         Assert.Equal("PROTO-02.generated-wire-manifest.v2", root.GetProperty("schemaVersion").GetString());
         JsonElement coverage = root.GetProperty("coverage");
-        Assert.Equal(146, coverage.GetProperty("clientPacketCount").GetInt32());
+        Assert.Equal(147, coverage.GetProperty("clientPacketCount").GetInt32());
         Assert.Equal(279, coverage.GetProperty("serverPacketCount").GetInt32());
         Assert.Equal(76, coverage.GetProperty("enumCount").GetInt32());
 
         JsonElement.ArrayEnumerator packetEnumerator = root.GetProperty("packets").EnumerateArray();
         JsonElement[] packets = packetEnumerator.ToArray();
-        Assert.Equal(425, packets.Length);
-        Assert.Equal(425, packets.Select(packet =>
+        Assert.Equal(426, packets.Length);
+        Assert.Equal(426, packets.Select(packet =>
             $"{packet.GetProperty("direction").GetString()}:{packet.GetProperty("id").GetInt32()}").Distinct().Count());
         Assert.All(packets, packet =>
         {

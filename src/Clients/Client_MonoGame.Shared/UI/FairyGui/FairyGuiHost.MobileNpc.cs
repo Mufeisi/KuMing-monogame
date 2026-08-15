@@ -269,6 +269,7 @@ namespace MonoShare
 
             if (string.Equals(action, "@Exit", StringComparison.OrdinalIgnoreCase))
             {
+                GameScene.Scene?.EndNpcConversation();
                 TryHideMobileWindow("Npc");
                 return;
             }
@@ -371,6 +372,7 @@ namespace MonoShare
 
             if (string.Equals(href, "@Exit", StringComparison.OrdinalIgnoreCase))
             {
+                GameScene.Scene?.EndNpcConversation();
                 TryHideMobileWindow("Npc");
                 return;
             }
@@ -800,6 +802,7 @@ namespace MonoShare
                     {
                         close.onClick.Add(() =>
                         {
+                            try { GameScene.Scene?.EndNpcConversation(); } catch { }
                             try { TryHideMobileWindow("Npc"); } catch { }
                         });
                         close.data = MobileNpcFallbackCloseName;

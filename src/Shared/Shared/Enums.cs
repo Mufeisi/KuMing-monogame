@@ -2479,7 +2479,8 @@ public enum ClientPacketIds : short
     ItemRentalLockItem = 142,
     ConfirmItemRental = 143,
     Fg = 144,
-    CustomGuiAction = 145
+    CustomGuiAction = 145,
+    NpcConversationClosed = 146
 }
 
 public enum ConquestType : byte

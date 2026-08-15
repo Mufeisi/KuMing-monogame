@@ -20,6 +20,27 @@ namespace Base05.Tests;
 public sealed class ProtocolGoldenTests
 {
     [Fact]
+    public void NpcConversationClosed_roundtrips_object_id_on_canonical_protocol()
+    {
+        var packet = new global::ClientPackets.NpcConversationClosed { ObjectID = 0x10203040 };
+        byte[] wire = packet.GetPacketBytes().ToArray();
+        bool previous = global::Packet.IsServer;
+        try
+        {
+            global::Packet.IsServer = true;
+            var decoded = Assert.IsType<global::ClientPackets.NpcConversationClosed>(
+                global::Packet.ReceivePacket(wire, out byte[] extra));
+            Assert.Equal(0x10203040u, decoded.ObjectID);
+            Assert.Empty(extra);
+            Assert.Equal((short)146, decoded.Index);
+        }
+        finally
+        {
+            global::Packet.IsServer = previous;
+        }
+    }
+
+    [Fact]
     public void Manifest_is_machine_readable_and_covers_packet_and_enum_metadata()
     {
         var path = Path.Combine(AppContext.BaseDirectory, "protocol-wire-manifest.json");

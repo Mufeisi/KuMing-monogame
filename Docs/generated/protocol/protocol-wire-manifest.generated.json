@@ -1,7 +1,7 @@
 {
   "schemaVersion": "PROTO-02.generated-wire-manifest.v2",
   "coverage": {
-    "clientPacketCount": 146,
+    "clientPacketCount": 147,
     "serverPacketCount": 279,
     "enumCount": 76
   },
@@ -12,7 +12,7 @@
     },
     {
       "path": "src/Shared/Shared/ClientPackets.cs",
-      "sha256": "1c8aa9a96c90e7617298c344f0a69dbc6137e5d1675a3db23dd1369a4462def1"
+      "sha256": "01d9bea5b56f36c63ff57e49d548490c49200a79e7cdf67cf0e1ad012f1e3680"
     },
     {
       "path": "src/Shared/Shared/CustomGui/CustomGuiPackets.cs",
@@ -52,7 +52,7 @@
     },
     {
       "path": "src/Shared/Shared/Enums.cs",
-      "sha256": "2f2afed30177b80f2aa47421a7045bd68a904cbea0372cbbe27dfd7eaeba357d"
+      "sha256": "eb22fb7ba2c77335805f0c8d102d9d6d52f9b3a28abe51df484f4d044fc3fa8b"
     },
     {
       "path": "src/Shared/Shared/Extensions/ExtensionMethods.cs",
@@ -76,7 +76,7 @@
     },
     {
       "path": "src/Shared/Shared/Packet.cs",
-      "sha256": "6c852fe3af3ecbb0e544b5c66a901be7e455848522f68bfa712a39b652ec7542"
+      "sha256": "0812a1244192776dd494bbce4a31c25617050a6d957d647fd5c491c9f636ec93"
     },
     {
       "path": "src/Shared/Shared/ServerPackets.cs",
@@ -2525,6 +2525,20 @@
       ],
       "readIlSha256": "75696e56963cf6ead17bc0ff675edd387513a9bbb888d4dd7cfa8f08c889844a",
       "writeIlSha256": "a5f13d39f6559e0e6d26802308bbbfd1fd183406b11cc0d0aed872ce723714af"
+    },
+    {
+      "direction": "clientToServer",
+      "id": 146,
+      "type": "ClientPackets.NpcConversationClosed",
+      "compressed": false,
+      "fields": [
+        {
+          "name": "ObjectID",
+          "type": "System.UInt32"
+        }
+      ],
+      "readIlSha256": "f504e1a636cccb89f1a7e81ac56eaf08495db67b05ff53c51a39ac79303749c3",
+      "writeIlSha256": "b23aff4d2eb24d6a77c64f226f32d581db4e3182ad4c33a6c0e5e186b17e7815"
     },
     {
       "direction": "serverToClient",
@@ -9659,6 +9673,10 @@
         {
           "name": "CustomGuiAction",
           "value": "145"
+        },
+        {
+          "name": "NpcConversationClosed",
+          "value": "146"
         }
       ]
     },

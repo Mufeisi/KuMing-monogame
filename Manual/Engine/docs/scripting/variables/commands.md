@@ -1,7 +1,7 @@
 # 操作与显示命令
 
-- 功能状态：规划中
-- 首次支持版本：尚未确定
+- 功能状态：实验性（当前支持 P）
+- 首次支持版本：开发版 2026-08-15
 
 整数和小数共用以下命令。变量模块根据声明类型选择运算规则。
 
@@ -21,6 +21,33 @@
 | `CEIL` | 向上取整 | 溢出 |
 | `TRUNC` | 截去小数部分 | 溢出 |
 | `PARSEDECIMAL` | 显式解析字符串 | 格式非法、小数位超限 |
+
+当前已实现 `MOV/INC/DEC/MUL/DIV/CHECK`、`$STR/$FORMAT` 和 `ROUND/FLOOR/CEIL/TRUNC`。`INITVAR` 与 `PARSEDECIMAL` 随持久及字符串作用域阶段交付，当前不要使用。
+
+## TXT NPC 写法
+
+```text
+MOV P0 5
+DIV P0 2
+MOV P.DropRate 12.5
+INC P.DropRate 0.25
+CHECK P.DropRate >= 12.75
+```
+
+显示写在 NPC 文本中：
+
+```text
+当前整数：<$STR(P0)>\
+当前几率：<$FORMAT(P.DropRate,2)>%\
+```
+
+显式取整写入整数目标：
+
+```text
+MOV P0 FLOOR P.DropRate
+```
+
+右操作数既可以是文化无关的字面量，也可以是同一上下文中的变量引用。固定编号 `P0-P999` 始终是 `Int64`；`MOV P0 1.5` 会返回类型错误，不会动态变成小数。
 
 ## 整数除法与小数除法
 

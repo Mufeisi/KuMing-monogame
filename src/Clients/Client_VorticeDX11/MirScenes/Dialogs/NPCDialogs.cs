@@ -125,7 +125,7 @@ namespace Client.MirScenes.Dialogs
                 PressedIndex = 362,
                 Sound = SoundList.ButtonA,
             };
-            CloseButton.Click += (o, e) => Hide();
+            CloseButton.Click += (o, e) => CloseConversation();
 
             HelpButton = new MirButton
             {
@@ -220,7 +220,7 @@ namespace Client.MirScenes.Dialogs
         {
             if (action == "@Exit")
             {
-                Hide();
+                CloseConversation();
                 return;
             }
 
@@ -487,6 +487,18 @@ namespace Client.MirScenes.Dialogs
             GameScene.Scene.InventoryDialog.Location = new Point(0, 0);
             GameScene.Scene.RollControl.Hide();
             BigButtonDialog.Hide();
+        }
+
+        public void CloseConversation()
+        {
+            uint npcObjectId = GameScene.NPCID;
+            if (npcObjectId != 0)
+            {
+                Network.Enqueue(new C.NpcConversationClosed { ObjectID = npcObjectId });
+                GameScene.NPCID = 0;
+            }
+
+            Hide();
         }
 
         public override void Show()

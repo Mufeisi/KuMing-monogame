@@ -2,6 +2,7 @@
 using Server.Persistence.Sql;
 using Server.Diagnostics;
 using Server.MirEnvir;
+using Server.Scripting.Variables;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -55,6 +56,9 @@ namespace Server.MirForms
         {
             if (string.Equals(args[0], "--headless-smoke-server", StringComparison.OrdinalIgnoreCase))
                 return RunHeadlessSmokeServer(args);
+
+            if (string.Equals(args[0], "--headless-variable-smoke", StringComparison.OrdinalIgnoreCase))
+                return RunHeadlessVariableSmoke(args);
 
             if (!string.Equals(args[0], "--restore-sqlite", StringComparison.OrdinalIgnoreCase) ||
                 (args.Length != 2 && args.Length != 4) ||
@@ -116,6 +120,22 @@ namespace Server.MirForms
             {
                 if (Envir.Main.Running) Envir.Main.Stop();
             }
+        }
+
+        private static int RunHeadlessVariableSmoke(string[] args)
+        {
+            if (args.Length != 1)
+            {
+                Console.Error.WriteLine("用法：Server.exe --headless-variable-smoke");
+                return 2;
+            }
+
+            VariableProcessSmokeResult result = VariableProcessSmoke.Run(Envir.Main);
+            if (result.Success)
+                Console.WriteLine(result.Message);
+            else
+                Console.Error.WriteLine(result.Message);
+            return result.ExitCode;
         }
     }
 }

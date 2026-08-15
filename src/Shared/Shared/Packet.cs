@@ -390,6 +390,8 @@ public abstract class Packet
                 return new C.Fg();
             case (short)ClientPacketIds.CustomGuiAction:
                 return new C.CustomGuiAction();
+            case (short)ClientPacketIds.NpcConversationClosed:
+                return new C.NpcConversationClosed();
             default:
                 return null;
         }

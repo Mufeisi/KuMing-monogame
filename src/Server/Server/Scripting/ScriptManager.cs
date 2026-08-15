@@ -4,6 +4,7 @@ using Server.CustomGui;
 using Server.MirDatabase;
 using Server.MirEnvir;
 using Server.MirObjects;
+using Server.Scripting.Variables;
 
 namespace Server.Scripting
 {
@@ -25,6 +26,9 @@ namespace Server.Scripting
         public ScriptManager()
         {
             _currentRegistry = CreateRegistry();
+            _currentRegistry.SealVariableDeclarations();
+            VariableModule = new ScriptVariableModule(() => CurrentRegistry.VariableDeclarations);
+            VariableCommands = new ScriptVariableCommands(VariableModule);
         }
 
         public bool Enabled { get; private set; }
@@ -35,6 +39,8 @@ namespace Server.Scripting
         public IReadOnlyList<ScriptDiagnostic> LastDiagnostics { get; private set; } = Array.Empty<ScriptDiagnostic>();
         public int LastRegisteredHandlerCount { get; private set; }
         public bool LogDiagnostics { get; set; } = true;
+        public IScriptVariableModule VariableModule { get; }
+        public ScriptVariableCommands VariableCommands { get; }
 
         public ScriptRegistry CurrentRegistry
         {
@@ -279,6 +285,12 @@ namespace Server.Scripting
             ScriptRegistry[] published = Envir.Main.InvokeOnMainThread(() =>
             {
                 ScriptRegistry previous = CurrentRegistry;
+                ScriptVariableCatalogReloadResult variableCompatibility =
+                    previous.VariableDeclarations.ValidateCompatibleTransitionTo(next.VariableDeclarations);
+                if (!variableCompatibility.Success)
+                    throw new InvalidOperationException(variableCompatibility.Diagnostic);
+                next.SealVariableDeclarations();
+
                 var affectedDocuments = new HashSet<string>(
                     previous.CustomGui.DocumentIds.Concat(next.CustomGui.DocumentIds),
                     StringComparer.Ordinal);
@@ -382,7 +394,9 @@ namespace Server.Scripting
             }
             catch when (!Envir.Main.Running)
             {
-                oldRegistry = Interlocked.Exchange(ref _currentRegistry, CreateRegistry());
+                var emptyRegistry = CreateRegistry();
+                emptyRegistry.SealVariableDeclarations();
+                oldRegistry = Interlocked.Exchange(ref _currentRegistry, emptyRegistry);
             }
             oldRegistry = null;
 

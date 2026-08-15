@@ -5,6 +5,7 @@ using System.Text.RegularExpressions;
 using Server.MirDatabase;
 using Server.MirEnvir;
 using Server.MirObjects;
+using Server.Scripting.Variables;
 using S = ServerPackets;
 
 namespace Server.Scripting
@@ -92,6 +93,120 @@ namespace Server.Scripting
             if (Envir.CSharpScripts == null)
                 return CustomGuiScriptOpenResult.Rejected("GUI11-HOOK-DISABLED：C# 脚本系统未启用");
             return Envir.CSharpScripts.OpenCustomGui(player, documentId);
+        }
+
+        public ScriptVariableMutationResult MutateVariable(
+            PlayerObject player,
+            NpcPageCall call,
+            string reference,
+            string command,
+            string operand)
+        {
+            if (!TryCreateConversationVariableContext(player, call, out var context, out var diagnostic))
+                return new ScriptVariableMutationResult(
+                    false, ScriptVariableErrorCode.ContextUnavailable, default, default, diagnostic);
+
+            ScriptVariableMutationResult result = Envir.CSharpScripts.VariableCommands.Mutate(
+                context, reference, command, operand);
+            TraceVariableResult(player, command, reference, operand, result.Success, result.Diagnostic);
+            return result;
+        }
+
+        public ScriptVariableTextResult GetVariable(
+            PlayerObject player,
+            NpcPageCall call,
+            string reference) =>
+            FormatVariable(player, call, reference, decimalDigits: null);
+
+        public ScriptVariableMutationResult ConvertVariable(
+            PlayerObject player,
+            NpcPageCall call,
+            string destination,
+            string conversion,
+            string source)
+        {
+            if (!TryCreateConversationVariableContext(player, call, out var context, out var diagnostic))
+                return new ScriptVariableMutationResult(
+                    false, ScriptVariableErrorCode.ContextUnavailable, default, default, diagnostic);
+
+            return Envir.CSharpScripts.VariableCommands.Convert(
+                context, destination, conversion, source);
+        }
+
+        public ScriptVariableTextResult FormatVariable(
+            PlayerObject player,
+            NpcPageCall call,
+            string reference,
+            int? decimalDigits)
+        {
+            if (!TryCreateConversationVariableContext(player, call, out var context, out var diagnostic))
+                return new ScriptVariableTextResult(
+                    false, ScriptVariableErrorCode.ContextUnavailable, string.Empty, diagnostic);
+
+            return Envir.CSharpScripts.VariableCommands.Format(context, reference, decimalDigits);
+        }
+
+        public ScriptVariableCheckResult CheckVariable(
+            PlayerObject player,
+            NpcPageCall call,
+            string reference,
+            string comparison,
+            string operand)
+        {
+            if (!TryCreateConversationVariableContext(player, call, out var context, out var diagnostic))
+                return new ScriptVariableCheckResult(
+                    false, false, ScriptVariableErrorCode.ContextUnavailable, diagnostic);
+
+            return Envir.CSharpScripts.VariableCommands.Check(context, reference, comparison, operand);
+        }
+
+        public ScriptVariableResetResult ResetConversationVariables(PlayerObject player, NpcPageCall call = null)
+        {
+            if (!TryCreateConversationVariableContext(player, call, out var context, out var diagnostic))
+                return new ScriptVariableResetResult(
+                    false, ScriptVariableErrorCode.ContextUnavailable, 0, diagnostic);
+
+            return Envir.CSharpScripts.VariableModule.Reset(
+                context, ScriptVariableSelector.Conversation());
+        }
+
+        private static bool TryCreateConversationVariableContext(
+            PlayerObject player,
+            NpcPageCall call,
+            out ScriptVariableContext context,
+            out string diagnostic)
+        {
+            context = default;
+            diagnostic = string.Empty;
+            if (player == null)
+            {
+                diagnostic = "变量操作缺少人物上下文。";
+                return false;
+            }
+
+            uint npcObjectId = call?.NpcObjectID ?? player.NPCObjectID;
+            if (npcObjectId == 0)
+            {
+                diagnostic = "P 变量操作缺少 NPC 对话上下文。";
+                return false;
+            }
+
+            context = ScriptVariableContext.ForConversation(player, npcObjectId);
+            return true;
+        }
+
+        private static void TraceVariableResult(
+            PlayerObject player,
+            string command,
+            string reference,
+            string operand,
+            bool success,
+            string diagnostic)
+        {
+            if (player == null || !ScriptTrace.IsEnabled(player)) return;
+            string suffix = success ? "成功" : "失败：" + (diagnostic ?? string.Empty);
+            ScriptTrace.Record(player,
+                $"[C#][Variable] {command} {reference} {operand} -> {suffix}");
         }
 
         public int GetBagFreeSlotCount(PlayerObject player)

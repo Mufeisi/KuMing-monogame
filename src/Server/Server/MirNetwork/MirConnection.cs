@@ -846,6 +846,9 @@ namespace Server.MirNetwork
                 case (short)ClientPacketIds.CustomGuiAction:
                     _customGuiSessions.Handle((C.CustomGuiAction)p);
                     break;
+                case (short)ClientPacketIds.NpcConversationClosed:
+                    NpcConversationClosed((C.NpcConversationClosed)p);
+                    break;
                 default:
                     MessageQueue.Enqueue(string.Format("接收到的数据包无效 ID: {0}", p.Index));
                     break;
@@ -1524,6 +1527,12 @@ namespace Server.MirNetwork
             }
 
             Player.CallNPC(p.ObjectID, p.Key);
+        }
+
+        private void NpcConversationClosed(C.NpcConversationClosed p)
+        {
+            if (Stage != GameStage.Game) return;
+            Player.EndNpcConversation(p.ObjectID);
         }
 
         private void BuyItem(C.BuyItem p)

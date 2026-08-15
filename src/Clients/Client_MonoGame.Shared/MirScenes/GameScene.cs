@@ -430,6 +430,15 @@ namespace MonoShare.MirScenes
                 MonoShare.FairyGuiHost.HideAllMobileWindowsExcept("Npc");
         }
 
+        internal void EndNpcConversation()
+        {
+            uint npcObjectId = NPCID;
+            if (npcObjectId == 0) return;
+
+            Network.Enqueue(new C.NpcConversationClosed { ObjectID = npcObjectId });
+            NPCID = 0;
+        }
+
         internal void ShowMobileQuestListOverlay(uint npcObjectId, string npcName)
         {
             if (Environment.OSVersion.Platform == PlatformID.Win32NT)

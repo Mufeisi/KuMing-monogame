@@ -14,6 +14,7 @@ using Server.Persistence.Sql;
 using Server.Security;
 using Shared.Security;
 using Server.Operations;
+using Server.Scripting.Variables;
 using Xunit;
 
 namespace Base05.Tests;
@@ -72,6 +73,101 @@ public sealed class ServerLifecycleSmokeTests : IDisposable
 
         envir.Stop();
         Assert.False(envir.Running);
+    }
+
+    [Fact]
+    public void 真实服务器生命周期内变量声明可原子热重载且失败保留旧版本()
+    {
+        string scriptsRoot = Path.Combine(Path.GetTempPath(), "LyoCrystalVar01Scripts-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(scriptsRoot);
+        string scriptPath = Path.Combine(scriptsRoot, "Variables.cs");
+        bool oldEnabled = Settings.CSharpScriptsEnabled;
+        string oldPath = Settings.CSharpScriptsPath;
+        bool oldHotReload = Settings.CSharpScriptsHotReloadEnabled;
+        bool oldPushMode = Settings.CSharpScriptsPushModeEnabled;
+        var envir = new Envir();
+
+        try
+        {
+            WriteVariableScript(scriptPath, "Decimal", "1.0", includeBonus: false);
+            Settings.CSharpScriptsEnabled = true;
+            Settings.CSharpScriptsPath = scriptsRoot;
+            Settings.CSharpScriptsHotReloadEnabled = false;
+            Settings.CSharpScriptsPushModeEnabled = false;
+
+            envir.Start(new EnvirStartOptions
+            {
+                EnforceProductionSecurity = false,
+                LoadResources = false,
+                BindNetwork = false,
+                StartScripts = true,
+                StartHttp = false,
+                SaveOnStop = false,
+                Multithreaded = false,
+            });
+            Assert.True(SpinWait.SpinUntil(
+                () => envir.StartState is EnvirStartState.Ready or EnvirStartState.Failed,
+                TimeSpan.FromSeconds(5)));
+            Assert.Equal(EnvirStartState.Ready, envir.StartState);
+            Assert.Equal(ScriptVariableKind.Decimal, envir.CSharpScripts.CurrentRegistry
+                .VariableDeclarations.GetRequired(ScriptVariableScope.P, "Rate").Kind);
+            Assert.Throws<InvalidOperationException>(() => envir.CSharpScripts.CurrentRegistry.RegisterVariable(
+                ScriptVariableScope.P, "OutOfBand", ScriptVariableKind.Decimal, "0"));
+
+            var owner = new object();
+            var context = ScriptVariableContext.ForConversation(owner, 100);
+            Assert.True(envir.CSharpScripts.VariableCommands
+                .Mutate(context, "P.Rate", "MOV", "2.5").Success);
+
+            long compatibleBaseVersion = envir.CSharpScripts.Version;
+            WriteVariableScript(scriptPath, "Decimal", "3.0", includeBonus: true);
+            envir.CSharpScripts.Reload();
+            Assert.True(envir.CSharpScripts.Version > compatibleBaseVersion);
+            Assert.Equal("2.5", envir.CSharpScripts.VariableCommands.Format(context, "P.Rate").Text);
+            Assert.Equal("0.5", envir.CSharpScripts.VariableCommands.Format(context, "P.Bonus").Text);
+
+            long incompatibleBaseVersion = envir.CSharpScripts.Version;
+            WriteVariableScript(scriptPath, "Integer", "1", includeBonus: false);
+            envir.CSharpScripts.Reload();
+            Assert.Equal(incompatibleBaseVersion, envir.CSharpScripts.Version);
+            Assert.Equal(ScriptVariableKind.Decimal, envir.CSharpScripts.CurrentRegistry
+                .VariableDeclarations.GetRequired(ScriptVariableScope.P, "Rate").Kind);
+            Assert.Contains("不能修改变量类型", envir.CSharpScripts.LastError, StringComparison.Ordinal);
+        }
+        finally
+        {
+            envir.Stop();
+            Settings.CSharpScriptsEnabled = oldEnabled;
+            Settings.CSharpScriptsPath = oldPath;
+            Settings.CSharpScriptsHotReloadEnabled = oldHotReload;
+            Settings.CSharpScriptsPushModeEnabled = oldPushMode;
+            Directory.Delete(scriptsRoot, recursive: true);
+        }
+    }
+
+    private static void WriteVariableScript(
+        string path,
+        string kind,
+        string defaultValue,
+        bool includeBonus)
+    {
+        string bonus = includeBonus
+            ? "registry.RegisterVariable(ScriptVariableScope.P, \"Bonus\", ScriptVariableKind.Decimal, \"0.5\");"
+            : string.Empty;
+        File.WriteAllText(path, $$"""
+            using Server.Scripting;
+            using Server.Scripting.Variables;
+
+            public sealed class RuntimeVariableDeclarations : IScriptModule
+            {
+                public void Register(ScriptRegistry registry)
+                {
+                    registry.RegisterVariable(
+                        ScriptVariableScope.P, "Rate", ScriptVariableKind.{{kind}}, "{{defaultValue}}");
+                    {{bonus}}
+                }
+            }
+            """);
     }
 
     [Fact]
