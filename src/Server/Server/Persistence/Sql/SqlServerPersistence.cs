@@ -8,6 +8,7 @@ using System.Threading;
 using Server.MirDatabase;
 using Server.MirEnvir;
 using Server.MirObjects;
+using Server.Scripting.Variables;
 using Shared.Diagnostics;
 
 namespace Server.Persistence.Sql
@@ -168,6 +169,17 @@ namespace Server.Persistence.Sql
             public int ListIndex { get; set; }
             public int BuffType { get; set; }
             public byte[] Payload { get; set; }
+        }
+
+        private sealed class CharacterScriptVariableRow
+        {
+            public long CharacterId { get; set; }
+            public string VariableNamespace { get; set; }
+            public string VariableKey { get; set; }
+            public int ValueKind { get; set; }
+            public long IntegerValue { get; set; }
+            public string DecimalText { get; set; }
+            public string TextValue { get; set; }
         }
 
         private sealed class ItemRow
@@ -506,6 +518,8 @@ namespace Server.Persistence.Sql
 
             public IReadOnlyList<CharacterBuffRow> CharacterBuffs { get; }
 
+            public IReadOnlyList<CharacterScriptVariableRow> CharacterScriptVariables { get; }
+
             public AccountsSnapshot(
                 long saveEpochUtcMs,
                 IReadOnlyDictionary<string, long> nextIds,
@@ -538,7 +552,8 @@ namespace Server.Persistence.Sql
                 IReadOnlyList<CharacterIntelligentCreatureRow> characterIntelligentCreatures,
                 IReadOnlyList<HeroDetailRow> heroDetails,
                 IReadOnlyList<CharacterHeroSlotRow> characterHeroSlots,
-                IReadOnlyList<CharacterBuffRow> characterBuffs)
+                IReadOnlyList<CharacterBuffRow> characterBuffs,
+                IReadOnlyList<CharacterScriptVariableRow> characterScriptVariables)
             {
                 SaveEpochUtcMs = saveEpochUtcMs <= 0 ? DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() : saveEpochUtcMs;
                 NextIds = nextIds ?? new Dictionary<string, long>(StringComparer.Ordinal);
@@ -572,6 +587,7 @@ namespace Server.Persistence.Sql
                 HeroDetails = heroDetails ?? Array.Empty<HeroDetailRow>();
                 CharacterHeroSlots = characterHeroSlots ?? Array.Empty<CharacterHeroSlotRow>();
                 CharacterBuffs = characterBuffs ?? Array.Empty<CharacterBuffRow>();
+                CharacterScriptVariables = characterScriptVariables ?? Array.Empty<CharacterScriptVariableRow>();
             }
         }
 
@@ -4133,6 +4149,38 @@ namespace Server.Persistence.Sql
             }
         }
 
+        private static IReadOnlyList<CharacterScriptVariableRow> CaptureCharacterScriptVariables(Envir envir)
+        {
+            if (envir == null) throw new ArgumentNullException(nameof(envir));
+
+            lock (Envir.AccountLock)
+            {
+                var result = new List<CharacterScriptVariableRow>();
+                VisitAllPersistentCharacters(envir, character =>
+                {
+                    if (character?.ScriptVariables == null) return;
+                    foreach (var entry in character.ScriptVariables.Snapshot())
+                    {
+                        result.Add(new CharacterScriptVariableRow
+                        {
+                            CharacterId = character.Index,
+                            VariableNamespace = entry.Scope.ToString(),
+                            VariableKey = entry.Key,
+                            ValueKind = (int)entry.Value.Kind,
+                            IntegerValue = entry.Value.Kind == ScriptVariableKind.Integer ? entry.Value.Integer : 0,
+                            DecimalText = entry.Value.Kind == ScriptVariableKind.Decimal ? entry.Value.Format() : string.Empty,
+                            TextValue = entry.Value.Kind == ScriptVariableKind.String ? entry.Value.Text : string.Empty,
+                        });
+                    }
+                });
+                return result
+                    .OrderBy(row => row.CharacterId)
+                    .ThenBy(row => row.VariableNamespace, StringComparer.Ordinal)
+                    .ThenBy(row => row.VariableKey, StringComparer.Ordinal)
+                    .ToArray();
+            }
+        }
+
         private static IReadOnlyList<AuctionRow> LoadAuctionRows(SqlSession session)
         {
             if (session == null) throw new ArgumentNullException(nameof(session));
@@ -4345,6 +4393,16 @@ namespace Server.Persistence.Sql
 
             return session.Query<CharacterBuffRow>(
                 "SELECT character_id AS CharacterId, list_index AS ListIndex, buff_type AS BuffType, payload AS Payload FROM character_buffs ORDER BY character_id, list_index");
+        }
+
+        private static IReadOnlyList<CharacterScriptVariableRow> LoadCharacterScriptVariableRows(SqlSession session)
+        {
+            if (session == null) throw new ArgumentNullException(nameof(session));
+            return session.Query<CharacterScriptVariableRow>(
+                "SELECT character_id AS CharacterId, variable_namespace AS VariableNamespace, " +
+                "variable_key AS VariableKey, value_kind AS ValueKind, integer_value AS IntegerValue, " +
+                "decimal_text AS DecimalText, text_value AS TextValue " +
+                "FROM character_script_variables ORDER BY character_id, variable_namespace, variable_key");
         }
 
         private static void ReplaceAuctions(SqlSession session, IReadOnlyList<AuctionRow> auctions, long saveEpochUtcMs = 0)
@@ -5293,6 +5351,37 @@ namespace Server.Persistence.Sql
             session.Execute("DELETE FROM character_buffs WHERE updated_utc_ms <> @nowMs", new { nowMs });
         }
 
+        private static void ReplaceCharacterScriptVariables(
+            SqlSession session,
+            IReadOnlyList<CharacterScriptVariableRow> rows,
+            long saveEpochUtcMs = 0)
+        {
+            if (session == null) throw new ArgumentNullException(nameof(session));
+            var nowMs = saveEpochUtcMs > 0 ? saveEpochUtcMs : DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+            rows ??= Array.Empty<CharacterScriptVariableRow>();
+            var sql = session.Dialect.BuildUpsert(
+                tableName: "character_script_variables",
+                insertColumns: ["character_id", "variable_namespace", "variable_key", "value_kind", "integer_value", "decimal_text", "text_value", "reset_policy", "reset_period_id", "updated_utc_ms"],
+                keyColumns: ["character_id", "variable_namespace", "variable_key"],
+                updateColumns: ["value_kind", "integer_value", "decimal_text", "text_value", "reset_policy", "reset_period_id", "updated_utc_ms"]);
+
+            var batch = rows.Select(row => (object)new
+            {
+                character_id = row.CharacterId,
+                variable_namespace = row.VariableNamespace ?? string.Empty,
+                variable_key = row.VariableKey ?? string.Empty,
+                value_kind = row.ValueKind,
+                integer_value = row.IntegerValue,
+                decimal_text = row.DecimalText ?? string.Empty,
+                text_value = row.TextValue ?? string.Empty,
+                reset_policy = "Never",
+                reset_period_id = string.Empty,
+                updated_utc_ms = nowMs,
+            }).ToArray();
+            if (batch.Length > 0) session.Execute(sql, batch);
+            session.Execute("DELETE FROM character_script_variables WHERE updated_utc_ms <> @nowMs", new { nowMs });
+        }
+
         private static Dictionary<int, CharacterInfo> BuildCharacterIndex(Envir envir)
         {
             var result = new Dictionary<int, CharacterInfo>();
@@ -6086,6 +6175,42 @@ namespace Server.Persistence.Sql
             }
         }
 
+        private static void ApplyCharacterScriptVariables(Envir envir, IReadOnlyList<CharacterScriptVariableRow> rows)
+        {
+            if (envir == null) throw new ArgumentNullException(nameof(envir));
+            lock (Envir.AccountLock)
+            {
+                var characterById = BuildCharacterIndex(envir);
+                if (rows == null) return;
+                foreach (var row in rows)
+                {
+                    if (row == null || row.CharacterId <= 0 || row.CharacterId > int.MaxValue) continue;
+                    if (!characterById.TryGetValue((int)row.CharacterId, out var character)) continue;
+                    if (!Enum.TryParse(row.VariableNamespace, true, out ScriptVariableScope scope) ||
+                        (scope != ScriptVariableScope.U && scope != ScriptVariableScope.T)) continue;
+
+                    ScriptVariableValue value;
+                    switch ((ScriptVariableKind)row.ValueKind)
+                    {
+                        case ScriptVariableKind.Integer:
+                            value = ScriptVariableValue.FromInteger(row.IntegerValue);
+                            break;
+                        case ScriptVariableKind.Decimal:
+                            if (!ScriptVariableValue.TryParseDecimal(row.DecimalText, out value)) continue;
+                            break;
+                        case ScriptVariableKind.String:
+                            value = ScriptVariableValue.FromString(row.TextValue);
+                            break;
+                        default:
+                            continue;
+                    }
+
+                    try { character.ScriptVariables.Set(scope, row.VariableKey, value); }
+                    catch (Exception) { /* 单条坏数据不阻塞角色加载。 */ }
+                }
+            }
+        }
+
         public bool LoadWorld(Envir envir)
         {
             if (envir == null) throw new ArgumentNullException(nameof(envir));
@@ -6582,6 +6707,17 @@ namespace Server.Persistence.Sql
                     var buffs = CaptureCharacterBuffs(envir);
                     session.RunInTransaction(s => ReplaceCharacterBuffs(s, buffs));
                 }
+
+                var variableRows = LoadCharacterScriptVariableRows(session);
+                if (shouldApplyRelations)
+                {
+                    ApplyCharacterScriptVariables(envir, variableRows);
+                }
+                else if (allowSeedFromMemory)
+                {
+                    var variables = CaptureCharacterScriptVariables(envir);
+                    session.RunInTransaction(s => ReplaceCharacterScriptVariables(s, variables));
+                }
             }
             catch (Exception ex)
             {
@@ -6626,6 +6762,7 @@ namespace Server.Persistence.Sql
                         var heroDetails = CaptureHeroDetails(envir);
                         var characterHeroSlots = CaptureCharacterHeroSlots(envir);
                         var characterBuffs = CaptureCharacterBuffs(envir);
+                        var characterScriptVariables = CaptureCharacterScriptVariables(envir);
 
                         if (Settings.TestServer)
                         {
@@ -6664,7 +6801,8 @@ namespace Server.Persistence.Sql
                             characterIntelligentCreatures: characterIntelligentCreatures,
                             heroDetails: heroDetails,
                             characterHeroSlots: characterHeroSlots,
-                            characterBuffs: characterBuffs);
+                            characterBuffs: characterBuffs,
+                            characterScriptVariables: characterScriptVariables);
                     },
                     work: (session, snapshot) =>
                     {
@@ -6704,6 +6842,7 @@ namespace Server.Persistence.Sql
                         RunStep("HeroDetails", () => ReplaceHeroDetails(session, snapshot.HeroDetails, snapshot.SaveEpochUtcMs));
                         RunStep("CharacterHeroSlots", () => ReplaceCharacterHeroSlots(session, snapshot.CharacterHeroSlots, snapshot.SaveEpochUtcMs));
                         RunStep("CharacterBuffs", () => ReplaceCharacterBuffs(session, snapshot.CharacterBuffs, snapshot.SaveEpochUtcMs));
+                        RunStep("CharacterScriptVariables", () => ReplaceCharacterScriptVariables(session, snapshot.CharacterScriptVariables, snapshot.SaveEpochUtcMs));
                         RunStep(
                             "AccountsRelationsEpoch",
                             () => UpsertServerMeta(session, ServerMetaKeyAccountsRelationsEpochUtcMs, snapshot.SaveEpochUtcMs.ToString(), snapshot.SaveEpochUtcMs));

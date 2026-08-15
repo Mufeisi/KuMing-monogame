@@ -27,7 +27,9 @@ namespace Server.Scripting
         {
             _currentRegistry = CreateRegistry();
             _currentRegistry.SealVariableDeclarations();
-            VariableModule = new ScriptVariableModule(() => CurrentRegistry.VariableDeclarations);
+            VariableModule = new ScriptVariableModule(
+                () => CurrentRegistry.VariableDeclarations,
+                requestAutoSave: () => Envir.Main?.RequestAutoSave());
             VariableCommands = new ScriptVariableCommands(VariableModule);
         }
 

@@ -2,6 +2,7 @@ using Server.CustomGui;
 using Server.MirDatabase;
 using Server.MirObjects;
 using Server.Scripting;
+using Server.Scripting.Variables;
 using Shared.CustomGui;
 using C = ClientPackets;
 using S = ServerPackets;
@@ -119,6 +120,10 @@ public sealed class ActivityExchangeWindowTests
             Heroes = new HeroInfo[1]
         };
         source.Flags[ActivityExchangeWindow.ClaimFlagIndex] = true;
+        source.ScriptVariables.Set(
+            ScriptVariableScope.U, "droprate", ScriptVariableValue.FromDecimal(0.125m));
+        source.ScriptVariables.Set(
+            ScriptVariableScope.T, "#0", ScriptVariableValue.FromString("归档称号"));
         using var stream = new MemoryStream();
         using (var writer = new BinaryWriter(stream, System.Text.Encoding.UTF8, leaveOpen: true))
             source.Save(writer);
@@ -128,6 +133,37 @@ public sealed class ActivityExchangeWindowTests
         var restored = new CharacterInfo(reader, Server.MirEnvir.Envir.Version, Server.MirEnvir.Envir.CustomVersion);
 
         Assert.True(restored.Flags[ActivityExchangeWindow.ClaimFlagIndex]);
+        Assert.True(restored.ScriptVariables.TryGet(
+            ScriptVariableScope.U, "droprate", out var restoredRate));
+        Assert.Equal(0.125m, restoredRate.Decimal);
+        Assert.True(restored.ScriptVariables.TryGet(
+            ScriptVariableScope.T, "#0", out var restoredTitle));
+        Assert.Equal("归档称号", restoredTitle.Text);
+    }
+
+    [Fact]
+    public void CharacterPersistenceStillReadsCustomVersionZeroWithoutVariablePayload()
+    {
+        var source = new CharacterInfo
+        {
+            Index = 43,
+            Name = "旧版角色档案",
+            CreationIP = "127.0.0.1",
+            Heroes = new HeroInfo[1]
+        };
+        using var current = new MemoryStream();
+        using (var writer = new BinaryWriter(current, System.Text.Encoding.UTF8, leaveOpen: true))
+            source.Save(writer);
+
+        byte[] currentBytes = current.ToArray();
+        Assert.Equal(0, BitConverter.ToInt32(currentBytes, currentBytes.Length - sizeof(int)));
+        using var legacy = new MemoryStream(currentBytes, 0, currentBytes.Length - sizeof(int), writable: false);
+        using var reader = new BinaryReader(legacy, System.Text.Encoding.UTF8, leaveOpen: true);
+        var restored = new CharacterInfo(reader, Server.MirEnvir.Envir.Version, customVersion: 0);
+
+        Assert.Equal(source.Name, restored.Name);
+        Assert.Equal(0, restored.ScriptVariables.Count);
+        Assert.Equal(legacy.Length, legacy.Position);
     }
 
     [Fact]

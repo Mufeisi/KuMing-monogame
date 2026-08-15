@@ -64,7 +64,11 @@ namespace Server.Scripting.Variables
                     return Failure(3, $"VARIABLE_SMOKE_START_FAILED={envir.StartFailure}");
 
                 ScriptVariableCommands commands = envir.CSharpScripts.VariableCommands;
-                var player = new PlayerObject { NPCObjectID = 100 };
+                var player = new PlayerObject
+                {
+                    NPCObjectID = 100,
+                    Info = new CharacterInfo { Name = "变量冒烟角色", Heroes = new HeroInfo[1] }
+                };
                 var firstMap = new Map(new MapInfo { Index = 1 });
                 var secondMap = new Map(new MapInfo { Index = 2 });
                 var callFrame = new object();
@@ -82,6 +86,9 @@ namespace Server.Scripting.Variables
                 actions.ParseAct(actions.ActList, "MOV N$Score 33");
                 actions.ParseAct(actions.ActList, "MOV S$Label 在线");
                 actions.ParseAct(actions.ActList, "MOV I0 44");
+                actions.ParseAct(actions.ActList, "MOV U0 55");
+                actions.ParseAct(actions.ActList, "MOV T0 永久文本");
+                actions.ParseAct(actions.ActList, "MOV U.PersistentRate 6.25");
                 if (!actions.Check(player))
                     return Failure(4, "VARIABLE_SMOKE_TXT_ACTION_FAILED");
                 AssertResult(commands.Mutate(context, "M0", "MOV", "22").Success,
@@ -100,6 +107,9 @@ namespace Server.Scripting.Variables
                     commands.Format(context, "N$Score").Text != "33" ||
                     commands.Format(context, "S$Label").Text != "在线" ||
                     commands.Format(context, "I0").Text != "44" ||
+                    commands.Format(context, "U0").Text != "55" ||
+                    commands.Format(context, "T0").Text != "永久文本" ||
+                    commands.Format(context, "U.PersistentRate", 2).Text != "6.25" ||
                     !player.NPCSpeech.Any(line => line.Contains("整数3 小数12.75", StringComparison.Ordinal)))
                     return Failure(4, "VARIABLE_SMOKE_COMMAND_FAILED");
 
@@ -131,7 +141,9 @@ namespace Server.Scripting.Variables
                         nextMapContext, ScriptVariableReference.Named(ScriptVariableScope.N, "Score")).Found &&
                     !envir.CSharpScripts.VariableModule.Read(
                         nextMapContext, ScriptVariableReference.Named(ScriptVariableScope.S, "Label")).Found &&
-                    commands.Format(nextMapContext, "I0").Text == "44",
+                    commands.Format(nextMapContext, "I0").Text == "44" &&
+                    commands.Format(nextMapContext, "U0").Text == "55" &&
+                    commands.Format(nextMapContext, "T0").Text == "永久文本",
                     "VARIABLE_SMOKE_LOGOFF_LIFECYCLE_FAILED");
 
                 long compatibleVersion = envir.CSharpScripts.Version;
@@ -168,11 +180,17 @@ namespace Server.Scripting.Variables
                         ScriptVariableReference.Legacy(ScriptVariableScope.I, 0)).Found)
                     return Failure(8, "VARIABLE_SMOKE_SERVER_RESTART_LIFECYCLE_FAILED");
 
+                var restartedContext = ScriptVariableContext.ForPlayer(player);
+                if (envir.CSharpScripts.VariableCommands.Format(restartedContext, "U0").Text != "55" ||
+                    envir.CSharpScripts.VariableCommands.Format(restartedContext, "T0").Text != "永久文本" ||
+                    envir.CSharpScripts.VariableCommands.Format(restartedContext, "U.PersistentRate", 2).Text != "6.25")
+                    return Failure(9, "VARIABLE_SMOKE_PRIVATE_PERSISTENCE_FAILED");
+
                 return new VariableProcessSmokeResult(
                     true,
                     0,
                     $"VARIABLE_SMOKE_OK;VERSION={rejectedVersion};INTEGER=3;DECIMAL=12.75;" +
-                    "RESET=1.5;BONUS=0.5;RUNTIME_SCOPES=True;SERVER_RESTART_CLEAR=True;" +
+                    "RESET=1.5;BONUS=0.5;RUNTIME_SCOPES=True;PRIVATE_PERSISTENCE=True;SERVER_RESTART_CLEAR=True;" +
                     "CONFLICT_REJECTED=True");
             }
             catch (Exception ex)
@@ -226,6 +244,8 @@ namespace Server.Scripting.Variables
                             ScriptVariableScope.P, "Rate", ScriptVariableKind.{{kind}}, "{{defaultValue}}");
                         registry.RegisterVariable(
                             ScriptVariableScope.Call, "Rate", ScriptVariableKind.Decimal, "4.5");
+                        registry.RegisterVariable(
+                            ScriptVariableScope.U, "PersistentRate", ScriptVariableKind.Decimal, "1.0");
                         {{bonus}}
                     }
                 }

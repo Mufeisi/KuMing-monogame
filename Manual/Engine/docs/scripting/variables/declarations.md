@@ -30,21 +30,15 @@ public sealed class VariableDeclarations : IScriptModule
 }
 ```
 
-`VAR Decimal P DropRate DEFAULT 1.0` 的纯 TXT 声明语法仍在规划中；TXT NPC 可以操作由 C# 启动脚本声明的 `P/D/M/N/I.名称`。Call 声明仅供 C# 调用帧使用。
+`VAR Decimal P DropRate DEFAULT 1.0` 的纯 TXT 声明语法仍在规划中；TXT NPC 可以操作由 C# 启动脚本声明的 `P/D/M/N/I/U.名称`。Call 声明仅供 C# 调用帧使用。
 
-声明只注册名称、类型、作用域、默认值和重置策略，不会立即为所有人物写入数据库。因此私人变量也可以在服务器启动或脚本加载阶段统一声明。
+当前声明注册名称、类型、作用域、默认值和来源位置，不会立即为所有人物写入数据库。因此私人变量也可以在服务器启动或脚本加载阶段统一声明；重置策略元数据属于 VAR-05。
 
-## 初始化当前所有者
+## 默认值与首次写入
 
-```text
-INITVAR U.SpecialRate 1.5
-```
+读取尚未写入的命名变量时，引擎返回声明中的默认值，但不会立即为所有人物生成数据库记录。第一次 `MOV/INC/DEC/MUL/DIV` 成功后才保存实际值。`INITVAR` 尚未开放，当前不要在 QM 中使用它。
 
-`INITVAR` 只在当前人物尚无该值时写入。下面的写法会在每次登录时覆盖旧值，不适合作为初始化：
-
-```text
-MOV U.SpecialRate 1.5
-```
+若在登录 QM 中执行 `MOV U.SpecialRate 1.5`，每次登录都会覆盖旧值；只需要默认值时应直接读取声明默认值。
 
 ## 热重载
 

@@ -1,6 +1,6 @@
 # 完整使用示例
 
-- 功能状态：混合；运行时作用域示例为实验性，持久作用域示例仍为规划中
+- 功能状态：混合；运行时作用域和 U/T 私人持久示例可用，全局持久示例仍为规划中
 - 首次支持版本：开发版 2026-08-15
 
 ## 在线与地图临时变量
@@ -17,17 +17,20 @@ MOV M0 100
 
 ## 私人持久掉落几率
 
-声明文件：
+服务器启动时由 C# 脚本模块注册一次：
 
-```text
-VAR Decimal U DropRate DEFAULT 1.0
+```csharp
+registry.RegisterVariable(
+    ScriptVariableScope.U,
+    "DropRate",
+    ScriptVariableKind.Decimal,
+    "1.0");
 ```
 
-登录 QM：
+登录 QM 只读取默认值，不必为每个人重复声明：
 
 ```text
 [@Login]
-INITVAR U.DropRate 1.0
 SENDMSG 6 你的基础掉落几率为：<$FORMAT(U.DropRate, 2)>%
 ```
 
@@ -38,7 +41,7 @@ INC U.DropRate 0.5
 SENDMSG 6 掉落几率提升后：<$FORMAT(U.DropRate, 2)>%
 ```
 
-`U` 是人物私人持久作用域，不同人物拥有不同的 `DropRate`。
+`U` 是人物私人持久作用域，不同人物拥有不同的 `DropRate`。首次成功修改后进入现有自动保存流程，掉线、重启和归档恢复后仍保留。
 
 ## 全服活动倍率热更新
 

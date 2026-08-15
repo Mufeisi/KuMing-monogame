@@ -16,7 +16,7 @@
 私人持久
 热重载
 P0
-INITVAR
+character_script_variables
 DeclarationConflict
 ```
 

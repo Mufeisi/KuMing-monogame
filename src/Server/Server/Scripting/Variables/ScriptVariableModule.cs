@@ -1,4 +1,6 @@
 using System.Runtime.CompilerServices;
+using Server.MirDatabase;
+using Server.MirObjects;
 
 namespace Server.Scripting.Variables
 {
@@ -203,19 +205,22 @@ namespace Server.Scripting.Variables
         private readonly Dictionary<string, ScriptVariableValue> _serverRuntime =
             new Dictionary<string, ScriptVariableValue>(StringComparer.Ordinal);
         private readonly Func<bool> _canWrite;
+        private readonly Action _requestAutoSave;
 
-        public ScriptVariableModule(ScriptVariableDeclarationCatalog catalog, Func<bool> canWrite = null)
-            : this(() => (catalog ?? throw new ArgumentNullException(nameof(catalog))).Current, canWrite)
+        public ScriptVariableModule(ScriptVariableDeclarationCatalog catalog, Func<bool> canWrite = null, Action requestAutoSave = null)
+            : this(() => (catalog ?? throw new ArgumentNullException(nameof(catalog))).Current, canWrite, requestAutoSave)
         {
         }
 
         public ScriptVariableModule(
             Func<ScriptVariableDeclarationSnapshot> declarations,
-            Func<bool> canWrite = null)
+            Func<bool> canWrite = null,
+            Action requestAutoSave = null)
         {
             _declarations = declarations ?? throw new ArgumentNullException(nameof(declarations));
             int creatorThread = Environment.CurrentManagedThreadId;
             _canWrite = canWrite ?? (() => Environment.CurrentManagedThreadId == creatorThread);
+            _requestAutoSave = requestAutoSave;
         }
 
         public ScriptVariableReadResult Read(in ScriptVariableContext context, ScriptVariableReference reference)
@@ -227,6 +232,13 @@ namespace Server.Scripting.Variables
 
             if (!TryResolveContract(reference, out var kind, out var defaultValue, out var diagnostic))
                 return ReadFailure(ScriptVariableErrorCode.UnknownReference, diagnostic);
+
+            if (TryGetPersistentStore(context, reference.Scope, out var persistentStore))
+            {
+                if (persistentStore.TryGet(reference.Scope, reference.StorageKey, out var persistentValue))
+                    return new ScriptVariableReadResult(true, true, ScriptVariableErrorCode.None, persistentValue, string.Empty);
+                return new ScriptVariableReadResult(true, false, ScriptVariableErrorCode.None, defaultValue, string.Empty);
+            }
 
             Dictionary<string, ScriptVariableValue> values = GetScopeValues(context, reference.Scope);
             if (values.TryGetValue(reference.StorageKey, out var value))
@@ -254,8 +266,27 @@ namespace Server.Scripting.Variables
             if (!coerced.Success)
                 return MutationFailure(coerced.ErrorCode, current.Value, coerced.Diagnostic);
 
-            Dictionary<string, ScriptVariableValue> values = GetScopeValues(context, mutation.Reference.Scope);
-            values[mutation.Reference.StorageKey] = coerced.Value;
+            if (TryGetPersistentStore(context, mutation.Reference.Scope, out var persistentStore))
+            {
+                try
+                {
+                    persistentStore.Set(mutation.Reference.Scope, mutation.Reference.StorageKey, coerced.Value);
+                    _requestAutoSave?.Invoke();
+                }
+                catch (InvalidOperationException ex)
+                {
+                    return MutationFailure(ScriptVariableErrorCode.QuotaExceeded, current.Value, ex.Message);
+                }
+                catch (InvalidDataException ex)
+                {
+                    return MutationFailure(ScriptVariableErrorCode.TypeMismatch, current.Value, ex.Message);
+                }
+            }
+            else
+            {
+                Dictionary<string, ScriptVariableValue> values = GetScopeValues(context, mutation.Reference.Scope);
+                values[mutation.Reference.StorageKey] = coerced.Value;
+            }
             return new ScriptVariableMutationResult(
                 true, ScriptVariableErrorCode.None, current.Value, coerced.Value, string.Empty);
         }
@@ -267,9 +298,18 @@ namespace Server.Scripting.Variables
             if (!TryValidateResetContext(context, selector.Scope, out var diagnostic))
                 return new ScriptVariableResetResult(false, ScriptVariableErrorCode.ContextUnavailable, 0, diagnostic);
 
-            Dictionary<string, ScriptVariableValue> values = GetScopeValues(context, selector.Scope);
-            int count = values.Count;
-            values.Clear();
+            int count;
+            if (TryGetPersistentStore(context, selector.Scope, out var persistentStore))
+            {
+                count = persistentStore.Clear(selector.Scope);
+                if (count > 0) _requestAutoSave?.Invoke();
+            }
+            else
+            {
+                Dictionary<string, ScriptVariableValue> values = GetScopeValues(context, selector.Scope);
+                count = values.Count;
+                values.Clear();
+            }
             return new ScriptVariableResetResult(true, ScriptVariableErrorCode.None, count, string.Empty);
         }
 
@@ -313,6 +353,11 @@ namespace Server.Scripting.Variables
                     if (context.Owner != null) return true;
                     diagnostic = $"{scope} 变量需要有效人物在线上下文。";
                     return false;
+                case ScriptVariableScope.U:
+                case ScriptVariableScope.T:
+                    if (ResolveCharacter(context.Owner) != null) return true;
+                    diagnostic = $"{scope} 变量需要有效角色持久化上下文。";
+                    return false;
                 case ScriptVariableScope.M:
                     if (context.Owner != null && context.MapInstanceKey != null) return true;
                     diagnostic = "M 变量需要有效人物和地图实例上下文。";
@@ -348,7 +393,8 @@ namespace Server.Scripting.Variables
             return context.Owner != null &&
                    (scope == ScriptVariableScope.P || scope == ScriptVariableScope.D ||
                     scope == ScriptVariableScope.M || scope == ScriptVariableScope.N ||
-                    scope == ScriptVariableScope.S);
+                    scope == ScriptVariableScope.S || scope == ScriptVariableScope.U ||
+                    scope == ScriptVariableScope.T);
         }
 
         private bool TryResolveContract(
@@ -360,6 +406,14 @@ namespace Server.Scripting.Variables
             diagnostic = string.Empty;
             if (reference.IsLegacy)
             {
+                if ((reference.Scope == ScriptVariableScope.U || reference.Scope == ScriptVariableScope.T) &&
+                    reference.LegacyIndex > 499)
+                {
+                    kind = default;
+                    defaultValue = default;
+                    diagnostic = $"{reference.Scope} 固定编号范围为 0-499。";
+                    return false;
+                }
                 kind = IsLegacyStringScope(reference.Scope)
                     ? ScriptVariableKind.String
                     : ScriptVariableKind.Integer;
@@ -412,6 +466,26 @@ namespace Server.Scripting.Variables
             scope == ScriptVariableScope.A ||
             scope == ScriptVariableScope.T ||
             scope == ScriptVariableScope.Z;
+
+        private static bool TryGetPersistentStore(
+            in ScriptVariableContext context,
+            ScriptVariableScope scope,
+            out CharacterScriptVariableStore store)
+        {
+            store = null;
+            if (scope != ScriptVariableScope.U && scope != ScriptVariableScope.T) return false;
+            CharacterInfo character = ResolveCharacter(context.Owner);
+            if (character == null) return false;
+            store = character.ScriptVariables;
+            return true;
+        }
+
+        private static CharacterInfo ResolveCharacter(object owner) => owner switch
+        {
+            CharacterInfo character => character,
+            HumanObject human => human.Info,
+            _ => null
+        };
 
         private static ScriptVariableReadResult ReadFailure(ScriptVariableErrorCode code, string diagnostic) =>
             new ScriptVariableReadResult(false, false, code, default, diagnostic);

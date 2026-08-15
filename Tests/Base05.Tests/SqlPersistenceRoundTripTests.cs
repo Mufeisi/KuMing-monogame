@@ -5,6 +5,7 @@ using Server.Persistence;
 using Server.Persistence.Sql;
 using Server.Utils;
 using Shared.Diagnostics;
+using Server.Scripting.Variables;
 using Xunit;
 
 namespace Base05.Tests;
@@ -12,6 +13,35 @@ namespace Base05.Tests;
 [Collection("PerformanceMetrics")]
 public sealed class SqlPersistenceRoundTripTests
 {
+    [Fact]
+    public void PrivateVariableSchemaAndUpsertAreDefinedForSqliteAndMySql()
+    {
+        SchemaMigration migration = Assert.Single(
+            SchemaMigrator.CreateDefaultMigrations(), item => item.Version == 18);
+        string createTable = Assert.Single(
+            migration.Statements,
+            statement => statement.Contains(
+                "CREATE TABLE IF NOT EXISTS character_script_variables", StringComparison.Ordinal));
+        Assert.Contains("PRIMARY KEY(character_id, variable_namespace, variable_key)", createTable);
+        Assert.Contains("decimal_text", createTable);
+
+        string[] columns =
+        [
+            "character_id", "variable_namespace", "variable_key", "value_kind",
+            "integer_value", "decimal_text", "text_value", "reset_policy",
+            "reset_period_id", "updated_utc_ms"
+        ];
+        string[] keys = ["character_id", "variable_namespace", "variable_key"];
+        string[] updates = columns.Except(keys).ToArray();
+        string sqlite = SqlDialectFactory.Create(DatabaseProviderKind.Sqlite)
+            .BuildUpsert("character_script_variables", columns, keys, updates);
+        string mysql = SqlDialectFactory.Create(DatabaseProviderKind.MySql)
+            .BuildUpsert("character_script_variables", columns, keys, updates);
+
+        Assert.Contains("ON CONFLICT", sqlite, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("ON DUPLICATE KEY UPDATE", mysql, StringComparison.OrdinalIgnoreCase);
+    }
+
     [Fact]
     public void Sqlite_round_trips_account_character_inventory_storage_and_mail()
     {
@@ -72,6 +102,10 @@ public sealed class SqlPersistenceRoundTripTests
             };
             mail.Items.Add(mailItem);
             character.Mail.Add(mail);
+            character.ScriptVariables.Set(
+                ScriptVariableScope.U, "droprate", ScriptVariableValue.FromDecimal(12.75m));
+            character.ScriptVariables.Set(
+                ScriptVariableScope.T, "#0", ScriptVariableValue.FromString("永久称号"));
 
             persistence.SaveAccounts(source);
             ((IPendingSaveCoordinator)persistence).DrainPendingSaves();
@@ -129,10 +163,58 @@ public sealed class SqlPersistenceRoundTripTests
             Assert.Equal(406ul, restoredMailItem.UniqueID);
             Assert.Equal(303, restoredMailItem.ItemIndex);
             Assert.Equal(303, restoredMailItem.Info.Index);
+            Assert.True(restoredCharacter.ScriptVariables.TryGet(
+                ScriptVariableScope.U, "droprate", out var restoredRate));
+            Assert.Equal(12.75m, restoredRate.Decimal);
+            Assert.True(restoredCharacter.ScriptVariables.TryGet(
+                ScriptVariableScope.T, "#0", out var restoredTitle));
+            Assert.Equal("永久称号", restoredTitle.Text);
         }
         finally
         {
             PerformanceMetrics.Configure(enabled: false);
+            TryDelete(databasePath);
+            TryDelete(databasePath + "-wal");
+            TryDelete(databasePath + "-shm");
+        }
+    }
+
+    [Fact]
+    public void Sqlite_archive_round_trip_preserves_private_persistent_variables()
+    {
+        var databasePath = Path.Combine(Path.GetTempPath(), $"base05-archive-{Guid.NewGuid():N}.db");
+        var persistence = new SqlServerPersistence(
+            DatabaseProviderKind.Sqlite,
+            new SqlDatabaseOptions { SqlitePath = databasePath });
+        try
+        {
+            var envir = new Envir();
+            var character = new CharacterInfo
+            {
+                Index = 901,
+                Name = "变量归档测试",
+                CreationIP = "127.0.0.1",
+                Heroes = new HeroInfo[1],
+            };
+            character.ScriptVariables.Set(
+                ScriptVariableScope.U, "chance", ScriptVariableValue.FromDecimal(33.33333333m));
+            character.ScriptVariables.Set(
+                ScriptVariableScope.T, "#2", ScriptVariableValue.FromString("可恢复文本"));
+
+            persistence.SaveArchivedCharacter(envir, character);
+            ((IPendingSaveCoordinator)persistence).DrainPendingSaves();
+            CharacterInfo restored = persistence.GetArchivedCharacter(envir, character.Name);
+
+            Assert.NotNull(restored);
+            Assert.True(restored.ScriptVariables.TryGet(
+                ScriptVariableScope.U, "chance", out var chance));
+            Assert.Equal(33.33333333m, chance.Decimal);
+            Assert.True(restored.ScriptVariables.TryGet(
+                ScriptVariableScope.T, "#2", out var text));
+            Assert.Equal("可恢复文本", text.Text);
+        }
+        finally
+        {
             TryDelete(databasePath);
             TryDelete(databasePath + "-wal");
             TryDelete(databasePath + "-shm");

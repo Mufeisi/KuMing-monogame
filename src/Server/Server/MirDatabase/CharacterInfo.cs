@@ -2,6 +2,7 @@ using System.Drawing;
 ﻿using Server.MirEnvir;
 using Server.MirNetwork;
 using Server.MirObjects;
+using Server.Scripting.Variables;
 
 namespace Server.MirDatabase
 {
@@ -105,6 +106,7 @@ namespace Server.MirDatabase
         public int CurrentHeroIndex;
         public bool HeroSpawned;
         public HeroBehaviour HeroBehaviour;
+        public CharacterScriptVariableStore ScriptVariables { get; } = new CharacterScriptVariableStore();
 
         public CharacterInfo() { }
 
@@ -380,6 +382,9 @@ namespace Server.MirDatabase
 
             if (version > 100)
                 HeroBehaviour = (HeroBehaviour)reader.ReadByte();
+
+            if (customVersion >= 1)
+                ScriptVariables.Load(reader);
         }
 
         public virtual void Save(BinaryWriter writer)
@@ -565,6 +570,7 @@ namespace Server.MirDatabase
             writer.Write(CurrentHeroIndex);
             writer.Write(HeroSpawned);
             writer.Write((byte)HeroBehaviour);
+            ScriptVariables.Save(writer);
         }
 
         public SelectInfo ToSelectInfo()

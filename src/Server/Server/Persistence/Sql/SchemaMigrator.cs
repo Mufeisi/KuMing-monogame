@@ -1088,6 +1088,26 @@ namespace Server.Persistence.Sql
                     [
                         "ALTER TABLE characters ADD COLUMN character_kind INTEGER NOT NULL DEFAULT 0",
                     ]),
+                new SchemaMigration(
+                    version: 18,
+                    description: "角色私人持久变量 U/T",
+                    statements:
+                    [
+                        "CREATE TABLE IF NOT EXISTS character_script_variables (" +
+                        "character_id BIGINT NOT NULL, " +
+                        "variable_namespace VARCHAR(16) NOT NULL, " +
+                        "variable_key VARCHAR(96) NOT NULL, " +
+                        "value_kind INTEGER NOT NULL, " +
+                        "integer_value BIGINT NOT NULL DEFAULT 0, " +
+                        "decimal_text VARCHAR(64) NOT NULL DEFAULT '', " +
+                        "text_value TEXT NOT NULL, " +
+                        "reset_policy VARCHAR(32) NOT NULL DEFAULT 'Never', " +
+                        "reset_period_id VARCHAR(64) NOT NULL DEFAULT '', " +
+                        "updated_utc_ms BIGINT NOT NULL, " +
+                        "PRIMARY KEY(character_id, variable_namespace, variable_key)" +
+                        ")",
+                        "CREATE INDEX character_script_variables_ix_namespace ON character_script_variables(variable_namespace)",
+                    ]),
             };
         }
     }

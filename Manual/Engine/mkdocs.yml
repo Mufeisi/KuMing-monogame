@@ -80,6 +80,7 @@ nav:
       - 变量系统:
           - 变量系统概览: scripting/variables/overview.md
           - 作用域与生命周期: scripting/variables/scopes.md
+          - 私人持久变量与数据库: scripting/variables/persistence.md
           - 声明、初始化与热重载: scripting/variables/declarations.md
           - 命名小数变量: scripting/variables/decimal.md
           - 操作与显示命令: scripting/variables/commands.md
@@ -89,6 +90,7 @@ nav:
   - 版本说明:
       - 2026-08-15 变量系统 VAR-01: releases/2026-08-15-var01.md
       - 2026-08-15 变量系统 VAR-02: releases/2026-08-15-var02.md
+      - 2026-08-15 变量系统 VAR-03: releases/2026-08-15-var03.md
   - 参考:
       - 功能状态: reference/feature-status.md
   - 说明书维护:

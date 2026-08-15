@@ -2,6 +2,7 @@ using System.Globalization;
 using Server.Scripting.Variables;
 using Server.Scripting;
 using Server.MirObjects;
+using Server.MirDatabase;
 using Xunit;
 
 namespace Base05.Tests;
@@ -512,6 +513,95 @@ public sealed class ScriptVariableModuleTests
         Assert.Equal(new[] { "N$Score", "MOV", "3" }, segment.ActList[2].Params);
         Assert.Equal(new[] { "S$Label", "MOV", "在线" }, segment.ActList[3].Params);
         Assert.Equal(new[] { "I0", "DIV", "2" }, segment.ActList[4].Params);
+        Assert.Equal(CheckType.Variable, Assert.Single(segment.CheckList).Type);
+    }
+
+    [Fact]
+    public void PrivatePersistentVariablesUseCharacterStorageAndRequestAutoSave()
+    {
+        var catalog = new ScriptVariableDeclarationCatalog();
+        Assert.True(catalog.TryReload(new[]
+        {
+            Declaration(ScriptVariableScope.U, "DropRate", ScriptVariableKind.Decimal, "1.5"),
+            Declaration(ScriptVariableScope.T, "Title", ScriptVariableKind.String, "无")
+        }).Success);
+        int saveRequests = 0;
+        var module = new ScriptVariableModule(catalog, requestAutoSave: () => saveRequests++);
+        var character = new CharacterInfo();
+        ScriptVariableContext context = ScriptVariableContext.ForPlayer(character);
+
+        Assert.True(module.Mutate(context, ScriptVariableMutation.Set(
+            ScriptVariableReference.Named(ScriptVariableScope.U, "DropRate"),
+            ScriptVariableValue.FromDecimal(12.75m))).Success);
+        Assert.True(module.Mutate(context, ScriptVariableMutation.Set(
+            ScriptVariableReference.Legacy(ScriptVariableScope.T, 0),
+            ScriptVariableValue.FromString("勇者"))).Success);
+
+        var reloggedModule = new ScriptVariableModule(catalog);
+        Assert.Equal("12.75", reloggedModule.Read(context,
+            ScriptVariableReference.Named(ScriptVariableScope.U, "DropRate")).Value.Format());
+        Assert.Equal("勇者", reloggedModule.Read(context,
+            ScriptVariableReference.Legacy(ScriptVariableScope.T, 0)).Value.Text);
+        Assert.Equal(2, saveRequests);
+
+        ScriptVariableReadResult outOfRange = module.Read(context,
+            ScriptVariableReference.Legacy(ScriptVariableScope.U, 500));
+        Assert.False(outOfRange.Success);
+        Assert.Equal(ScriptVariableErrorCode.UnknownReference, outOfRange.ErrorCode);
+    }
+
+    [Fact]
+    public void PrivatePersistentStoreBinaryRoundTripPreservesIntegerDecimalAndString()
+    {
+        var source = new CharacterScriptVariableStore();
+        source.Set(ScriptVariableScope.U, "#0", ScriptVariableValue.FromInteger(long.MaxValue));
+        source.Set(ScriptVariableScope.U, "droprate", ScriptVariableValue.FromDecimal(0.125m));
+        source.Set(ScriptVariableScope.T, "#1", ScriptVariableValue.FromString("中文标题"));
+
+        using var stream = new MemoryStream();
+        using (var writer = new BinaryWriter(stream, System.Text.Encoding.UTF8, leaveOpen: true))
+            source.Save(writer);
+        stream.Position = 0;
+        var restored = new CharacterScriptVariableStore();
+        using (var reader = new BinaryReader(stream, System.Text.Encoding.UTF8, leaveOpen: true))
+            restored.Load(reader);
+
+        Assert.Equal(3, restored.Count);
+        Assert.True(restored.TryGet(ScriptVariableScope.U, "#0", out var integer));
+        Assert.Equal(long.MaxValue, integer.Integer);
+        Assert.True(restored.TryGet(ScriptVariableScope.U, "droprate", out var decimalValue));
+        Assert.Equal(0.125m, decimalValue.Decimal);
+        Assert.True(restored.TryGet(ScriptVariableScope.T, "#1", out var text));
+        Assert.Equal("中文标题", text.Text);
+    }
+
+    [Fact]
+    public void PrivatePersistentDeclarationsRejectScopeKindMismatch()
+    {
+        ArgumentException uString = Assert.Throws<ArgumentException>(() =>
+            Declaration(ScriptVariableScope.U, "Title", ScriptVariableKind.String, "错误"));
+        ArgumentException tDecimal = Assert.Throws<ArgumentException>(() =>
+            Declaration(ScriptVariableScope.T, "Rate", ScriptVariableKind.Decimal, "1.5"));
+
+        Assert.Contains("U 作用域", uString.Message);
+        Assert.Contains("T 作用域", tDecimal.Message);
+    }
+
+    [Fact]
+    public void TxtNpcParserRoutesPrivatePersistentPrefixesToUnifiedCommands()
+    {
+        var page = new NPCPage("[@MAIN]");
+        var segment = new NPCSegment(
+            page, new List<string>(), new List<string>(), new List<string>(),
+            new List<string>(), new List<string>());
+
+        segment.ParseAct(segment.ActList, "MOV U0 7");
+        segment.ParseAct(segment.ActList, "INC U.DropRate 0.25");
+        segment.ParseAct(segment.ActList, "MOV T0 永久称号");
+        segment.ParseCheck("CHECK U.DropRate >= 1.5");
+
+        Assert.Equal(3, segment.ActList.Count);
+        Assert.All(segment.ActList, action => Assert.Equal(ActionType.VariableMutate, action.Type));
         Assert.Equal(CheckType.Variable, Assert.Single(segment.CheckList).Type);
     }
 
