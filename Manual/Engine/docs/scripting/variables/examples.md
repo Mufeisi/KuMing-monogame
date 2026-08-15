@@ -1,6 +1,6 @@
 # 完整使用示例
 
-- 功能状态：混合；VAR-01～06 的运行时、持久和复合变量示例可用
+- 功能状态：混合；VAR-01～07 已实现部分的运行时、持久、复合及在线跨角色示例可用
 - 首次支持版本：开发版 2026-08-15
 
 ## 在线与地图临时变量
@@ -114,3 +114,17 @@ SENDMSG 6 命中几率，候选奖励：<$STR(L$候选奖励)>
 ```
 
 L$/D$ 在人物小退时清除。`P.FinalRate=12.5` 配合 `PERCENT` 明确表示 12.5%，不会被解释为 1250% 或 0.125%。
+
+## 当前目标与在线角色传递
+
+```text
+MOV S$目标名称 张三
+SETCURRTARGET S$目标名称
+SENDMSG 6 目标积分：<$C.HUMAN(EventScore)>
+
+SETHUMVAR S$目标名称 HUMAN.EventScore 20
+GETHUMVAR S$目标名称 U.DropRate P.TargetRate
+SENDMSG 6 读取到的目标倍率：<$FORMAT(P.TargetRate,2)>
+```
+
+目标必须在线。`C.` 还要求同图且距离不超过 20 格，并且只能读取；写入必须显式使用 `SETHUMVAR`。完整边界见[当前目标与跨角色变量](cross-object.md)。

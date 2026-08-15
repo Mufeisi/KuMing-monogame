@@ -1,11 +1,11 @@
 # 变量系统概览
 
-- 功能状态：实验性（VAR-01～06）
+- 功能状态：实验性（VAR-01～07 实现部分）
 - 首次支持版本：开发版 2026-08-15
 - 适用端：服务端脚本
 
 !!! warning "开发版功能"
-    当前已实现 P/D/M/N/S/I/Call 运行时作用域、U/T 私人持久、G/A 全局持久、J/Z 每日周期、HUMAN/GUILD/GLOBAL 自定义持久、L$/D$ 临时复合值、受控公式、显式单位概率、统一运算/比较/显示以及 C# 声明热重载。跨对象访问仍是后续能力。
+    当前已实现 P/D/M/N/S/I/Call 运行时作用域、U/T 私人持久、G/A 全局持久、J/Z 每日周期、HUMAN/GUILD/GLOBAL 自定义持久、L$/D$ 临时复合值、受控公式、显式单位概率、在线跨对象访问、统一运算/比较/显示以及 C# 声明热重载。兼容工具已经具备，但真实运行服仍需独立预检和冒烟。
 
 变量系统用于在 NPC 对话、人物在线、地图停留、服务器运行和持久化数据之间保存状态。所有变量都由四部分确定：
 
@@ -52,3 +52,5 @@ VAR Integer HUMAN KillCount DEFAULT 0
 - [操作与显示命令](commands.md)
 - [列表 L$ 与字典 D$](composites.md)
 - [公式、概率与格式化](formula-probability.md)
+- [当前目标与跨角色变量](cross-object.md)
+- [兼容模式与迁移](compatibility-migration.md)

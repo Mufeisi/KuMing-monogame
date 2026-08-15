@@ -16,6 +16,10 @@
 | `QuotaExceeded` | 变量数量或内容超过配额 | 删除无用临时数据或拆分业务 |
 | `WrongThread` | 非服务器主线程修改状态 | 通过现有主线程调度执行 |
 
+## 兼容预检失败
+
+`--variable-preflight` 返回 3 或 `LingFengCompatible` 拒绝启动时，先查看[兼容模式与迁移](compatibility-migration.md)中的诊断表。不要通过填写旧摘要绕过检查：脚本内容变化后必须重新扫描、审核，并把新摘要写入 `ScriptVariableCompatibilityAcknowledgement`。
+
 ## 热重载失败
 
 热重载失败不会应用半个版本。检查日志中的：

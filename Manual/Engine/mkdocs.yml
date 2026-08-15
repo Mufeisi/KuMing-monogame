@@ -89,6 +89,8 @@ nav:
           - 操作与显示命令: scripting/variables/commands.md
           - 列表 L$ 与字典 D$: scripting/variables/composites.md
           - 公式、概率与格式化: scripting/variables/formula-probability.md
+          - 当前目标与跨角色变量: scripting/variables/cross-object.md
+          - 兼容模式与迁移: scripting/variables/compatibility-migration.md
           - C# 脚本变量 API: scripting/variables/csharp-api.md
           - 完整使用示例: scripting/variables/examples.md
           - 错误与排查: scripting/variables/errors.md
@@ -99,6 +101,7 @@ nav:
       - 2026-08-15 变量系统 VAR-04: releases/2026-08-15-var04.md
       - 2026-08-15 变量系统 VAR-05: releases/2026-08-15-var05.md
       - 2026-08-15 变量系统 VAR-06: releases/2026-08-15-var06.md
+      - 2026-08-15 变量系统 VAR-07: releases/2026-08-15-var07.md
   - 参考:
       - 功能状态: reference/feature-status.md
   - 说明书维护:

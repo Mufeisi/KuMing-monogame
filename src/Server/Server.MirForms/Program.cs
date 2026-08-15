@@ -60,6 +60,9 @@ namespace Server.MirForms
             if (string.Equals(args[0], "--headless-variable-smoke", StringComparison.OrdinalIgnoreCase))
                 return RunHeadlessVariableSmoke(args);
 
+            if (string.Equals(args[0], "--variable-preflight", StringComparison.OrdinalIgnoreCase))
+                return RunVariablePreflight(args);
+
             if (!string.Equals(args[0], "--restore-sqlite", StringComparison.OrdinalIgnoreCase) ||
                 (args.Length != 2 && args.Length != 4) ||
                 (args.Length == 4 && !string.Equals(args[2], "--target", StringComparison.OrdinalIgnoreCase)))
@@ -136,6 +139,26 @@ namespace Server.MirForms
             else
                 Console.Error.WriteLine(result.Message);
             return result.ExitCode;
+        }
+
+        private static int RunVariablePreflight(string[] args)
+        {
+            if (args.Length != 2)
+            {
+                Console.Error.WriteLine("用法：Server.exe --variable-preflight <Envir或脚本根目录>");
+                return 2;
+            }
+
+            ScriptVariablePreflightReport report = ScriptVariableCompatibilityPreflight.Scan(args[1]);
+            Console.WriteLine(
+                $"变量兼容预检：根目录={report.RootPath}；文件={report.FileCount}；摘要={report.ContentDigest}");
+            Console.WriteLine("前缀统计：" + (report.PrefixUsages.Count == 0
+                ? "无"
+                : string.Join("；", report.PrefixUsages.Select(item => $"{item.Prefix}={item.Count}"))));
+            foreach (ScriptVariablePreflightDiagnostic diagnostic in report.Diagnostics)
+                Console.WriteLine(
+                    $"[{diagnostic.Severity}] {diagnostic.Code} {diagnostic.File}:{diagnostic.Line} {diagnostic.Message}");
+            return report.HasErrors ? 3 : 0;
         }
     }
 }

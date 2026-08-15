@@ -1060,6 +1060,22 @@ public sealed class ScriptVariableModuleTests
             $"1000 次受控公式计算耗时 {watch.Elapsed}，超过 3 秒门禁。");
     }
 
+    [Fact]
+    public void TxtNpcParserRoutesCurrentTargetAndOnlineHumanTransferCommands()
+    {
+        var segment = new NPCSegment(
+            new NPCPage("[@MAIN]"), new List<string>(), new List<string>(), new List<string>(),
+            new List<string>(), new List<string>());
+
+        segment.ParseAct(segment.ActList, "SETCURRTARGET S$TargetName");
+        segment.ParseAct(segment.ActList, "SETHUMVAR S$TargetName HUMAN.Shared P.Rate");
+        segment.ParseAct(segment.ActList, "GETHUMVAR S$TargetName HUMAN.Shared P.Result");
+
+        Assert.Equal(ActionType.VariableSetCurrentTarget, segment.ActList[0].Type);
+        Assert.Equal(ActionType.VariableSetHuman, segment.ActList[1].Type);
+        Assert.Equal(ActionType.VariableGetHuman, segment.ActList[2].Type);
+    }
+
     private static ScriptVariableDeclaration Declaration(
         ScriptVariableScope scope,
         string key,

@@ -3,6 +3,7 @@ using Server.MirDatabase;
 using Server.MirEnvir;
 using Server.MirObjects;
 using Server.Security;
+using Server.Scripting.Variables;
 
 namespace Server
 {
@@ -131,6 +132,10 @@ namespace Server
         //C# Scripts (Roslyn + HotReload)
         public static bool CSharpScriptsEnabled = true;
         public static int ScriptVariableDailyResetHour = 0;
+        public static ScriptVariableCompatibilityMode ScriptVariableCompatibilityMode =
+            ScriptVariableCompatibilityMode.LegacyCurrent;
+        public static string ScriptVariablePreflightPath = EnvirPath;
+        public static string ScriptVariableCompatibilityAcknowledgement = string.Empty;
         public static string CSharpScriptsPath = EnvirPath;
         public static long CustomGuiPackageSequence = 1;
         public static bool CSharpScriptsHotReloadEnabled = true;
@@ -553,6 +558,15 @@ namespace Server
             CSharpScriptsEnabled = Reader.ReadBoolean("CSharpScripts", "CSharpScriptsEnabled", CSharpScriptsEnabled);
             ScriptVariableDailyResetHour = Reader.ReadInt32(
                 "CSharpScripts", "ScriptVariableDailyResetHour", ScriptVariableDailyResetHour);
+            string variableCompatibilityMode = Reader.ReadString(
+                "CSharpScripts", "ScriptVariableCompatibilityMode", ScriptVariableCompatibilityMode.ToString());
+            if (!Enum.TryParse(variableCompatibilityMode, true, out ScriptVariableCompatibilityMode parsedVariableMode))
+                parsedVariableMode = ScriptVariableCompatibilityMode.LegacyCurrent;
+            ScriptVariableCompatibilityMode = parsedVariableMode;
+            ScriptVariablePreflightPath = Reader.ReadString(
+                "CSharpScripts", "ScriptVariablePreflightPath", ScriptVariablePreflightPath);
+            ScriptVariableCompatibilityAcknowledgement = Reader.ReadString(
+                "CSharpScripts", "ScriptVariableCompatibilityAcknowledgement", ScriptVariableCompatibilityAcknowledgement);
             CSharpScriptsPath = Reader.ReadString("CSharpScripts", "CSharpScriptsPath", CSharpScriptsPath);
             CustomGuiPackageSequence = Math.Max(1, Reader.ReadInt64("CSharpScripts", "CustomGuiPackageSequence", CustomGuiPackageSequence));
             CSharpScriptsHotReloadEnabled = Reader.ReadBoolean("CSharpScripts", "CSharpScriptsHotReloadEnabled", CSharpScriptsHotReloadEnabled);
@@ -880,6 +894,9 @@ namespace Server
             //C# Scripts
             Reader.Write("CSharpScripts", "CSharpScriptsEnabled", CSharpScriptsEnabled);
             Reader.Write("CSharpScripts", "ScriptVariableDailyResetHour", ScriptVariableDailyResetHour);
+            Reader.Write("CSharpScripts", "ScriptVariableCompatibilityMode", ScriptVariableCompatibilityMode.ToString());
+            Reader.Write("CSharpScripts", "ScriptVariablePreflightPath", ScriptVariablePreflightPath);
+            Reader.Write("CSharpScripts", "ScriptVariableCompatibilityAcknowledgement", ScriptVariableCompatibilityAcknowledgement);
             Reader.Write("CSharpScripts", "CSharpScriptsPath", CSharpScriptsPath);
             Reader.Write("CSharpScripts", "CustomGuiPackageSequence", CustomGuiPackageSequence);
             Reader.Write("CSharpScripts", "CSharpScriptsHotReloadEnabled", CSharpScriptsHotReloadEnabled);

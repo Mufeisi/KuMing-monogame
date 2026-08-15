@@ -131,6 +131,7 @@ namespace Server.MirObjects
         protected int _fishCounter, _restedCounter;
 
         public uint NPCObjectID;
+        public PlayerObject ScriptVariableCurrentTarget { get; set; }
         public int NPCScriptID;
         public NPCPage NPCPage;
         public Dictionary<NPCSegment, bool> NPCSuccess = new Dictionary<NPCSegment, bool>();
@@ -269,6 +270,7 @@ namespace Server.MirObjects
 
         public void StopGame(byte reason)
         {
+            ScriptVariableCurrentTarget = null;
             if (NPCObjectID != 0)
                 EndNpcConversation(NPCObjectID);
 

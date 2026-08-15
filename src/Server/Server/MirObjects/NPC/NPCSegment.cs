@@ -61,6 +61,35 @@ namespace Server.MirObjects
             if (player == null || player.NPCObjectID == 0 || string.IsNullOrWhiteSpace(expression))
                 return false;
 
+            Match currentTarget = Regex.Match(
+                expression, @"^C\.(STR|HUMAN|GUILD)\(([^,()]+)\)$",
+                RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+            if (currentTarget.Success)
+            {
+                PlayerObject target = player.ScriptVariableCurrentTarget;
+                if (target == null || Envir.GetPlayer(target.Name) != target ||
+                    target.CurrentMap != player.CurrentMap ||
+                    !Functions.InRange(player.CurrentLocation, target.CurrentLocation, 20))
+                    return false;
+                string targetReference = currentTarget.Groups[1].Value.ToUpperInvariant() switch
+                {
+                    "HUMAN" => "HUMAN." + currentTarget.Groups[2].Value.Trim(),
+                    "GUILD" => "GUILD." + currentTarget.Groups[2].Value.Trim(),
+                    _ => currentTarget.Groups[2].Value.Trim()
+                };
+                if (!TryParseRuntimeVariableReference(targetReference, out _)) return false;
+                ScriptVariableTextResult targetResult = Envir.CSharpScripts.VariableCommands.Format(
+                    ScriptVariableContext.ForPlayer(target, target.CurrentMap), targetReference);
+                if (!targetResult.Success)
+                {
+                    MessageQueue.Enqueue(
+                        $"[Variables][TXT] C. 读取失败：{targetResult.ErrorCode} {targetResult.Diagnostic}，页码：{Key}");
+                    return false;
+                }
+                text = targetResult.Text;
+                return true;
+            }
+
             Match str = Regex.Match(
                 expression, @"^STR\(([^,()]+)\)$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
             Match format = Regex.Match(
@@ -1048,6 +1077,22 @@ namespace Server.MirObjects
                         ActionType.VariableFormulation,
                         string.Join(" ", parts.Skip(1).Take(parts.Length - 2)),
                         parts[^1]));
+                    break;
+
+                case "SETCURRTARGET":
+                    acts.Add(new NPCActions(
+                        ActionType.VariableSetCurrentTarget, parts.Length > 1 ? parts[1] : string.Empty));
+                    break;
+
+                case "SETHUMVAR":
+                    if (parts.Length < 4 || !TryParseRuntimeVariableReference(parts[2], out _)) return;
+                    acts.Add(new NPCActions(ActionType.VariableSetHuman, parts[1], parts[2], parts[3]));
+                    break;
+
+                case "GETHUMVAR":
+                    if (parts.Length < 4 || !TryParseRuntimeVariableReference(parts[2], out _) ||
+                        !TryParseRuntimeVariableReference(parts[3], out _)) return;
+                    acts.Add(new NPCActions(ActionType.VariableGetHuman, parts[1], parts[2], parts[3]));
                     break;
 
                 case "ADDTOLIST":
@@ -3986,6 +4031,70 @@ namespace Server.MirObjects
                         }
                         break;
 
+                    case ActionType.VariableSetCurrentTarget:
+                        {
+                            if (string.IsNullOrWhiteSpace(param[0]))
+                            {
+                                player.ScriptVariableCurrentTarget = null;
+                                break;
+                            }
+                            PlayerObject target = Envir.GetPlayer(ResolveOwnVariableOperand(player, param[0]));
+                            player.ScriptVariableCurrentTarget = target != null &&
+                                target.CurrentMap == player.CurrentMap &&
+                                Functions.InRange(player.CurrentLocation, target.CurrentLocation, 20)
+                                    ? target
+                                    : null;
+                            if (player.ScriptVariableCurrentTarget == null)
+                                MessageQueue.Enqueue($"[Variables][TXT] SETCURRTARGET 失败：目标离线、不在同图或距离超过 20 格，页码：{Key}");
+                        }
+                        break;
+
+                    case ActionType.VariableSetHuman:
+                        {
+                            string targetName = ResolveOwnVariableOperand(player, param[0]);
+                            PlayerObject target = Envir.GetPlayer(targetName);
+                            if (target == null)
+                            {
+                                MessageQueue.Enqueue($"[Variables][TXT] SETHUMVAR 失败：TargetOffline 目标不在线，页码：{Key}");
+                                break;
+                            }
+                            ScriptVariableMutationResult result = Envir.CSharpScripts.VariableCommands.Mutate(
+                                ScriptVariableContext.ForPlayer(target, target.CurrentMap),
+                                param[1], "MOV", ResolveOwnVariableOperand(player, param[2]));
+                            if (!result.Success)
+                                MessageQueue.Enqueue($"[Variables][TXT] SETHUMVAR 失败：{result.ErrorCode} {result.Diagnostic}，页码：{Key}");
+                        }
+                        break;
+
+                    case ActionType.VariableGetHuman:
+                        {
+                            string targetName = ResolveOwnVariableOperand(player, param[0]);
+                            PlayerObject target = Envir.GetPlayer(targetName);
+                            if (target == null)
+                            {
+                                MessageQueue.Enqueue($"[Variables][TXT] GETHUMVAR 失败：TargetOffline 目标不在线，页码：{Key}");
+                                break;
+                            }
+                            if (!ScriptVariableReferenceParser.TryParse(param[1], out var sourceReference))
+                            {
+                                MessageQueue.Enqueue($"[Variables][TXT] GETHUMVAR 失败：UnknownReference，页码：{Key}");
+                                break;
+                            }
+                            ScriptVariableReadResult source = Envir.CSharpScripts.VariableModule.Read(
+                                ScriptVariableContext.ForPlayer(target, target.CurrentMap), sourceReference);
+                            if (!source.Success)
+                            {
+                                MessageQueue.Enqueue($"[Variables][TXT] GETHUMVAR 失败：{source.ErrorCode} {source.Diagnostic}，页码：{Key}");
+                                break;
+                            }
+                            ScriptVariableMutationResult result = Envir.CSharpScripts.VariableCommands.Mutate(
+                                ScriptVariableContext.ForConversation(player, player.NPCObjectID, player.CurrentMap),
+                                param[2], "MOV", source.Value.Format());
+                            if (!result.Success)
+                                MessageQueue.Enqueue($"[Variables][TXT] GETHUMVAR 失败：{result.ErrorCode} {result.Diagnostic}，页码：{Key}");
+                        }
+                        break;
+
                     case ActionType.GiveBuff:
                         {
                             if (!Enum.IsDefined(typeof(BuffType), param[0]))
@@ -5093,6 +5202,14 @@ namespace Server.MirObjects
 
         private static bool TryInteger(string text, out int value) =>
             int.TryParse(text, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out value);
+
+        private static string ResolveOwnVariableOperand(PlayerObject player, string text)
+        {
+            if (player == null || !ScriptVariableReferenceParser.TryParse(text, out _)) return text;
+            ScriptVariableTextResult result = Envir.CSharpScripts.VariableCommands.Format(
+                ScriptVariableContext.ForConversation(player, player.NPCObjectID, player.CurrentMap), text);
+            return result.Success ? result.Text : text;
+        }
 
         public static int Calculate(string op, int left, int right)
         {

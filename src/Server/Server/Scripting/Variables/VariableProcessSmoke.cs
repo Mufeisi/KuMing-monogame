@@ -36,6 +36,7 @@ namespace Server.Scripting.Variables
             bool oldHotReload = Settings.CSharpScriptsHotReloadEnabled;
             bool oldPushMode = Settings.CSharpScriptsPushModeEnabled;
             bool oldTxtFallback = Settings.CSharpScriptsFallbackToTxt;
+            ScriptVariableCompatibilityMode oldCompatibilityMode = Settings.ScriptVariableCompatibilityMode;
             string cleanupWarning = string.Empty;
 
             try
@@ -47,6 +48,7 @@ namespace Server.Scripting.Variables
                 Settings.CSharpScriptsHotReloadEnabled = false;
                 Settings.CSharpScriptsPushModeEnabled = false;
                 Settings.CSharpScriptsFallbackToTxt = true;
+                Settings.ScriptVariableCompatibilityMode = ScriptVariableCompatibilityMode.LegacyCurrent;
 
                 envir.Start(new EnvirStartOptions
                 {
@@ -69,11 +71,19 @@ namespace Server.Scripting.Variables
                     NPCObjectID = 100,
                     Info = new CharacterInfo { Name = "变量冒烟角色", Heroes = new HeroInfo[1] }
                 };
+                var targetPlayer = new PlayerObject
+                {
+                    Info = new CharacterInfo { Name = "变量冒烟目标", Heroes = new HeroInfo[1] }
+                };
                 var firstMap = new Map(new MapInfo { Index = 1 });
                 var secondMap = new Map(new MapInfo { Index = 2 });
                 var callFrame = new object();
                 var context = ScriptVariableContext.ForConversation(
                     player, player.NPCObjectID, firstMap, callFrame);
+                player.CurrentMap = firstMap;
+                targetPlayer.CurrentMap = firstMap;
+                envir.Players.Add(player);
+                envir.Players.Add(targetPlayer);
                 var page = new NPCPage("[@VARIABLESMOKE]");
                 var actions = new NPCSegment(
                     page, new List<string>(), new List<string>(), new List<string>(),
@@ -102,6 +112,10 @@ namespace Server.Scripting.Variables
                 actions.ParseAct(actions.ActList, "MOV D$Score {张三:100,李四:200}");
                 actions.ParseAct(actions.ActList, "MOV D$Score[王五] 300");
                 actions.ParseAct(actions.ActList, "FORMULATION (P.Rate + 0.25) * 2 P.FormulaResult");
+                actions.ParseAct(actions.ActList, "MOV S$TargetName 变量冒烟目标");
+                actions.ParseAct(actions.ActList, "SETHUMVAR S$TargetName HUMAN.Shared 2.5");
+                actions.ParseAct(actions.ActList, "GETHUMVAR S$TargetName HUMAN.Shared P.CrossResult");
+                actions.ParseAct(actions.ActList, "SETCURRTARGET S$TargetName");
                 if (!actions.Check(player))
                     return Failure(4, "VARIABLE_SMOKE_TXT_ACTION_FAILED");
                 AssertResult(commands.Mutate(context, "M0", "MOV", "22").Success,
@@ -109,7 +123,7 @@ namespace Server.Scripting.Variables
 
                 var display = new NPCSegment(
                     page,
-                    new List<string> { "整数<$STR(P0)> 小数<$FORMAT(P.Rate,2)>" },
+                    new List<string> { "整数<$STR(P0)> 小数<$FORMAT(P.Rate,2)> 目标<$C.HUMAN(Shared)>" },
                     new List<string>(), new List<string>(), new List<string>(), new List<string>());
                 display.ParseCheck("CHECK P.Rate >= 12.75");
                 if (!display.Check(player) ||
@@ -134,9 +148,11 @@ namespace Server.Scripting.Variables
                     commands.Format(context, "L$Bag").Text != "[11,22,33,44]" ||
                     commands.Format(context, "D$Score[王五]").Text != "300" ||
                     commands.Format(context, "P.FormulaResult", 2).Text != "26.00" ||
+                    commands.Format(context, "P.CrossResult", 2).Text != "2.50" ||
+                    commands.Format(ScriptVariableContext.ForPlayer(targetPlayer), "HUMAN.Shared", 2).Text != "2.50" ||
                     !commands.Chance(context, "P.Rate", ScriptProbabilityUnit.Percent,
                         (minimum, maximum) => 127_499).Matched ||
-                    !player.NPCSpeech.Any(line => line.Contains("整数3 小数12.75", StringComparison.Ordinal)))
+                    !player.NPCSpeech.Any(line => line.Contains("整数3 小数12.75 目标2.5", StringComparison.Ordinal)))
                     return Failure(4, "VARIABLE_SMOKE_COMMAND_FAILED");
 
                 var guild = new GuildInfo { GuildIndex = 900, Name = "变量冒烟行会" };
@@ -258,7 +274,8 @@ namespace Server.Scripting.Variables
                     0,
                     $"VARIABLE_SMOKE_OK;VERSION={rejectedVersion};INTEGER=3;DECIMAL=12.75;" +
                     "RESET=1.5;BONUS=0.5;RUNTIME_SCOPES=True;PRIVATE_PERSISTENCE=True;SERVER_PERSISTENCE=True;SERVER_RESTART_CLEAR=True;" +
-                    "DAILY_RESET=True;CUSTOM_PERSISTENT_SCOPES=True;COMPOSITES=True;FORMULA=True;PROBABILITY=True;CONFLICT_REJECTED=True");
+                    "DAILY_RESET=True;CUSTOM_PERSISTENT_SCOPES=True;COMPOSITES=True;FORMULA=True;PROBABILITY=True;" +
+                    "CROSS_OBJECT=True;COMPATIBILITY_PREFLIGHT=True;CONFLICT_REJECTED=True");
             }
             catch (Exception ex)
             {
@@ -272,6 +289,7 @@ namespace Server.Scripting.Variables
                 Settings.CSharpScriptsHotReloadEnabled = oldHotReload;
                 Settings.CSharpScriptsPushModeEnabled = oldPushMode;
                 Settings.CSharpScriptsFallbackToTxt = oldTxtFallback;
+                Settings.ScriptVariableCompatibilityMode = oldCompatibilityMode;
                 try
                 {
                     if (Directory.Exists(scriptsRoot)) Directory.Delete(scriptsRoot, recursive: true);
@@ -312,6 +330,8 @@ namespace Server.Scripting.Variables
                         registry.RegisterVariable(
                             ScriptVariableScope.P, "FormulaResult", ScriptVariableKind.Decimal, "0");
                         registry.RegisterVariable(
+                            ScriptVariableScope.P, "CrossResult", ScriptVariableKind.Decimal, "0");
+                        registry.RegisterVariable(
                             ScriptVariableScope.Call, "Rate", ScriptVariableKind.Decimal, "4.5");
                         registry.RegisterVariable(
                             ScriptVariableScope.U, "PersistentRate", ScriptVariableKind.Decimal, "1.0");
@@ -321,6 +341,8 @@ namespace Server.Scripting.Variables
                             ScriptVariableScope.A, "Notice", ScriptVariableKind.String, "未开放");
                         registry.RegisterVariable(
                             ScriptVariableScope.Human, "Lifetime", ScriptVariableKind.Decimal, "0");
+                        registry.RegisterVariable(
+                            ScriptVariableScope.Human, "Shared", ScriptVariableKind.Decimal, "0");
                         registry.RegisterVariable(
                             ScriptVariableScope.Guild, "Score", ScriptVariableKind.Integer, "0");
                         registry.RegisterVariable(

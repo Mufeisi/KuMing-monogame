@@ -10,7 +10,7 @@
 </section>
 
 !!! warning "当前说明书状态"
-    变量系统已交付 `VAR-01`～`VAR-06`：运行时、私人、全局、每日和行会作用域，命名 Decimal、L$/D$、受控公式、显式单位概率、声明热重载及 Legacy/SQLite/MySQL 持久化可在开发版使用。跨角色兼容范围以[功能状态](reference/feature-status.md)为准。
+    变量系统已交付 `VAR-01`～`VAR-06`，并完成 `VAR-07` 的在线跨角色访问与兼容预检工具：运行时、私人、全局、每日和行会作用域，命名 Decimal、L$/D$、受控公式、显式单位概率、声明热重载及 Legacy/SQLite/MySQL 持久化可在开发版使用。真实运行服仍需按[兼容模式与迁移](scripting/variables/compatibility-migration.md)执行审核和冒烟。
 
 <div class="lyo-card-grid" markdown>
 

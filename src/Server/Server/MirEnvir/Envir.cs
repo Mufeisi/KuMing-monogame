@@ -97,6 +97,9 @@ namespace Server.MirEnvir
 
         public ScriptManager CSharpScripts { get; }
         public ServerScriptVariableStore ScriptVariables { get; } = new ServerScriptVariableStore();
+        public ScriptVariableCompatibilityMode ActiveScriptVariableCompatibilityMode { get; private set; } =
+            ScriptVariableCompatibilityMode.LegacyCurrent;
+        public ScriptVariablePreflightReport ScriptVariablePreflightReport { get; private set; }
 
         public Envir()
         {
@@ -3887,6 +3890,30 @@ namespace Server.MirEnvir
             if (options == null) throw new ArgumentNullException(nameof(options));
             if (Settings.ScriptVariableDailyResetHour < 0 || Settings.ScriptVariableDailyResetHour > 23)
                 throw new InvalidOperationException("ScriptVariableDailyResetHour 必须是 0-23。");
+
+            ActiveScriptVariableCompatibilityMode = Settings.ScriptVariableCompatibilityMode;
+            if (ActiveScriptVariableCompatibilityMode != ScriptVariableCompatibilityMode.LegacyCurrent)
+            {
+                ScriptVariablePreflightReport = ScriptVariableCompatibilityPreflight.Scan(
+                    Settings.ScriptVariablePreflightPath);
+                MessageQueue.Enqueue(
+                    $"[Variables][Preflight] 模式={ActiveScriptVariableCompatibilityMode}；文件={ScriptVariablePreflightReport.FileCount}；" +
+                    $"诊断={ScriptVariablePreflightReport.Diagnostics.Count}；摘要={ScriptVariablePreflightReport.ContentDigest}");
+                foreach (ScriptVariablePreflightDiagnostic diagnostic in ScriptVariablePreflightReport.Diagnostics.Take(100))
+                    MessageQueue.Enqueue(
+                        $"[Variables][Preflight][{diagnostic.Severity}] {diagnostic.Code} {diagnostic.File}:{diagnostic.Line} {diagnostic.Message}");
+
+                ScriptVariableCompatibilityActivationResult activation =
+                    ScriptVariableCompatibilityPreflight.ValidateActivation(
+                        ActiveScriptVariableCompatibilityMode,
+                        ScriptVariablePreflightReport,
+                        Settings.ScriptVariableCompatibilityAcknowledgement);
+                if (!activation.Success) throw new InvalidOperationException(activation.Diagnostic);
+            }
+            else
+            {
+                ScriptVariablePreflightReport = null;
+            }
 
             _startOptions = options;
             Interlocked.Exchange(ref _shutdownSavePrepared, 0);
