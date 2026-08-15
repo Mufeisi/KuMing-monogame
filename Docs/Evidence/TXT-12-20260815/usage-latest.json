@@ -1,0 +1,19 @@
+{
+  "generatedAtUtc": "2026-08-15T16:49:39.791998Z",
+  "envirRoot": "./Envir",
+  "entries": [
+    {
+      "key": "npcs/txt灰度向导",
+      "relativePath": "NPCs/TXT灰度向导",
+      "readCount": 0,
+      "dispatchCount": 3,
+      "lastReadAtUtc": null,
+      "lastDispatchAtUtc": "2026-08-15T16:49:37.0437779Z",
+      "readSources": [],
+      "dispatchSources": [
+        { "source": "NpcPage:TXT灰度向导 [@MAIN]", "count": 2 },
+        { "source": "NpcPage:TXT灰度向导 [@VERIFY]", "count": 1 }
+      ]
+    }
+  ]
+}

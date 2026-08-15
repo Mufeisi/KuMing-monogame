@@ -1,0 +1,27 @@
+[@MAIN]
+#IF
+CHECK P0 = 1
+#ACT
+GOTO @READY
+#ELSESAY
+请先重新登录，使灰度登录标记生效。\
+<关闭/@Exit>
+
+[@READY]
+#SAY
+物理 TXT 灰度来源已生效。\
+<执行闭环验证/@VERIFY>\
+<关闭/@Exit>
+
+[@VERIFY]
+#IF
+CHECKMAPNAME 0
+CHECKMON >= 0 0 1
+#ACT
+MOV P0 2
+#SAY
+地图、怪物计数与会话变量闭环已完成；本试点不修改经济资产。\
+<关闭/@Exit>
+#ELSESAY
+当前地图或运行上下文不满足灰度条件。\
+<关闭/@Exit>

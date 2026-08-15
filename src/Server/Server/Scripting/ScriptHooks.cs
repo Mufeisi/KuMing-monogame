@@ -58,6 +58,8 @@ namespace Server.Scripting
         public const string OnPlayerDeathPenaltyAfter = "hooks/player/deathpenalty/after";
         public const string OnPlayerItemPickupCheck = "hooks/player/item/pickup/check";
         public static string OnPlayerItemPickupCheckIndex(int itemIndex) => $"hooks/player/item/pickup/check/{itemIndex}";
+        public const string OnPlayerItemPickupAfter = "hooks/player/item/pickup/after";
+        public static string OnPlayerItemPickupAfterIndex(int itemIndex) => $"hooks/player/item/pickup/after/{itemIndex}";
         public const string OnPlayerItemUseCheck = "hooks/player/item/use/check";
         public static string OnPlayerItemUseCheckIndex(int itemIndex) => $"hooks/player/item/use/check/{itemIndex}";
         public const string OnPlayerCustomCommand = "hooks/player/customcommand";
@@ -225,6 +227,7 @@ namespace Server.Scripting
     public delegate void OnPlayerDeathPenaltyBeforeHook(ScriptContext context, PlayerObject player, PlayerDeathPenaltyRequest request);
     public delegate void OnPlayerDeathPenaltyAfterHook(ScriptContext context, PlayerObject player, PlayerDeathPenaltyResult result);
     public delegate void OnPlayerItemPickupCheckHook(ScriptContext context, PlayerObject player, PlayerItemPickupCheckRequest request);
+    public delegate void OnPlayerItemPickupAfterHook(ScriptContext context, PlayerObject player, PlayerItemPickupResult result);
     public delegate void OnPlayerItemUseCheckHook(ScriptContext context, PlayerObject player, PlayerItemUseCheckRequest request);
     public delegate bool OnPlayerCustomCommandHook(ScriptContext context, PlayerObject player, string command);
     public delegate bool OnPlayerAcceptQuestHook(ScriptContext context, PlayerObject player, int questIndex);

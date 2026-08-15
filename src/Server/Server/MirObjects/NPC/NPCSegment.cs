@@ -4,6 +4,7 @@ using Server.MirEnvir;
 using System.Globalization;
 using System.Text.RegularExpressions;
 using Server.Scripting.Variables;
+using Server.Scripting;
 using S = ServerPackets;
 using Timer = Server.MirEnvir.Timer;
 
@@ -20,6 +21,9 @@ namespace Server.MirObjects
         {
             get { return MessageQueue.Instance; }
         }
+
+        private static bool IsLingFengCompatibility =>
+            Settings.TxtScriptsCompatibilityVersion?.StartsWith("LFM2-", StringComparison.OrdinalIgnoreCase) == true;
 
         private static bool ShouldAllowLegacyTxtExecution()
         {
@@ -235,7 +239,8 @@ namespace Server.MirObjects
 
         public void ParseCheck(string line)
         {
-            var parts = line.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            if (!TxtScriptTokenizer.TryTokenize(line, out string[] parts, out string tokenError))
+                throw new InvalidDataException($"检测命令参数无效：{tokenError} 原文={line}");
 
             parts = ParseArguments(parts);
 
@@ -251,9 +256,22 @@ namespace Server.MirObjects
             switch (parts[0].ToUpper())
             {
                 case "LEVEL":
+                case "CHECKLEVEL":
                     if (parts.Length < 3) return;
 
                     CheckList.Add(new NPCChecks(CheckType.Level, parts[1], parts[2]));
+                    break;
+
+                case "CHECKEXP":
+                case "CHECKHP":
+                case "CHECKMP":
+                    if (parts.Length is not (3 or 5)) return;
+                    CheckType numericType = parts[0].Equals("CHECKEXP", StringComparison.OrdinalIgnoreCase)
+                        ? CheckType.CheckExperience
+                        : parts[0].Equals("CHECKHP", StringComparison.OrdinalIgnoreCase)
+                            ? CheckType.CheckHP
+                            : CheckType.CheckMP;
+                    CheckList.Add(new NPCChecks(numericType, parts.Skip(1).ToArray()));
                     break;
 
                 case "CHECKGOLD":
@@ -274,6 +292,16 @@ namespace Server.MirObjects
                 case "CHECKITEM":
                     if (parts.Length < 2) return;
 
+                    if (IsLingFengCompatibility)
+                    {
+                        string requestedCount = parts.Length < 3 ? "1" : parts[2];
+                        string partial = parts.Length < 4 ? "0" : parts[3];
+                        string renamed = parts.Length < 5 ? "0" : parts[4];
+                        CheckList.Add(new NPCChecks(
+                            CheckType.CheckItemLingFeng, parts[1], requestedCount, partial, renamed));
+                        break;
+                    }
+
                     tempString = parts.Length < 3 ? "1" : parts[2];
                     tempString2 = parts.Length > 3 ? parts[3] : "";
 
@@ -287,6 +315,7 @@ namespace Server.MirObjects
                     break;
 
                 case "CHECKCLASS":
+                case "CHECKJOB":
                     if (parts.Length < 2) return;
 
                     CheckList.Add(new NPCChecks(CheckType.CheckClass, parts[1]));
@@ -353,6 +382,7 @@ namespace Server.MirObjects
                     break;
 
                 case "CHECKPKPOINT":
+                case "CHECKPKPOINTEX":
                     if (parts.Length < 3) return;
 
                     CheckList.Add(new NPCChecks(CheckType.CheckPkPoint, parts[1], parts[2]));
@@ -365,6 +395,8 @@ namespace Server.MirObjects
                     break;
 
                 case "CHECKMAP":
+                case "CHECKMAPNAME" when IsLingFengCompatibility:
+                case "ISONMAP" when IsLingFengCompatibility:
                     if (parts.Length < 2) return;
 
                     CheckList.Add(new NPCChecks(CheckType.CheckMap, parts[1]));
@@ -494,6 +526,16 @@ namespace Server.MirObjects
 
                     CheckList.Add(new NPCChecks(CheckType.CheckQuest, parts[1], parts[2]));
                     break;
+                case "ISQUESTACTIVE" when IsLingFengCompatibility:
+                    if (parts.Length != 2 ||
+                        !Server.Scripting.LingFengSocialCommandExecutor.TryParseQuestIndex(parts[1], out _, out _)) return;
+                    CheckList.Add(new NPCChecks(CheckType.CheckQuest, parts[1], "ACTIVE"));
+                    break;
+                case "ISQUESTCOMPLETED" when IsLingFengCompatibility:
+                    if (parts.Length != 2 ||
+                        !Server.Scripting.LingFengSocialCommandExecutor.TryParseQuestIndex(parts[1], out _, out _)) return;
+                    CheckList.Add(new NPCChecks(CheckType.CheckQuest, parts[1], "COMPLETE"));
+                    break;
                 case "CHECKRELATIONSHIP":
                     CheckList.Add(new NPCChecks(CheckType.CheckRelationship));
                     break;
@@ -578,7 +620,8 @@ namespace Server.MirObjects
         }
         public void ParseAct(List<NPCActions> acts, string line)
         {
-            var parts = line.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            if (!TxtScriptTokenizer.TryTokenize(line, out string[] parts, out string tokenError))
+                throw new InvalidDataException($"动作命令参数无效：{tokenError} 原文={line}");
 
             parts = ParseArguments(parts);
 
@@ -593,6 +636,7 @@ namespace Server.MirObjects
             switch (parts[0].ToUpper())
             {
                 case "MOVE":
+                case "TELEPORT" when IsLingFengCompatibility:
                     if (parts.Length < 2) return;
 
                     string tempx = parts.Length > 3 ? parts[2] : "0";
@@ -607,6 +651,17 @@ namespace Server.MirObjects
                     acts.Add(new NPCActions(ActionType.InstanceMove, parts[1], parts[2], parts[3], parts[4]));
                     break;
 
+                case "GOLDCOUNT":
+                    if (parts.Length != 3) return;
+                    acts.Add(new NPCActions(ActionType.ChangeGold, parts[1], parts[2]));
+                    break;
+
+                case "CHANGEDAMAGEVALUE" when IsLingFengCompatibility:
+                    if (parts.Length != 4)
+                        throw new InvalidDataException("CHANGEDAMAGEVALUE 需要参数：字段(0伤害/1防御) 运算符 数值。");
+                    acts.Add(new NPCActions(ActionType.ChangeDamageValue, parts[1], parts[2], parts[3]));
+                    break;
+
                 case "GIVEGOLD":
                     if (parts.Length < 2) return;
 
@@ -617,6 +672,11 @@ namespace Server.MirObjects
                     if (parts.Length < 2) return;
 
                     acts.Add(new NPCActions(ActionType.TakeGold, parts[1]));
+                    break;
+
+                case "CHANGEPKPOINT":
+                    if (parts.Length != 3) return;
+                    acts.Add(new NPCActions(ActionType.ChangePkPoint, parts[1], parts[2]));
                     break;
                 case "GIVEGUILDGOLD":
                     if (parts.Length < 2) return;
@@ -658,6 +718,14 @@ namespace Server.MirObjects
                     acts.Add(new NPCActions(ActionType.GiveItem, parts[1], count));
                     break;
 
+                case "GIVE" when IsLingFengCompatibility:
+                    if (parts.Length < 2) return;
+                    if (parts.Length > 3)
+                        throw new InvalidDataException("LFM2 扩展 GIVE 极品属性参数尚无等价物品模型；请改用 GIVEITEM 或移除扩展参数。");
+                    count = parts.Length < 3 ? string.Empty : parts[2];
+                    acts.Add(new NPCActions(ActionType.GiveItem, parts[1], count));
+                    break;
+
                 case "TAKEITEM":
                     if (parts.Length < 3) return;
 
@@ -665,6 +733,18 @@ namespace Server.MirObjects
                     string dura = parts.Length > 3 ? parts[3] : "";
 
                     acts.Add(new NPCActions(ActionType.TakeItem, parts[1], count, dura));
+                    break;
+
+                case "TAKE" when IsLingFengCompatibility:
+                    if (parts.Length < 2 || parts.Length > 7) return;
+                    acts.Add(new NPCActions(
+                        ActionType.TakeItemLingFeng,
+                        parts[1],
+                        parts.Length > 2 ? parts[2] : "1",
+                        parts.Length > 3 ? parts[3] : "0",
+                        parts.Length > 4 ? parts[4] : "0",
+                        parts.Length > 5 ? parts[5] : "0",
+                        parts.Length > 6 ? parts[6] : "0"));
                     break;
 
                 case "GIVEEXP":
@@ -696,19 +776,21 @@ namespace Server.MirObjects
                     acts.Add(new NPCActions(ActionType.Goto, parts[1]));
                     break;
 
+                case "GOTOLABEL":
+                    if (parts.Length < 3) return;
+
+                    acts.Add(new NPCActions(ActionType.GotoLabel, parts.Skip(1).ToArray()));
+                    break;
+
                 case "CALL":
                     if (parts.Length < 2) return;
-
-                    quoteMatch = regexQuote.Match(line);
-
-                    string listPath = parts[1];
-
-                    if (quoteMatch.Success)
-                    {
-                        listPath = quoteMatch.Groups[1].Captures[0].Value;
-                    }
-
-                    var callKey = $"NPCs/{listPath}";
+                    string listPath = parts[1].Trim('[', ']');
+                    if (listPath.EndsWith(".txt", StringComparison.OrdinalIgnoreCase))
+                        listPath = listPath.Substring(0, listPath.Length - 4);
+                    string rawCallKey = listPath.Contains('/') || listPath.Contains('\\')
+                        ? listPath
+                        : $"NPCs/{listPath}";
+                    if (!LogicKey.TryNormalize(rawCallKey, out string callKey)) return;
                     if (Envir.TextFileProvider == null || Envir.TextFileProvider.GetByKey(callKey) == null)
                     {
                         if (Settings.TxtScriptsLogLoads)
@@ -717,7 +799,7 @@ namespace Server.MirObjects
                         return;
                     }
 
-                    var script = NPCScript.GetOrAdd(0, listPath, NPCScriptType.Called);
+                    var script = NPCScript.GetOrAdd(0, callKey, NPCScriptType.Called);
 
                     Page.ScriptCalls.Add(script.ScriptID);
 
@@ -1042,12 +1124,7 @@ namespace Server.MirObjects
                     if (parts.Length < 3) return;
                     match = Regex.Match(parts[1], @"[A-Z][0-9]", RegexOptions.IgnoreCase);
 
-                    quoteMatch = regexQuote.Match(line);
-
                     string valueToStore = parts[2];
-
-                    if (quoteMatch.Success)
-                        valueToStore = quoteMatch.Groups[1].Captures[0].Value;
 
                     if (TryParseRuntimeVariableReference(parts[1], out _))
                     {
@@ -1081,10 +1158,7 @@ namespace Server.MirObjects
                 case "MUL":
                 case "DIV":
                     if (parts.Length < 3 || !TryParseRuntimeVariableReference(parts[1], out _)) return;
-                    quoteMatch = regexQuote.Match(line);
-                    valueToStore = quoteMatch.Success
-                        ? quoteMatch.Groups[1].Captures[0].Value
-                        : parts[2];
+                    valueToStore = parts[2];
                     acts.Add(new NPCActions(
                         ActionType.VariableMutate, parts[1], parts[0].ToUpperInvariant(), valueToStore));
                     break;
@@ -1092,14 +1166,16 @@ namespace Server.MirObjects
                 case "CALC":
                     if (parts.Length < 4) return;
 
+                    if (TryParseRuntimeVariableReference(parts[1], out _))
+                    {
+                        acts.Add(new NPCActions(
+                            ActionType.VariableMutate, parts[1], parts[2], parts[3]));
+                        break;
+                    }
+
                     match = Regex.Match(parts[1], @"[A-Z][0-9]", RegexOptions.IgnoreCase);
 
-                    quoteMatch = regexQuote.Match(line);
-
                     valueToStore = parts[3];
-
-                    if (quoteMatch.Success)
-                        valueToStore = quoteMatch.Groups[1].Captures[0].Value;
 
                     if (match.Success)
                         acts.Add(new NPCActions(ActionType.Calc, "%" + parts[1], parts[2], valueToStore, parts[1].Insert(1, "-")));
@@ -1185,6 +1261,10 @@ namespace Server.MirObjects
                 case "REMOVEFROMGUILD":
                     if (parts.Length < 2) return;
                     acts.Add(new NPCActions(ActionType.RemoveFromGuild, parts[1]));
+                    break;
+                case "TRYREMOVEFROMGUILD" when IsLingFengCompatibility:
+                    if (parts.Length != 1) return;
+                    acts.Add(new NPCActions(ActionType.RemoveFromGuild));
                     break;
 
                 case "REFRESHEFFECTS":
@@ -2276,15 +2356,14 @@ namespace Server.MirObjects
                             break;
                         }
 
-                        try
+                        if (!LingFengNumericCommandExecutor.TryCheck(
+                                player.Account.Gold, new[] { param[0], param[1] },
+                                out bool goldMatched, out string goldDiagnostic))
                         {
-                            failed = !Compare(param[0], player.Account.Gold, tempUint);
-                        }
-                        catch (ArgumentException)
-                        {
-                            MessageQueue.Enqueue(string.Format("以玩家为对象的NPC命令CHECKGOLD中错误使用 {0} 操作符, 页码: {1}", param[0], Key));
+                            MessageQueue.Enqueue($"[TxtScripts] CHECKGOLD 失败：{goldDiagnostic}，页码：{Key}");
                             return true;
                         }
+                        failed = !goldMatched;
                         break;
                     case CheckType.CheckGuildGold:
                         if (!uint.TryParse(param[1], out tempUint))
@@ -2352,6 +2431,29 @@ namespace Server.MirObjects
                         }
                         if (count > 0)
                             failed = true;
+                        break;
+
+                    case CheckType.CheckItemLingFeng:
+                        {
+                            if (!ushort.TryParse(param[1], out ushort required) || required == 0 ||
+                                !int.TryParse(param[2], out int partialMode) || partialMode is not (0 or 1) ||
+                                !int.TryParse(param[3], out int renamedMode) || renamedMode is not (0 or 1))
+                            {
+                                MessageQueue.Enqueue($"[TxtScripts] CHECKITEM 扩展参数无效，页码：{Key}");
+                                return true;
+                            }
+                            if (renamedMode == 1)
+                            {
+                                MessageQueue.Enqueue($"[TxtScripts] CHECKITEM 不支持改名装备检测；当前物品模型无改名字段，页码：{Key}");
+                                return true;
+                            }
+
+                            int available = player.Info.Inventory
+                                .Where(item => item != null && LingFengItemCommandExecutor.NameMatches(
+                                    item.Info.FriendlyName, param[0], partialMode == 1))
+                                .Sum(item => item.Count);
+                            failed = available < required;
+                        }
                         break;
 
                     case CheckType.CheckGender:
@@ -2640,6 +2742,26 @@ namespace Server.MirObjects
                         {
                             MessageQueue.Enqueue(string.Format("以玩家为对象的NPC命令CHECKCALC中错误使用 {0} 操作符, 页码: {1} ", param[1], Key));
                             return true;
+                        }
+                        break;
+
+                    case CheckType.CheckExperience:
+                    case CheckType.CheckHP:
+                    case CheckType.CheckMP:
+                        {
+                            long current = check.Type switch
+                            {
+                                CheckType.CheckExperience => player.Experience,
+                                CheckType.CheckHP => player.HP,
+                                _ => player.MP
+                            };
+                            if (!LingFengNumericCommandExecutor.TryCheck(
+                                    current, param, out bool matched, out string diagnostic))
+                            {
+                                MessageQueue.Enqueue($"[TxtScripts] 数值检测参数错误：{diagnostic}，页码：{Key}");
+                                return true;
+                            }
+                            failed = !matched;
                         }
                         break;
                     case CheckType.Variable:
@@ -3284,15 +3406,15 @@ namespace Server.MirObjects
                 {
                     case ActionType.Move:
                         {
-                            Map map = Envir.GetMapByNameAndInstance(param[0]);
+                            if (!Server.Scripting.LingFengWorldCommandExecutor.TryPlanTeleport(
+                                    param[0], param[1], param[2], out var teleport, out _)) return;
+
+                            Map map = Envir.GetMapByNameAndInstance(teleport.MapName);
                             if (map == null) return;
 
-                            if (!int.TryParse(param[1], out int x)) return;
-                            if (!int.TryParse(param[2], out int y)) return;
+                            var coords = new Point(teleport.X, teleport.Y);
 
-                            var coords = new Point(x, y);
-
-                            if (coords.X > 0 && coords.Y > 0) player.Teleport(map, coords);
+                            if (!teleport.Random) player.Teleport(map, coords);
                             else player.TeleportRandom(200, 0, map);
 
                             if (Server.Scripting.ScriptTrace.IsEnabled(player))
@@ -3320,13 +3442,40 @@ namespace Server.MirObjects
                         }
                         break;
 
+                    case ActionType.ChangeGold:
+                        {
+                            if (!LingFengNumericCommandExecutor.TryAdjust(
+                                    player.Account.Gold, param[0], param[1], 0, 2_100_000_000,
+                                    false, out long adjusted, out string diagnostic))
+                            {
+                                MessageQueue.Enqueue($"[TxtScripts] GOLDCOUNT 失败：{diagnostic}，页码：{Key}");
+                                break;
+                            }
+
+                            uint nextGold = (uint)adjusted;
+                            if (nextGold > player.Account.Gold)
+                                player.GainGold(nextGold - player.Account.Gold);
+                            else if (nextGold < player.Account.Gold)
+                            {
+                                uint lost = player.Account.Gold - nextGold;
+                                player.Account.Gold = nextGold;
+                                player.Enqueue(new S.LoseGold { Gold = lost });
+                            }
+                        }
+                        break;
+
+                    case ActionType.ChangeDamageValue:
+                        {
+                            LingFengTxtTriggerContext context = LingFengTxtTriggerContext.Current;
+                            if (context == null || !context.TryChangeDamageValue(param[0], param[1], param[2]))
+                                MessageQueue.Enqueue($"[TxtScripts] CHANGEDAMAGEVALUE 仅允许在伤害前置触发中使用，页码：{Key}");
+                        }
+                        break;
+
                     case ActionType.GiveGold:
                         {
                             if (!uint.TryParse(param[0], out uint gold)) return;
-
-                            if (gold + player.Account.Gold >= uint.MaxValue)
-                                gold = uint.MaxValue - player.Account.Gold;
-
+                            gold = LingFengNumericCommandExecutor.PlanGoldGain(player.Account.Gold, gold);
                             player.GainGold(gold);
                         }
                         break;
@@ -3334,9 +3483,7 @@ namespace Server.MirObjects
                     case ActionType.TakeGold:
                         {
                             if (!uint.TryParse(param[0], out uint gold)) return;
-
-                            if (gold >= player.Account.Gold) gold = player.Account.Gold;
-
+                            gold = LingFengNumericCommandExecutor.PlanGoldTake(player.Account.Gold, gold);
                             player.Account.Gold -= gold;
                             player.Enqueue(new S.LoseGold { Gold = gold });
                         }
@@ -3517,23 +3664,17 @@ namespace Server.MirObjects
 
                     case ActionType.GivePet:
                         {
-                            byte petcount = 0;
-                            byte petlevel = 0;
+                            if (!Server.Scripting.LingFengWorldCommandExecutor.TryPlanPet(
+                                    param[0], param[1], param[2], out var petPlan, out _)) return;
 
-                            var monInfo = Envir.GetMonsterInfo(param[0]);
+                            var monInfo = Envir.GetMonsterInfo(petPlan.MonsterName);
                             if (monInfo == null) return;
 
-                            if (param.Count > 1)
-                                petcount = byte.TryParse(param[1], out petcount) ? Math.Min((byte)5, petcount) : (byte)1;
-
-                            if (param.Count > 2)
-                                petlevel = byte.TryParse(param[2], out petlevel) ? Math.Min((byte)7, petlevel) : (byte)0;
-
-                            for (int j = 0; j < petcount; j++)
+                            for (int j = 0; j < petPlan.Count; j++)
                             {
                                 MonsterObject monster = MonsterObject.GetMonster(monInfo);
                                 if (monster == null) return;
-                                monster.PetLevel = petlevel;
+                                monster.PetLevel = petPlan.Level;
                                 monster.Master = player;
                                 monster.MaxPetLevel = 7;
                                 monster.Direction = player.Direction;
@@ -3623,6 +3764,71 @@ namespace Server.MirObjects
                             player.Level = tempuShort;
                             player.Experience = 0;
                             player.LevelUp();
+                        }
+                        break;
+
+                    case ActionType.ChangePkPoint:
+                        {
+                            if (!LingFengNumericCommandExecutor.TryAdjust(
+                                    player.PKPoints, param[0], param[1], 0, int.MaxValue,
+                                    true, out long adjusted, out string diagnostic))
+                            {
+                                MessageQueue.Enqueue($"[TxtScripts] CHANGEPKPOINT 失败：{diagnostic}，页码：{Key}");
+                                break;
+                            }
+                            player.PKPoints = (int)adjusted;
+                            if (Server.Scripting.ScriptTrace.IsEnabled(player))
+                                Server.Scripting.ScriptTrace.Record(player, $"[TXT] PKPOINT {param[0]} {param[1]} -> {player.PKPoints}");
+                        }
+                        break;
+
+                    case ActionType.TakeItemLingFeng:
+                        {
+                            if (!ushort.TryParse(param[1], out ushort required) || required == 0 ||
+                                !int.TryParse(param[2], out int renamedMode) || renamedMode is not (0 or 1) ||
+                                !int.TryParse(param[3], out int partialMode) || partialMode is not (0 or 1) ||
+                                !int.TryParse(param[4], out int excludeCustomOk) || excludeCustomOk is not (0 or 1) ||
+                                !int.TryParse(param[5], out int durabilityMode) || durabilityMode is not (0 or -1 or -2))
+                            {
+                                MessageQueue.Enqueue($"[TxtScripts] TAKE 扩展参数无效，页码：{Key}");
+                                break;
+                            }
+                            if (renamedMode == 1 || excludeCustomOk == 0)
+                            {
+                                MessageQueue.Enqueue($"[TxtScripts] TAKE 当前只支持未改名装备且参数5=1的背包范围；自定义OK框没有等价物品容器，页码：{Key}");
+                                break;
+                            }
+
+                            var matches = player.Info.Inventory
+                                .Select((item, index) => (item, index))
+                                .Where(entry => entry.item != null &&
+                                    LingFengItemCommandExecutor.NameMatches(
+                                        entry.item.Info.FriendlyName, param[0], partialMode == 1) &&
+                                    LingFengItemCommandExecutor.DurabilityMatches(
+                                        entry.item.CurrentDura, entry.item.MaxDura, durabilityMode))
+                                .ToArray();
+                            int available = matches.Sum(entry => entry.item.Count);
+                            if (available < required)
+                            {
+                                MessageQueue.Enqueue($"[TxtScripts] TAKE 匹配物品不足：需要 {required}，实际 {available}，页码：{Key}");
+                                break;
+                            }
+
+                            int remaining = required;
+                            foreach (var entry in matches)
+                            {
+                                ushort removed = (ushort)Math.Min(remaining, entry.item.Count);
+                                player.Enqueue(new S.DeleteItem { UniqueID = entry.item.UniqueID, Count = removed });
+                                if (removed == entry.item.Count)
+                                    player.Info.Inventory[entry.index] = null;
+                                else
+                                    entry.item.Count -= removed;
+                                remaining -= removed;
+                                if (remaining == 0) break;
+                            }
+                            player.RefreshStats();
+                            if (Server.Scripting.ScriptTrace.IsEnabled(player))
+                                Server.Scripting.ScriptTrace.Record(player, $"[TXT] TAKE {param[0]} x{required} -> {required}");
                         }
                         break;
 
@@ -3792,8 +3998,115 @@ namespace Server.MirObjects
                         }
                         break;
 
+                    case ActionType.GotoLabel:
+                        {
+                            if (NPCScript.BlockSystemNavigation(nameof(ActionType.GotoLabel))) break;
+                            if (!int.TryParse(param[0], out int mode) || mode < 0 || mode > 8) return;
+                            string label = param[1].Trim('[', ']');
+                            if (!label.StartsWith('@')) label = "@" + label;
+
+                            int range = -1;
+                            if (mode <= 7 && param.Count > 2 && !int.TryParse(param[2], out range)) return;
+                            IEnumerable<PlayerObject> candidates;
+                            switch (mode)
+                            {
+                                case 0:
+                                case 4:
+                                    candidates = player.GroupMembers ?? new List<PlayerObject> { player };
+                                    break;
+                                case 1:
+                                case 5:
+                                    candidates = player.MyGuild?.GetOnlinePlayers() ?? new List<PlayerObject> { player };
+                                    break;
+                                case 2:
+                                case 3:
+                                case 6:
+                                case 7:
+                                    candidates = player.CurrentMap?.Players ?? new List<PlayerObject>();
+                                    break;
+                                case 8:
+                                    if (param.Count < 6 ||
+                                        !int.TryParse(param[2], out int x) ||
+                                        !int.TryParse(param[3], out int y) ||
+                                        !int.TryParse(param[4], out range) ||
+                                        !int.TryParse(param[5], out int exclude)) return;
+                                    Point center = new Point(x, y);
+                                    candidates = (player.CurrentMap?.Players ?? new List<PlayerObject>())
+                                        .Where(target => Functions.InRange(target.CurrentLocation, center, Math.Max(0, range)) &&
+                                                         (exclude == 0 || target != player));
+                                    break;
+                                default:
+                                    return;
+                            }
+
+                            bool transferVariable = false;
+                            ScriptVariableValue transferredValue = default;
+                            string receiveReference = string.Empty;
+                            if (mode == 8 && param.Count > 6)
+                            {
+                                string sourceReference = param[6];
+                                receiveReference = param.Count > 7 ? param[7] : string.Empty;
+                                if (string.IsNullOrWhiteSpace(sourceReference) !=
+                                    string.IsNullOrWhiteSpace(receiveReference))
+                                {
+                                    MessageQueue.Enqueue($"[Variables][TXT] GOTOLABEL 8 变量传递失败：传递变量和接收变量必须同时为空或同时填写，页码：{Key}");
+                                    return;
+                                }
+                                if (!string.IsNullOrWhiteSpace(sourceReference))
+                                {
+                                    if (!ScriptVariableReferenceParser.TryParse(sourceReference, out var source))
+                                    {
+                                        MessageQueue.Enqueue($"[Variables][TXT] GOTOLABEL 8 变量传递失败：传递变量引用无效，页码：{Key}");
+                                        return;
+                                    }
+                                    ScriptVariableReadResult read = Envir.CSharpScripts.VariableModule.Read(
+                                        ScriptVariableContext.ForConversation(
+                                            player, player.NPCObjectID, player.CurrentMap), source);
+                                    if (!read.Success)
+                                    {
+                                        MessageQueue.Enqueue($"[Variables][TXT] GOTOLABEL 8 变量传递失败：{read.ErrorCode} {read.Diagnostic}，页码：{Key}");
+                                        return;
+                                    }
+                                    if (!ScriptVariableReferenceParser.TryParse(receiveReference, out _))
+                                    {
+                                        MessageQueue.Enqueue($"[Variables][TXT] GOTOLABEL 8 变量传递失败：接收变量引用无效，页码：{Key}");
+                                        return;
+                                    }
+                                    transferredValue = read.Value;
+                                    transferVariable = true;
+                                }
+                            }
+
+                            bool excludeSelf = mode >= 4 && mode <= 7;
+                            foreach (PlayerObject target in candidates.Distinct().ToArray())
+                            {
+                                if (target == null || excludeSelf && target == player) continue;
+                                if (range >= 0 && mode <= 7 &&
+                                    (target.CurrentMap != player.CurrentMap ||
+                                     !Functions.InRange(target.CurrentLocation, player.CurrentLocation, range))) continue;
+
+                                if (transferVariable)
+                                {
+                                    ScriptVariableMutationResult transfer = Envir.CSharpScripts.VariableCommands.Mutate(
+                                        ScriptVariableContext.ForConversation(
+                                            target, player.NPCObjectID, target.CurrentMap),
+                                        receiveReference, "MOV", transferredValue.Format());
+                                    if (!transfer.Success)
+                                    {
+                                        MessageQueue.Enqueue($"[Variables][TXT] GOTOLABEL 8 变量传递失败：{transfer.ErrorCode} {transfer.Diagnostic}，目标：{target.Name}，页码：{Key}");
+                                        continue;
+                                    }
+                                }
+
+                                target.ActionList.Add(new DelayedAction(
+                                    DelayedType.NPC, -1, player.NPCObjectID, player.NPCScriptID, $"[{label}]"));
+                            }
+                        }
+                        break;
+
                     case ActionType.Call:
                         {
+                            if (NPCScript.BlockSystemNavigation(nameof(ActionType.Call))) break;
                             if (!int.TryParse(param[0], out int scriptID)) return;
 
                             var action = new DelayedAction(DelayedType.NPC, -1, player.NPCObjectID, scriptID, "[@MAIN]");
@@ -3878,6 +4191,7 @@ namespace Server.MirObjects
 
                     case ActionType.TimeRecall:
                         {
+                            if (NPCScript.BlockSystemNavigation(nameof(ActionType.TimeRecall))) break;
                             var tempString = "";
                             if (!long.TryParse(param[0], out long tempLong)) return;
 
@@ -3893,6 +4207,7 @@ namespace Server.MirObjects
 
                     case ActionType.TimeRecallGroup:
                         {
+                            if (NPCScript.BlockSystemNavigation(nameof(ActionType.TimeRecallGroup))) break;
                             var tempString = "";
                             if (player.GroupMembers == null) return;
                             if (!long.TryParse(param[0], out long tempLong)) return;
@@ -3910,6 +4225,7 @@ namespace Server.MirObjects
 
                     case ActionType.BreakTimeRecall:
                         {
+                            if (NPCScript.BlockSystemNavigation(nameof(ActionType.BreakTimeRecall))) break;
                             foreach (DelayedAction ac in player.ActionList.Where(u => u.Type == DelayedType.NPC))
                             {
                                 ac.FlaggedToRemove = true;
@@ -3919,6 +4235,7 @@ namespace Server.MirObjects
 
                     case ActionType.DelayGoto:
                         {
+                            if (NPCScript.BlockSystemNavigation(nameof(ActionType.DelayGoto))) break;
                             if (!long.TryParse(param[0], out long tempLong)) return;
 
                             var action = new DelayedAction(DelayedType.NPC, Envir.Time + (tempLong * 1000), player.NPCObjectID, player.NPCScriptID, "[" + param[1] + "]");
@@ -4307,6 +4624,7 @@ namespace Server.MirObjects
 
                     case ActionType.GroupGoto:
                         {
+                            if (NPCScript.BlockSystemNavigation(nameof(ActionType.GroupGoto))) break;
                             if (player.GroupMembers == null) return;
 
                             for (int j = 0; j < player.GroupMembers.Count(); j++)
@@ -4587,7 +4905,13 @@ namespace Server.MirObjects
                         break;
                     case ActionType.OpenBrowser:
                         {
-                            player.Enqueue(new S.OpenBrowser { Url = param[0] });
+                            bool killSwitchEnabled = Envir.KillSwitches?.IsEnabled(
+                                Server.Operations.KillSwitchFeature.HighRiskOperations) == true;
+                            if (!Server.Scripting.LingFengHighRiskCommandPolicy.CanOpenBrowser(
+                                    param[0], Settings.TxtScriptsHighRiskCapabilitiesEnabled,
+                                    Settings.TxtScriptsAllowedHttpsHosts, killSwitchEnabled,
+                                    out Uri safeUri, out _)) return;
+                            player.Enqueue(new S.OpenBrowser { Url = safeUri.AbsoluteUri });
                         }
                         break;
                     case ActionType.GetRandomText:
@@ -4871,9 +5195,9 @@ namespace Server.MirObjects
 
                     case ActionType.GiveGuildExp:
                         {
-                            uint tempUint;
-                            if (!uint.TryParse(param[0], out tempUint)) return;
-                            player.MyGuild.GainExp(tempUint);
+                            if (!Server.Scripting.LingFengSocialCommandExecutor.TryPlanGuildExperience(
+                                    player.MyGuild != null, param[0], out uint amount, out _)) return;
+                            player.MyGuild.GainExp(amount);
                         }
                         break;
 

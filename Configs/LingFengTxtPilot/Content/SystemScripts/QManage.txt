@@ -1,0 +1,3 @@
+[@LOGIN]
+#ACT
+MOV P0 1

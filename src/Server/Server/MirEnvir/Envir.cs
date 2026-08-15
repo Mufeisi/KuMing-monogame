@@ -137,6 +137,10 @@ namespace Server.MirEnvir
         public IRootConfigProvider RootConfigProvider { get; private set; }
 
         public ITextFileProvider TextFileProvider { get; private set; }
+        private ITextFileProvider _csharpTextFileProvider;
+        private ITextFileProvider _physicalTextFileProvider;
+        private TxtScriptReloadCoordinator _txtScriptReloadCoordinator;
+        internal TxtScriptSnapshot TxtScriptSnapshot => _txtScriptReloadCoordinator?.Current;
 
         private long _lastAppliedCSharpActiveMapCoordsVersion = -1;
 
@@ -3002,12 +3006,16 @@ namespace Server.MirEnvir
 
             if (!scriptsRuntimeActive)
             {
-                TextFileProvider = null;
+                _csharpTextFileProvider = null;
+                RebuildTextFileProvider();
                 return;
             }
 
             var textRegistry = registry?.TextFiles;
-            TextFileProvider = textRegistry != null && textRegistry.Count > 0 ? new CSharpTextFileProvider(textRegistry.Definitions) : null;
+            _csharpTextFileProvider = textRegistry != null && textRegistry.Count > 0
+                ? new CSharpTextFileProvider(textRegistry.Definitions)
+                : null;
+            RebuildTextFileProvider();
 
             if (TextFileProvider != null)
             {
@@ -3015,6 +3023,154 @@ namespace Server.MirEnvir
             }
 
             ClearSetBuffsCache();
+        }
+
+        internal void ApplyPhysicalTextFileDefinitions()
+        {
+            if (!Settings.TxtScriptsEnabled)
+            {
+                PublishPhysicalTextFileProvider(null, reloadNpcScripts: true);
+                return;
+            }
+
+            var candidateProvider = new PhysicalTextFileProvider(
+                new PhysicalTextFileProviderOptions(Settings.TxtScriptsPath, Settings.TxtScriptsLayout)
+                {
+                    MaxFileBytes = Settings.TxtScriptsMaxFileBytes
+                });
+            PublishPhysicalTextFileProvider(candidateProvider, reloadNpcScripts: true);
+            MessageQueue.Enqueue(
+                $"[TxtScripts] 已加载 {_physicalTextFileProvider.GetAll().Count} 个物理 TXT 文本（布局={Settings.TxtScriptsLayout}）");
+        }
+
+        private bool PublishPhysicalTextFileProvider(
+            ITextFileProvider candidateProvider,
+            bool reloadNpcScripts)
+        {
+            ITextFileProvider previousProvider = _physicalTextFileProvider;
+            ScriptVariableCatalogReloadResult variableResult =
+                CSharpScripts.PublishTxtVariableDeclarations(candidateProvider);
+            if (!variableResult.Success)
+                throw new InvalidOperationException(variableResult.Diagnostic);
+
+            try
+            {
+                _physicalTextFileProvider = candidateProvider;
+                RebuildTextFileProvider();
+                ClearSetBuffsCache();
+                if (reloadNpcScripts)
+                {
+                    ReloadNPCs();
+                    EndActiveNpcConversationsAfterTxtSnapshotChange();
+                }
+                return true;
+            }
+            catch
+            {
+                ScriptVariableCatalogReloadResult rollbackVariables =
+                    CSharpScripts.PublishTxtVariableDeclarations(previousProvider);
+                _physicalTextFileProvider = previousProvider;
+                RebuildTextFileProvider();
+                ClearSetBuffsCache();
+                if (reloadNpcScripts)
+                    ReloadNPCs();
+                if (!rollbackVariables.Success)
+                    throw new InvalidOperationException(
+                        $"TXT 候选发布失败，且变量目录回滚失败：{rollbackVariables.Diagnostic}");
+                throw;
+            }
+        }
+
+        private void EndActiveNpcConversationsAfterTxtSnapshotChange()
+        {
+            // 发布发生在主线程。快照替换后显式结束仍绑定旧 NPCPage 的会话，
+            // 防止下一次点击跨到新快照；失败回滚路径不会调用本方法。
+            for (var i = 0; i < Players.Count; i++)
+            {
+                PlayerObject player = Players[i];
+                uint objectId = player?.NPCObjectID ?? 0;
+                if (objectId == 0)
+                    continue;
+
+                player.ActionList.RemoveAll(action => action.Type == DelayedType.NPC);
+                player.EndNpcConversation(objectId);
+                player.Enqueue(new S.NPCResponse { Page = new List<string>() });
+            }
+        }
+
+        private void StartTxtScriptReloadCoordinator()
+        {
+            _txtScriptReloadCoordinator?.Dispose();
+            _txtScriptReloadCoordinator = new TxtScriptReloadCoordinator(
+                new PhysicalTextFileProviderOptions(Settings.TxtScriptsPath, Settings.TxtScriptsLayout)
+                {
+                    MaxFileBytes = Settings.TxtScriptsMaxFileBytes
+                },
+                Settings.TxtScriptsDebounceMs,
+                provider => InvokeOnMainThread(() =>
+                    PublishPhysicalTextFileProvider(provider, reloadNpcScripts: true)),
+                provider =>
+                {
+                    var errors = TxtScriptSnapshotValidator.Validate(provider).ToList();
+                    ScriptVariableCatalogReloadResult variableResult =
+                        CSharpScripts.ValidateTxtVariableDeclarations(provider);
+                    if (!variableResult.Success)
+                        errors.Add($"TXT-SNAPSHOT-012：变量声明与当前快照冲突：{variableResult.Diagnostic}");
+                    return errors;
+                });
+            _txtScriptReloadCoordinator.ReloadCompleted += result =>
+            {
+                if (result.Published)
+                {
+                    MessageQueue.Enqueue(
+                        $"[TxtScripts][Reload] 发布版本={result.Snapshot.Version}，摘要={result.Snapshot.Digest}，" +
+                        $"变更Key={string.Join(',', result.Snapshot.ChangedKeys)}，耗时={result.Snapshot.LoadMilliseconds}ms，" +
+                        $"错误=0，上次成功={result.Snapshot.PublishedAt:O}");
+                }
+                else
+                {
+                    MessageQueue.Enqueue(
+                        $"[TxtScripts][Reload] 候选发布失败，保留版本={result.Snapshot?.Version ?? 0}，" +
+                        $"错误={result.Errors.Count}：{string.Join("；", result.Errors)}");
+                }
+            };
+
+            TxtScriptReloadResult initial = _txtScriptReloadCoordinator.ReloadNow();
+            if (!initial.Published)
+                throw new InvalidDataException(string.Join("；", initial.Errors));
+
+            bool watcherEnabled = Settings.TxtScriptsHotReloadEnabled && !Settings.CSharpScriptsPushModeEnabled;
+            if (watcherEnabled)
+                _txtScriptReloadCoordinator.Start();
+            else if (Settings.CSharpScriptsPushModeEnabled)
+                MessageQueue.Enqueue("[TxtScripts] 推送模式已启用：已禁用本地 TXT watcher。");
+        }
+
+        internal TxtScriptReloadResult ReloadTxtScripts()
+        {
+            if (_txtScriptReloadCoordinator == null)
+                return new TxtScriptReloadResult(false, null, new[] { "TXT 热重载协调器尚未启动。" });
+            return _txtScriptReloadCoordinator.ReloadNow();
+        }
+
+        private void RebuildTextFileProvider()
+        {
+            if (_csharpTextFileProvider == null && _physicalTextFileProvider == null)
+            {
+                TextFileProvider = null;
+                return;
+            }
+
+            var composite = new CompositeTextFileProvider(
+                _csharpTextFileProvider,
+                _physicalTextFileProvider,
+                Settings.TxtScriptsSourcePriority);
+            TextFileProvider = composite;
+            foreach (TextFileSourceConflict conflict in composite.Conflicts)
+            {
+                MessageQueue.Enqueue(
+                    $"[TxtScripts] 来源冲突 Key={conflict.Key}，优先级={conflict.Priority}，采用={conflict.SelectedSource}，遮蔽={conflict.ShadowedSource}");
+            }
         }
 
         internal void EnsureCSharpActiveMapCoordsApplied()
@@ -3924,6 +4080,9 @@ namespace Server.MirEnvir
             if (options.EnforceProductionSecurity)
                 ProductionSecurityPolicy.ValidateAndApply();
 
+            if (Settings.TxtScriptsEnabled)
+                StartTxtScriptReloadCoordinator();
+
             if (options.StartScripts && Settings.CSharpScriptsEnabled)
             {
                 try
@@ -3963,6 +4122,8 @@ namespace Server.MirEnvir
                 !PrepareSqliteShutdownSave(options))
                 return;
 
+            _txtScriptReloadCoordinator?.Dispose();
+            _txtScriptReloadCoordinator = null;
             FreezeAndCancelPendingMainThreadWork();
 
             try

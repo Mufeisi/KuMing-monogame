@@ -410,6 +410,16 @@ namespace Server.Scripting
             Register(ScriptHookKeys.OnPlayerItemPickupCheckIndex(itemIndex), handler);
         }
 
+        public void RegisterOnPlayerItemPickupAfter(OnPlayerItemPickupAfterHook handler) => Register(ScriptHookKeys.OnPlayerItemPickupAfter, handler);
+
+        public void RegisterOnPlayerItemPickupAfter(int itemIndex, OnPlayerItemPickupAfterHook handler)
+        {
+            if (itemIndex <= 0)
+                throw new ArgumentOutOfRangeException(nameof(itemIndex), "itemIndex 必须大于 0。");
+
+            Register(ScriptHookKeys.OnPlayerItemPickupAfterIndex(itemIndex), handler);
+        }
+
         public void RegisterOnPlayerItemUseCheck(OnPlayerItemUseCheckHook handler) => Register(ScriptHookKeys.OnPlayerItemUseCheck, handler);
 
         public void RegisterOnPlayerItemUseCheck(int itemIndex, OnPlayerItemUseCheckHook handler)

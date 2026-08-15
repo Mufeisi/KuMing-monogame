@@ -1,0 +1,28 @@
+{
+  "generatedAtUtc": "2026-08-15T16:50:20.8699405Z",
+  "stopwatchFrequency": 10000000,
+  "entries": [
+    {
+      "key": "legacy/npc-page/npcs/txt灰度向导/[@main]",
+      "count": 2,
+      "totalMilliseconds": 79.8308,
+      "averageMilliseconds": 39.9154,
+      "p95Milliseconds": 79.39,
+      "p99Milliseconds": 79.39,
+      "maximumMilliseconds": 79.39,
+      "recentSampleCount": 2,
+      "lastAtUtc": "2026-08-15T16:47:59.1652051Z"
+    },
+    {
+      "key": "legacy/npc-page/npcs/txt灰度向导/[@verify]",
+      "count": 1,
+      "totalMilliseconds": 5.3326,
+      "averageMilliseconds": 5.3326,
+      "p95Milliseconds": 5.3326,
+      "p99Milliseconds": 5.3326,
+      "maximumMilliseconds": 5.3326,
+      "recentSampleCount": 1,
+      "lastAtUtc": "2026-08-15T16:49:37.0491446Z"
+    }
+  ]
+}

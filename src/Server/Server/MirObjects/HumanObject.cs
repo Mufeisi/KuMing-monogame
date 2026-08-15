@@ -7405,13 +7405,16 @@ namespace Server.MirObjects
             damage += attacker.Stats[Stat.武器增伤];
 
             var scriptsRuntimeActive = Settings.CSharpScriptsEnabled && Envir.CSharpScripts.Enabled;
-            var allowCSharpBefore = scriptsRuntimeActive && Server.Scripting.ScriptDispatchPolicy.ShouldTryCSharp(Server.Scripting.ScriptHookKeys.OnPlayerDamageBefore);
-            var allowCSharpAfter = scriptsRuntimeActive && Server.Scripting.ScriptDispatchPolicy.ShouldTryCSharp(Server.Scripting.ScriptHookKeys.OnPlayerDamageAfter);
+            var txtSpecialTriggersActive = Server.Scripting.LingFengTxtSystemHookAdapter.IsCompatibilityEnabled(Envir.TextFileProvider);
+            var tryCSharpBefore = scriptsRuntimeActive && Server.Scripting.ScriptDispatchPolicy.ShouldTryCSharp(Server.Scripting.ScriptHookKeys.OnPlayerDamageBefore);
+            var tryCSharpAfter = scriptsRuntimeActive && Server.Scripting.ScriptDispatchPolicy.ShouldTryCSharp(Server.Scripting.ScriptHookKeys.OnPlayerDamageAfter);
+            var allowCSharpBefore = txtSpecialTriggersActive || tryCSharpBefore;
+            var allowCSharpAfter = txtSpecialTriggersActive || tryCSharpAfter;
 
             PlayerObject attackerPlayer = null;
             PlayerObject targetPlayer = null;
 
-            if (scriptsRuntimeActive && (allowCSharpBefore || allowCSharpAfter))
+            if (allowCSharpBefore || allowCSharpAfter)
             {
                 attackerPlayer = attacker as PlayerObject;
                 if (attackerPlayer == null && attacker is HeroObject heroAttacker)
@@ -7444,7 +7447,7 @@ namespace Server.MirObjects
                         type,
                         damageWeaponFlag);
 
-                    Envir.CSharpScripts.TryHandlePlayerDamageBefore(attackerPlayer, req);
+                    Envir.CSharpScripts.TryHandlePlayerDamageBefore(attackerPlayer, req, tryCSharpBefore);
 
                     damage = req.Damage;
                     armour = req.Armour;
@@ -7469,7 +7472,7 @@ namespace Server.MirObjects
                         type,
                         damageWeaponFlag);
 
-                    Envir.CSharpScripts.TryHandlePlayerDamageBefore(targetPlayer, req);
+                    Envir.CSharpScripts.TryHandlePlayerDamageBefore(targetPlayer, req, tryCSharpBefore);
 
                     damage = req.Damage;
                     armour = req.Armour;
@@ -7631,7 +7634,7 @@ namespace Server.MirObjects
                             damageWeaponFlag,
                             critical,
                             appliedDamage,
-                            scriptDecision));
+                            scriptDecision), tryCSharpAfter);
                 }
 
                 if (targetPlayer != null && !ReferenceEquals(targetPlayer, attackerPlayer))
@@ -7648,7 +7651,7 @@ namespace Server.MirObjects
                             damageWeaponFlag,
                             critical,
                             appliedDamage,
-                            scriptDecision));
+                            scriptDecision), tryCSharpAfter);
                 }
             }
 
@@ -7664,12 +7667,15 @@ namespace Server.MirObjects
             }
 
             var scriptsRuntimeActive = Settings.CSharpScriptsEnabled && Envir.CSharpScripts.Enabled;
-            var allowCSharpBefore = scriptsRuntimeActive && Server.Scripting.ScriptDispatchPolicy.ShouldTryCSharp(Server.Scripting.ScriptHookKeys.OnPlayerDamageBefore);
-            var allowCSharpAfter = scriptsRuntimeActive && Server.Scripting.ScriptDispatchPolicy.ShouldTryCSharp(Server.Scripting.ScriptHookKeys.OnPlayerDamageAfter);
+            var txtSpecialTriggersActive = Server.Scripting.LingFengTxtSystemHookAdapter.IsCompatibilityEnabled(Envir.TextFileProvider);
+            var tryCSharpBefore = scriptsRuntimeActive && Server.Scripting.ScriptDispatchPolicy.ShouldTryCSharp(Server.Scripting.ScriptHookKeys.OnPlayerDamageBefore);
+            var tryCSharpAfter = scriptsRuntimeActive && Server.Scripting.ScriptDispatchPolicy.ShouldTryCSharp(Server.Scripting.ScriptHookKeys.OnPlayerDamageAfter);
+            var allowCSharpBefore = txtSpecialTriggersActive || tryCSharpBefore;
+            var allowCSharpAfter = txtSpecialTriggersActive || tryCSharpAfter;
 
             PlayerObject targetPlayer = null;
 
-            if (scriptsRuntimeActive && (allowCSharpBefore || allowCSharpAfter))
+            if (allowCSharpBefore || allowCSharpAfter)
             {
                 targetPlayer = this as PlayerObject;
                 if (targetPlayer == null && this is HeroObject heroTarget)
@@ -7691,7 +7697,7 @@ namespace Server.MirObjects
                     type,
                     false);
 
-                Envir.CSharpScripts.TryHandlePlayerDamageBefore(targetPlayer, req);
+                Envir.CSharpScripts.TryHandlePlayerDamageBefore(targetPlayer, req, tryCSharpBefore);
 
                 damage = req.Damage;
                 armour = req.Armour;
@@ -7817,7 +7823,7 @@ namespace Server.MirObjects
                         false,
                         false,
                         appliedDamage,
-                        scriptDecision));
+                        scriptDecision), tryCSharpAfter);
             }
 
             return appliedDamage;

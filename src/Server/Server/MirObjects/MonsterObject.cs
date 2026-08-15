@@ -810,7 +810,8 @@ namespace Server.MirObjects
             var handled = false;
 
             var policyKey = "NPCs/00Monster";
-            var allowCSharp = scriptsRuntimeActive && Server.Scripting.ScriptDispatchPolicy.ShouldTryCSharp(policyKey);
+            var allowCSharp = Server.Scripting.LingFengTxtSystemHookAdapter.IsCompatibilityEnabled(Envir.TextFileProvider) ||
+                              scriptsRuntimeActive && Server.Scripting.ScriptDispatchPolicy.ShouldTryCSharp(policyKey);
 
             if (allowCSharp)
             {
@@ -1018,11 +1019,12 @@ namespace Server.MirObjects
             var handled = false;
 
             var policyKey = "NPCs/00Monster";
-            var allowCSharp = scriptsRuntimeActive && Server.Scripting.ScriptDispatchPolicy.ShouldTryCSharp(policyKey);
+            var tryCSharp = scriptsRuntimeActive && Server.Scripting.ScriptDispatchPolicy.ShouldTryCSharp(policyKey);
+            var allowCSharp = Server.Scripting.LingFengTxtSystemHookAdapter.IsCompatibilityEnabled(Envir.TextFileProvider) || tryCSharp;
 
             if (allowCSharp)
             {
-                handled = Envir.CSharpScripts.TryHandleMonsterDie(this);
+                handled = Envir.CSharpScripts.TryHandleMonsterDie(this, tryCSharp);
 
                 if (Settings.TxtScriptsLogDispatch)
                 {
@@ -1167,8 +1169,10 @@ namespace Server.MirObjects
                 return;
 
             var scriptsRuntimeActive = Settings.CSharpScriptsEnabled && Envir.CSharpScripts.Enabled;
+            var txtSpecialTriggersActive = Server.Scripting.LingFengTxtSystemHookAdapter.IsCompatibilityEnabled(Envir.TextFileProvider);
             var allowCSharpBefore = scriptsRuntimeActive && Server.Scripting.ScriptDispatchPolicy.ShouldTryCSharp(Server.Scripting.ScriptHookKeys.OnMonsterDropBefore);
-            var allowCSharpAfter = scriptsRuntimeActive && Server.Scripting.ScriptDispatchPolicy.ShouldTryCSharp(Server.Scripting.ScriptHookKeys.OnMonsterDropAfter);
+            var tryCSharpAfter = scriptsRuntimeActive && Server.Scripting.ScriptDispatchPolicy.ShouldTryCSharp(Server.Scripting.ScriptHookKeys.OnMonsterDropAfter);
+            var allowCSharpAfter = txtSpecialTriggersActive || tryCSharpAfter;
 
             var dropTableKey = string.Empty;
             var dropTableName = string.IsNullOrWhiteSpace(Info.DropPath) ? Info.Name : Info.DropPath;
@@ -1339,7 +1343,7 @@ namespace Server.MirObjects
                         scriptDecision == Server.Scripting.ScriptHookDecision.Continue,
                         scriptDecision);
 
-                    Envir.CSharpScripts.TryHandleMonsterDropAfter(this, result);
+                    Envir.CSharpScripts.TryHandleMonsterDropAfter(this, result, tryCSharpAfter);
                 }
                 else if (scriptsRuntimeActive && Settings.TxtScriptsLogDispatch)
                 {
@@ -2806,8 +2810,11 @@ namespace Server.MirObjects
             damage = (int)Math.Max(int.MinValue, (Math.Min(int.MaxValue, (decimal)(damage * DamageRate))));
 
             var scriptsRuntimeActive = Settings.CSharpScriptsEnabled && Envir.CSharpScripts.Enabled;
-            var allowCSharpBefore = scriptsRuntimeActive && Server.Scripting.ScriptDispatchPolicy.ShouldTryCSharp(Server.Scripting.ScriptHookKeys.OnPlayerDamageBefore);
-            var allowCSharpAfter = scriptsRuntimeActive && Server.Scripting.ScriptDispatchPolicy.ShouldTryCSharp(Server.Scripting.ScriptHookKeys.OnPlayerDamageAfter);
+            var txtSpecialTriggersActive = Server.Scripting.LingFengTxtSystemHookAdapter.IsCompatibilityEnabled(Envir.TextFileProvider);
+            var tryCSharpBefore = scriptsRuntimeActive && Server.Scripting.ScriptDispatchPolicy.ShouldTryCSharp(Server.Scripting.ScriptHookKeys.OnPlayerDamageBefore);
+            var tryCSharpAfter = scriptsRuntimeActive && Server.Scripting.ScriptDispatchPolicy.ShouldTryCSharp(Server.Scripting.ScriptHookKeys.OnPlayerDamageAfter);
+            var allowCSharpBefore = txtSpecialTriggersActive || tryCSharpBefore;
+            var allowCSharpAfter = txtSpecialTriggersActive || tryCSharpAfter;
 
             var attackerPlayer = attacker as PlayerObject;
             if (attackerPlayer == null && attacker is HeroObject heroAttacker)
@@ -2834,7 +2841,7 @@ namespace Server.MirObjects
                     type,
                     damageWeaponFlag);
 
-                Envir.CSharpScripts.TryHandlePlayerDamageBefore(attackerPlayer, req);
+                Envir.CSharpScripts.TryHandlePlayerDamageBefore(attackerPlayer, req, tryCSharpBefore);
 
                 damage = req.Damage;
                 armour = req.Armour;
@@ -2983,7 +2990,7 @@ namespace Server.MirObjects
                         damageWeaponFlag,
                         critical,
                         appliedDamage,
-                        scriptDecision));
+                        scriptDecision), tryCSharpAfter);
             }
 
             return appliedDamage;

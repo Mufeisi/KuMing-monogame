@@ -512,6 +512,7 @@ public sealed class ScriptVariableModuleTests
         segment.ParseAct(actions, "MOV P0 5");
         segment.ParseAct(actions, "INC P.DropRate 0.25");
         segment.ParseAct(actions, "DIV P.DropRate 2");
+        segment.ParseAct(actions, "CALC P.DropRate + 0.5");
         segment.ParseAct(actions, "MOV A0 legacy");
         segment.ParseAct(actions, "MOV P0 FLOOR P.DropRate");
         segment.ParseAct(actions, "INITVAR P.DropRate");
@@ -533,6 +534,11 @@ public sealed class ScriptVariableModuleTests
             {
                 Assert.Equal(ActionType.VariableMutate, action.Type);
                 Assert.Equal(new[] { "P.DropRate", "DIV", "2" }, action.Params);
+            },
+            action =>
+            {
+                Assert.Equal(ActionType.VariableMutate, action.Type);
+                Assert.Equal(new[] { "P.DropRate", "+", "0.5" }, action.Params);
             },
             action =>
             {
@@ -1009,6 +1015,13 @@ public sealed class ScriptVariableModuleTests
         Assert.True(commands.Composites.SliceList(context, "L$Sorted", "L$Slice", 1, -1, 2).Success);
         Assert.Equal("[20,44]", commands.Format(context, "L$Slice").Text);
 
+        Assert.True(commands.Mutate(context, "L$InvalidNumbers", "MOV", "[11,中文,22]").Success);
+        ScriptVariableMutationResult invalidSort = commands.Composites.SortList(
+            context, "L$InvalidNumbers", "L$Unchanged", false, true);
+        Assert.False(invalidSort.Success);
+        Assert.Equal(ScriptVariableErrorCode.TypeMismatch, invalidSort.ErrorCode);
+        Assert.Equal("[]", commands.Format(context, "L$Unchanged").Text);
+
         string overQuota = "[" + string.Join(',', Enumerable.Range(0, 257)) + "]";
         ScriptVariableMutationResult rejected = commands.Mutate(context, "L$TooMany", "MOV", overQuota);
         Assert.False(rejected.Success);
@@ -1088,6 +1101,7 @@ public sealed class ScriptVariableModuleTests
         segment.ParseAct(segment.ActList, "MOV D$Score {张三:100}");
         segment.ParseAct(segment.ActList, "INSERTTOLIST L$Bag 9 -1");
         segment.ParseAct(segment.ActList, "GETDICTITEMS D$Score 0 L$Keys");
+        segment.ParseAct(segment.ActList, "SORTLIST L$Bag L$Sorted 0 0");
         segment.ParseAct(segment.ActList, "FORMULATION (P.Rate + 0.5) * 2 P.Result");
         segment.ParseCheck("CHANCE P.Rate PERCENT");
         segment.ParseCheck("CHECKVARINLIST L$Bag 2");
@@ -1096,7 +1110,8 @@ public sealed class ScriptVariableModuleTests
         Assert.Equal(ActionType.VariableMutate, segment.ActList[1].Type);
         Assert.Equal(ActionType.VariableComposite, segment.ActList[2].Type);
         Assert.Equal(ActionType.VariableComposite, segment.ActList[3].Type);
-        Assert.Equal(ActionType.VariableFormulation, segment.ActList[4].Type);
+        Assert.Equal(ActionType.VariableComposite, segment.ActList[4].Type);
+        Assert.Equal(ActionType.VariableFormulation, segment.ActList[5].Type);
         Assert.Equal(CheckType.VariableChance, segment.CheckList[0].Type);
         Assert.Equal(CheckType.VariableComposite, segment.CheckList[1].Type);
     }
@@ -1160,6 +1175,48 @@ public sealed class ScriptVariableModuleTests
             registry.VariableDeclarations.GetRequired(ScriptVariableScope.A, "Notice").DefaultValue.Text);
         Assert.Equal("systemscripts/variabledeclarations",
             registry.VariableDeclarations.GetRequired(ScriptVariableScope.Human, "KillCount").SourceFile);
+    }
+
+    [Fact]
+    public void 物理Txt声明在CSharp关闭时仍发布到同一变量模块并在冲突时回滚()
+    {
+        using var manager = new ScriptManager();
+        ITextFileProvider initial = VariableProvider(
+            "VAR Decimal P DropRate DEFAULT 1.25\n" +
+            "VAR String A Notice DEFAULT \"活动 开启\"");
+
+        ScriptVariableCatalogReloadResult published =
+            manager.PublishTxtVariableDeclarations(initial);
+
+        Assert.True(published.Success, published.Diagnostic);
+        Assert.Equal(1.25m,
+            manager.EffectiveVariableDeclarations
+                .GetRequired(ScriptVariableScope.P, "DropRate").DefaultValue.Decimal);
+        ScriptVariableContext context = ScriptVariableContext.ForConversation(new object(), 1);
+        Assert.True(manager.VariableCommands.Mutate(context, "P.DropRate", "MOV", "2.5").Success);
+
+        ITextFileProvider incompatible = VariableProvider(
+            "VAR Integer P DropRate DEFAULT 1");
+        ScriptVariableCatalogReloadResult rejected =
+            manager.PublishTxtVariableDeclarations(incompatible);
+
+        Assert.False(rejected.Success);
+        Assert.Equal(ScriptVariableErrorCode.DeclarationConflict, rejected.ErrorCode);
+        Assert.Equal(ScriptVariableKind.Decimal,
+            manager.EffectiveVariableDeclarations
+                .GetRequired(ScriptVariableScope.P, "DropRate").Kind);
+        Assert.Equal("2.5", manager.VariableCommands.Format(context, "P.DropRate").Text);
+    }
+
+    private static ITextFileProvider VariableProvider(string lines)
+    {
+        var definition = new TextFileDefinition("Variables/Declarations", "Variables/Declarations.txt", "UTF-8", "LF")
+            .AddLines(lines.Split('\n'));
+        return new CSharpTextFileProvider(
+            new Dictionary<string, TextFileDefinition>(StringComparer.Ordinal)
+            {
+                [definition.Key] = definition
+            });
     }
 
     [Fact]

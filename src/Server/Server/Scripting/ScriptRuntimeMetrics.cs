@@ -11,14 +11,57 @@ namespace Server.Scripting
     {
         private sealed class Entry
         {
+            private const int RecentSampleCapacity = 2048;
+            private readonly object _sampleGate = new object();
+            private readonly long[] _recentStopwatchTicks = new long[RecentSampleCapacity];
+            private int _nextSample;
+            private int _sampleCount;
+
             public readonly string Key;
             public long Count;
             public long TotalStopwatchTicks;
+            public long MaximumStopwatchTicks;
             public long LastTicksUtc;
 
             public Entry(string key)
             {
                 Key = key ?? string.Empty;
+            }
+
+            public void Record(long elapsedStopwatchTicks)
+            {
+                Interlocked.Increment(ref Count);
+                Interlocked.Add(ref TotalStopwatchTicks, elapsedStopwatchTicks);
+                UpdateMaximum(ref MaximumStopwatchTicks, elapsedStopwatchTicks);
+                Interlocked.Exchange(ref LastTicksUtc, DateTime.UtcNow.Ticks);
+
+                lock (_sampleGate)
+                {
+                    _recentStopwatchTicks[_nextSample] = elapsedStopwatchTicks;
+                    _nextSample = (_nextSample + 1) % RecentSampleCapacity;
+                    if (_sampleCount < RecentSampleCapacity) _sampleCount++;
+                }
+            }
+
+            public long[] CopyRecentSamples()
+            {
+                lock (_sampleGate)
+                {
+                    var samples = new long[_sampleCount];
+                    Array.Copy(_recentStopwatchTicks, samples, _sampleCount);
+                    return samples;
+                }
+            }
+
+            private static void UpdateMaximum(ref long target, long candidate)
+            {
+                long current = Volatile.Read(ref target);
+                while (candidate > current)
+                {
+                    long observed = Interlocked.CompareExchange(ref target, candidate, current);
+                    if (observed == current) return;
+                    current = observed;
+                }
             }
         }
 
@@ -35,6 +78,10 @@ namespace Server.Scripting
             public long Count { get; set; }
             public double TotalMilliseconds { get; set; }
             public double AverageMilliseconds { get; set; }
+            public double P95Milliseconds { get; set; }
+            public double P99Milliseconds { get; set; }
+            public double MaximumMilliseconds { get; set; }
+            public int RecentSampleCount { get; set; }
             public DateTime? LastAtUtc { get; set; }
         }
 
@@ -109,7 +156,10 @@ namespace Server.Scripting
 
                 var count = Interlocked.Read(ref e.Count);
                 var ticks = Interlocked.Read(ref e.TotalStopwatchTicks);
+                var maximumTicks = Interlocked.Read(ref e.MaximumStopwatchTicks);
                 var lastTicks = Interlocked.Read(ref e.LastTicksUtc);
+                var samples = e.CopyRecentSamples();
+                Array.Sort(samples);
 
                 var totalMs = ticks * 1000.0 / freq;
                 var avgMs = count > 0 ? (totalMs / count) : 0;
@@ -120,12 +170,24 @@ namespace Server.Scripting
                     Count = count,
                     TotalMilliseconds = totalMs,
                     AverageMilliseconds = avgMs,
+                    P95Milliseconds = PercentileTicks(samples, 0.95) * 1000.0 / freq,
+                    P99Milliseconds = PercentileTicks(samples, 0.99) * 1000.0 / freq,
+                    MaximumMilliseconds = maximumTicks * 1000.0 / freq,
+                    RecentSampleCount = samples.Length,
                     LastAtUtc = lastTicks > 0 ? new DateTime(lastTicks, DateTimeKind.Utc) : null
                 });
             }
 
             snapshot.Entries.Sort((a, b) => b.TotalMilliseconds.CompareTo(a.TotalMilliseconds));
             return snapshot;
+        }
+
+        private static long PercentileTicks(IReadOnlyList<long> sortedSamples, double percentile)
+        {
+            if (sortedSamples == null || sortedSamples.Count == 0) return 0;
+            int nearestRank = (int)Math.Ceiling(percentile * sortedSamples.Count);
+            int index = Math.Clamp(nearestRank - 1, 0, sortedSamples.Count - 1);
+            return sortedSamples[index];
         }
 
         public static bool DumpLatest(out string filePath, out int entryCount, out string error)
@@ -183,9 +245,7 @@ namespace Server.Scripting
 
             var entry = Entries.GetOrAdd(normalizedKey, k => new Entry(k));
 
-            Interlocked.Increment(ref entry.Count);
-            Interlocked.Add(ref entry.TotalStopwatchTicks, elapsedStopwatchTicks);
-            Interlocked.Exchange(ref entry.LastTicksUtc, DateTime.UtcNow.Ticks);
+            entry.Record(elapsedStopwatchTicks);
 
             Volatile.Write(ref _dirty, 1);
         }

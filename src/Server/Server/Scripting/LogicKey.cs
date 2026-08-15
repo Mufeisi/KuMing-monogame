@@ -13,6 +13,10 @@ namespace Server.Scripting
 
             key = key.Replace('\\', '/');
 
+            // 逻辑 Key 只能是相对标识。必须在合并分隔符或去前缀前拒绝
+            // POSIX、UNC、设备路径以及以反斜杠伪装的绝对路径。
+            if (key.StartsWith("/", StringComparison.Ordinal)) return false;
+
             while (key.Contains("//"))
             {
                 key = key.Replace("//", "/");
@@ -22,8 +26,6 @@ namespace Server.Scripting
             {
                 key = key.Substring(2);
             }
-
-            key = key.TrimStart('/');
 
             if (key.EndsWith(".txt", StringComparison.OrdinalIgnoreCase))
             {
@@ -36,8 +38,6 @@ namespace Server.Scripting
 
             if (key.Length == 0) return false;
             if (key.EndsWith("/", StringComparison.Ordinal)) return false;
-
-            if (key.StartsWith("//", StringComparison.Ordinal)) return false;
 
             if (key.Length >= 3 && char.IsLetter(key[0]) && key[1] == ':' && key[2] == '/')
             {

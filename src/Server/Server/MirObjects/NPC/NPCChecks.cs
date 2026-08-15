@@ -18,7 +18,11 @@
     {
         IsAdmin,
         Level,
+        CheckExperience,
+        CheckHP,
+        CheckMP,
         CheckItem,
+        CheckItemLingFeng,
         CheckGold,
         CheckGuildGold,
         CheckCredit,

@@ -92,6 +92,21 @@ namespace Server.Scripting.Variables
             new ScriptVariableDeclarationSnapshot(new Dictionary<string, ScriptVariableDeclaration>());
 
         public int Count => _declarations.Count;
+        internal IEnumerable<ScriptVariableDeclaration> Declarations => _declarations.Values;
+
+        internal static ScriptVariableDeclarationSnapshot Merge(
+            params ScriptVariableDeclarationSnapshot[] snapshots)
+        {
+            var registry = new ScriptVariableRegistry();
+            foreach (ScriptVariableDeclarationSnapshot snapshot in snapshots)
+            {
+                if (snapshot == null) continue;
+                foreach (ScriptVariableDeclaration declaration in snapshot.Declarations)
+                    registry.Register(declaration);
+            }
+            registry.Seal();
+            return registry.CreateSnapshot();
+        }
 
         public ScriptVariableCatalogReloadResult ValidateCompatibleTransitionTo(
             ScriptVariableDeclarationSnapshot next)

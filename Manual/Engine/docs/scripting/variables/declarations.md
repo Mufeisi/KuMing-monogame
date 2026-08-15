@@ -11,7 +11,7 @@ VAR Decimal G EventRate DEFAULT 2.5
 VAR Integer HUMAN KillCount DEFAULT 0
 ```
 
-这些 `VAR` 行可以放在服务器启动脚本、QM 或其他已注册的 `TextFileDefinition` 中。它们在脚本加载期收集，不会等到人物登录后才声明。字符串默认值包含空格时可加双引号：
+这些 `VAR` 行可以放在物理 TXT 的 `Variables` 白名单目录、服务器启动脚本、QM 或其他已注册的 `TextFileDefinition` 中。它们在完整脚本快照发布前统一收集，不会等到人物登录后才声明。字符串默认值包含空格时可加双引号：
 
 ```text
 VAR String A Notice DEFAULT "全服活动 已开启"
@@ -62,7 +62,7 @@ INITVAR U.SpecialRate
 4. 在主线程安全点原子切换；
 5. 新调用立即使用新声明。
 
-脚本文件保存后由现有 C# 热重载监视器重新编译，TXT `VAR` 行与 C# 注册声明在同一候选版本内校验和切换。也可执行现有重载操作；不需要重启服务端。
+C# 脚本文件由现有编译监视器处理；物理 TXT 由独立 watcher 构建候选快照。两种来源的 `VAR` 声明在发布前合并校验，并在主线程安全点切换。也可执行现有重载操作；不需要重启服务端。
 
 解析或校验失败时，旧脚本和旧声明继续运行。
 

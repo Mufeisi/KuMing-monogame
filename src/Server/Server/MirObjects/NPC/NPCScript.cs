@@ -9,6 +9,17 @@ namespace Server.MirObjects
 {
     public class NPCScript
     {
+        [ThreadStatic]
+        private static int _systemCallDepth;
+
+        internal static bool IsSystemCallActive => _systemCallDepth > 0;
+
+        internal static bool BlockSystemNavigation(string action)
+        {
+            if (!IsSystemCallActive) return false;
+            MessageQueue.Enqueue($"[TxtScripts][TXT-RUNTIME-002] 系统触发禁止 {action} 延迟、跨脚本或跨玩家导航；仅允许受预算约束的同脚本 GOTO。");
+            return true;
+        }
         protected static Envir Envir
         {
             get { return Envir.Main; }
@@ -286,6 +297,8 @@ namespace Server.MirObjects
             }
 
             var scriptsRuntimeActive = csharpScriptsEnabled && Envir.CSharpScripts.Enabled;
+            var physicalTxtActive = Settings.TxtScriptsEnabled
+                                    && Envir.TextFileProvider != null;
 
             var allowSkipTxt = false;
 
@@ -319,7 +332,13 @@ namespace Server.MirObjects
                 }
             }
 
-            var npcFileKey = $"NPCs/{FileName}";
+            string npcFileKey;
+            if (Type == NPCScriptType.Called &&
+                (FileName.Contains('/') || FileName.Contains('\\')) &&
+                LogicKey.TryNormalize(FileName, out string calledKey))
+                npcFileKey = calledKey;
+            else
+                npcFileKey = $"NPCs/{FileName}";
 
             // legacy txt 解析器护栏：当全局关闭 txt 回落时，不应再解析/执行 legacy DSL。
             if (scriptsRuntimeActive && !Settings.CSharpScriptsFallbackToTxt)
@@ -358,11 +377,12 @@ namespace Server.MirObjects
             // 注意：若你希望仍走磁盘 txt，请通过 PreferKeyPrefixes/DisabledKeys 策略控制 ShouldTryCSharp 返回 false。
             List<string> lines = null;
 
-            if (scriptsRuntimeActive)
+            if (scriptsRuntimeActive || physicalTxtActive)
             {
-                var allowCSharp = Server.Scripting.ScriptDispatchPolicy.ShouldTryCSharp(npcFileKey);
+                var allowTextProvider = physicalTxtActive
+                                        || Server.Scripting.ScriptDispatchPolicy.ShouldTryCSharp(npcFileKey);
 
-                if (allowCSharp && Envir.TextFileProvider != null)
+                if (allowTextProvider && Envir.TextFileProvider != null)
                 {
                     var definition = Envir.TextFileProvider.GetByKey(npcFileKey);
                     if (definition != null)
@@ -370,9 +390,9 @@ namespace Server.MirObjects
                         lines = new List<string>(definition.Lines);
 
                         if (Settings.TxtScriptsLogLoads)
-                            MessageQueue.Enqueue($"[TxtScripts] 加载 NPC 脚本: {FileName}.txt <- C# TextFiles（key={npcFileKey}，v{Envir.CSharpScripts.Version}）");
+                            MessageQueue.Enqueue($"[TxtScripts] 加载 NPC 脚本: {FileName}.txt <- TextFileProvider（key={npcFileKey}，source={definition.SourcePath}）");
                     }
-                    else if (!Server.Scripting.TxtFallbackPolicy.ShouldFallbackToTxt(npcFileKey))
+                    else if (scriptsRuntimeActive && !Server.Scripting.TxtFallbackPolicy.ShouldFallbackToTxt(npcFileKey))
                     {
                         if (Settings.TxtScriptsLogLoads)
                             MessageQueue.Enqueue($"[TxtScripts] NPC 脚本 C# 定义缺失且禁止回落TXT：{FileName}.txt（key={npcFileKey}）");
@@ -380,7 +400,7 @@ namespace Server.MirObjects
                         return;
                     }
                 }
-                else if (!Server.Scripting.TxtFallbackPolicy.ShouldFallbackToTxt(npcFileKey))
+                else if (scriptsRuntimeActive && !Server.Scripting.TxtFallbackPolicy.ShouldFallbackToTxt(npcFileKey))
                 {
                     if (Settings.TxtScriptsLogLoads)
                         MessageQueue.Enqueue($"[TxtScripts] NPC 脚本禁止回落TXT且跳过 C#：{FileName}.txt（key={npcFileKey}）");
@@ -742,13 +762,16 @@ namespace Server.MirObjects
 
             for (int i = 0; i < lines.Count; i++)
             {
-                if (!lines[i].ToUpper().StartsWith("#INSERT")) continue;
+                string structuralLine = lines[i].TrimStart();
+                if (!structuralLine.StartsWith("#INSERT", StringComparison.OrdinalIgnoreCase)) continue;
+                if (!TxtScriptTokenizer.TryTokenize(structuralLine, out string[] tokens, out _) ||
+                    tokens.Length < 2 || !TryGetReferencePath(tokens[1], out string relativePath))
+                {
+                    MessageQueue.Enqueue($"INSERT:语法无效 {FileName}:{i + 1}");
+                    continue;
+                }
 
-                string[] split = lines[i].Split(' ');
-
-                if (split.Length < 2) continue;
-
-                string path = Path.Combine(Settings.EnvirPath, split[1].Substring(1, split[1].Length - 2));
+                string path = Path.Combine(Settings.EnvirPath, relativePath);
 
                 if (!TryReadAllLinesWithTrace(path, $"#INSERT:{FileName}", out newLines))
                 {
@@ -759,7 +782,7 @@ namespace Server.MirObjects
                 lines.AddRange(newLines);
             }
 
-            lines.RemoveAll(str => str.ToUpper().StartsWith("#INSERT"));
+            lines.RemoveAll(str => str.TrimStart().StartsWith("#INSERT", StringComparison.OrdinalIgnoreCase));
 
             return lines;
         }
@@ -768,12 +791,18 @@ namespace Server.MirObjects
         {
             for (int i = 0; i < lines.Count; i++)
             {
-                if (!lines[i].ToUpper().StartsWith("#INCLUDE")) continue;
+                string structuralLine = lines[i].TrimStart();
+                if (!structuralLine.StartsWith("#INCLUDE", StringComparison.OrdinalIgnoreCase)) continue;
+                if (!TxtScriptTokenizer.TryTokenize(structuralLine, out string[] tokens, out _) ||
+                    tokens.Length < 3 || !TryGetReferencePath(tokens[1], out string relativePath))
+                {
+                    MessageQueue.Enqueue($"INCLUDE:语法无效 {FileName}:{i + 1}");
+                    continue;
+                }
 
-                string[] split = lines[i].Split(' ');
-
-                string path = Path.Combine(Settings.EnvirPath, split[1].Substring(1, split[1].Length - 2));
-                string page = ("[" + split[2] + "]").ToUpper();
+                string path = Path.Combine(Settings.EnvirPath, relativePath);
+                string pageToken = tokens[2].Trim('[', ']');
+                string page = ("[" + pageToken + "]").ToUpperInvariant();
 
                 bool start = false, finish = false;
 
@@ -787,7 +816,7 @@ namespace Server.MirObjects
 
                 for (int j = 0; j < extLines.Count; j++)
                 {
-                    if (!extLines[j].ToUpper().StartsWith(page)) continue;
+                    if (!extLines[j].TrimStart().StartsWith(page, StringComparison.OrdinalIgnoreCase)) continue;
 
                     for (int x = j + 1; x < extLines.Count; x++)
                     {
@@ -814,9 +843,23 @@ namespace Server.MirObjects
                 }
             }
 
-            lines.RemoveAll(str => str.ToUpper().StartsWith("#INCLUDE"));
+            lines.RemoveAll(str => str.TrimStart().StartsWith("#INCLUDE", StringComparison.OrdinalIgnoreCase));
 
             return lines;
+        }
+
+        private static bool TryGetReferencePath(string token, out string relativePath)
+        {
+            relativePath = string.Empty;
+            if (string.IsNullOrWhiteSpace(token)) return false;
+
+            string value = token.Trim();
+            if (value.Length >= 2 && value[0] == '[' && value[value.Length - 1] == ']')
+                value = value.Substring(1, value.Length - 2);
+            if (string.IsNullOrWhiteSpace(value) || Path.IsPathRooted(value)) return false;
+
+            relativePath = value.Replace('/', Path.DirectorySeparatorChar);
+            return true;
         }
 
         private static string TryGetLogicKeyForTxtPath(string path)
@@ -851,12 +894,15 @@ namespace Server.MirObjects
 
             var key = TryGetLogicKeyForTxtPath(path);
             var scriptsRuntimeActive = Settings.CSharpScriptsEnabled && Envir.CSharpScripts.Enabled;
+            var physicalTxtActive = Settings.TxtScriptsEnabled
+                                    && Envir.TextFileProvider != null;
 
             if (!string.IsNullOrWhiteSpace(key))
             {
-                var allowCSharp = scriptsRuntimeActive && ScriptDispatchPolicy.ShouldTryCSharp(key);
+                var allowTextProvider = physicalTxtActive
+                                        || scriptsRuntimeActive && ScriptDispatchPolicy.ShouldTryCSharp(key);
 
-                if (allowCSharp && Envir.TextFileProvider != null)
+                if (allowTextProvider && Envir.TextFileProvider != null)
                 {
                     var definition = Envir.TextFileProvider.GetByKey(key);
                     if (definition != null)
@@ -939,10 +985,11 @@ namespace Server.MirObjects
             for (int i = 0; i < lines.Count; i++)
             {
                 string line = lines[i];
+                string structuralLine = line.Trim();
 
-                if (line.StartsWith(";")) continue;
+                if (structuralLine.StartsWith(";", StringComparison.Ordinal)) continue;
 
-                if (!lines[i].ToUpper().StartsWith(tempSectionName.ToUpper())) continue;
+                if (!structuralLine.StartsWith(tempSectionName, StringComparison.OrdinalIgnoreCase)) continue;
 
                 List<string> segmentLines = new List<string>();
 
@@ -957,6 +1004,8 @@ namespace Server.MirObjects
                         nextLine = lines[j + 1];
                     else
                         nextLine = "";
+
+                    nextLine = nextLine.Trim();
 
                     if (nextLine.StartsWith("[") && nextLine.EndsWith("]"))
                     {
@@ -1039,11 +1088,13 @@ namespace Server.MirObjects
             {
                 if (string.IsNullOrEmpty(lines[i])) continue;
 
-                if (lines[i].StartsWith(";")) continue;
+                string structuralLine = lines[i].Trim();
 
-                if (lines[i].StartsWith("#"))
+                if (structuralLine.StartsWith(";", StringComparison.Ordinal)) continue;
+
+                if (structuralLine.StartsWith("#", StringComparison.Ordinal))
                 {
-                    string[] action = lines[i].Remove(0, 1).ToUpper().Trim().Split(' ');
+                    string[] action = structuralLine.Remove(0, 1).ToUpperInvariant().Trim().Split(' ');
                     switch (action[0])
                     {
                         case "IF":
@@ -1071,7 +1122,8 @@ namespace Server.MirObjects
                     }
                 }
 
-                if (lines[i].StartsWith("[") && lines[i].EndsWith("]")) break;
+                if (structuralLine.StartsWith("[", StringComparison.Ordinal) &&
+                    structuralLine.EndsWith("]", StringComparison.Ordinal)) break;
 
                 if (currentButtons != null)
                 {
@@ -1087,7 +1139,7 @@ namespace Server.MirObjects
                     }
 
                     //Check if line has a goto command
-                    var parts = lines[i].Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+                    var parts = structuralLine.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
 
                     if (parts.Count() > 1)
                         switch (parts[0].ToUpper())
@@ -1109,7 +1161,8 @@ namespace Server.MirObjects
                         }
                 }
 
-                currentSay.Add(lines[i].TrimEnd());
+                bool isSpeech = ReferenceEquals(currentSay, say) || ReferenceEquals(currentSay, elseSay);
+                currentSay.Add(isSpeech ? lines[i].TrimEnd() : structuralLine);
             }
 
             NPCSegment segment = new NPCSegment(page, say, buttons, elseSay, elseButtons, gotoButtons);
@@ -1562,6 +1615,99 @@ namespace Server.MirObjects
             }
 
             player.NPCData.Remove("NPCInputStr");
+        }
+
+        public bool CallSystem(PlayerObject player, string key)
+        {
+            if (player == null || string.IsNullOrWhiteSpace(key)) return false;
+            key = key.ToUpperInvariant();
+
+            NPCPage page = ResolveSystemPage(key);
+            if (page == null) return false;
+
+            uint previousObjectId = player.NPCObjectID;
+            int previousScriptId = player.NPCScriptID;
+            NPCPage previousPage = player.NPCPage;
+            bool previousDelayed = player.NPCDelayed;
+            List<string> previousSpeech = player.NPCSpeech;
+            var previousSuccess = player.NPCSuccess.ToArray();
+            var existingActions = new HashSet<DelayedAction>(player.ActionList);
+            var budget = new Server.Scripting.TxtScriptExecutionBudget(Settings.TxtScriptsMaxImmediateTransitions);
+
+            try
+            {
+                // 系统事件拥有独立的无响应输出缓冲，不能向正在进行的 NPC 对话追加 #SAY。
+                player.NPCSpeech = new List<string>();
+                _systemCallDepth++;
+                while (page != null)
+                {
+                    if (!budget.TryConsume())
+                    {
+                        int removed = player.ActionList.RemoveAll(action =>
+                            !existingActions.Contains(action) &&
+                            action.Type == DelayedType.NPC && action.Time == -1);
+                        MessageQueue.Enqueue($"[TxtScripts][TXT-RUNTIME-001] 系统触发即时跳转超过预算 {budget.MaximumSteps}，已终止玩家 {player.Name} 的本次系统触发并移除 {removed} 个待执行跳转。");
+                        break;
+                    }
+
+                    player.NPCSuccess.Clear();
+                    foreach (NPCSegment segment in page.SegmentList)
+                    {
+                        if (page.BreakFromSegments)
+                        {
+                            page.BreakFromSegments = false;
+                            break;
+                        }
+
+                        ProcessSegment(player, page, segment, 0);
+                    }
+
+                    int actionIndex = player.ActionList.FindIndex(action =>
+                        !existingActions.Contains(action) &&
+                        action.Type == DelayedType.NPC && action.Time == -1 &&
+                        action.Params?.Length >= 3 &&
+                        action.Params[1] is int scriptId && scriptId == ScriptID);
+                    if (actionIndex < 0) break;
+
+                    DelayedAction action = player.ActionList[actionIndex];
+                    player.ActionList.RemoveAt(actionIndex);
+                    page = action.Params[2] is string nextKey
+                        ? ResolveSystemPage(nextKey.ToUpperInvariant())
+                        : null;
+                }
+            }
+            finally
+            {
+                _systemCallDepth--;
+                player.ActionList.RemoveAll(action =>
+                    !existingActions.Contains(action) &&
+                    action.Type == DelayedType.NPC);
+                player.NPCSuccess.Clear();
+                foreach (var pair in previousSuccess)
+                    player.NPCSuccess.Add(pair.Key, pair.Value);
+                player.NPCObjectID = previousObjectId;
+                player.NPCScriptID = previousScriptId;
+                player.NPCPage = previousPage;
+                player.NPCDelayed = previousDelayed;
+                player.NPCSpeech = previousSpeech;
+            }
+
+            return true;
+        }
+
+        private NPCPage ResolveSystemPage(string key)
+        {
+            NPCPage page = NPCPages.FirstOrDefault(candidate =>
+                string.Equals(candidate.Key, key, StringComparison.OrdinalIgnoreCase));
+            if (page != null) return page;
+
+            if (Envir.TextFileProvider?.GetByKey(FileName) is not TextFileDefinition definition ||
+                !definition.Lines.Any(line => line.Trim().Equals(key, StringComparison.OrdinalIgnoreCase)))
+                return null;
+
+            page = ParsePage(definition.Lines.ToList(), key);
+            NPCPages.Add(page);
+            return page;
         }
 
         private void Response(PlayerObject player, NPCPage page)

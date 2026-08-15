@@ -3,6 +3,7 @@ using Server.MirDatabase;
 using Server.MirEnvir;
 using Server.MirObjects;
 using Server.Security;
+using Server.Scripting;
 using Server.Scripting.Variables;
 
 namespace Server
@@ -162,6 +163,20 @@ namespace Server
         public static int AiScriptsMaxRetries = 1;
         public static int AiScriptsRequestsPerMinute = 10;
         public static int AiScriptsDocumentationMaxChars = 12000;
+
+        //Physical Txt Scripts（原生磁盘来源，默认关闭）
+        public static bool TxtScriptsEnabled = false;
+        public static string TxtScriptsPath = EnvirPath;
+        public static TxtScriptLayout TxtScriptsLayout = TxtScriptLayout.LyoCrystal;
+        public static long TxtScriptsMaxFileBytes = 1024 * 1024;
+        public static TextFileSourcePriority TxtScriptsSourcePriority = TextFileSourcePriority.CSharpFirst;
+        public static bool TxtScriptsHotReloadEnabled = true;
+        public static int TxtScriptsDebounceMs = 500;
+        public static int TxtScriptsMaxImmediateTransitions = 64;
+        public static string TxtScriptsCompatibilityVersion = string.Empty;
+        public static bool TxtScriptsStrictCompatibility = true;
+        public static bool TxtScriptsHighRiskCapabilitiesEnabled = false;
+        public static string TxtScriptsAllowedHttpsHosts = string.Empty;
 
         //Legacy Txt Scripts (加载/回落日志)
         public static bool TxtScriptsLogLoads = false;
@@ -595,6 +610,34 @@ namespace Server
             AiScriptsDocumentationMaxChars = Reader.ReadInt32("AiScripts", "AiScriptsDocumentationMaxChars", AiScriptsDocumentationMaxChars);
 
             //Legacy Txt Scripts
+            TxtScriptsEnabled = Reader.ReadBoolean("TxtScripts", "TxtScriptsEnabled", TxtScriptsEnabled);
+            TxtScriptsPath = Reader.ReadString("TxtScripts", "TxtScriptsPath", TxtScriptsPath);
+            string txtScriptsLayout = Reader.ReadString(
+                "TxtScripts", "TxtScriptsLayout", TxtScriptsLayout.ToString());
+            if (!Enum.TryParse(txtScriptsLayout, true, out TxtScriptLayout parsedTxtScriptsLayout))
+                parsedTxtScriptsLayout = TxtScriptLayout.LyoCrystal;
+            TxtScriptsLayout = parsedTxtScriptsLayout;
+            TxtScriptsMaxFileBytes = Math.Max(1,
+                Reader.ReadInt64("TxtScripts", "TxtScriptsMaxFileBytes", TxtScriptsMaxFileBytes));
+            string txtScriptsSourcePriority = Reader.ReadString(
+                "TxtScripts", "TxtScriptsSourcePriority", TxtScriptsSourcePriority.ToString());
+            if (!Enum.TryParse(txtScriptsSourcePriority, true, out TextFileSourcePriority parsedTxtScriptsSourcePriority))
+                parsedTxtScriptsSourcePriority = TextFileSourcePriority.CSharpFirst;
+            TxtScriptsSourcePriority = parsedTxtScriptsSourcePriority;
+            TxtScriptsHotReloadEnabled = Reader.ReadBoolean(
+                "TxtScripts", "TxtScriptsHotReloadEnabled", TxtScriptsHotReloadEnabled);
+            TxtScriptsDebounceMs = Math.Max(0,
+                Reader.ReadInt32("TxtScripts", "TxtScriptsDebounceMs", TxtScriptsDebounceMs));
+            TxtScriptsMaxImmediateTransitions = Math.Max(1,
+                Reader.ReadInt32("TxtScripts", "TxtScriptsMaxImmediateTransitions", TxtScriptsMaxImmediateTransitions));
+            TxtScriptsCompatibilityVersion = Reader.ReadString(
+                "TxtScripts", "TxtScriptsCompatibilityVersion", TxtScriptsCompatibilityVersion).Trim();
+            TxtScriptsStrictCompatibility = Reader.ReadBoolean(
+                "TxtScripts", "TxtScriptsStrictCompatibility", TxtScriptsStrictCompatibility);
+            TxtScriptsHighRiskCapabilitiesEnabled = Reader.ReadBoolean(
+                "TxtScripts", "TxtScriptsHighRiskCapabilitiesEnabled", TxtScriptsHighRiskCapabilitiesEnabled);
+            TxtScriptsAllowedHttpsHosts = Reader.ReadString(
+                "TxtScripts", "TxtScriptsAllowedHttpsHosts", TxtScriptsAllowedHttpsHosts).Trim();
             TxtScriptsLogLoads = Reader.ReadBoolean("TxtScripts", "TxtScriptsLogLoads", TxtScriptsLogLoads);
             TxtScriptsLogDispatch = Reader.ReadBoolean("TxtScripts", "TxtScriptsLogDispatch", TxtScriptsLogDispatch);
             TxtScriptsEnableInsertInclude = Reader.ReadBoolean("TxtScripts", "TxtScriptsEnableInsertInclude", TxtScriptsEnableInsertInclude);
@@ -925,6 +968,18 @@ namespace Server
             Reader.Write("AiScripts", "AiScriptsDocumentationMaxChars", AiScriptsDocumentationMaxChars);
 
             //Legacy Txt Scripts
+            Reader.Write("TxtScripts", "TxtScriptsEnabled", TxtScriptsEnabled);
+            Reader.Write("TxtScripts", "TxtScriptsPath", TxtScriptsPath);
+            Reader.Write("TxtScripts", "TxtScriptsLayout", TxtScriptsLayout.ToString());
+            Reader.Write("TxtScripts", "TxtScriptsMaxFileBytes", TxtScriptsMaxFileBytes);
+            Reader.Write("TxtScripts", "TxtScriptsSourcePriority", TxtScriptsSourcePriority.ToString());
+            Reader.Write("TxtScripts", "TxtScriptsHotReloadEnabled", TxtScriptsHotReloadEnabled);
+            Reader.Write("TxtScripts", "TxtScriptsDebounceMs", TxtScriptsDebounceMs);
+            Reader.Write("TxtScripts", "TxtScriptsMaxImmediateTransitions", TxtScriptsMaxImmediateTransitions);
+            Reader.Write("TxtScripts", "TxtScriptsCompatibilityVersion", TxtScriptsCompatibilityVersion);
+            Reader.Write("TxtScripts", "TxtScriptsStrictCompatibility", TxtScriptsStrictCompatibility);
+            Reader.Write("TxtScripts", "TxtScriptsHighRiskCapabilitiesEnabled", TxtScriptsHighRiskCapabilitiesEnabled);
+            Reader.Write("TxtScripts", "TxtScriptsAllowedHttpsHosts", TxtScriptsAllowedHttpsHosts);
             Reader.Write("TxtScripts", "TxtScriptsLogLoads", TxtScriptsLogLoads);
             Reader.Write("TxtScripts", "TxtScriptsLogDispatch", TxtScriptsLogDispatch);
             Reader.Write("TxtScripts", "TxtScriptsEnableInsertInclude", TxtScriptsEnableInsertInclude);

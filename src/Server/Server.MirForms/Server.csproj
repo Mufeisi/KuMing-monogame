@@ -15,6 +15,7 @@
 		<DebugType>embedded</DebugType>
 		<!--winform AOT-->
 		<PublishAot>False</PublishAot>
+		<IncludeNativeLibrariesForSelfExtract Condition="'$(PublishSingleFile)' == 'true'">true</IncludeNativeLibrariesForSelfExtract>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<_SuppressWinFormsTrimError>true</_SuppressWinFormsTrimError>
 		<!--解决AOT设计器报错-->

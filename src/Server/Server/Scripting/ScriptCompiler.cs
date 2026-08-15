@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Reflection;
+using System.Reflection.Metadata;
 using System.Text;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -423,14 +424,20 @@ namespace Server.Scripting
             var references = new List<MetadataReference>();
             var added = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-            AddReferenceFromAssemblyLocation(references, added, typeof(object).Assembly);
-            AddReferenceFromAssemblyLocation(references, added, typeof(Enumerable).Assembly);
-            AddReferenceFromAssemblyLocation(references, added, typeof(ScriptManager).Assembly);
-            AddReferenceFromAssemblyLocation(references, added, typeof(global::Globals).Assembly);
+            var rootAssemblies = new[]
+            {
+                typeof(object).Assembly,
+                typeof(Enumerable).Assembly,
+                typeof(ScriptManager).Assembly,
+                typeof(global::Globals).Assembly,
+            };
 
             var tpa = AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES") as string;
             if (!string.IsNullOrWhiteSpace(tpa))
             {
+                for (var i = 0; i < rootAssemblies.Length; i++)
+                    AddReferenceFromAssemblyLocation(references, added, rootAssemblies[i]);
+
                 var paths = tpa.Split(Path.PathSeparator);
                 for (var i = 0; i < paths.Length; i++)
                 {
@@ -446,20 +453,89 @@ namespace Server.Scripting
                     references.Add(MetadataReference.CreateFromFile(path));
                 }
             }
+            else
+            {
+                // 单文件应用没有 TPA 文件列表。递归加载根程序集声明的依赖，并从
+                // 运行时内嵌元数据创建引用，确保 System.Runtime 等门面程序集齐全。
+                AddEmbeddedAssemblyClosure(references, added, rootAssemblies);
+            }
 
             return references.ToArray();
         }
 
-        private static void AddReferenceFromAssemblyLocation(List<MetadataReference> references, HashSet<string> added, Assembly assembly)
+        private static void AddEmbeddedAssemblyClosure(
+            List<MetadataReference> references,
+            HashSet<string> added,
+            IEnumerable<Assembly> rootAssemblies)
+        {
+            var pending = new Queue<Assembly>(rootAssemblies.Where(assembly => assembly != null));
+            var visited = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            while (pending.Count > 0)
+            {
+                var assembly = pending.Dequeue();
+                var identity = assembly.FullName ?? assembly.GetName().Name ?? string.Empty;
+                if (!visited.Add(identity))
+                    continue;
+
+                AddReferenceFromAssemblyLocation(references, added, assembly);
+
+                AssemblyName[] dependencies;
+                try
+                {
+                    dependencies = assembly.GetReferencedAssemblies();
+                }
+                catch
+                {
+                    continue;
+                }
+
+                for (var i = 0; i < dependencies.Length; i++)
+                {
+                    try
+                    {
+                        pending.Enqueue(Assembly.Load(dependencies[i]));
+                    }
+                    catch
+                    {
+                        // 可选依赖可能因当前 RID 未携带而无法加载；Roslyn 会在实际
+                        // 脚本需要该依赖时给出明确诊断，不阻断其他可用引用。
+                    }
+                }
+            }
+        }
+
+        private static unsafe void AddReferenceFromAssemblyLocation(List<MetadataReference> references, HashSet<string> added, Assembly assembly)
         {
             if (assembly == null) return;
 
+            // 非单文件部署优先使用真实 PE 文件；单文件部署会返回空字符串并进入
+            // 下方 TryGetRawMetadata 路径，因此此处的 IL3000 警告已被显式处理。
+#pragma warning disable IL3000
             var location = assembly.Location;
-            if (string.IsNullOrWhiteSpace(location)) return;
-            if (!File.Exists(location)) return;
-            if (!added.Add(location)) return;
+#pragma warning restore IL3000
+            if (!string.IsNullOrWhiteSpace(location) && File.Exists(location))
+            {
+                if (!added.Add(location)) return;
+                references.Add(MetadataReference.CreateFromFile(location));
+                return;
+            }
 
-            references.Add(MetadataReference.CreateFromFile(location));
+            // 单文件发布中的托管程序集没有 Assembly.Location。TryGetRawMetadata 返回的
+            // 是 ECMA-335 元数据块而不是完整 PE 映像，必须通过 ModuleMetadata 交给 Roslyn。
+            // 该指针由当前已加载程序集持有，在进程生命周期内保持有效。
+            string identity = "embedded:" + (assembly.FullName ?? assembly.GetName().Name ?? string.Empty);
+            if (!added.Add(identity)) return;
+            if (!assembly.TryGetRawMetadata(out byte* metadata, out int length) || metadata == null || length <= 0)
+            {
+                added.Remove(identity);
+                return;
+            }
+
+            var module = ModuleMetadata.CreateFromMetadata((IntPtr)metadata, length);
+            var assemblyMetadata = AssemblyMetadata.Create(module);
+            references.Add(assemblyMetadata.GetReference(
+                filePath: (assembly.GetName().Name ?? "embedded") + ".dll"));
         }
 
         private static SourceText ReadSourceTextWithRetry(string path)

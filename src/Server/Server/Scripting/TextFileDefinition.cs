@@ -10,18 +10,42 @@ namespace Server.Scripting
     {
         public string Key { get; }
 
+        public string SourcePath { get; }
+
+        public string SourceEncoding { get; }
+
+        public string SourceNewLine { get; }
+
         private readonly List<string> _lines = new List<string>();
+        private readonly List<int> _sourceLineNumbers = new List<int>();
 
         public IReadOnlyList<string> Lines => _lines;
 
         public TextFileDefinition(string key)
+            : this(key, string.Empty, string.Empty, "NONE")
+        {
+        }
+
+        public TextFileDefinition(string key, string sourcePath, string sourceEncoding, string sourceNewLine)
         {
             Key = LogicKey.NormalizeOrThrow(key);
+            SourcePath = sourcePath ?? string.Empty;
+            SourceEncoding = sourceEncoding ?? string.Empty;
+            SourceNewLine = sourceNewLine ?? "NONE";
         }
 
         public TextFileDefinition AddLine(string line)
         {
             _lines.Add(line ?? string.Empty);
+            _sourceLineNumbers.Add(_sourceLineNumbers.Count + 1);
+            return this;
+        }
+
+        public TextFileDefinition AddLine(string line, int sourceLineNumber)
+        {
+            if (sourceLineNumber <= 0) throw new ArgumentOutOfRangeException(nameof(sourceLineNumber));
+            _lines.Add(line ?? string.Empty);
+            _sourceLineNumbers.Add(sourceLineNumber);
             return this;
         }
 
@@ -31,7 +55,7 @@ namespace Server.Scripting
 
             foreach (var line in lines)
             {
-                _lines.Add(line ?? string.Empty);
+                AddLine(line);
             }
 
             return this;
@@ -40,7 +64,22 @@ namespace Server.Scripting
         public TextFileDefinition SetLines(IEnumerable<string> lines)
         {
             _lines.Clear();
+            _sourceLineNumbers.Clear();
             return AddLines(lines);
+        }
+
+        public int GetSourceLineNumber(int lineIndex)
+        {
+            if (lineIndex < 0 || lineIndex >= _lines.Count)
+                throw new ArgumentOutOfRangeException(nameof(lineIndex));
+
+            return _sourceLineNumbers[lineIndex];
+        }
+
+        public string GetSourceLocation(int lineIndex)
+        {
+            string source = string.IsNullOrWhiteSpace(SourcePath) ? Key : SourcePath;
+            return $"{source}:{GetSourceLineNumber(lineIndex)}";
         }
     }
 }

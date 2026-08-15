@@ -22,6 +22,9 @@ namespace Server.Scripting
         private DateTime _lastCompileFailureLogUtc = DateTime.MinValue;
         private int _suppressedCompileFailureCount;
         private static readonly TimeSpan CompileFailureLogSuppressWindow = TimeSpan.FromSeconds(10);
+        private ScriptVariableDeclarationSnapshot _txtVariableDeclarations =
+            ScriptVariableDeclarationSnapshot.Empty;
+        private ScriptVariableDeclarationSnapshot _effectiveVariableDeclarations;
 
         public ScriptManager()
             : this(new ServerScriptVariableStore(), null, null, null)
@@ -36,8 +39,9 @@ namespace Server.Scripting
         {
             _currentRegistry = CreateRegistry();
             _currentRegistry.SealVariableDeclarations();
+            _effectiveVariableDeclarations = _currentRegistry.VariableDeclarations;
             VariableModule = new ScriptVariableModule(
-                () => CurrentRegistry.VariableDeclarations,
+                () => Volatile.Read(ref _effectiveVariableDeclarations),
                 requestAutoSave: requestAccountAutoSave,
                 serverPersistent: serverVariables,
                 requestServerAutoSave: requestServerVariableAutoSave,
@@ -55,6 +59,8 @@ namespace Server.Scripting
         public bool LogDiagnostics { get; set; } = true;
         public IScriptVariableModule VariableModule { get; }
         public ScriptVariableCommands VariableCommands { get; }
+        public ScriptVariableDeclarationSnapshot EffectiveVariableDeclarations =>
+            Volatile.Read(ref _effectiveVariableDeclarations);
 
         public ScriptRegistry CurrentRegistry
         {
@@ -296,14 +302,18 @@ namespace Server.Scripting
 
         private ScriptRegistry PublishRegistry(ScriptRegistry next)
         {
+            next.SealVariableDeclarations();
             ScriptRegistry[] published = Envir.Main.InvokeOnMainThread(() =>
             {
                 ScriptRegistry previous = CurrentRegistry;
+                ScriptVariableDeclarationSnapshot candidateDeclarations =
+                    ScriptVariableDeclarationSnapshot.Merge(
+                        next.VariableDeclarations,
+                        Volatile.Read(ref _txtVariableDeclarations));
                 ScriptVariableCatalogReloadResult variableCompatibility =
-                    previous.VariableDeclarations.ValidateCompatibleTransitionTo(next.VariableDeclarations);
+                    EffectiveVariableDeclarations.ValidateCompatibleTransitionTo(candidateDeclarations);
                 if (!variableCompatibility.Success)
                     throw new InvalidOperationException(variableCompatibility.Diagnostic);
-                next.SealVariableDeclarations();
 
                 var affectedDocuments = new HashSet<string>(
                     previous.CustomGui.DocumentIds.Concat(next.CustomGui.DocumentIds),
@@ -317,10 +327,55 @@ namespace Server.Scripting
                     }
                 }
                 Interlocked.Exchange(ref _currentRegistry, next);
+                Interlocked.Exchange(ref _effectiveVariableDeclarations, candidateDeclarations);
                 return new[] { previous };
             });
             return published?[0] ?? throw new InvalidOperationException(
                 "GUI11-HOOK-MAINTHREAD：游戏主线程不可用，脚本注册表未发布");
+        }
+
+        public ScriptVariableCatalogReloadResult ValidateTxtVariableDeclarations(ITextFileProvider provider)
+        {
+            try
+            {
+                ScriptVariableDeclarationSnapshot candidateTxt =
+                    ScriptVariableTextDeclarationParser.CreateSnapshot(provider);
+                ScriptVariableDeclarationSnapshot candidateEffective =
+                    ScriptVariableDeclarationSnapshot.Merge(
+                        CurrentRegistry.VariableDeclarations,
+                        candidateTxt);
+                return EffectiveVariableDeclarations.ValidateCompatibleTransitionTo(candidateEffective);
+            }
+            catch (Exception error) when (error is ArgumentException or InvalidOperationException)
+            {
+                return ScriptVariableCatalogReloadResult.Fail(
+                    ScriptVariableErrorCode.DeclarationConflict, error.Message);
+            }
+        }
+
+        public ScriptVariableCatalogReloadResult PublishTxtVariableDeclarations(ITextFileProvider provider)
+        {
+            try
+            {
+                ScriptVariableDeclarationSnapshot candidateTxt =
+                    ScriptVariableTextDeclarationParser.CreateSnapshot(provider);
+                ScriptVariableDeclarationSnapshot candidateEffective =
+                    ScriptVariableDeclarationSnapshot.Merge(
+                        CurrentRegistry.VariableDeclarations,
+                        candidateTxt);
+                ScriptVariableCatalogReloadResult compatibility =
+                    EffectiveVariableDeclarations.ValidateCompatibleTransitionTo(candidateEffective);
+                if (!compatibility.Success) return compatibility;
+
+                Interlocked.Exchange(ref _txtVariableDeclarations, candidateTxt);
+                Interlocked.Exchange(ref _effectiveVariableDeclarations, candidateEffective);
+                return ScriptVariableCatalogReloadResult.Ok();
+            }
+            catch (Exception error) when (error is ArgumentException or InvalidOperationException)
+            {
+                return ScriptVariableCatalogReloadResult.Fail(
+                    ScriptVariableErrorCode.DeclarationConflict, error.Message);
+            }
         }
 
         private static void ReportCustomGuiError(string code, Exception error)
@@ -415,6 +470,11 @@ namespace Server.Scripting
                 var emptyRegistry = CreateRegistry();
                 emptyRegistry.SealVariableDeclarations();
                 oldRegistry = Interlocked.Exchange(ref _currentRegistry, emptyRegistry);
+                Interlocked.Exchange(
+                    ref _effectiveVariableDeclarations,
+                    ScriptVariableDeclarationSnapshot.Merge(
+                        emptyRegistry.VariableDeclarations,
+                        Volatile.Read(ref _txtVariableDeclarations)));
             }
             oldRegistry = null;
 
@@ -539,10 +599,57 @@ namespace Server.Scripting
         }
 
         public bool TryHandlePlayerLogin(PlayerObject player) =>
-            TryInvoke<OnPlayerLoginHook>(ScriptHookKeys.OnPlayerLogin, h => h(_context, player));
+            TryHandlePlayerLogin(player, out _);
+
+        public bool TryHandlePlayerLogin(PlayerObject player, out bool faulted)
+        {
+            faulted = false;
+            bool cSharpEligible = Settings.CSharpScriptsEnabled && Enabled;
+            bool handlerExists = HasHandler<OnPlayerLoginHook>(ScriptHookKeys.OnPlayerLogin);
+            bool completed = false;
+            bool handled = TryInvoke<OnPlayerLoginHook>(
+                ScriptHookKeys.OnPlayerLogin, h =>
+                {
+                    bool result = h(_context, player);
+                    completed = true;
+                    return result;
+                });
+            if (handlerExists && !completed)
+            {
+                faulted = true;
+                return false;
+            }
+            return LingFengTxtSystemHookAdapter.TryDispatchAfterCSharp(
+                handled, Envir.Main.TextFileProvider, ScriptHookKeys.OnPlayerLogin, player, cSharpEligible);
+        }
+
+        private bool HasHandler<TDelegate>(string key) where TDelegate : class =>
+            Enabled && CurrentRegistry.TryGet<TDelegate>(key, out _);
 
         public bool TryHandlePlayerLevelUp(PlayerObject player) =>
-            TryInvoke<OnPlayerLevelUpHook>(ScriptHookKeys.OnPlayerLevelUp, h => h(_context, player));
+            TryHandlePlayerLevelUp(player, out _);
+
+        public bool TryHandlePlayerLevelUp(PlayerObject player, out bool faulted)
+        {
+            faulted = false;
+            bool cSharpEligible = Settings.CSharpScriptsEnabled && Enabled;
+            bool handlerExists = HasHandler<OnPlayerLevelUpHook>(ScriptHookKeys.OnPlayerLevelUp);
+            bool completed = false;
+            bool handled = TryInvoke<OnPlayerLevelUpHook>(
+                ScriptHookKeys.OnPlayerLevelUp, h =>
+                {
+                    bool result = h(_context, player);
+                    completed = true;
+                    return result;
+                });
+            if (handlerExists && !completed)
+            {
+                faulted = true;
+                return false;
+            }
+            return LingFengTxtSystemHookAdapter.TryDispatchAfterCSharp(
+                handled, Envir.Main.TextFileProvider, ScriptHookKeys.OnPlayerLevelUp, player, cSharpEligible);
+        }
 
         public bool TryHandlePlayerDie(PlayerObject player) =>
             TryInvoke<OnPlayerDieHook>(ScriptHookKeys.OnPlayerDie, h => h(_context, player));
@@ -1057,7 +1164,7 @@ namespace Server.Scripting
             });
         }
 
-        public bool TryHandlePlayerDamageBefore(PlayerObject player, PlayerDamageRequest request)
+        public bool TryHandlePlayerDamageBefore(PlayerObject player, PlayerDamageRequest request, bool allowCSharp = true)
         {
             if (player == null) return false;
             if (request == null) throw new ArgumentNullException(nameof(request));
@@ -1066,23 +1173,37 @@ namespace Server.Scripting
                 ? ScriptHookKeys.OnPlayerDamageBeforeOut
                 : ScriptHookKeys.OnPlayerDamageBeforeIn;
 
-            if (TryInvoke<OnPlayerDamageBeforeHook>(specificKey, h =>
+            bool cSharpInvoked = false;
+            if (allowCSharp && HasHandler<OnPlayerDamageBeforeHook>(specificKey))
             {
-                h(_context, player, request);
-                return request.Decision != ScriptHookDecision.Continue;
-            }))
-            {
-                return true;
+                cSharpInvoked = true;
+                if (TryInvoke<OnPlayerDamageBeforeHook>(specificKey, h =>
+                {
+                    h(_context, player, request);
+                    return request.Decision != ScriptHookDecision.Continue;
+                }))
+                    return true;
             }
 
-            return TryInvoke<OnPlayerDamageBeforeHook>(ScriptHookKeys.OnPlayerDamageBefore, h =>
+            if (allowCSharp && HasHandler<OnPlayerDamageBeforeHook>(ScriptHookKeys.OnPlayerDamageBefore))
             {
-                h(_context, player, request);
+                cSharpInvoked = true;
+                TryInvoke<OnPlayerDamageBeforeHook>(ScriptHookKeys.OnPlayerDamageBefore, h =>
+                {
+                    h(_context, player, request);
+                    return request.Decision != ScriptHookDecision.Continue;
+                });
+            }
+
+            if (cSharpInvoked)
                 return request.Decision != ScriptHookDecision.Continue;
-            });
+
+            return LingFengTxtSystemHookAdapter.TryDispatchPlayerDamageBefore(
+                false, Envir.Main.TextFileProvider, player, request,
+                allowCSharp && Settings.CSharpScriptsEnabled && Enabled);
         }
 
-        public bool TryHandlePlayerDamageAfter(PlayerObject player, PlayerDamageResult result)
+        public bool TryHandlePlayerDamageAfter(PlayerObject player, PlayerDamageResult result, bool allowCSharp = true)
         {
             if (player == null) return false;
             if (result == null) throw new ArgumentNullException(nameof(result));
@@ -1091,20 +1212,32 @@ namespace Server.Scripting
                 ? ScriptHookKeys.OnPlayerDamageAfterOut
                 : ScriptHookKeys.OnPlayerDamageAfterIn;
 
-            if (TryInvoke<OnPlayerDamageAfterHook>(specificKey, h =>
+            bool cSharpInvoked = false;
+            bool cSharpHandled = false;
+            bool specificSucceeded = false;
+            if (allowCSharp && HasHandler<OnPlayerDamageAfterHook>(specificKey))
             {
-                h(_context, player, result);
-                return true;
-            }))
+                cSharpInvoked = true;
+                specificSucceeded = cSharpHandled = TryInvoke<OnPlayerDamageAfterHook>(specificKey, h =>
+                {
+                    h(_context, player, result);
+                    return true;
+                });
+            }
+            if (!specificSucceeded && allowCSharp && HasHandler<OnPlayerDamageAfterHook>(ScriptHookKeys.OnPlayerDamageAfter))
             {
-                return true;
+                cSharpInvoked = true;
+                cSharpHandled = TryInvoke<OnPlayerDamageAfterHook>(ScriptHookKeys.OnPlayerDamageAfter, h =>
+                {
+                    h(_context, player, result);
+                    return true;
+                });
             }
 
-            return TryInvoke<OnPlayerDamageAfterHook>(ScriptHookKeys.OnPlayerDamageAfter, h =>
-            {
-                h(_context, player, result);
-                return true;
-            });
+            if (cSharpInvoked) return cSharpHandled;
+            return LingFengTxtSystemHookAdapter.TryDispatchPlayerDamageAfter(
+                false, Envir.Main.TextFileProvider, player, result,
+                allowCSharp && Settings.CSharpScriptsEnabled && Enabled);
         }
 
         public bool TryHandlePlayerDeathPenaltyBefore(PlayerObject player, PlayerDeathPenaltyRequest request)
@@ -1154,6 +1287,42 @@ namespace Server.Scripting
                 h(_context, player, request);
                 return request.Decision != ScriptHookDecision.Continue;
             });
+        }
+
+        public bool TryHandlePlayerItemPickupAfter(PlayerObject player, PlayerItemPickupResult result, bool allowCSharp = true)
+        {
+            if (player == null) return false;
+            if (result == null) throw new ArgumentNullException(nameof(result));
+
+            int itemIndex = result.Item?.Info?.Index ?? 0;
+            string specificKey = itemIndex > 0 ? ScriptHookKeys.OnPlayerItemPickupAfterIndex(itemIndex) : null;
+            bool cSharpInvoked = false;
+            bool cSharpHandled = false;
+            bool specificSucceeded = false;
+
+            if (allowCSharp && specificKey != null && HasHandler<OnPlayerItemPickupAfterHook>(specificKey))
+            {
+                cSharpInvoked = true;
+                specificSucceeded = cSharpHandled = TryInvoke<OnPlayerItemPickupAfterHook>(specificKey, h =>
+                {
+                    h(_context, player, result);
+                    return true;
+                });
+            }
+            if (!specificSucceeded && allowCSharp && HasHandler<OnPlayerItemPickupAfterHook>(ScriptHookKeys.OnPlayerItemPickupAfter))
+            {
+                cSharpInvoked = true;
+                cSharpHandled = TryInvoke<OnPlayerItemPickupAfterHook>(ScriptHookKeys.OnPlayerItemPickupAfter, h =>
+                {
+                    h(_context, player, result);
+                    return true;
+                });
+            }
+
+            if (cSharpInvoked) return cSharpHandled;
+            return LingFengTxtSystemHookAdapter.TryDispatchPlayerItemPickupAfter(
+                false, Envir.Main.TextFileProvider, player, result,
+                allowCSharp && Settings.CSharpScriptsEnabled && Enabled);
         }
 
         public bool TryHandlePlayerItemUseCheck(PlayerObject player, PlayerItemUseCheckRequest request)
@@ -1220,15 +1389,30 @@ namespace Server.Scripting
             return TryInvoke<OnMonsterSpawnHook>(ScriptHookKeys.OnMonsterSpawn, h => h(_context, monster));
         }
 
-        public bool TryHandleMonsterDie(MonsterObject monster)
+        public bool TryHandleMonsterDie(MonsterObject monster, bool allowCSharp = true)
         {
+            bool cSharpInvoked = false;
+            bool cSharpHandled = false;
             if (monster != null)
             {
-                if (TryInvoke<OnMonsterDieHook>(ScriptHookKeys.OnMonsterDieIndex(monster.Info.Index), h => h(_context, monster)))
-                    return true;
+                string specificKey = ScriptHookKeys.OnMonsterDieIndex(monster.Info.Index);
+                cSharpInvoked = allowCSharp && HasHandler<OnMonsterDieHook>(specificKey);
+                if (cSharpInvoked)
+                    cSharpHandled = TryInvoke<OnMonsterDieHook>(specificKey, h => h(_context, monster));
             }
 
-            return TryInvoke<OnMonsterDieHook>(ScriptHookKeys.OnMonsterDie, h => h(_context, monster));
+            if (!cSharpHandled && allowCSharp && HasHandler<OnMonsterDieHook>(ScriptHookKeys.OnMonsterDie))
+            {
+                cSharpInvoked = true;
+                cSharpHandled = TryInvoke<OnMonsterDieHook>(ScriptHookKeys.OnMonsterDie, h => h(_context, monster));
+            }
+
+            if (cSharpInvoked) return cSharpHandled;
+            LingFengTxtSystemHookAdapter.TryDispatchMonsterDie(
+                false, Envir.Main.TextFileProvider, monster,
+                allowCSharp && Settings.CSharpScriptsEnabled && Enabled);
+            // @KILLMON 是归属玩家的 QFunction 事件，不替代怪物自身的 [@_DIE(index)]。
+            return false;
         }
 
         public bool TryHandleMonsterDropBefore(MonsterObject monster, MonsterDropRequest request)
@@ -1252,25 +1436,38 @@ namespace Server.Scripting
             });
         }
 
-        public bool TryHandleMonsterDropAfter(MonsterObject monster, MonsterDropResult result)
+        public bool TryHandleMonsterDropAfter(MonsterObject monster, MonsterDropResult result, bool allowCSharp = true)
         {
             if (monster == null) return false;
             if (result == null) throw new ArgumentNullException(nameof(result));
 
-            if (TryInvoke<OnMonsterDropAfterHook>(ScriptHookKeys.OnMonsterDropAfterIndex(monster.Info.Index), h =>
+            string specificKey = ScriptHookKeys.OnMonsterDropAfterIndex(monster.Info.Index);
+            bool cSharpInvoked = false;
+            bool cSharpHandled = false;
+            bool specificSucceeded = false;
+            if (allowCSharp && HasHandler<OnMonsterDropAfterHook>(specificKey))
             {
-                h(_context, monster, result);
-                return true;
-            }))
+                cSharpInvoked = true;
+                specificSucceeded = cSharpHandled = TryInvoke<OnMonsterDropAfterHook>(specificKey, h =>
+                {
+                    h(_context, monster, result);
+                    return true;
+                });
+            }
+            if (!specificSucceeded && allowCSharp && HasHandler<OnMonsterDropAfterHook>(ScriptHookKeys.OnMonsterDropAfter))
             {
-                return true;
+                cSharpInvoked = true;
+                cSharpHandled = TryInvoke<OnMonsterDropAfterHook>(ScriptHookKeys.OnMonsterDropAfter, h =>
+                {
+                    h(_context, monster, result);
+                    return true;
+                });
             }
 
-            return TryInvoke<OnMonsterDropAfterHook>(ScriptHookKeys.OnMonsterDropAfter, h =>
-            {
-                h(_context, monster, result);
-                return true;
-            });
+            if (cSharpInvoked) return cSharpHandled;
+            return LingFengTxtSystemHookAdapter.TryDispatchMonsterDropAfter(
+                false, Envir.Main.TextFileProvider, result,
+                allowCSharp && Settings.CSharpScriptsEnabled && Enabled);
         }
 
         public bool TryHandleMonsterRespawnBefore(MonsterInfo monster, MonsterRespawnRequest request)

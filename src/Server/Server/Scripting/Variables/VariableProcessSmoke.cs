@@ -172,7 +172,9 @@ namespace Server.Scripting.Variables
                         $"INIT={commands.Format(context, "U.InitRate", 2).Text};" +
                         $"A0={commands.Format(context, "A0").Text};" +
                         $"A1={commands.Format(context, "A1").Text};" +
-                        $"SPEECH={string.Join("|", player.NPCSpeech)}");
+                        $"SPEECH={string.Join("|", player.NPCSpeech)};" +
+                        $"SCRIPT_ERROR={envir.CSharpScripts.LastError};" +
+                        $"DIAGNOSTICS={string.Join("|", envir.CSharpScripts.LastDiagnostics)}");
 
                 var guild = new GuildInfo { GuildIndex = 900, Name = "变量冒烟行会" };
                 var guildContext = ScriptVariableContext.ForPlayer(guild);

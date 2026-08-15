@@ -1,0 +1,3 @@
+[@PLAYLEVELUP]
+#ACT
+MOV P1 1

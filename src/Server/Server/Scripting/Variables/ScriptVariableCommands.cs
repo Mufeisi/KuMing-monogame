@@ -342,11 +342,16 @@ namespace Server.Scripting.Variables
             switch ((command ?? string.Empty).Trim().ToUpperInvariant())
             {
                 case "MOV": operation = ScriptVariableOperation.Set; return true;
-                case "INC": operation = ScriptVariableOperation.Add; return true;
-                case "DEC": operation = ScriptVariableOperation.Subtract; return true;
-                case "MUL": operation = ScriptVariableOperation.Multiply; return true;
-                case "DIV": operation = ScriptVariableOperation.Divide; return true;
-                case "MOD": operation = ScriptVariableOperation.Modulo; return true;
+                case "INC":
+                case "+": operation = ScriptVariableOperation.Add; return true;
+                case "DEC":
+                case "-": operation = ScriptVariableOperation.Subtract; return true;
+                case "MUL":
+                case "*": operation = ScriptVariableOperation.Multiply; return true;
+                case "DIV":
+                case "/": operation = ScriptVariableOperation.Divide; return true;
+                case "MOD":
+                case "%": operation = ScriptVariableOperation.Modulo; return true;
                 default: return false;
             }
         }

@@ -8665,6 +8665,8 @@ namespace Server.MirObjects
 
             var scriptsRuntimeActive = Settings.CSharpScriptsEnabled && Envir.CSharpScripts.Enabled;
             var allowCSharpCheck = scriptsRuntimeActive && Server.Scripting.ScriptDispatchPolicy.ShouldTryCSharp(Server.Scripting.ScriptHookKeys.OnPlayerItemPickupCheck);
+            var tryCSharpPickupAfter = scriptsRuntimeActive && Server.Scripting.ScriptDispatchPolicy.ShouldTryCSharp(Server.Scripting.ScriptHookKeys.OnPlayerItemPickupAfter);
+            var allowPickupAfter = Server.Scripting.LingFengTxtSystemHookAdapter.IsCompatibilityEnabled(Envir.TextFileProvider) || tryCSharpPickupAfter;
 
             if (!allowCSharpCheck && scriptsRuntimeActive && Settings.TxtScriptsLogDispatch)
             {
@@ -8727,6 +8729,17 @@ namespace Server.MirObjects
                     CurrentMap.RemoveObject(ob);
                     ob.Despawn();
 
+                    if (allowPickupAfter)
+                    {
+                        Envir.CSharpScripts.TryHandlePlayerItemPickupAfter(
+                            this,
+                            new Server.Scripting.PlayerItemPickupResult(
+                                Server.Scripting.PlayerItemPickupSource.Player,
+                                this,
+                                item.Item,
+                                0), tryCSharpPickupAfter);
+                    }
+
                     return;
                 }
 
@@ -8735,6 +8748,16 @@ namespace Server.MirObjects
                 GainGold(item.Gold);
                 CurrentMap.RemoveObject(ob);
                 ob.Despawn();
+                if (allowPickupAfter)
+                {
+                    Envir.CSharpScripts.TryHandlePlayerItemPickupAfter(
+                        this,
+                        new Server.Scripting.PlayerItemPickupResult(
+                            Server.Scripting.PlayerItemPickupSource.Player,
+                            this,
+                            null,
+                            item.Gold), tryCSharpPickupAfter);
+                }
                 return;
             }
 
@@ -9013,10 +9036,13 @@ namespace Server.MirObjects
             }
 
             var scriptsRuntimeActive = Settings.CSharpScriptsEnabled && Envir.CSharpScripts.Enabled;
+            var txtLifecycleActive = (type == DefaultNPCType.Login || type == DefaultNPCType.LevelUp) &&
+                                     Server.Scripting.LingFengTxtSystemHookAdapter.IsCompatibilityEnabled(Envir.TextFileProvider);
 
-            if (scriptsRuntimeActive)
+            if (scriptsRuntimeActive || txtLifecycleActive)
             {
                 bool handled;
+                bool hookFaulted = false;
 
                 string policyKey = string.Empty;
 
@@ -9060,7 +9086,7 @@ namespace Server.MirObjects
                         break;
                 }
 
-                var allowCSharp = string.IsNullOrEmpty(policyKey) || Server.Scripting.ScriptDispatchPolicy.ShouldTryCSharp(policyKey);
+                var allowCSharp = !scriptsRuntimeActive || string.IsNullOrEmpty(policyKey) || Server.Scripting.ScriptDispatchPolicy.ShouldTryCSharp(policyKey);
 
                 if (!allowCSharp)
                 {
@@ -9074,11 +9100,11 @@ namespace Server.MirObjects
                 switch (type)
                 {
                     case DefaultNPCType.Login:
-                        handled = Envir.CSharpScripts.TryHandlePlayerLogin(this);
+                        handled = Envir.CSharpScripts.TryHandlePlayerLogin(this, out hookFaulted);
                         break;
 
                     case DefaultNPCType.LevelUp:
-                        handled = Envir.CSharpScripts.TryHandlePlayerLevelUp(this);
+                        handled = Envir.CSharpScripts.TryHandlePlayerLevelUp(this, out hookFaulted);
                         break;
 
                     case DefaultNPCType.Die:
@@ -9138,6 +9164,13 @@ namespace Server.MirObjects
                 }
                 }
 
+                if (hookFaulted)
+                {
+                    if (Settings.TxtScriptsLogDispatch)
+                        MessageQueue.Enqueue($"[Scripts][Dispatch] DefaultNPC {type} -> C#异常，禁止回落TXT");
+                    return;
+                }
+
                 if (handled)
                 {
                     if (Settings.TxtScriptsLogDispatch)
@@ -9145,7 +9178,7 @@ namespace Server.MirObjects
                     return;
                 }
 
-                if (!Server.Scripting.TxtFallbackPolicy.ShouldFallbackToTxt(policyKey))
+                if (scriptsRuntimeActive && !Server.Scripting.TxtFallbackPolicy.ShouldFallbackToTxt(policyKey))
                 {
                     if (Settings.TxtScriptsLogDispatch)
                         MessageQueue.Enqueue($"[Scripts][Dispatch] DefaultNPC {type} -> 阻止回落TXT（v{Envir.CSharpScripts.Version}，handlers={Envir.CSharpScripts.LastRegisteredHandlerCount}）");
@@ -9275,13 +9308,22 @@ namespace Server.MirObjects
         }
         private void CallNPCNextPage()
         {
-            //process any new npc calls immediately
-            for (int i = 0; i < ActionList.Count; i++)
+            var budget = new Server.Scripting.TxtScriptExecutionBudget(Settings.TxtScriptsMaxImmediateTransitions);
+            while (true)
             {
-                if (ActionList[i].Type != DelayedType.NPC || ActionList[i].Time != -1) continue;
-                var action = ActionList[i];
+                int index = ActionList.FindIndex(item => item.Type == DelayedType.NPC && item.Time == -1);
+                if (index < 0) return;
+                if (!budget.TryConsume())
+                {
+                    int removed = ActionList.RemoveAll(item => item.Type == DelayedType.NPC && item.Time == -1);
+                    MessageQueue.Enqueue($"[TxtScripts][TXT-RUNTIME-001] 即时跳转超过预算 {budget.MaximumSteps}，已终止玩家 {Name} 的 NPC 对话并移除 {removed} 个待执行跳转。");
+                    uint objectID = NPCObjectID;
+                    if (objectID != 0) EndNpcConversation(objectID);
+                    return;
+                }
 
-                ActionList.RemoveAt(i);
+                DelayedAction action = ActionList[index];
+                ActionList.RemoveAt(index);
 
                 CompleteNPC(action.Params);
             }

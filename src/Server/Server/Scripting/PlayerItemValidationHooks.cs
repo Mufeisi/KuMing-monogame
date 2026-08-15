@@ -87,5 +87,22 @@ namespace Server.Scripting
 
         public ScriptHookDecision Decision { get; set; } = ScriptHookDecision.Continue;
     }
+
+    public sealed class PlayerItemPickupResult
+    {
+        public PlayerItemPickupResult(PlayerItemPickupSource source, MapObject picker, UserItem item, uint gold)
+        {
+            Source = source;
+            Picker = picker ?? throw new ArgumentNullException(nameof(picker));
+            Item = item;
+            Gold = gold;
+        }
+
+        public PlayerItemPickupSource Source { get; }
+        public MapObject Picker { get; }
+        public UserItem Item { get; }
+        public uint Gold { get; }
+        public bool IsGold => Item == null;
+    }
 }
 

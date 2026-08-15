@@ -88,6 +88,14 @@ namespace MonoShare
                         CMain.SaveLog($"FairyGUI: MobileMainHud 后台预取启动，Pkg={AtlasPackageName} Atlases={_atlasFiles?.Count ?? 0}");
 
                     _prefetchTask = Task.Run(PrefetchAtlasBytesWorker);
+#if REAL_ANDROID
+                    // Android 的 MonoGame 游戏循环运行在 Activity 主线程。逐张调用
+                    // GetItemAsset 会同步创建 GPU 纹理，低速设备上可连续阻塞数秒并
+                    // 触发系统 ANR。保留后台字节预取，纹理由正常界面按需创建。
+                    _completed = true;
+                    if (Settings.LogErrors)
+                        CMain.SaveLog("FairyGUI: Android 已完成后台字节预取调度，跳过启动期同步 GPU 贴图预热。");
+#endif
                 }
                 catch (Exception ex)
                 {

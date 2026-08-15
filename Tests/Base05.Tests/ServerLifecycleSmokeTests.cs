@@ -8,12 +8,14 @@ using System.Security.Cryptography.X509Certificates;
 using Server;
 using Server.MirEnvir;
 using Server.MirDatabase;
+using Server.MirObjects;
 using Server.MirNetwork;
 using Server.Persistence;
 using Server.Persistence.Sql;
 using Server.Security;
 using Shared.Security;
 using Server.Operations;
+using Server.Scripting;
 using Server.Scripting.Variables;
 using Xunit;
 
@@ -73,6 +75,186 @@ public sealed class ServerLifecycleSmokeTests : IDisposable
 
         envir.Stop();
         Assert.False(envir.Running);
+    }
+
+    [Fact]
+    public void 翎风Txt灰度候选在真实服务端生命周期内可重启并关闭回滚()
+    {
+        bool oldTxtEnabled = Settings.TxtScriptsEnabled;
+        string oldTxtPath = Settings.TxtScriptsPath;
+        TxtScriptLayout oldLayout = Settings.TxtScriptsLayout;
+        long oldMaxFileBytes = Settings.TxtScriptsMaxFileBytes;
+        bool oldHotReload = Settings.TxtScriptsHotReloadEnabled;
+        bool oldCSharpEnabled = Settings.CSharpScriptsEnabled;
+        string oldVersion = Settings.TxtScriptsCompatibilityVersion;
+        bool oldStrict = Settings.TxtScriptsStrictCompatibility;
+        string contentRoot = Path.Combine(
+            RepositoryRoot(), "Configs", "LingFengTxtPilot", "Content");
+        string firstDigest = string.Empty;
+
+        try
+        {
+            Settings.CSharpScriptsEnabled = false;
+            Settings.TxtScriptsEnabled = true;
+            Settings.TxtScriptsPath = contentRoot;
+            Settings.TxtScriptsLayout = TxtScriptLayout.LyoCrystal;
+            Settings.TxtScriptsMaxFileBytes = 1024 * 1024;
+            Settings.TxtScriptsHotReloadEnabled = false;
+            Settings.TxtScriptsCompatibilityVersion = "LFM2-2026-08-15-snapshot";
+            Settings.TxtScriptsStrictCompatibility = true;
+
+            for (int cycle = 0; cycle < 2; cycle++)
+            {
+                var envir = new Envir();
+                try
+                {
+                    envir.Start(IsolatedStartOptions());
+                    Assert.True(SpinWait.SpinUntil(
+                        () => envir.StartState is EnvirStartState.Ready or EnvirStartState.Failed,
+                        TimeSpan.FromSeconds(5)));
+                    Assert.Equal(EnvirStartState.Ready, envir.StartState);
+                    Assert.Null(envir.StartFailure);
+                    Assert.Equal(3, envir.TextFileProvider.GetAll().Count);
+                    Assert.Empty(TxtScriptSnapshotValidator.Validate(envir.TextFileProvider));
+                    Assert.NotNull(envir.TxtScriptSnapshot);
+                    Assert.True(envir.TxtScriptSnapshot.LoadMilliseconds < 5000);
+                    if (cycle == 0)
+                        firstDigest = envir.TxtScriptSnapshot.Digest;
+                    else
+                        Assert.Equal(firstDigest, envir.TxtScriptSnapshot.Digest);
+                }
+                finally
+                {
+                    envir.Stop();
+                }
+            }
+
+            Settings.TxtScriptsEnabled = false;
+            var rollbackEnvir = new Envir();
+            try
+            {
+                rollbackEnvir.Start(IsolatedStartOptions());
+                Assert.True(SpinWait.SpinUntil(
+                    () => rollbackEnvir.StartState is EnvirStartState.Ready or EnvirStartState.Failed,
+                    TimeSpan.FromSeconds(5)));
+                Assert.Equal(EnvirStartState.Ready, rollbackEnvir.StartState);
+                Assert.Null(rollbackEnvir.TextFileProvider);
+                Assert.Null(rollbackEnvir.TxtScriptSnapshot);
+            }
+            finally
+            {
+                rollbackEnvir.Stop();
+            }
+        }
+        finally
+        {
+            Settings.TxtScriptsEnabled = oldTxtEnabled;
+            Settings.TxtScriptsPath = oldTxtPath;
+            Settings.TxtScriptsLayout = oldLayout;
+            Settings.TxtScriptsMaxFileBytes = oldMaxFileBytes;
+            Settings.TxtScriptsHotReloadEnabled = oldHotReload;
+            Settings.CSharpScriptsEnabled = oldCSharpEnabled;
+            Settings.TxtScriptsCompatibilityVersion = oldVersion;
+            Settings.TxtScriptsStrictCompatibility = oldStrict;
+        }
+    }
+
+    [Fact]
+    public void 翎风Txt灰度NPC在真实服务端生命周期内执行并产生百分位指标()
+    {
+        bool oldTxtEnabled = Settings.TxtScriptsEnabled;
+        string oldTxtPath = Settings.TxtScriptsPath;
+        TxtScriptLayout oldLayout = Settings.TxtScriptsLayout;
+        long oldMaxFileBytes = Settings.TxtScriptsMaxFileBytes;
+        bool oldHotReload = Settings.TxtScriptsHotReloadEnabled;
+        bool oldCSharpEnabled = Settings.CSharpScriptsEnabled;
+        string oldVersion = Settings.TxtScriptsCompatibilityVersion;
+        bool oldStrict = Settings.TxtScriptsStrictCompatibility;
+        bool oldMetricsEnabled = Settings.ScriptsRuntimeMetricsEnabled;
+        int oldAutoDumpSeconds = Settings.ScriptsRuntimeMetricsAutoDumpSeconds;
+        Envir envir = Envir.Main;
+
+        try
+        {
+            Settings.CSharpScriptsEnabled = false;
+            Settings.TxtScriptsEnabled = true;
+            Settings.TxtScriptsPath = Path.Combine(
+                RepositoryRoot(), "Configs", "LingFengTxtPilot", "Content");
+            Settings.TxtScriptsLayout = TxtScriptLayout.LyoCrystal;
+            Settings.TxtScriptsMaxFileBytes = 1024 * 1024;
+            Settings.TxtScriptsHotReloadEnabled = false;
+            Settings.TxtScriptsCompatibilityVersion = "LFM2-2026-08-15-snapshot";
+            Settings.TxtScriptsStrictCompatibility = true;
+            Settings.ScriptsRuntimeMetricsEnabled = true;
+            Settings.ScriptsRuntimeMetricsAutoDumpSeconds = 0;
+            ScriptRuntimeMetrics.Clear();
+
+            envir.Start(IsolatedStartOptions());
+            Assert.True(SpinWait.SpinUntil(
+                () => envir.StartState is EnvirStartState.Ready or EnvirStartState.Failed,
+                TimeSpan.FromSeconds(5)));
+            Assert.Equal(EnvirStartState.Ready, envir.StartState);
+
+            NPCScript script = NPCScript.GetOrAdd(0, "TXT灰度向导", NPCScriptType.Normal);
+            Assert.Contains(script.NPCPages, page => page.Key == NPCScript.MainKey);
+            var player = new PlayerObject
+            {
+                Info = new CharacterInfo { Name = "TXT灰度指标玩家" },
+                Account = new AccountInfo()
+            };
+
+            for (int index = 0; index < 100; index++)
+                script.Call(player, 0, NPCScript.MainKey);
+
+            ScriptRuntimeMetrics.EntrySnapshot metric = Assert.Single(
+                ScriptRuntimeMetrics.CreateSnapshot().Entries,
+                entry => entry.Key.Contains("TXT灰度向导", StringComparison.OrdinalIgnoreCase));
+            Assert.Equal(100, metric.Count);
+            Assert.Equal(100, metric.RecentSampleCount);
+            Assert.True(metric.P95Milliseconds >= 0);
+            Assert.True(metric.P99Milliseconds >= metric.P95Milliseconds);
+            Assert.True(metric.MaximumMilliseconds >= metric.P99Milliseconds);
+        }
+        finally
+        {
+            envir.Stop();
+            ScriptRuntimeMetrics.Clear();
+            Settings.TxtScriptsEnabled = oldTxtEnabled;
+            Settings.TxtScriptsPath = oldTxtPath;
+            Settings.TxtScriptsLayout = oldLayout;
+            Settings.TxtScriptsMaxFileBytes = oldMaxFileBytes;
+            Settings.TxtScriptsHotReloadEnabled = oldHotReload;
+            Settings.CSharpScriptsEnabled = oldCSharpEnabled;
+            Settings.TxtScriptsCompatibilityVersion = oldVersion;
+            Settings.TxtScriptsStrictCompatibility = oldStrict;
+            Settings.ScriptsRuntimeMetricsEnabled = oldMetricsEnabled;
+            Settings.ScriptsRuntimeMetricsAutoDumpSeconds = oldAutoDumpSeconds;
+        }
+    }
+
+    private static EnvirStartOptions IsolatedStartOptions() => new()
+    {
+        EnforceProductionSecurity = false,
+        LoadResources = false,
+        BindNetwork = false,
+        StartScripts = false,
+        StartHttp = false,
+        SaveOnStop = false,
+        Multithreaded = false,
+    };
+
+    private static string RepositoryRoot()
+    {
+        DirectoryInfo current = new(AppContext.BaseDirectory);
+        while (current != null)
+        {
+            if (File.Exists(Path.Combine(
+                    current.FullName, "Docs", "design", "scripting", "翎风TXT脚本兼容迁移实施规格.md")))
+                return current.FullName;
+            current = current.Parent;
+        }
+
+        throw new DirectoryNotFoundException("未找到 LyoCrystal 仓库根目录。");
     }
 
     [Fact]
