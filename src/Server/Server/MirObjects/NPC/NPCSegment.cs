@@ -27,12 +27,17 @@ namespace Server.MirObjects
             return !scriptsRuntimeActive || Settings.CSharpScriptsFallbackToTxt;
         }
 
-        private static bool TryParsePVariableReference(
+        private static bool TryParseRuntimeVariableReference(
             string text,
             out ScriptVariableReference reference)
         {
             return ScriptVariableReferenceParser.TryParse(text, out reference) &&
-                   reference.Scope == ScriptVariableScope.P;
+                   (reference.Scope == ScriptVariableScope.P ||
+                    reference.Scope == ScriptVariableScope.D ||
+                    reference.Scope == ScriptVariableScope.M ||
+                    reference.Scope == ScriptVariableScope.N ||
+                    reference.Scope == ScriptVariableScope.S ||
+                    reference.Scope == ScriptVariableScope.I);
         }
 
         private bool TryFormatScriptVariable(PlayerObject player, string expression, out string text)
@@ -64,8 +69,8 @@ namespace Server.MirObjects
                 return false;
             }
 
-            if (!TryParsePVariableReference(referenceText, out _)) return false;
-            var context = ScriptVariableContext.ForConversation(player, player.NPCObjectID);
+            if (!TryParseRuntimeVariableReference(referenceText, out _)) return false;
+            var context = ScriptVariableContext.ForConversation(player, player.NPCObjectID, player.CurrentMap);
             ScriptVariableTextResult result = Envir.CSharpScripts.VariableCommands.Format(
                 context, referenceText, digits);
             if (!result.Success)
@@ -295,7 +300,7 @@ namespace Server.MirObjects
                 //cant use stored var
                 case "CHECK":
                     if (parts.Length < 3) return;
-                    if (TryParsePVariableReference(parts[1], out _))
+                    if (TryParseRuntimeVariableReference(parts[1], out _))
                     {
                         if (parts.Length < 4) return;
                         CheckList.Add(new NPCChecks(CheckType.Variable, parts[1], parts[2], parts[3]));
@@ -957,13 +962,13 @@ namespace Server.MirObjects
                     if (quoteMatch.Success)
                         valueToStore = quoteMatch.Groups[1].Captures[0].Value;
 
-                    if (TryParsePVariableReference(parts[1], out _))
+                    if (TryParseRuntimeVariableReference(parts[1], out _))
                     {
                         string conversion = parts[2].ToUpperInvariant();
                         if (parts.Length >= 4 &&
                             (conversion == "ROUND" || conversion == "FLOOR" ||
                              conversion == "CEIL" || conversion == "TRUNC") &&
-                            TryParsePVariableReference(parts[3], out _))
+                            TryParseRuntimeVariableReference(parts[3], out _))
                         {
                             acts.Add(new NPCActions(
                                 ActionType.VariableConvert, parts[1], conversion, parts[3]));
@@ -982,7 +987,7 @@ namespace Server.MirObjects
                 case "DEC":
                 case "MUL":
                 case "DIV":
-                    if (parts.Length < 3 || !TryParsePVariableReference(parts[1], out _)) return;
+                    if (parts.Length < 3 || !TryParseRuntimeVariableReference(parts[1], out _)) return;
                     quoteMatch = regexQuote.Match(line);
                     valueToStore = quoteMatch.Success
                         ? quoteMatch.Groups[1].Captures[0].Value
@@ -2506,7 +2511,7 @@ namespace Server.MirObjects
                                 break;
                             }
 
-                            var context = ScriptVariableContext.ForConversation(player, player.NPCObjectID);
+                            var context = ScriptVariableContext.ForConversation(player, player.NPCObjectID, player.CurrentMap);
                             ScriptVariableCheckResult result = Envir.CSharpScripts.VariableCommands.Check(
                                 context, param[0], param[1], param[2]);
                             failed = !result.Success || !result.Matched;
@@ -3847,7 +3852,7 @@ namespace Server.MirObjects
                     case ActionType.VariableMutate:
                         {
                             if (player.NPCObjectID == 0) return;
-                            var context = ScriptVariableContext.ForConversation(player, player.NPCObjectID);
+                            var context = ScriptVariableContext.ForConversation(player, player.NPCObjectID, player.CurrentMap);
                             ScriptVariableMutationResult result = Envir.CSharpScripts.VariableCommands.Mutate(
                                 context, param[0], param[1], param[2]);
                             if (!result.Success)
@@ -3858,7 +3863,7 @@ namespace Server.MirObjects
                     case ActionType.VariableConvert:
                         {
                             if (player.NPCObjectID == 0) return;
-                            var context = ScriptVariableContext.ForConversation(player, player.NPCObjectID);
+                            var context = ScriptVariableContext.ForConversation(player, player.NPCObjectID, player.CurrentMap);
                             ScriptVariableMutationResult result = Envir.CSharpScripts.VariableCommands.Convert(
                                 context, param[0], param[1], param[2]);
                             if (!result.Success)

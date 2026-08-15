@@ -88,6 +88,7 @@ nav:
           - 错误与排查: scripting/variables/errors.md
   - 版本说明:
       - 2026-08-15 变量系统 VAR-01: releases/2026-08-15-var01.md
+      - 2026-08-15 变量系统 VAR-02: releases/2026-08-15-var02.md
   - 参考:
       - 功能状态: reference/feature-status.md
   - 说明书维护:

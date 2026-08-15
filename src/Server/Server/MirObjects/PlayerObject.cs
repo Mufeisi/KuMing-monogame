@@ -272,6 +272,21 @@ namespace Server.MirObjects
             if (NPCObjectID != 0)
                 EndNpcConversation(NPCObjectID);
 
+            var variableContext = Server.Scripting.Variables.ScriptVariableContext.ForPlayer(this, CurrentMap);
+            foreach (var scope in new[]
+                     {
+                         Server.Scripting.Variables.ScriptVariableScope.P,
+                         Server.Scripting.Variables.ScriptVariableScope.D,
+                         Server.Scripting.Variables.ScriptVariableScope.M,
+                         Server.Scripting.Variables.ScriptVariableScope.N,
+                         Server.Scripting.Variables.ScriptVariableScope.S,
+                     })
+            {
+                Envir.CSharpScripts.VariableModule.Reset(
+                    variableContext,
+                    Server.Scripting.Variables.ScriptVariableSelector.ScopeOnly(scope));
+            }
+
             if (Node == null) return;
 
             for (int i = Pets.Count - 1; i >= 0; i--)
@@ -9244,7 +9259,7 @@ namespace Server.MirObjects
 
             if (Envir.CSharpScripts != null)
             {
-                var context = Server.Scripting.Variables.ScriptVariableContext.ForConversation(this, objectID);
+                var context = Server.Scripting.Variables.ScriptVariableContext.ForConversation(this, objectID, CurrentMap);
                 Envir.CSharpScripts.VariableModule.Reset(
                     context,
                     Server.Scripting.Variables.ScriptVariableSelector.Conversation());

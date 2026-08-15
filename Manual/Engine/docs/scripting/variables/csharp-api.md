@@ -1,6 +1,6 @@
 # C# 脚本变量 API
 
-- 功能状态：实验性（当前支持 P）
+- 功能状态：实验性（当前支持 P/D/M/N/S/I/Call）
 - 首次支持版本：开发版 2026-08-15
 
 ## 注册声明
@@ -39,6 +39,8 @@ if (!moved.Success || !increased.Success)
 ```
 
 `command` 支持 `MOV`、`INC`、`DEC`、`MUL`、`DIV` 和 `MOD`。操作数可以是字面量，也可以是另一个变量引用。
+
+同一组 API 也可直接使用 `D0`、`M0`、`N0`、`S0`、`I0`、`N$名称`、`S$名称` 和已声明的 `Call.名称`。非 P 变量不要求存在 NPC 对话对象；M 必须有当前地图，Call 必须传入当前 `NpcPageCall`。
 
 ## 比较和显示
 
@@ -82,6 +84,6 @@ ScriptVariableResetResult reset = context.Api.ResetConversationVariables(player,
 dotnet Server.dll --headless-variable-smoke
 ```
 
-该命令不会监听网络，也不会加载或保存正式游戏数据。它会在独立临时目录编译声明脚本，并通过真实 `Envir`、`NPCSegment` 和 `PlayerObject` 路径验证 TXT 整数/小数运算、比较、显示、对话重置、兼容热重载和冲突保旧。
+该命令不会监听网络，也不会加载或保存正式游戏数据。它会在独立临时目录编译声明脚本，并通过真实 `Envir`、`NPCSegment` 和 `PlayerObject` 路径验证 TXT 整数/小数运算、比较、显示、P/D/M/N/S/I 生命周期、调用帧隔离、服务端停启清理、兼容热重载和冲突保旧。
 
 成功时退出码为 `0`，并输出以 `VARIABLE_SMOKE_OK` 开头的结构化结果；其他退出码和 `VARIABLE_SMOKE_*_FAILED` 信息表示对应阶段失败。

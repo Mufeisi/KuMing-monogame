@@ -111,6 +111,87 @@ public sealed class ScriptVariableModuleTests
     }
 
     [Fact]
+    public void RuntimeScopesFollowPlayerMapServerAndCallFrameLifecycles()
+    {
+        var catalog = new ScriptVariableDeclarationCatalog();
+        Assert.True(catalog.TryReload(new[]
+        {
+            Declaration(ScriptVariableScope.D, "Rate", ScriptVariableKind.Decimal, "1.5"),
+            Declaration(ScriptVariableScope.M, "Rate", ScriptVariableKind.Decimal, "2.5"),
+            Declaration(ScriptVariableScope.I, "Rate", ScriptVariableKind.Decimal, "3.5"),
+            Declaration(ScriptVariableScope.Call, "Rate", ScriptVariableKind.Decimal, "4.5")
+        }).Success);
+        var module = new ScriptVariableModule(catalog);
+        var commands = new ScriptVariableCommands(module);
+        var ownerOne = new object();
+        var ownerTwo = new object();
+        var mapOne = new object();
+        var mapTwo = new object();
+        var frameOne = new object();
+        var frameTwo = new object();
+        var first = ScriptVariableContext.ForConversation(ownerOne, 100, mapOne, frameOne);
+
+        Assert.True(commands.Mutate(first, "D0", "MOV", "10").Success);
+        Assert.True(commands.Mutate(first, "M0", "MOV", "20").Success);
+        Assert.True(commands.Mutate(first, "N$Score", "MOV", "30").Success);
+        Assert.True(commands.Mutate(first, "S$Label", "MOV", "在线").Success);
+        Assert.True(commands.Mutate(first, "I0", "MOV", "40").Success);
+        Assert.True(commands.Mutate(first, "D.Rate", "MOV", "1.75").Success);
+        Assert.True(commands.Mutate(first, "Call.Rate", "MOV", "4.75").Success);
+
+        var nextNpc = ScriptVariableContext.ForConversation(ownerOne, 200, mapOne, frameOne);
+        Assert.Equal("10", commands.Format(nextNpc, "D0").Text);
+        Assert.Equal("20", commands.Format(nextNpc, "M0").Text);
+        Assert.Equal("30", commands.Format(nextNpc, "N$Score").Text);
+        Assert.Equal("在线", commands.Format(nextNpc, "S$Label").Text);
+        Assert.Equal("1.75", commands.Format(nextNpc, "D.Rate").Text);
+
+        var nextMap = ScriptVariableContext.ForConversation(ownerOne, 200, mapTwo, frameOne);
+        Assert.False(module.Read(nextMap, ScriptVariableReference.Legacy(ScriptVariableScope.M, 0)).Found);
+        Assert.Equal("10", commands.Format(nextMap, "D0").Text);
+        Assert.Equal("30", commands.Format(nextMap, "N$Score").Text);
+
+        var otherOwner = ScriptVariableContext.ForConversation(ownerTwo, 300, mapOne, frameTwo);
+        Assert.False(module.Read(otherOwner, ScriptVariableReference.Legacy(ScriptVariableScope.D, 0)).Found);
+        Assert.Equal("40", commands.Format(otherOwner, "I0").Text);
+        Assert.Equal("4.5", commands.Format(otherOwner, "Call.Rate").Text);
+        Assert.Equal("4.75", commands.Format(first, "Call.Rate").Text);
+
+        foreach (ScriptVariableScope scope in new[]
+                 { ScriptVariableScope.D, ScriptVariableScope.M, ScriptVariableScope.N, ScriptVariableScope.S })
+            Assert.True(module.Reset(nextMap, ScriptVariableSelector.ScopeOnly(scope)).Success);
+        Assert.False(module.Read(nextMap, ScriptVariableReference.Legacy(ScriptVariableScope.D, 0)).Found);
+        Assert.False(module.Read(nextMap, ScriptVariableReference.Named(ScriptVariableScope.N, "Score")).Found);
+        Assert.False(module.Read(nextMap, ScriptVariableReference.Named(ScriptVariableScope.S, "Label")).Found);
+
+        Assert.True(module.Reset(ScriptVariableContext.ForServer(),
+            ScriptVariableSelector.ScopeOnly(ScriptVariableScope.I)).Success);
+        Assert.False(module.Read(otherOwner, ScriptVariableReference.Legacy(ScriptVariableScope.I, 0)).Found);
+    }
+
+    [Fact]
+    public void RuntimeScopesRejectMissingMapOrCallFrameContext()
+    {
+        var catalog = new ScriptVariableDeclarationCatalog();
+        Assert.True(catalog.TryReload(new[]
+        {
+            Declaration(ScriptVariableScope.Call, "Rate", ScriptVariableKind.Decimal, "0")
+        }).Success);
+        var module = new ScriptVariableModule(catalog);
+        var withoutMapOrFrame = ScriptVariableContext.ForPlayer(new object());
+
+        ScriptVariableReadResult map = module.Read(
+            withoutMapOrFrame, ScriptVariableReference.Legacy(ScriptVariableScope.M, 0));
+        ScriptVariableReadResult call = module.Read(
+            withoutMapOrFrame, ScriptVariableReference.Named(ScriptVariableScope.Call, "Rate"));
+
+        Assert.False(map.Success);
+        Assert.Equal(ScriptVariableErrorCode.ContextUnavailable, map.ErrorCode);
+        Assert.False(call.Success);
+        Assert.Equal(ScriptVariableErrorCode.ContextUnavailable, call.ErrorCode);
+    }
+
+    [Fact]
     public void FailedMutationKeepsOldValueAndReturnsStableError()
     {
         var catalog = new ScriptVariableDeclarationCatalog();
@@ -252,6 +333,8 @@ public sealed class ScriptVariableModuleTests
     [InlineData("p999", ScriptVariableScope.P, true, 999, "")]
     [InlineData("P.DropRate", ScriptVariableScope.P, false, -1, "DROPRATE")]
     [InlineData("P.Drop.Rate", ScriptVariableScope.P, false, -1, "DROP.RATE")]
+    [InlineData("N$Score", ScriptVariableScope.N, false, -1, "SCORE")]
+    [InlineData("S$标题", ScriptVariableScope.S, false, -1, "标题")]
     [InlineData("guild.GuildRate", ScriptVariableScope.Guild, false, -1, "GUILDRATE")]
     public void ReferenceParserAcceptsLegacyAndExplicitNamedReferences(
         string text,
@@ -407,6 +490,29 @@ public sealed class ScriptVariableModuleTests
         NPCChecks variableCheck = Assert.Single(segment.CheckList);
         Assert.Equal(CheckType.Variable, variableCheck.Type);
         Assert.Equal(new[] { "P.DropRate", ">=", "12.5" }, variableCheck.Params);
+    }
+
+    [Fact]
+    public void TxtNpcParserRoutesAllVar02RuntimePrefixesToTheUnifiedModule()
+    {
+        var page = new NPCPage("[@MAIN]");
+        var segment = new NPCSegment(
+            page, new List<string>(), new List<string>(), new List<string>(),
+            new List<string>(), new List<string>());
+
+        foreach (string line in new[]
+                 { "MOV D0 1", "INC M0 2", "MOV N$Score 3", "MOV S$Label 在线", "DIV I0 2" })
+            segment.ParseAct(segment.ActList, line);
+        segment.ParseCheck("CHECK N$Score >= 3");
+
+        Assert.Equal(5, segment.ActList.Count);
+        Assert.All(segment.ActList, action => Assert.Equal(ActionType.VariableMutate, action.Type));
+        Assert.Equal(new[] { "D0", "MOV", "1" }, segment.ActList[0].Params);
+        Assert.Equal(new[] { "M0", "INC", "2" }, segment.ActList[1].Params);
+        Assert.Equal(new[] { "N$Score", "MOV", "3" }, segment.ActList[2].Params);
+        Assert.Equal(new[] { "S$Label", "MOV", "在线" }, segment.ActList[3].Params);
+        Assert.Equal(new[] { "I0", "DIV", "2" }, segment.ActList[4].Params);
+        Assert.Equal(CheckType.Variable, Assert.Single(segment.CheckList).Type);
     }
 
     private static ScriptVariableDeclaration Declaration(

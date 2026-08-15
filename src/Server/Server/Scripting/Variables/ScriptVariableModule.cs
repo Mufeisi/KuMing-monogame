@@ -34,17 +34,42 @@ namespace Server.Scripting.Variables
 
     public readonly struct ScriptVariableContext
     {
-        private ScriptVariableContext(object owner, uint npcObjectId)
+        private ScriptVariableContext(object owner, uint npcObjectId, object mapInstanceKey, object callFrame)
         {
             Owner = owner;
             NpcObjectId = npcObjectId;
+            MapInstanceKey = mapInstanceKey;
+            CallFrame = callFrame;
         }
 
         public object Owner { get; }
         public uint NpcObjectId { get; }
+        public object MapInstanceKey { get; }
+        public object CallFrame { get; }
 
-        public static ScriptVariableContext ForConversation(object owner, uint npcObjectId) =>
-            new ScriptVariableContext(owner ?? throw new ArgumentNullException(nameof(owner)), npcObjectId);
+        public static ScriptVariableContext ForConversation(
+            object owner,
+            uint npcObjectId,
+            object mapInstanceKey = null,
+            object callFrame = null) =>
+            new ScriptVariableContext(
+                owner ?? throw new ArgumentNullException(nameof(owner)),
+                npcObjectId,
+                mapInstanceKey,
+                callFrame);
+
+        public static ScriptVariableContext ForPlayer(
+            object owner,
+            object mapInstanceKey = null,
+            object callFrame = null) =>
+            new ScriptVariableContext(
+                owner ?? throw new ArgumentNullException(nameof(owner)),
+                0,
+                mapInstanceKey,
+                callFrame);
+
+        public static ScriptVariableContext ForServer() =>
+            new ScriptVariableContext(null, 0, null, null);
     }
 
     public readonly struct ScriptVariableMutation
@@ -82,6 +107,7 @@ namespace Server.Scripting.Variables
 
         public ScriptVariableScope Scope { get; }
         public static ScriptVariableSelector Conversation() => new ScriptVariableSelector(ScriptVariableScope.P);
+        public static ScriptVariableSelector ScopeOnly(ScriptVariableScope scope) => new ScriptVariableSelector(scope);
     }
 
     public readonly struct ScriptVariableReadResult
@@ -158,12 +184,24 @@ namespace Server.Scripting.Variables
         private sealed class OwnerState
         {
             public uint NpcObjectId;
-            public readonly Dictionary<string, ScriptVariableValue> Conversation =
-                new Dictionary<string, ScriptVariableValue>(StringComparer.Ordinal);
+            public object MapInstanceKey;
+            public readonly Dictionary<ScriptVariableScope, Dictionary<string, ScriptVariableValue>> Scopes =
+                new Dictionary<ScriptVariableScope, Dictionary<string, ScriptVariableValue>>();
+
+            public Dictionary<string, ScriptVariableValue> GetScope(ScriptVariableScope scope)
+            {
+                if (Scopes.TryGetValue(scope, out var values)) return values;
+                values = new Dictionary<string, ScriptVariableValue>(StringComparer.Ordinal);
+                Scopes.Add(scope, values);
+                return values;
+            }
         }
 
         private readonly Func<ScriptVariableDeclarationSnapshot> _declarations;
         private readonly ConditionalWeakTable<object, OwnerState> _owners = new ConditionalWeakTable<object, OwnerState>();
+        private readonly ConditionalWeakTable<object, OwnerState> _callFrames = new ConditionalWeakTable<object, OwnerState>();
+        private readonly Dictionary<string, ScriptVariableValue> _serverRuntime =
+            new Dictionary<string, ScriptVariableValue>(StringComparer.Ordinal);
         private readonly Func<bool> _canWrite;
 
         public ScriptVariableModule(ScriptVariableDeclarationCatalog catalog, Func<bool> canWrite = null)
@@ -182,18 +220,16 @@ namespace Server.Scripting.Variables
 
         public ScriptVariableReadResult Read(in ScriptVariableContext context, ScriptVariableReference reference)
         {
-            if (reference.Scope != ScriptVariableScope.P)
-                return ReadFailure(ScriptVariableErrorCode.UnknownReference, "VAR-01 只实现 P 对话作用域。");
-            if (context.Owner == null || context.NpcObjectId == 0)
-                return ReadFailure(ScriptVariableErrorCode.ContextUnavailable, "P 变量需要有效人物和 NPC 对话上下文。");
             if (!_canWrite())
                 return ReadFailure(ScriptVariableErrorCode.WrongThread, "变量状态只能在服务端主线程访问。");
+            if (!TryValidateContext(context, reference.Scope, out var contextDiagnostic))
+                return ReadFailure(ScriptVariableErrorCode.ContextUnavailable, contextDiagnostic);
 
             if (!TryResolveContract(reference, out var kind, out var defaultValue, out var diagnostic))
                 return ReadFailure(ScriptVariableErrorCode.UnknownReference, diagnostic);
 
-            OwnerState state = GetConversationState(context);
-            if (state.Conversation.TryGetValue(reference.StorageKey, out var value))
+            Dictionary<string, ScriptVariableValue> values = GetScopeValues(context, reference.Scope);
+            if (values.TryGetValue(reference.StorageKey, out var value))
                 return new ScriptVariableReadResult(true, true, ScriptVariableErrorCode.None, value, string.Empty);
 
             return new ScriptVariableReadResult(true, false, ScriptVariableErrorCode.None, defaultValue, string.Empty);
@@ -218,37 +254,101 @@ namespace Server.Scripting.Variables
             if (!coerced.Success)
                 return MutationFailure(coerced.ErrorCode, current.Value, coerced.Diagnostic);
 
-            OwnerState state = GetConversationState(context);
-            state.Conversation[mutation.Reference.StorageKey] = coerced.Value;
+            Dictionary<string, ScriptVariableValue> values = GetScopeValues(context, mutation.Reference.Scope);
+            values[mutation.Reference.StorageKey] = coerced.Value;
             return new ScriptVariableMutationResult(
                 true, ScriptVariableErrorCode.None, current.Value, coerced.Value, string.Empty);
         }
 
         public ScriptVariableResetResult Reset(in ScriptVariableContext context, ScriptVariableSelector selector)
         {
-            if (selector.Scope != ScriptVariableScope.P)
-                return new ScriptVariableResetResult(false, ScriptVariableErrorCode.UnknownReference, 0, "VAR-01 只实现 P 对话作用域。");
-            if (context.Owner == null)
-                return new ScriptVariableResetResult(false, ScriptVariableErrorCode.ContextUnavailable, 0, "缺少变量所有者。");
             if (!_canWrite())
                 return new ScriptVariableResetResult(false, ScriptVariableErrorCode.WrongThread, 0, "变量状态只能在服务端主线程修改。");
+            if (!TryValidateResetContext(context, selector.Scope, out var diagnostic))
+                return new ScriptVariableResetResult(false, ScriptVariableErrorCode.ContextUnavailable, 0, diagnostic);
 
-            OwnerState state = _owners.GetOrCreateValue(context.Owner);
-            int count = state.Conversation.Count;
-            state.Conversation.Clear();
-            state.NpcObjectId = context.NpcObjectId;
+            Dictionary<string, ScriptVariableValue> values = GetScopeValues(context, selector.Scope);
+            int count = values.Count;
+            values.Clear();
             return new ScriptVariableResetResult(true, ScriptVariableErrorCode.None, count, string.Empty);
         }
 
-        private OwnerState GetConversationState(in ScriptVariableContext context)
+        private Dictionary<string, ScriptVariableValue> GetScopeValues(
+            in ScriptVariableContext context,
+            ScriptVariableScope scope)
         {
+            if (scope == ScriptVariableScope.I) return _serverRuntime;
+            if (scope == ScriptVariableScope.Call)
+                return _callFrames.GetOrCreateValue(context.CallFrame).GetScope(scope);
+
             OwnerState state = _owners.GetOrCreateValue(context.Owner);
-            if (state.NpcObjectId != context.NpcObjectId)
+            if (scope == ScriptVariableScope.P && state.NpcObjectId != context.NpcObjectId)
             {
-                state.Conversation.Clear();
+                state.GetScope(ScriptVariableScope.P).Clear();
                 state.NpcObjectId = context.NpcObjectId;
             }
-            return state;
+            if (scope == ScriptVariableScope.M && !ReferenceEquals(state.MapInstanceKey, context.MapInstanceKey))
+            {
+                state.GetScope(ScriptVariableScope.M).Clear();
+                state.MapInstanceKey = context.MapInstanceKey;
+            }
+            return state.GetScope(scope);
+        }
+
+        private static bool TryValidateContext(
+            in ScriptVariableContext context,
+            ScriptVariableScope scope,
+            out string diagnostic)
+        {
+            diagnostic = string.Empty;
+            switch (scope)
+            {
+                case ScriptVariableScope.P:
+                    if (context.Owner != null && context.NpcObjectId != 0) return true;
+                    diagnostic = "P 变量需要有效人物和 NPC 对话上下文。";
+                    return false;
+                case ScriptVariableScope.D:
+                case ScriptVariableScope.N:
+                case ScriptVariableScope.S:
+                    if (context.Owner != null) return true;
+                    diagnostic = $"{scope} 变量需要有效人物在线上下文。";
+                    return false;
+                case ScriptVariableScope.M:
+                    if (context.Owner != null && context.MapInstanceKey != null) return true;
+                    diagnostic = "M 变量需要有效人物和地图实例上下文。";
+                    return false;
+                case ScriptVariableScope.I:
+                    return true;
+                case ScriptVariableScope.Call:
+                    if (context.CallFrame != null) return true;
+                    diagnostic = "Call 变量需要有效脚本调用帧。";
+                    return false;
+                default:
+                    diagnostic = $"作用域尚未实现：{scope}。";
+                    return false;
+            }
+        }
+
+        private static bool TryValidateResetContext(
+            in ScriptVariableContext context,
+            ScriptVariableScope scope,
+            out string diagnostic)
+        {
+            if (scope == ScriptVariableScope.I)
+            {
+                diagnostic = string.Empty;
+                return true;
+            }
+            if (scope == ScriptVariableScope.Call)
+            {
+                diagnostic = context.CallFrame == null ? "Call 变量需要有效脚本调用帧。" : string.Empty;
+                return context.CallFrame != null;
+            }
+            diagnostic = context.Owner == null ? "缺少变量所有者。" : string.Empty;
+            return context.Owner != null &&
+                   (scope == ScriptVariableScope.P || scope == ScriptVariableScope.D ||
+                    scope == ScriptVariableScope.M || scope == ScriptVariableScope.N ||
+                    scope == ScriptVariableScope.S);
         }
 
         private bool TryResolveContract(
@@ -269,12 +369,24 @@ namespace Server.Scripting.Variables
                 return true;
             }
 
-            ScriptVariableDeclarationSnapshot declarations =
-                _declarations() ?? ScriptVariableDeclarationSnapshot.Empty;
+            ScriptVariableDeclarationSnapshot declarations = _declarations() ?? ScriptVariableDeclarationSnapshot.Empty;
             if (declarations.TryGet(reference.Scope, reference.Key, out var declaration))
             {
                 kind = declaration.Kind;
                 defaultValue = declaration.DefaultValue;
+                return true;
+            }
+
+            if (reference.Scope == ScriptVariableScope.N)
+            {
+                kind = ScriptVariableKind.Integer;
+                defaultValue = ScriptVariableValue.FromInteger(0);
+                return true;
+            }
+            if (reference.Scope == ScriptVariableScope.S)
+            {
+                kind = ScriptVariableKind.String;
+                defaultValue = ScriptVariableValue.FromString(string.Empty);
                 return true;
             }
 

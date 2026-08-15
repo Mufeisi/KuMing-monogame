@@ -387,6 +387,10 @@ namespace Server.Scripting
             _watcher?.Dispose();
             _watcher = null;
 
+            VariableModule.Reset(
+                ScriptVariableContext.ForServer(),
+                ScriptVariableSelector.ScopeOnly(ScriptVariableScope.I));
+
             ScriptRegistry oldRegistry;
             try
             {

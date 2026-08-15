@@ -185,13 +185,11 @@ namespace Server.Scripting
             }
 
             uint npcObjectId = call?.NpcObjectID ?? player.NPCObjectID;
-            if (npcObjectId == 0)
-            {
-                diagnostic = "P 变量操作缺少 NPC 对话上下文。";
-                return false;
-            }
-
-            context = ScriptVariableContext.ForConversation(player, npcObjectId);
+            context = ScriptVariableContext.ForConversation(
+                player,
+                npcObjectId,
+                player.CurrentMap,
+                call);
             return true;
         }
 

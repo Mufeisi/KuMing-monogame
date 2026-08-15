@@ -30,7 +30,7 @@ public sealed class VariableDeclarations : IScriptModule
 }
 ```
 
-`VAR Decimal P DropRate DEFAULT 1.0` 的纯 TXT 声明语法仍在规划中；TXT NPC 可以操作由 C# 启动脚本声明的 `P.DropRate`。
+`VAR Decimal P DropRate DEFAULT 1.0` 的纯 TXT 声明语法仍在规划中；TXT NPC 可以操作由 C# 启动脚本声明的 `P/D/M/N/I.名称`。Call 声明仅供 C# 调用帧使用。
 
 声明只注册名称、类型、作用域、默认值和重置策略，不会立即为所有人物写入数据库。因此私人变量也可以在服务器启动或脚本加载阶段统一声明。
 

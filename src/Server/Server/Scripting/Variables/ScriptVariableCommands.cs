@@ -10,6 +10,23 @@ namespace Server.Scripting.Variables
             if (string.IsNullOrWhiteSpace(text)) return false;
 
             string value = text.Trim();
+            if (value.Length > 2 && value[1] == '$' &&
+                (value[0] == 'N' || value[0] == 'n' || value[0] == 'S' || value[0] == 's'))
+            {
+                ScriptVariableScope extendedScope = value[0] == 'N' || value[0] == 'n'
+                    ? ScriptVariableScope.N
+                    : ScriptVariableScope.S;
+                try
+                {
+                    reference = ScriptVariableReference.Named(extendedScope, value.Substring(2));
+                    return true;
+                }
+                catch (ArgumentException)
+                {
+                    return false;
+                }
+            }
+
             int separator = value.IndexOf('.');
             if (separator >= 0)
             {

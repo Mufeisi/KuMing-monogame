@@ -1,4 +1,5 @@
 using Server.MirEnvir;
+using Server.MirDatabase;
 using Server.MirObjects;
 
 namespace Server.Scripting.Variables
@@ -64,7 +65,11 @@ namespace Server.Scripting.Variables
 
                 ScriptVariableCommands commands = envir.CSharpScripts.VariableCommands;
                 var player = new PlayerObject { NPCObjectID = 100 };
-                var context = ScriptVariableContext.ForConversation(player, player.NPCObjectID);
+                var firstMap = new Map(new MapInfo { Index = 1 });
+                var secondMap = new Map(new MapInfo { Index = 2 });
+                var callFrame = new object();
+                var context = ScriptVariableContext.ForConversation(
+                    player, player.NPCObjectID, firstMap, callFrame);
                 var page = new NPCPage("[@VARIABLESMOKE]");
                 var actions = new NPCSegment(
                     page, new List<string>(), new List<string>(), new List<string>(),
@@ -73,8 +78,14 @@ namespace Server.Scripting.Variables
                 actions.ParseAct(actions.ActList, "DIV P0 2");
                 actions.ParseAct(actions.ActList, "MOV P.Rate 12.5");
                 actions.ParseAct(actions.ActList, "INC P.Rate 0.25");
+                actions.ParseAct(actions.ActList, "MOV D0 11");
+                actions.ParseAct(actions.ActList, "MOV N$Score 33");
+                actions.ParseAct(actions.ActList, "MOV S$Label 在线");
+                actions.ParseAct(actions.ActList, "MOV I0 44");
                 if (!actions.Check(player))
                     return Failure(4, "VARIABLE_SMOKE_TXT_ACTION_FAILED");
+                AssertResult(commands.Mutate(context, "M0", "MOV", "22").Success,
+                    "VARIABLE_SMOKE_MAP_COMMAND_FAILED");
 
                 var display = new NPCSegment(
                     page,
@@ -84,13 +95,44 @@ namespace Server.Scripting.Variables
                 if (!display.Check(player) ||
                     commands.Format(context, "P0").Text != "3" ||
                     commands.Format(context, "P.Rate", 2).Text != "12.75" ||
+                    commands.Format(context, "D0").Text != "11" ||
+                    commands.Format(context, "M0").Text != "22" ||
+                    commands.Format(context, "N$Score").Text != "33" ||
+                    commands.Format(context, "S$Label").Text != "在线" ||
+                    commands.Format(context, "I0").Text != "44" ||
                     !player.NPCSpeech.Any(line => line.Contains("整数3 小数12.75", StringComparison.Ordinal)))
                     return Failure(4, "VARIABLE_SMOKE_COMMAND_FAILED");
 
+                AssertResult(commands.Mutate(context, "Call.Rate", "MOV", "4.75").Success,
+                    "VARIABLE_SMOKE_CALL_FRAME_FAILED");
+                var otherFrame = ScriptVariableContext.ForConversation(
+                    player, player.NPCObjectID, firstMap, new object());
+                AssertResult(commands.Format(otherFrame, "Call.Rate").Text == "4.5",
+                    "VARIABLE_SMOKE_CALL_FRAME_ISOLATION_FAILED");
+
+                var nextMapContext = ScriptVariableContext.ForConversation(
+                    player, player.NPCObjectID, secondMap, callFrame);
+                AssertResult(!envir.CSharpScripts.VariableModule.Read(
+                        nextMapContext, ScriptVariableReference.Legacy(ScriptVariableScope.M, 0)).Found &&
+                    commands.Format(nextMapContext, "D0").Text == "11" &&
+                    commands.Format(nextMapContext, "N$Score").Text == "33",
+                    "VARIABLE_SMOKE_MAP_LIFECYCLE_FAILED");
+
                 if (!envir.CSharpScripts.VariableModule
-                        .Reset(context, ScriptVariableSelector.Conversation()).Success ||
-                    commands.Format(context, "P.Rate").Text != "1.5")
+                        .Reset(nextMapContext, ScriptVariableSelector.Conversation()).Success ||
+                    commands.Format(nextMapContext, "P.Rate").Text != "1.5")
                     return Failure(5, "VARIABLE_SMOKE_RESET_FAILED");
+
+                player.StopGame(0);
+                AssertResult(
+                    !envir.CSharpScripts.VariableModule.Read(
+                        nextMapContext, ScriptVariableReference.Legacy(ScriptVariableScope.D, 0)).Found &&
+                    !envir.CSharpScripts.VariableModule.Read(
+                        nextMapContext, ScriptVariableReference.Named(ScriptVariableScope.N, "Score")).Found &&
+                    !envir.CSharpScripts.VariableModule.Read(
+                        nextMapContext, ScriptVariableReference.Named(ScriptVariableScope.S, "Label")).Found &&
+                    commands.Format(nextMapContext, "I0").Text == "44",
+                    "VARIABLE_SMOKE_LOGOFF_LIFECYCLE_FAILED");
 
                 long compatibleVersion = envir.CSharpScripts.Version;
                 WriteScript(scriptPath, "Decimal", "2.0", includeBonus: true);
@@ -107,15 +149,35 @@ namespace Server.Scripting.Variables
                         .GetRequired(ScriptVariableScope.P, "Rate").Kind != ScriptVariableKind.Decimal)
                     return Failure(7, "VARIABLE_SMOKE_CONFLICT_NOT_REJECTED");
 
+                envir.Stop();
+                envir.Start(new EnvirStartOptions
+                {
+                    EnforceProductionSecurity = false,
+                    LoadResources = false,
+                    BindNetwork = false,
+                    StartScripts = true,
+                    StartHttp = false,
+                    SaveOnStop = false,
+                    Multithreaded = false,
+                });
+                if (!SpinWait.SpinUntil(
+                        () => envir.StartState is EnvirStartState.Ready or EnvirStartState.Failed,
+                        TimeSpan.FromSeconds(10)) || envir.StartState != EnvirStartState.Ready ||
+                    envir.CSharpScripts.VariableModule.Read(
+                        ScriptVariableContext.ForServer(),
+                        ScriptVariableReference.Legacy(ScriptVariableScope.I, 0)).Found)
+                    return Failure(8, "VARIABLE_SMOKE_SERVER_RESTART_LIFECYCLE_FAILED");
+
                 return new VariableProcessSmokeResult(
                     true,
                     0,
                     $"VARIABLE_SMOKE_OK;VERSION={rejectedVersion};INTEGER=3;DECIMAL=12.75;" +
-                    "RESET=1.5;BONUS=0.5;CONFLICT_REJECTED=True");
+                    "RESET=1.5;BONUS=0.5;RUNTIME_SCOPES=True;SERVER_RESTART_CLEAR=True;" +
+                    "CONFLICT_REJECTED=True");
             }
             catch (Exception ex)
             {
-                return Failure(1, $"VARIABLE_SMOKE_EXCEPTION={ex.GetType().Name}:{ex.Message}");
+                return Failure(1, $"VARIABLE_SMOKE_EXCEPTION={ex}");
             }
             finally
             {
@@ -142,6 +204,11 @@ namespace Server.Scripting.Variables
         private static VariableProcessSmokeResult Failure(int exitCode, string message) =>
             new VariableProcessSmokeResult(false, exitCode, message);
 
+        private static void AssertResult(bool condition, string message)
+        {
+            if (!condition) throw new InvalidOperationException(message);
+        }
+
         private static void WriteScript(string path, string kind, string defaultValue, bool includeBonus)
         {
             string bonus = includeBonus
@@ -157,6 +224,8 @@ namespace Server.Scripting.Variables
                     {
                         registry.RegisterVariable(
                             ScriptVariableScope.P, "Rate", ScriptVariableKind.{{kind}}, "{{defaultValue}}");
+                        registry.RegisterVariable(
+                            ScriptVariableScope.Call, "Rate", ScriptVariableKind.Decimal, "4.5");
                         {{bonus}}
                     }
                 }
