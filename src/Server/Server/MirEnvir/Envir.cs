@@ -9,6 +9,7 @@ using Server.Persistence.Sql;
 using Server.Operations;
 using Server.Security;
 using Server.Scripting;
+using Server.Scripting.Variables;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Net;
@@ -94,7 +95,16 @@ namespace Server.MirEnvir
 
         protected static MessageQueue MessageQueue => MessageQueue.Instance;
 
-        public ScriptManager CSharpScripts { get; } = new ScriptManager();
+        public ScriptManager CSharpScripts { get; }
+        public ServerScriptVariableStore ScriptVariables { get; } = new ServerScriptVariableStore();
+
+        public Envir()
+        {
+            CSharpScripts = new ScriptManager(
+                ScriptVariables,
+                RequestAutoSave,
+                RequestServerVariableAutoSave);
+        }
 
         private IServerPersistence? _persistence;
         internal SqliteBackupService SqliteBackup { get; private set; }
@@ -166,6 +176,7 @@ namespace Server.MirEnvir
         public const int CustomVersion = 1;
         public static readonly string DatabasePath = Path.Combine(".", "Server.MirDB");
         public static readonly string AccountPath = Path.Combine(".", "Server.MirADB");
+        public static readonly string ScriptVariablePath = Path.Combine(".", "Server.Variables.json");
         public static readonly string BackUpPath = Path.Combine(".", "Back Up");
         public static readonly string AccountsBackUpPath = Path.Combine(".", "Back Up", "Accounts");
         public static readonly string ArchivePath = Path.Combine(".", "Archive");
@@ -184,6 +195,7 @@ namespace Server.MirEnvir
         public RespawnTimer RespawnTick = new RespawnTimer();
 
         private int _autoSaveRequested;
+        private int _serverVariableAutoSaveRequested;
         private int _shutdownSavePrepared;
         private int _shutdownNetworkStopped;
         private LoginProtectionOptions _loginProtectionOptions;
@@ -218,6 +230,14 @@ namespace Server.MirEnvir
         {
             Interlocked.Exchange(ref _autoSaveRequested, 1);
         }
+
+        public void RequestServerVariableAutoSave()
+        {
+            Interlocked.Exchange(ref _serverVariableAutoSaveRequested, 1);
+        }
+
+        internal bool HasPendingServerVariableAutoSave =>
+            Volatile.Read(ref _serverVariableAutoSaveRequested) == 1;
 
         internal bool HasPendingAutoSave => Volatile.Read(ref _autoSaveRequested) == 1;
 
@@ -875,6 +895,7 @@ namespace Server.MirEnvir
 
         private void QueueFinalPersistenceSave()
         {
+            SaveScriptVariables();
             SaveAccounts();
             SaveGuilds(true);
             SaveGoods(true);
@@ -1195,6 +1216,11 @@ namespace Server.MirEnvir
                         Process();
 
                         var forceAutoSave = Interlocked.Exchange(ref _autoSaveRequested, 0) == 1;
+                        var forceServerVariableSave =
+                            Interlocked.Exchange(ref _serverVariableAutoSaveRequested, 0) == 1;
+
+                        if (options.SaveOnStop && forceServerVariableSave)
+                            TryAutoSave(SqlSaveDomain.ScriptVariables, SaveScriptVariables);
 
                         if (options.SaveOnStop && (Time >= saveTime || forceAutoSave))
                         {
@@ -1560,6 +1586,11 @@ namespace Server.MirEnvir
         public void SaveDB()
         {
             Persistence.SaveWorld(this);
+        }
+
+        public void SaveScriptVariables()
+        {
+            Persistence.SaveScriptVariables(this);
         }
 
         internal void Legacy_SaveDB()

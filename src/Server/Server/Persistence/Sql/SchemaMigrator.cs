@@ -1108,6 +1108,22 @@ namespace Server.Persistence.Sql
                         ")",
                         "CREATE INDEX character_script_variables_ix_namespace ON character_script_variables(variable_namespace)",
                     ]),
+                new SchemaMigration(
+                    version: 19,
+                    description: "服务器全局持久变量 G/A",
+                    statements:
+                    [
+                        "CREATE TABLE IF NOT EXISTS server_script_variables (" +
+                        "variable_namespace VARCHAR(16) NOT NULL, " +
+                        "variable_key VARCHAR(96) NOT NULL, " +
+                        "value_kind INTEGER NOT NULL, " +
+                        "integer_value BIGINT NOT NULL DEFAULT 0, " +
+                        "decimal_text VARCHAR(64) NOT NULL DEFAULT '', " +
+                        "text_value TEXT NOT NULL, " +
+                        "updated_utc_ms BIGINT NOT NULL, " +
+                        "PRIMARY KEY(variable_namespace, variable_key)" +
+                        ")",
+                    ]),
             };
         }
     }

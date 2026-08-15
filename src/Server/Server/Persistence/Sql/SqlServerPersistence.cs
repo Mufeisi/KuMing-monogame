@@ -182,6 +182,16 @@ namespace Server.Persistence.Sql
             public string TextValue { get; set; }
         }
 
+        private sealed class ServerScriptVariableRow
+        {
+            public string VariableNamespace { get; set; }
+            public string VariableKey { get; set; }
+            public int ValueKind { get; set; }
+            public long IntegerValue { get; set; }
+            public string DecimalText { get; set; }
+            public string TextValue { get; set; }
+        }
+
         private sealed class ItemRow
         {
             public long ItemId { get; set; }
@@ -6312,6 +6322,7 @@ namespace Server.Persistence.Sql
                 }
             }
 
+            LoadScriptVariables(envir);
             return loaded;
         }
 
@@ -6335,12 +6346,94 @@ namespace Server.Persistence.Sql
                     domain: SqlSaveDomain.WorldRelations,
                     snapshotFactory: () => SqlWorldRelationsStore.Capture(envir),
                     work: (session, snapshot) => SqlWorldRelationsStore.ReplaceAll(session, snapshot));
+                SaveScriptVariables(envir);
             }
             catch (Exception ex)
             {
                 // 保持与 legacy 保存一致：保存失败不应直接终止服务器主循环。
                 MessageQueue.Instance.Enqueue($"[SQL:{_provider}] World 保存异常：{ex}");
             }
+        }
+
+        public void LoadScriptVariables(Envir envir)
+        {
+            if (envir == null) throw new ArgumentNullException(nameof(envir));
+            EnsureInitialized();
+            using var session = SqlSession.Open(_provider, _databaseOptions, maxRetries: 3, baseRetryDelayMs: 200);
+            IReadOnlyList<ServerScriptVariableRow> rows = session.Query<ServerScriptVariableRow>(
+                "SELECT variable_namespace AS VariableNamespace, variable_key AS VariableKey, " +
+                "value_kind AS ValueKind, integer_value AS IntegerValue, decimal_text AS DecimalText, " +
+                "text_value AS TextValue FROM server_script_variables ORDER BY variable_namespace, variable_key");
+            var loaded = new ServerScriptVariableStore();
+            foreach (var row in rows)
+            {
+                if (row == null || !Enum.TryParse(row.VariableNamespace, true, out ScriptVariableScope scope) ||
+                    (scope != ScriptVariableScope.G && scope != ScriptVariableScope.A)) continue;
+                ScriptVariableValue value;
+                switch ((ScriptVariableKind)row.ValueKind)
+                {
+                    case ScriptVariableKind.Integer:
+                        value = ScriptVariableValue.FromInteger(row.IntegerValue);
+                        break;
+                    case ScriptVariableKind.Decimal:
+                        if (!ScriptVariableValue.TryParseDecimal(row.DecimalText, out value)) continue;
+                        break;
+                    case ScriptVariableKind.String:
+                        value = ScriptVariableValue.FromString(row.TextValue);
+                        break;
+                    default:
+                        continue;
+                }
+                try
+                {
+                    loaded.Set(scope, row.VariableKey, value);
+                }
+                catch (InvalidDataException)
+                {
+                    // 单条损坏或类型不匹配的数据不应阻止其余服务器变量加载。
+                }
+            }
+            envir.ScriptVariables.Replace(loaded.Snapshot());
+        }
+
+        public void SaveScriptVariables(Envir envir)
+        {
+            if (envir == null) throw new ArgumentNullException(nameof(envir));
+            EnsureInitialized();
+            RunSaveWithSnapshot(
+                domain: SqlSaveDomain.ScriptVariables,
+                snapshotFactory: () => envir.ScriptVariables.Snapshot()
+                    .Select(entry => new ServerScriptVariableRow
+                    {
+                        VariableNamespace = entry.Scope.ToString(),
+                        VariableKey = entry.Key,
+                        ValueKind = (int)entry.Value.Kind,
+                        IntegerValue = entry.Value.Kind == ScriptVariableKind.Integer ? entry.Value.Integer : 0,
+                        DecimalText = entry.Value.Kind == ScriptVariableKind.Decimal ? entry.Value.Format() : string.Empty,
+                        TextValue = entry.Value.Kind == ScriptVariableKind.String ? entry.Value.Text : string.Empty,
+                    }).ToArray(),
+                work: (session, rows) =>
+                {
+                    long nowMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+                    var sql = session.Dialect.BuildUpsert(
+                        "server_script_variables",
+                        ["variable_namespace", "variable_key", "value_kind", "integer_value", "decimal_text", "text_value", "updated_utc_ms"],
+                        ["variable_namespace", "variable_key"],
+                        ["value_kind", "integer_value", "decimal_text", "text_value", "updated_utc_ms"]);
+                    var batch = rows.Select(row => (object)new
+                    {
+                        variable_namespace = row.VariableNamespace,
+                        variable_key = row.VariableKey,
+                        value_kind = row.ValueKind,
+                        integer_value = row.IntegerValue,
+                        decimal_text = row.DecimalText,
+                        text_value = row.TextValue,
+                        updated_utc_ms = nowMs,
+                    }).ToArray();
+                    // 该作用域最多 8192 项，事务内全量替换可避免同毫秒保存导致旧行残留。
+                    session.Execute("DELETE FROM server_script_variables");
+                    if (batch.Length > 0) session.Execute(sql, batch);
+                });
         }
 
         public void LoadAccounts(Envir envir)

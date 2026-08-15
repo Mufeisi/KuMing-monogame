@@ -206,21 +206,33 @@ namespace Server.Scripting.Variables
             new Dictionary<string, ScriptVariableValue>(StringComparer.Ordinal);
         private readonly Func<bool> _canWrite;
         private readonly Action _requestAutoSave;
+        private readonly ServerScriptVariableStore _serverPersistent;
+        private readonly Action _requestServerAutoSave;
 
-        public ScriptVariableModule(ScriptVariableDeclarationCatalog catalog, Func<bool> canWrite = null, Action requestAutoSave = null)
-            : this(() => (catalog ?? throw new ArgumentNullException(nameof(catalog))).Current, canWrite, requestAutoSave)
+        public ScriptVariableModule(
+            ScriptVariableDeclarationCatalog catalog,
+            Func<bool> canWrite = null,
+            Action requestAutoSave = null,
+            ServerScriptVariableStore serverPersistent = null,
+            Action requestServerAutoSave = null)
+            : this(() => (catalog ?? throw new ArgumentNullException(nameof(catalog))).Current,
+                canWrite, requestAutoSave, serverPersistent, requestServerAutoSave)
         {
         }
 
         public ScriptVariableModule(
             Func<ScriptVariableDeclarationSnapshot> declarations,
             Func<bool> canWrite = null,
-            Action requestAutoSave = null)
+            Action requestAutoSave = null,
+            ServerScriptVariableStore serverPersistent = null,
+            Action requestServerAutoSave = null)
         {
             _declarations = declarations ?? throw new ArgumentNullException(nameof(declarations));
             int creatorThread = Environment.CurrentManagedThreadId;
             _canWrite = canWrite ?? (() => Environment.CurrentManagedThreadId == creatorThread);
             _requestAutoSave = requestAutoSave;
+            _serverPersistent = serverPersistent ?? new ServerScriptVariableStore();
+            _requestServerAutoSave = requestServerAutoSave;
         }
 
         public ScriptVariableReadResult Read(in ScriptVariableContext context, ScriptVariableReference reference)
@@ -237,6 +249,12 @@ namespace Server.Scripting.Variables
             {
                 if (persistentStore.TryGet(reference.Scope, reference.StorageKey, out var persistentValue))
                     return new ScriptVariableReadResult(true, true, ScriptVariableErrorCode.None, persistentValue, string.Empty);
+                return new ScriptVariableReadResult(true, false, ScriptVariableErrorCode.None, defaultValue, string.Empty);
+            }
+            if (IsServerPersistentScope(reference.Scope))
+            {
+                if (_serverPersistent.TryGet(reference.Scope, reference.StorageKey, out var serverValue))
+                    return new ScriptVariableReadResult(true, true, ScriptVariableErrorCode.None, serverValue, string.Empty);
                 return new ScriptVariableReadResult(true, false, ScriptVariableErrorCode.None, defaultValue, string.Empty);
             }
 
@@ -282,6 +300,22 @@ namespace Server.Scripting.Variables
                     return MutationFailure(ScriptVariableErrorCode.TypeMismatch, current.Value, ex.Message);
                 }
             }
+            else if (IsServerPersistentScope(mutation.Reference.Scope))
+            {
+                try
+                {
+                    _serverPersistent.Set(mutation.Reference.Scope, mutation.Reference.StorageKey, coerced.Value);
+                    _requestServerAutoSave?.Invoke();
+                }
+                catch (InvalidOperationException ex)
+                {
+                    return MutationFailure(ScriptVariableErrorCode.QuotaExceeded, current.Value, ex.Message);
+                }
+                catch (InvalidDataException ex)
+                {
+                    return MutationFailure(ScriptVariableErrorCode.TypeMismatch, current.Value, ex.Message);
+                }
+            }
             else
             {
                 Dictionary<string, ScriptVariableValue> values = GetScopeValues(context, mutation.Reference.Scope);
@@ -303,6 +337,11 @@ namespace Server.Scripting.Variables
             {
                 count = persistentStore.Clear(selector.Scope);
                 if (count > 0) _requestAutoSave?.Invoke();
+            }
+            else if (IsServerPersistentScope(selector.Scope))
+            {
+                count = _serverPersistent.Clear(selector.Scope);
+                if (count > 0) _requestServerAutoSave?.Invoke();
             }
             else
             {
@@ -363,6 +402,8 @@ namespace Server.Scripting.Variables
                     diagnostic = "M 变量需要有效人物和地图实例上下文。";
                     return false;
                 case ScriptVariableScope.I:
+                case ScriptVariableScope.G:
+                case ScriptVariableScope.A:
                     return true;
                 case ScriptVariableScope.Call:
                     if (context.CallFrame != null) return true;
@@ -379,7 +420,7 @@ namespace Server.Scripting.Variables
             ScriptVariableScope scope,
             out string diagnostic)
         {
-            if (scope == ScriptVariableScope.I)
+            if (scope == ScriptVariableScope.I || IsServerPersistentScope(scope))
             {
                 diagnostic = string.Empty;
                 return true;
@@ -466,6 +507,9 @@ namespace Server.Scripting.Variables
             scope == ScriptVariableScope.A ||
             scope == ScriptVariableScope.T ||
             scope == ScriptVariableScope.Z;
+
+        private static bool IsServerPersistentScope(ScriptVariableScope scope) =>
+            scope == ScriptVariableScope.G || scope == ScriptVariableScope.A;
 
         private static bool TryGetPersistentStore(
             in ScriptVariableContext context,

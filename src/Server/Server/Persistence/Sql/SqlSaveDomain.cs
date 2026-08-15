@@ -9,5 +9,6 @@ namespace Server.Persistence.Sql
         Conquests = 5,
         Archive = 6,
         WorldRelations = 7,
+        ScriptVariables = 8,
     }
 }

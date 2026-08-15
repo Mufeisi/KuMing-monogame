@@ -11,13 +11,28 @@ namespace Server.Persistence.Legacy
         public bool LoadWorld(Envir envir)
         {
             if (envir == null) throw new ArgumentNullException(nameof(envir));
-            return envir.Legacy_LoadDB();
+            bool loaded = envir.Legacy_LoadDB();
+            LoadScriptVariables(envir);
+            return loaded;
         }
 
         public void SaveWorld(Envir envir)
         {
             if (envir == null) throw new ArgumentNullException(nameof(envir));
             envir.Legacy_SaveDB();
+            SaveScriptVariables(envir);
+        }
+
+        public void LoadScriptVariables(Envir envir)
+        {
+            if (envir == null) throw new ArgumentNullException(nameof(envir));
+            envir.ScriptVariables.LoadJson(Envir.ScriptVariablePath);
+        }
+
+        public void SaveScriptVariables(Envir envir)
+        {
+            if (envir == null) throw new ArgumentNullException(nameof(envir));
+            envir.ScriptVariables.SaveJson(Envir.ScriptVariablePath);
         }
 
         public void LoadAccounts(Envir envir)

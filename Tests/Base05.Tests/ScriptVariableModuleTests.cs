@@ -451,7 +451,7 @@ public sealed class ScriptVariableModuleTests
     }
 
     [Fact]
-    public void TxtNpcParserRoutesPVariablesToUnifiedCommandsWithoutChangingLegacyA0()
+    public void TxtNpcParserRoutesPVariablesAndOriginalA0ToUnifiedCommands()
     {
         var page = new NPCPage("[@MAIN]");
         var segment = new NPCSegment(
@@ -482,7 +482,11 @@ public sealed class ScriptVariableModuleTests
                 Assert.Equal(ActionType.VariableMutate, action.Type);
                 Assert.Equal(new[] { "P.DropRate", "DIV", "2" }, action.Params);
             },
-            action => Assert.Equal(ActionType.Mov, action.Type),
+            action =>
+            {
+                Assert.Equal(ActionType.VariableMutate, action.Type);
+                Assert.Equal(new[] { "A0", "MOV", "legacy" }, action.Params);
+            },
             action =>
             {
                 Assert.Equal(ActionType.VariableConvert, action.Type);
@@ -588,6 +592,111 @@ public sealed class ScriptVariableModuleTests
     }
 
     [Fact]
+    public void ServerPersistentVariablesAreSharedAndRequestTheirOwnAutoSave()
+    {
+        var catalog = new ScriptVariableDeclarationCatalog();
+        Assert.True(catalog.TryReload(new[]
+        {
+            Declaration(ScriptVariableScope.G, "EventRate", ScriptVariableKind.Decimal, "1.0"),
+            Declaration(ScriptVariableScope.A, "Notice", ScriptVariableKind.String, "未开放")
+        }).Success);
+        var store = new ServerScriptVariableStore();
+        int saveRequests = 0;
+        var module = new ScriptVariableModule(
+            catalog,
+            serverPersistent: store,
+            requestServerAutoSave: () => saveRequests++);
+        ScriptVariableContext playerOne = ScriptVariableContext.ForPlayer(new object());
+        ScriptVariableContext playerTwo = ScriptVariableContext.ForPlayer(new object());
+
+        Assert.True(module.Mutate(playerOne, ScriptVariableMutation.Set(
+            ScriptVariableReference.Named(ScriptVariableScope.G, "EventRate"),
+            ScriptVariableValue.FromDecimal(2.75m))).Success);
+        Assert.True(module.Mutate(playerTwo, ScriptVariableMutation.Set(
+            ScriptVariableReference.Legacy(ScriptVariableScope.A, 0),
+            ScriptVariableValue.FromString("全服公告"))).Success);
+
+        Assert.Equal("2.75", module.Read(playerTwo,
+            ScriptVariableReference.Named(ScriptVariableScope.G, "EventRate")).Value.Format());
+        Assert.Equal("全服公告", module.Read(playerOne,
+            ScriptVariableReference.Legacy(ScriptVariableScope.A, 0)).Value.Text);
+        Assert.Equal(2, saveRequests);
+
+        var restartedModule = new ScriptVariableModule(catalog, serverPersistent: store);
+        Assert.Equal("2.75", restartedModule.Read(ScriptVariableContext.ForServer(),
+            ScriptVariableReference.Named(ScriptVariableScope.G, "EventRate")).Value.Format());
+    }
+
+    [Fact]
+    public void ServerPersistentJsonIsAtomicAndFallsBackToBackup()
+    {
+        string root = Path.Combine(Path.GetTempPath(), "LyoCrystal-GA-" + Guid.NewGuid().ToString("N"));
+        string path = Path.Combine(root, "Server.Variables.json");
+        try
+        {
+            var store = new ServerScriptVariableStore();
+            store.Set(ScriptVariableScope.G, "RATE", ScriptVariableValue.FromDecimal(1.25m));
+            store.Set(ScriptVariableScope.A, "#0", ScriptVariableValue.FromString("第一版"));
+            store.SaveJson(path);
+            store.Set(ScriptVariableScope.G, "RATE", ScriptVariableValue.FromDecimal(2.5m));
+            store.SaveJson(path);
+
+            File.WriteAllText(path, "{损坏JSON");
+            var restored = new ServerScriptVariableStore();
+            restored.LoadJson(path);
+
+            Assert.True(restored.TryGet(ScriptVariableScope.G, "rate", out var rate));
+            Assert.Equal(1.25m, rate.Decimal);
+            Assert.True(restored.TryGet(ScriptVariableScope.A, "#0", out var text));
+            Assert.Equal("第一版", text.Text);
+            Assert.False(File.Exists(path + ".tmp"));
+
+            File.WriteAllText(path,
+                "{\"schemaVersion\":1,\"variables\":[{\"namespace\":\"A\",\"key\":\"#0\",\"kind\":\"Integer\",\"integerValue\":9}]}");
+            restored.LoadJson(path);
+            Assert.True(restored.TryGet(ScriptVariableScope.A, "#0", out text));
+            Assert.Equal("第一版", text.Text);
+        }
+        finally
+        {
+            if (Directory.Exists(root)) Directory.Delete(root, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void ServerPersistentDeclarationsRejectScopeKindMismatch()
+    {
+        Assert.Throws<ArgumentException>(() =>
+            Declaration(ScriptVariableScope.G, "Notice", ScriptVariableKind.String, "错误"));
+        Assert.Throws<ArgumentException>(() =>
+            Declaration(ScriptVariableScope.A, "Rate", ScriptVariableKind.Decimal, "1.5"));
+    }
+
+    [Fact]
+    public void ScriptManagerAutoSaveCallbacksBelongToTheirOwningEnvironment()
+    {
+        var envir = new Server.MirEnvir.Envir();
+        var character = new CharacterInfo();
+
+        Assert.True(envir.CSharpScripts.VariableModule.Mutate(
+            ScriptVariableContext.ForPlayer(character),
+            ScriptVariableMutation.Set(
+                ScriptVariableReference.Legacy(ScriptVariableScope.U, 0),
+                ScriptVariableValue.FromInteger(1))).Success);
+        Assert.True(envir.CSharpScripts.VariableModule.Mutate(
+            ScriptVariableContext.ForServer(),
+            ScriptVariableMutation.Set(
+                ScriptVariableReference.Legacy(ScriptVariableScope.G, 0),
+                ScriptVariableValue.FromInteger(2))).Success);
+
+        Assert.True(envir.HasPendingAutoSave);
+        Assert.True(envir.HasPendingServerVariableAutoSave);
+        Assert.True(envir.ScriptVariables.TryGet(
+            ScriptVariableScope.G, "#0", out var global));
+        Assert.Equal(2L, global.Integer);
+    }
+
+    [Fact]
     public void TxtNpcParserRoutesPrivatePersistentPrefixesToUnifiedCommands()
     {
         var page = new NPCPage("[@MAIN]");
@@ -599,6 +708,24 @@ public sealed class ScriptVariableModuleTests
         segment.ParseAct(segment.ActList, "INC U.DropRate 0.25");
         segment.ParseAct(segment.ActList, "MOV T0 永久称号");
         segment.ParseCheck("CHECK U.DropRate >= 1.5");
+
+        Assert.Equal(3, segment.ActList.Count);
+        Assert.All(segment.ActList, action => Assert.Equal(ActionType.VariableMutate, action.Type));
+        Assert.Equal(CheckType.Variable, Assert.Single(segment.CheckList).Type);
+    }
+
+    [Fact]
+    public void TxtNpcParserRoutesServerPersistentPrefixesToUnifiedCommands()
+    {
+        var page = new NPCPage("[@MAIN]");
+        var segment = new NPCSegment(
+            page, new List<string>(), new List<string>(), new List<string>(),
+            new List<string>(), new List<string>());
+
+        segment.ParseAct(segment.ActList, "MOV G0 7");
+        segment.ParseAct(segment.ActList, "INC G.EventRate 0.25");
+        segment.ParseAct(segment.ActList, "MOV A.Notice 全服公告");
+        segment.ParseCheck("CHECK G.EventRate >= 1.5");
 
         Assert.Equal(3, segment.ActList.Count);
         Assert.All(segment.ActList, action => Assert.Equal(ActionType.VariableMutate, action.Type));

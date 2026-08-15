@@ -17,6 +17,8 @@
 热重载
 P0
 character_script_variables
+server_script_variables
+Server.Variables.json
 DeclarationConflict
 ```
 

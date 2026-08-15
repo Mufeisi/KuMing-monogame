@@ -39,7 +39,9 @@ namespace Server.MirObjects
                     reference.Scope == ScriptVariableScope.S ||
                     reference.Scope == ScriptVariableScope.I ||
                     reference.Scope == ScriptVariableScope.U ||
-                    reference.Scope == ScriptVariableScope.T);
+                    reference.Scope == ScriptVariableScope.T ||
+                    reference.Scope == ScriptVariableScope.G ||
+                    reference.Scope == ScriptVariableScope.A);
         }
 
         private bool TryFormatScriptVariable(PlayerObject player, string expression, out string text)

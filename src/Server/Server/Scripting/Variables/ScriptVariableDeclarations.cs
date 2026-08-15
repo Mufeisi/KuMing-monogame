@@ -19,6 +19,10 @@ namespace Server.Scripting.Variables
                 throw new ArgumentException("U 作用域只允许 Integer 或 Decimal；私人持久字符串请使用 T。", nameof(kind));
             if (scope == ScriptVariableScope.T && kind != ScriptVariableKind.String)
                 throw new ArgumentException("T 作用域只允许 String；私人持久数值请使用 U。", nameof(kind));
+            if (scope == ScriptVariableScope.G && kind == ScriptVariableKind.String)
+                throw new ArgumentException("G 作用域只允许 Integer 或 Decimal；全局持久字符串请使用 A。", nameof(kind));
+            if (scope == ScriptVariableScope.A && kind != ScriptVariableKind.String)
+                throw new ArgumentException("A 作用域只允许 String；全局持久数值请使用 G。", nameof(kind));
 
             Scope = scope;
             Key = normalizedKey;

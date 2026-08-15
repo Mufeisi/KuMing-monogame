@@ -89,6 +89,10 @@ namespace Server.Scripting.Variables
                 actions.ParseAct(actions.ActList, "MOV U0 55");
                 actions.ParseAct(actions.ActList, "MOV T0 永久文本");
                 actions.ParseAct(actions.ActList, "MOV U.PersistentRate 6.25");
+                actions.ParseAct(actions.ActList, "MOV G0 66");
+                actions.ParseAct(actions.ActList, "MOV G.EventRate 2.5");
+                actions.ParseAct(actions.ActList, "MOV A0 固定公告");
+                actions.ParseAct(actions.ActList, "MOV A.Notice 全服公告");
                 if (!actions.Check(player))
                     return Failure(4, "VARIABLE_SMOKE_TXT_ACTION_FAILED");
                 AssertResult(commands.Mutate(context, "M0", "MOV", "22").Success,
@@ -110,6 +114,10 @@ namespace Server.Scripting.Variables
                     commands.Format(context, "U0").Text != "55" ||
                     commands.Format(context, "T0").Text != "永久文本" ||
                     commands.Format(context, "U.PersistentRate", 2).Text != "6.25" ||
+                    commands.Format(context, "G0").Text != "66" ||
+                    commands.Format(context, "G.EventRate", 2).Text != "2.50" ||
+                    commands.Format(context, "A0").Text != "固定公告" ||
+                    commands.Format(context, "A.Notice").Text != "全服公告" ||
                     !player.NPCSpeech.Any(line => line.Contains("整数3 小数12.75", StringComparison.Ordinal)))
                     return Failure(4, "VARIABLE_SMOKE_COMMAND_FAILED");
 
@@ -143,7 +151,10 @@ namespace Server.Scripting.Variables
                         nextMapContext, ScriptVariableReference.Named(ScriptVariableScope.S, "Label")).Found &&
                     commands.Format(nextMapContext, "I0").Text == "44" &&
                     commands.Format(nextMapContext, "U0").Text == "55" &&
-                    commands.Format(nextMapContext, "T0").Text == "永久文本",
+                    commands.Format(nextMapContext, "T0").Text == "永久文本" &&
+                    commands.Format(nextMapContext, "G0").Text == "66" &&
+                    commands.Format(nextMapContext, "A0").Text == "固定公告" &&
+                    commands.Format(nextMapContext, "A.Notice").Text == "全服公告",
                     "VARIABLE_SMOKE_LOGOFF_LIFECYCLE_FAILED");
 
                 long compatibleVersion = envir.CSharpScripts.Version;
@@ -160,6 +171,18 @@ namespace Server.Scripting.Variables
                     envir.CSharpScripts.CurrentRegistry.VariableDeclarations
                         .GetRequired(ScriptVariableScope.P, "Rate").Kind != ScriptVariableKind.Decimal)
                     return Failure(7, "VARIABLE_SMOKE_CONFLICT_NOT_REJECTED");
+
+                string serverVariablesPath = Path.Combine(scriptsRoot, "Server.Variables.json");
+                envir.ScriptVariables.SaveJson(serverVariablesPath);
+                var diskRestored = new ServerScriptVariableStore();
+                diskRestored.LoadJson(serverVariablesPath);
+                if (!diskRestored.TryGet(ScriptVariableScope.G, "EVENTRATE", out var diskRate) ||
+                    diskRate.Format(2) != "2.50" ||
+                    !diskRestored.TryGet(ScriptVariableScope.A, "#0", out var diskFixedNotice) ||
+                    diskFixedNotice.Text != "固定公告" ||
+                    !diskRestored.TryGet(ScriptVariableScope.A, "NOTICE", out var diskNotice) ||
+                    diskNotice.Text != "全服公告")
+                    return Failure(8, "VARIABLE_SMOKE_SERVER_DISK_PERSISTENCE_FAILED");
 
                 envir.Stop();
                 envir.Start(new EnvirStartOptions
@@ -178,19 +201,23 @@ namespace Server.Scripting.Variables
                     envir.CSharpScripts.VariableModule.Read(
                         ScriptVariableContext.ForServer(),
                         ScriptVariableReference.Legacy(ScriptVariableScope.I, 0)).Found)
-                    return Failure(8, "VARIABLE_SMOKE_SERVER_RESTART_LIFECYCLE_FAILED");
+                    return Failure(9, "VARIABLE_SMOKE_SERVER_RESTART_LIFECYCLE_FAILED");
 
                 var restartedContext = ScriptVariableContext.ForPlayer(player);
                 if (envir.CSharpScripts.VariableCommands.Format(restartedContext, "U0").Text != "55" ||
                     envir.CSharpScripts.VariableCommands.Format(restartedContext, "T0").Text != "永久文本" ||
-                    envir.CSharpScripts.VariableCommands.Format(restartedContext, "U.PersistentRate", 2).Text != "6.25")
-                    return Failure(9, "VARIABLE_SMOKE_PRIVATE_PERSISTENCE_FAILED");
+                    envir.CSharpScripts.VariableCommands.Format(restartedContext, "U.PersistentRate", 2).Text != "6.25" ||
+                    envir.CSharpScripts.VariableCommands.Format(restartedContext, "G0").Text != "66" ||
+                    envir.CSharpScripts.VariableCommands.Format(restartedContext, "G.EventRate", 2).Text != "2.50" ||
+                    envir.CSharpScripts.VariableCommands.Format(restartedContext, "A0").Text != "固定公告" ||
+                    envir.CSharpScripts.VariableCommands.Format(restartedContext, "A.Notice").Text != "全服公告")
+                    return Failure(10, "VARIABLE_SMOKE_PERSISTENCE_FAILED");
 
                 return new VariableProcessSmokeResult(
                     true,
                     0,
                     $"VARIABLE_SMOKE_OK;VERSION={rejectedVersion};INTEGER=3;DECIMAL=12.75;" +
-                    "RESET=1.5;BONUS=0.5;RUNTIME_SCOPES=True;PRIVATE_PERSISTENCE=True;SERVER_RESTART_CLEAR=True;" +
+                    "RESET=1.5;BONUS=0.5;RUNTIME_SCOPES=True;PRIVATE_PERSISTENCE=True;SERVER_PERSISTENCE=True;SERVER_RESTART_CLEAR=True;" +
                     "CONFLICT_REJECTED=True");
             }
             catch (Exception ex)
@@ -246,6 +273,10 @@ namespace Server.Scripting.Variables
                             ScriptVariableScope.Call, "Rate", ScriptVariableKind.Decimal, "4.5");
                         registry.RegisterVariable(
                             ScriptVariableScope.U, "PersistentRate", ScriptVariableKind.Decimal, "1.0");
+                        registry.RegisterVariable(
+                            ScriptVariableScope.G, "EventRate", ScriptVariableKind.Decimal, "1.0");
+                        registry.RegisterVariable(
+                            ScriptVariableScope.A, "Notice", ScriptVariableKind.String, "未开放");
                         {{bonus}}
                     }
                 }

@@ -43,6 +43,73 @@ public sealed class SqlPersistenceRoundTripTests
     }
 
     [Fact]
+    public void ServerVariableSchemaAndUpsertAreDefinedForSqliteAndMySql()
+    {
+        SchemaMigration migration = Assert.Single(
+            SchemaMigrator.CreateDefaultMigrations(), item => item.Version == 19);
+        string createTable = Assert.Single(
+            migration.Statements,
+            statement => statement.Contains(
+                "CREATE TABLE IF NOT EXISTS server_script_variables", StringComparison.Ordinal));
+        Assert.Contains("PRIMARY KEY(variable_namespace, variable_key)", createTable);
+
+        string[] columns =
+        [
+            "variable_namespace", "variable_key", "value_kind", "integer_value",
+            "decimal_text", "text_value", "updated_utc_ms"
+        ];
+        string[] keys = ["variable_namespace", "variable_key"];
+        string[] updates = columns.Except(keys).ToArray();
+        Assert.Contains("ON CONFLICT", SqlDialectFactory.Create(DatabaseProviderKind.Sqlite)
+            .BuildUpsert("server_script_variables", columns, keys, updates), StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("ON DUPLICATE KEY UPDATE", SqlDialectFactory.Create(DatabaseProviderKind.MySql)
+            .BuildUpsert("server_script_variables", columns, keys, updates), StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Sqlite_round_trips_server_persistent_variables()
+    {
+        var databasePath = Path.Combine(Path.GetTempPath(), $"base05-global-vars-{Guid.NewGuid():N}.db");
+        var persistence = new SqlServerPersistence(
+            DatabaseProviderKind.Sqlite,
+            new SqlDatabaseOptions { SqlitePath = databasePath });
+        try
+        {
+            var source = new Envir();
+            source.ScriptVariables.Set(
+                ScriptVariableScope.G, "EVENTRATE", ScriptVariableValue.FromDecimal(3.125m));
+            source.ScriptVariables.Set(
+                ScriptVariableScope.A, "#0", ScriptVariableValue.FromString("跨服重启公告"));
+            persistence.SaveScriptVariables(source);
+            ((IPendingSaveCoordinator)persistence).DrainPendingSaves();
+
+            var restored = new Envir();
+            persistence.LoadScriptVariables(restored);
+            Assert.True(restored.ScriptVariables.TryGet(
+                ScriptVariableScope.G, "EventRate", out var rate));
+            Assert.Equal(3.125m, rate.Decimal);
+            Assert.True(restored.ScriptVariables.TryGet(
+                ScriptVariableScope.A, "#0", out var text));
+            Assert.Equal("跨服重启公告", text.Text);
+
+            source.ScriptVariables.Clear(ScriptVariableScope.G);
+            source.ScriptVariables.Clear(ScriptVariableScope.A);
+            persistence.SaveScriptVariables(source);
+            ((IPendingSaveCoordinator)persistence).DrainPendingSaves();
+
+            var cleared = new Envir();
+            persistence.LoadScriptVariables(cleared);
+            Assert.Equal(0, cleared.ScriptVariables.Count);
+        }
+        finally
+        {
+            TryDelete(databasePath);
+            TryDelete(databasePath + "-wal");
+            TryDelete(databasePath + "-shm");
+        }
+    }
+
+    [Fact]
     public void Sqlite_round_trips_account_character_inventory_storage_and_mail()
     {
         var databasePath = Path.Combine(Path.GetTempPath(), $"base05-{Guid.NewGuid():N}.db");

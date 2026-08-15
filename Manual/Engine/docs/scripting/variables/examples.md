@@ -1,6 +1,6 @@
 # 完整使用示例
 
-- 功能状态：混合；运行时作用域和 U/T 私人持久示例可用，全局持久示例仍为规划中
+- 功能状态：混合；运行时作用域、U/T 私人持久和 G/A 全局持久示例可用
 - 首次支持版本：开发版 2026-08-15
 
 ## 在线与地图临时变量
@@ -56,9 +56,14 @@ VAR Decimal G EventRate DEFAULT 1.0
 使用：
 
 ```text
+MOV G.EventRate 2.5
 CHECK G.EventRate > 1.0
 SENDMSG 0 当前全服活动倍率：<$FORMAT(G.EventRate, 2)>
+MOV A.Notice 双倍经验活动已开启
+SENDMSG 0 <$STR(A.Notice)>
 ```
+
+G/A 是服务器级共享状态，任意人物触发修改后，其他人物立即可见；正常重启后从当前 Provider 恢复。固定 `A0-A999` 与命名 `A.名称` 都属于统一全局字符串存储，不再存在原始 NPC 私有 A 槽位。
 
 ## NPC 对话临时计算
 

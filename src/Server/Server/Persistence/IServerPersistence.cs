@@ -17,6 +17,10 @@ namespace Server.Persistence
 
         void SaveWorld(Envir envir);
 
+        void LoadScriptVariables(Envir envir);
+
+        void SaveScriptVariables(Envir envir);
+
         void LoadAccounts(Envir envir);
 
         void BeginSaveAccounts(Envir envir);

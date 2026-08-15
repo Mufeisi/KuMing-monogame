@@ -200,7 +200,7 @@ public sealed class ServerLifecycleSmokeTests : IDisposable
 
             envir.Stop();
 
-            Assert.Equal(new[] { "Accounts", "Guilds", "Goods", "Conquests", "Drain" }, persistence.Events);
+            Assert.Equal(new[] { "ScriptVariables", "Accounts", "Guilds", "Goods", "Conquests", "Drain" }, persistence.Events);
             Assert.DoesNotContain(callerThreadId, persistence.SaveThreadIds);
             Assert.Single(persistence.SaveThreadIds.Distinct());
             Assert.False(envir.Running);
@@ -350,6 +350,8 @@ public sealed class ServerLifecycleSmokeTests : IDisposable
 
         public bool LoadWorld(Envir envir) => true;
         public void SaveWorld(Envir envir) { }
+        public void LoadScriptVariables(Envir envir) { }
+        public void SaveScriptVariables(Envir envir) => Record("ScriptVariables");
         public void LoadAccounts(Envir envir) { }
         public void BeginSaveAccounts(Envir envir) { }
         public void SaveAccounts(Envir envir)
