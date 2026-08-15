@@ -1,6 +1,6 @@
 # 作用域与生命周期
 
-- 功能状态：部分实现（P/D/M/N/S/I/Call/U/T/G/A/J/Z/HUMAN/GUILD/GLOBAL 为实验性）
+- 功能状态：实验性（全部已列作用域可用）
 - 首次支持版本：开发版 2026-08-15
 
 | 作用域 | 编号变量 | 所有者 | 清除或保存时机 | 是否持久 |
@@ -22,7 +22,7 @@
 当前命名小数变量支持 `P/D/M/N/I/U/G/J/HUMAN/GUILD/GLOBAL/Call`。字符串作用域不直接进行小数运算。
 
 !!! warning "当前版本范围"
-    当前开发版开放 P/D/M/N/S/I/Call/U/T/G/A/J/Z/HUMAN/GUILD/GLOBAL；复合值、公式、跨对象访问仍是后续目标。
+    当前开发版已开放 P/D/M/N/S/I/Call/U/T/G/A/J/Z/HUMAN/GUILD/GLOBAL、L$/D$、公式、概率和在线跨对象访问。离线跨角色写档不在本版本范围。
 
 ## 全局持久作用域
 

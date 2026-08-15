@@ -11,6 +11,7 @@
 - [作用域与生命周期](variables/scopes.md)
 - [声明、初始化与热重载](variables/declarations.md)
 - [命名小数变量](variables/decimal.md)
+- [只读系统占位符](variables/read-only-symbols.md)
 - [操作与显示命令](variables/commands.md)
 - [完整使用示例](variables/examples.md)
 - [错误与排查](variables/errors.md)

@@ -40,6 +40,13 @@ if (!moved.Success || !increased.Success)
 
 `command` 支持 `MOV`、`INC`、`DEC`、`MUL`、`DIV` 和 `MOD`。操作数可以是字面量，也可以是另一个变量引用。
 
+只在缺失时写入声明默认值：
+
+```csharp
+ScriptVariableMutationResult initialized = context.Api.InitializeVariable(
+    player, call, "U.DropRate");
+```
+
 同一组 API 也可直接使用 `D0`、`M0`、`N0`、`S0`、`I0`、`U0`、`T0`、`G0`、`A0`、`J0`、`Z0`、`N$名称`、`S$名称` 及已声明的 HUMAN/GUILD/GLOBAL/Call。M 必须有当前地图，U/T/J/Z/HUMAN 必须有角色，GUILD 必须有行会，G/A/GLOBAL 可使用服务器上下文，Call 必须传入当前 `NpcPageCall`。
 
 ## 比较和显示
@@ -64,7 +71,14 @@ ScriptVariableMutationResult converted = context.Api.ConvertVariable(
     player, call, "P0", "FLOOR", "P.DropRate");
 ```
 
-转换目标必须是 Integer。支持 `ROUND`、`FLOOR`、`CEIL` 和 `TRUNC`，失败时目标旧值保持不变。
+`ROUND`、`FLOOR`、`CEIL` 和 `TRUNC` 的目标必须是 Integer。字符串转小数使用同一入口：
+
+```csharp
+ScriptVariableMutationResult parsed = context.Api.ConvertVariable(
+    player, call, "P.DropRate", "PARSEDECIMAL", "T0");
+```
+
+此时目标必须是 Decimal、来源必须是 String；任何转换失败都保留目标旧值。
 
 ## 主动结束对话
 

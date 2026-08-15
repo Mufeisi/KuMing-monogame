@@ -112,6 +112,21 @@ namespace Server.Scripting
             return result;
         }
 
+        public ScriptVariableMutationResult InitializeVariable(
+            PlayerObject player,
+            NpcPageCall call,
+            string reference)
+        {
+            if (!TryCreateConversationVariableContext(player, call, out var context, out var diagnostic))
+                return new ScriptVariableMutationResult(
+                    false, ScriptVariableErrorCode.ContextUnavailable, default, default, diagnostic);
+
+            ScriptVariableMutationResult result = Envir.CSharpScripts.VariableCommands.Initialize(
+                context, reference);
+            TraceVariableResult(player, "INITVAR", reference, string.Empty, result.Success, result.Diagnostic);
+            return result;
+        }
+
         public ScriptVariableTextResult GetVariable(
             PlayerObject player,
             NpcPageCall call,

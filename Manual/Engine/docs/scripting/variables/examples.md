@@ -17,20 +17,17 @@ MOV M0 100
 
 ## 私人持久掉落几率
 
-服务器启动时由 C# 脚本模块注册一次：
+服务器启动或脚本热重载时声明一次：
 
-```csharp
-registry.RegisterVariable(
-    ScriptVariableScope.U,
-    "DropRate",
-    ScriptVariableKind.Decimal,
-    "1.0");
+```text
+VAR Decimal U DropRate DEFAULT 1.0
 ```
 
-登录 QM 只读取默认值，不必为每个人重复声明：
+登录 QM 不需要重复声明；只读取默认值即可。若业务要求为角色生成持久记录，可安全执行一次条件初始化：
 
 ```text
 [@Login]
+INITVAR U.DropRate
 SENDMSG 6 你的基础掉落几率为：<$FORMAT(U.DropRate, 2)>%
 ```
 
@@ -86,7 +83,7 @@ INC HUMAN.LifetimeRuns 1
 SENDMSG 6 今日剩余：<$STR(J0)>，永久完成：<$STR(HUMAN.LifetimeRuns)>
 ```
 
-J0 在配置的每日边界清除；HUMAN.LifetimeRuns 永久保留。不要在登录 QM 中用 `MOV J0` 重设次数，后续条件初始化能力开放前应由活动逻辑明确发放。
+J0 在配置的每日边界清除；HUMAN.LifetimeRuns 永久保留。不要在登录 QM 中用 `MOV J0` 无条件重设次数；命名每日变量需要首次落盘时可使用 `INITVAR`。
 
 ## 行会与赛季倍率
 

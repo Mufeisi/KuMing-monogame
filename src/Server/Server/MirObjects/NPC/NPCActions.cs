@@ -58,6 +58,7 @@
         Mov,
         Calc,
         VariableMutate,
+        VariableInitialize,
         VariableConvert,
         VariableFormulation,
         VariableComposite,

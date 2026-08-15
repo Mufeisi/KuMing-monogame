@@ -115,6 +115,28 @@ namespace Server.Scripting.Variables
 
         public ScriptCompositeVariableCommands Composites => _composites;
 
+        public ScriptVariableMutationResult Initialize(
+            in ScriptVariableContext context,
+            string referenceText)
+        {
+            if (!ScriptVariableReferenceParser.TryParse(referenceText, out var reference))
+                return MutationFailure(ScriptVariableErrorCode.UnknownReference, "初始化变量引用无效。", default);
+
+            ScriptVariableReadResult current = _module.Read(context, reference);
+            if (!current.Success)
+                return MutationFailure(current.ErrorCode, current.Diagnostic, current.Value);
+            if (current.Value.Kind == ScriptVariableKind.List || current.Value.Kind == ScriptVariableKind.Dictionary)
+                return MutationFailure(
+                    ScriptVariableErrorCode.TypeMismatch,
+                    "INITVAR 只支持整数、小数和字符串变量。",
+                    current.Value);
+            if (current.Found)
+                return new ScriptVariableMutationResult(
+                    true, ScriptVariableErrorCode.None, current.Value, current.Value, string.Empty);
+
+            return _module.Mutate(context, ScriptVariableMutation.Set(reference, current.Value));
+        }
+
         public ScriptVariableMutationResult Mutate(
             in ScriptVariableContext context,
             string referenceText,
@@ -148,12 +170,37 @@ namespace Server.Scripting.Variables
             if (!ScriptVariableReferenceParser.TryParse(destinationText, out var destination) ||
                 !ScriptVariableReferenceParser.TryParse(sourceText, out var source))
                 return MutationFailure(ScriptVariableErrorCode.UnknownReference, "转换变量引用无效。", default);
-            if (!TryMapRounding(conversion, out var rounding))
+            bool parseDecimal = string.Equals(conversion, "PARSEDECIMAL", StringComparison.OrdinalIgnoreCase);
+            ScriptVariableRounding rounding = default;
+            if (!parseDecimal && !TryMapRounding(conversion, out rounding))
                 return MutationFailure(ScriptVariableErrorCode.InvalidExpression, "取整方式无效。", default);
 
             ScriptVariableReadResult destinationValue = _module.Read(context, destination);
             if (!destinationValue.Success)
                 return MutationFailure(destinationValue.ErrorCode, destinationValue.Diagnostic, destinationValue.Value);
+            if (parseDecimal)
+            {
+                if (destinationValue.Value.Kind != ScriptVariableKind.Decimal)
+                    return MutationFailure(
+                        ScriptVariableErrorCode.TypeMismatch,
+                        "PARSEDECIMAL 的目标必须是 Decimal 变量。",
+                        destinationValue.Value);
+                ScriptVariableReadResult parsedSource = _module.Read(context, source);
+                if (!parsedSource.Success)
+                    return MutationFailure(parsedSource.ErrorCode, parsedSource.Diagnostic, destinationValue.Value);
+                if (parsedSource.Value.Kind != ScriptVariableKind.String)
+                    return MutationFailure(
+                        ScriptVariableErrorCode.TypeMismatch,
+                        "PARSEDECIMAL 的来源必须是 String 变量。",
+                        destinationValue.Value);
+                if (!ScriptVariableValue.TryParseDecimal(parsedSource.Value.Text, out var parsedDecimal))
+                    return MutationFailure(
+                        ScriptVariableErrorCode.InvalidExpression,
+                        $"字符串不是有效的文化无关小数，或超过 {ScriptVariableValue.MaximumDecimalScale} 位小数。",
+                        destinationValue.Value);
+                return _module.Mutate(
+                    context, ScriptVariableMutation.Set(destination, parsedDecimal));
+            }
             if (destinationValue.Value.Kind != ScriptVariableKind.Integer)
                 return MutationFailure(
                     ScriptVariableErrorCode.TypeMismatch,

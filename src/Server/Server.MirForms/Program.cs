@@ -155,6 +155,9 @@ namespace Server.MirForms
             Console.WriteLine("前缀统计：" + (report.PrefixUsages.Count == 0
                 ? "无"
                 : string.Join("；", report.PrefixUsages.Select(item => $"{item.Prefix}={item.Count}"))));
+            Console.WriteLine("只读占位符：" + (report.SymbolUsages.Count == 0
+                ? "无"
+                : string.Join("；", report.SymbolUsages.Select(item => $"{item.Symbol}={item.Count}"))));
             foreach (ScriptVariablePreflightDiagnostic diagnostic in report.Diagnostics)
                 Console.WriteLine(
                     $"[{diagnostic.Severity}] {diagnostic.Code} {diagnostic.File}:{diagnostic.Line} {diagnostic.Message}");

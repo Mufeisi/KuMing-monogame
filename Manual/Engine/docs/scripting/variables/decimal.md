@@ -6,9 +6,10 @@
 
 ## 最小用法
 
-先在 C# 注册阶段声明 `N.DropRate` 为 Decimal，随后 TXT 使用：
+先在启动或 QM 文本的加载期声明 `N.DropRate` 为 Decimal，随后 TXT 使用：
 
 ```text
+VAR Decimal N DropRate DEFAULT 0
 MOV N.DropRate 12.5
 INC N.DropRate 0.25
 MUL N.DropRate 1.2
@@ -56,7 +57,7 @@ MOV N.DropRate 12.5
 !!! warning "单位必须统一"
     同一个项目不能有时用 `0.125` 表示 `12.5%`，有时又用 `12.5` 表示 `12.5%`。功能页面和配置表必须明确单位。
 
-## 字符串转换（规划）
+## 字符串显式转换
 
 字符串不会自动参与小数计算：
 
@@ -64,4 +65,4 @@ MOV N.DropRate 12.5
 MOV P.TempRate PARSEDECIMAL T0
 ```
 
-`PARSEDECIMAL` 尚未开放，属于后续字符串转换阶段。交付后解析失败仍必须保留旧值并返回错误，不能默认为零。
+`PARSEDECIMAL` 已实现，来源必须是 String 变量，目标必须是 Decimal 变量。它只接受文化无关格式，例如 `12.5`；解析失败、超过 8 位小数或目标类型错误时保留目标旧值，不会默认为零。

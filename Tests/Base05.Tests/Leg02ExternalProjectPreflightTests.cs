@@ -118,6 +118,7 @@ public sealed class Leg02ExternalProjectPreflightTests
             Assembly assembly = context.LoadFromStream(assemblyStream, symbolsStream);
             var registry = new ScriptRegistry();
             ScriptManager.RegisterModules(assembly, registry);
+            registry.SealVariableDeclarations();
             return registry;
         }
         finally

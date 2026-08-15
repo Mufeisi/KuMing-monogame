@@ -30,6 +30,8 @@ DeclarationConflict
 
 离线发布物是完整静态站点目录。为保证全文搜索正常，建议由本地或内网 HTTP 服务打开，不直接双击零散 HTML 文件。
 
+构建人员应使用 `Build-Manual.ps1 -Package` 生成带 SHA-256 和源码提交清单的离线 ZIP，具体步骤见[说明书离线发布与验证](../operations/manual-release.md)。
+
 ## 页面状态
 
 | 状态 | 含义 |

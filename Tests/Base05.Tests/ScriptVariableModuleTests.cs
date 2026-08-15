@@ -395,6 +395,56 @@ public sealed class ScriptVariableModuleTests
     }
 
     [Fact]
+    public void InitVarWritesTheDeclaredDefaultOnceWithoutOverwritingAnExistingOwnerValue()
+    {
+        var catalog = new ScriptVariableDeclarationCatalog();
+        Assert.True(catalog.TryReload(new[]
+        {
+            Declaration(ScriptVariableScope.U, "StartRate", ScriptVariableKind.Decimal, "1.25")
+        }).Success);
+        int saveRequests = 0;
+        var module = new ScriptVariableModule(catalog, canWrite: () => true, requestAutoSave: () => saveRequests++);
+        var commands = new ScriptVariableCommands(module);
+        var character = new CharacterInfo { Name = "初始化测试" };
+        var context = ScriptVariableContext.ForPlayer(character);
+
+        Assert.False(module.Read(context, ScriptVariableReference.Named(ScriptVariableScope.U, "StartRate")).Found);
+        Assert.True(commands.Initialize(context, "U.StartRate").Success);
+        Assert.True(module.Read(context, ScriptVariableReference.Named(ScriptVariableScope.U, "StartRate")).Found);
+        Assert.Equal("1.25", commands.Format(context, "U.StartRate").Text);
+        Assert.Equal(1, saveRequests);
+
+        Assert.True(commands.Mutate(context, "U.StartRate", "MOV", "9.5").Success);
+        Assert.True(commands.Initialize(context, "U.StartRate").Success);
+        Assert.Equal("9.5", commands.Format(context, "U.StartRate").Text);
+        Assert.Equal(2, saveRequests);
+    }
+
+    [Fact]
+    public void ParseDecimalExplicitlyConvertsStringAndKeepsTheOldValueOnInvalidInput()
+    {
+        var catalog = new ScriptVariableDeclarationCatalog();
+        Assert.True(catalog.TryReload(new[]
+        {
+            Declaration(ScriptVariableScope.P, "Parsed", ScriptVariableKind.Decimal, "0"),
+            Declaration(ScriptVariableScope.T, "Source", ScriptVariableKind.String, "")
+        }).Success);
+        var commands = new ScriptVariableCommands(new ScriptVariableModule(catalog, canWrite: () => true));
+        var context = ScriptVariableContext.ForConversation(new CharacterInfo { Name = "转换测试" }, 1);
+
+        Assert.True(commands.Mutate(context, "T.Source", "MOV", "12.500").Success);
+        Assert.True(commands.Convert(context, "P.Parsed", "PARSEDECIMAL", "T.Source").Success);
+        Assert.Equal("12.5", commands.Format(context, "P.Parsed").Text);
+
+        Assert.True(commands.Mutate(context, "T.Source", "MOV", "12,5").Success);
+        ScriptVariableMutationResult invalid = commands.Convert(
+            context, "P.Parsed", "PARSEDECIMAL", "T.Source");
+        Assert.False(invalid.Success);
+        Assert.Equal(ScriptVariableErrorCode.InvalidExpression, invalid.ErrorCode);
+        Assert.Equal("12.5", commands.Format(context, "P.Parsed").Text);
+    }
+
+    [Fact]
     public void HotReloadCompilerExposesVariableDeclarationAndCSharpCommandApi()
     {
         string root = Path.Combine(Path.GetTempPath(), "lyo-var01-" + Guid.NewGuid().ToString("N"));
@@ -464,6 +514,8 @@ public sealed class ScriptVariableModuleTests
         segment.ParseAct(actions, "DIV P.DropRate 2");
         segment.ParseAct(actions, "MOV A0 legacy");
         segment.ParseAct(actions, "MOV P0 FLOOR P.DropRate");
+        segment.ParseAct(actions, "INITVAR P.DropRate");
+        segment.ParseAct(actions, "MOV P.DropRate PARSEDECIMAL T0");
         segment.ParseCheck("CHECK P.DropRate >= 12.5");
 
         Assert.Collection(actions,
@@ -491,6 +543,16 @@ public sealed class ScriptVariableModuleTests
             {
                 Assert.Equal(ActionType.VariableConvert, action.Type);
                 Assert.Equal(new[] { "P0", "FLOOR", "P.DropRate" }, action.Params);
+            },
+            action =>
+            {
+                Assert.Equal(ActionType.VariableInitialize, action.Type);
+                Assert.Equal(new[] { "P.DropRate" }, action.Params);
+            },
+            action =>
+            {
+                Assert.Equal(ActionType.VariableConvert, action.Type);
+                Assert.Equal(new[] { "P.DropRate", "PARSEDECIMAL", "T0" }, action.Params);
             });
         NPCChecks variableCheck = Assert.Single(segment.CheckList);
         Assert.Equal(CheckType.Variable, variableCheck.Type);
@@ -1074,6 +1136,44 @@ public sealed class ScriptVariableModuleTests
         Assert.Equal(ActionType.VariableSetCurrentTarget, segment.ActList[0].Type);
         Assert.Equal(ActionType.VariableSetHuman, segment.ActList[1].Type);
         Assert.Equal(ActionType.VariableGetHuman, segment.ActList[2].Type);
+    }
+
+    [Fact]
+    public void TxtVarDeclarationsJoinTheSameSealedRegistryAsCSharpDeclarations()
+    {
+        var registry = new ScriptRegistry();
+        registry.RegisterVariable(
+            ScriptVariableScope.P, "Rate", ScriptVariableKind.Decimal, "1.25", "CSharp.cs", 7);
+        registry.TextFiles.Register(new TextFileDefinition("SystemScripts/VariableDeclarations")
+            .AddLine("; 声明可放在启动或 QM 文本中")
+            .AddLine("VARIABLE 只是普通说明文本，不应被当作声明")
+            .AddLine("VAR Decimal U DropRate DEFAULT 0.125")
+            .AddLine("VAR String A Notice DEFAULT \"全服活动 已开启\"")
+            .AddLine("VAR Integer HUMAN KillCount DEFAULT 0"));
+
+        registry.SealVariableDeclarations();
+
+        Assert.Equal(4, registry.VariableDeclarations.Count);
+        Assert.Equal(0.125m,
+            registry.VariableDeclarations.GetRequired(ScriptVariableScope.U, "DropRate").DefaultValue.Decimal);
+        Assert.Equal("全服活动 已开启",
+            registry.VariableDeclarations.GetRequired(ScriptVariableScope.A, "Notice").DefaultValue.Text);
+        Assert.Equal("systemscripts/variabledeclarations",
+            registry.VariableDeclarations.GetRequired(ScriptVariableScope.Human, "KillCount").SourceFile);
+    }
+
+    [Fact]
+    public void InvalidTxtVarDeclarationRejectsTheWholeCandidateRegistry()
+    {
+        var registry = new ScriptRegistry();
+        registry.TextFiles.Register(new TextFileDefinition("Variables")
+            .AddLine("VAR Decimal P Rate DEFAULT 1.5")
+            .AddLine("VAR Decimal P Rate DEFAULT 2.5"));
+
+        InvalidOperationException error = Assert.Throws<InvalidOperationException>(
+            registry.SealVariableDeclarations);
+
+        Assert.Contains("变量声明冲突", error.Message, StringComparison.Ordinal);
     }
 
     private static ScriptVariableDeclaration Declaration(

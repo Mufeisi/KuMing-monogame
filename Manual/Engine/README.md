@@ -22,7 +22,13 @@ python -m venv .venv
 .\Build-Manual.ps1 -Serve
 ```
 
-生成目录 `site/` 是可重建产物，不得直接修改。发布离线包时压缩完整 `site/`，通过本地 HTTP 服务或内网静态站点打开，以保证搜索功能稳定。
+正式离线发布包：
+
+```powershell
+.\Build-Manual.ps1 -Package
+```
+
+生成目录 `site/` 和 `dist/` 是可重建产物，不得直接修改。`-Package` 会生成完整站点 ZIP 和旁路发布清单，记录源码提交、构建时间、工具链、依赖摘要、搜索索引摘要和 ZIP 摘要。正式发布要求清单中的 `SourceDirty=false`。
 
 ## 维护入口
 

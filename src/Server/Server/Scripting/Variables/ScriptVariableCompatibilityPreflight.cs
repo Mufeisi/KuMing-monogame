@@ -26,6 +26,7 @@ namespace Server.Scripting.Variables
         string Message);
 
     public sealed record ScriptVariablePrefixUsage(string Prefix, int Count);
+    public sealed record ScriptVariableSymbolUsage(string Symbol, int Count);
 
     public sealed class ScriptVariablePreflightReport
     {
@@ -34,12 +35,14 @@ namespace Server.Scripting.Variables
             int fileCount,
             string contentDigest,
             IReadOnlyList<ScriptVariablePrefixUsage> prefixUsages,
+            IReadOnlyList<ScriptVariableSymbolUsage> symbolUsages,
             IReadOnlyList<ScriptVariablePreflightDiagnostic> diagnostics)
         {
             RootPath = rootPath;
             FileCount = fileCount;
             ContentDigest = contentDigest;
             PrefixUsages = prefixUsages;
+            SymbolUsages = symbolUsages;
             Diagnostics = diagnostics;
         }
 
@@ -47,6 +50,7 @@ namespace Server.Scripting.Variables
         public int FileCount { get; }
         public string ContentDigest { get; }
         public IReadOnlyList<ScriptVariablePrefixUsage> PrefixUsages { get; }
+        public IReadOnlyList<ScriptVariableSymbolUsage> SymbolUsages { get; }
         public IReadOnlyList<ScriptVariablePreflightDiagnostic> Diagnostics { get; }
         public bool HasErrors => Diagnostics.Any(item => item.Severity == ScriptVariablePreflightSeverity.Error);
     }
@@ -78,11 +82,34 @@ namespace Server.Scripting.Variables
         private static readonly Regex AWrite = new Regex(
             @"^\s*(?:MOV|INC|DEC|MUL|DIV|CALCVAR)\s+A(?:\d+|\.)",
             RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        private static readonly Regex ReadOnlySymbol = new Regex(
+            @"<\$(?<symbol>[A-Z_][A-Z0-9_]*)",
+            RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        private static readonly Regex LegacyDslLine = new Regex(
+            @"^\s*(?:MOV|INC|DEC|MUL|DIV|MOD|CHECK|CHECKCALC|LOADVALUE|SAVEVALUE|CALCVAR|CHECKVAR|INITVAR|FORMULATION|CHANCE)\b",
+            RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        private static readonly HashSet<string> SensitiveSymbols = new HashSet<string>(
+            new[] { "PASSWORD", "PASSWORD2", "SECURITYQUESTION", "SECURITYANSWER", "PHONE", "EMAIL" },
+            StringComparer.OrdinalIgnoreCase);
+        private static readonly HashSet<string> ReviewedCompatibilitySymbols = new HashSet<string>(
+            new[]
+            {
+                "AMULET", "ARMOUR", "BELT", "BOOTS", "BRACELET_L", "BRACELET_R", "CLASS",
+                "CONQUESTGATE", "CONQUESTGOLD", "CONQUESTGUARD", "CONQUESTOWNER", "CONQUESTRATE",
+                "CONQUESTSCHEDULE", "CONQUESTSIEGE", "CONQUESTWALL", "CREDIT", "DATE", "GAMEGOLD",
+                "GUILDNAME", "GUILDWARFEE", "GUILDWARTIME", "HELMET", "HP", "LEVEL", "MAP",
+                "MAPNAME", "MAXHP", "MAXMP", "MONSTERCOUNT", "MOUNT", "MOUNTLOYALTY", "MP",
+                "NECKLACE", "NPCNAME", "OUTPUT", "PARCELAMOUNT", "PKPOINT", "RING_L", "RING_R",
+                "ROLLRESULT", "STONE", "TORCH", "USERCOUNT", "USERNAME", "WEAPON", "X_COORD",
+                "Y_COORD", "STR", "FORMAT", "C"
+            },
+            StringComparer.OrdinalIgnoreCase);
 
         public static ScriptVariablePreflightReport Scan(string rootPath)
         {
             var diagnostics = new List<ScriptVariablePreflightDiagnostic>();
             var counts = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+            var symbolCounts = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
             var hashes = new List<string>();
             string root;
             try
@@ -96,14 +123,14 @@ namespace Server.Scripting.Variables
                 diagnostics.Add(new ScriptVariablePreflightDiagnostic(
                     "VAR07-ROOT-001", ScriptVariablePreflightSeverity.Error,
                     rootPath ?? string.Empty, 0, "脚本预检根目录无效：" + error.Message));
-                return Create(rootPath ?? string.Empty, 0, hashes, counts, diagnostics);
+                return Create(rootPath ?? string.Empty, 0, hashes, counts, symbolCounts, diagnostics);
             }
             if (root.Length == 0 || !Directory.Exists(root))
             {
                 diagnostics.Add(new ScriptVariablePreflightDiagnostic(
                     "VAR07-ROOT-001", ScriptVariablePreflightSeverity.Error,
                     root, 0, "脚本预检根目录不存在。"));
-                return Create(root, 0, hashes, counts, diagnostics);
+                return Create(root, 0, hashes, counts, symbolCounts, diagnostics);
             }
 
             string[] files;
@@ -116,7 +143,8 @@ namespace Server.Scripting.Variables
                         AttributesToSkip = FileAttributes.ReparsePoint
                     })
                     .Where(path => string.Equals(Path.GetExtension(path), ".txt", StringComparison.OrdinalIgnoreCase) ||
-                                   string.Equals(Path.GetExtension(path), ".ini", StringComparison.OrdinalIgnoreCase))
+                                   string.Equals(Path.GetExtension(path), ".ini", StringComparison.OrdinalIgnoreCase) ||
+                                   string.Equals(Path.GetExtension(path), ".cs", StringComparison.OrdinalIgnoreCase))
                     .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)
                     .ToArray();
             }
@@ -125,7 +153,7 @@ namespace Server.Scripting.Variables
                 diagnostics.Add(new ScriptVariablePreflightDiagnostic(
                     "VAR07-FILE-001", ScriptVariablePreflightSeverity.Error,
                     root, 0, "脚本目录无法完整枚举：" + error.Message));
-                return Create(root, 0, hashes, counts, diagnostics);
+                return Create(root, 0, hashes, counts, symbolCounts, diagnostics);
             }
             foreach (string file in files)
             {
@@ -160,50 +188,72 @@ namespace Server.Scripting.Variables
                         relative, 0, $"{encoding} 文件混用了 CRLF 与 LF。"));
 
                 string[] lines = Regex.Split(text, "\r\n|\n|\r");
+                bool isCSharp = string.Equals(Path.GetExtension(file), ".cs", StringComparison.OrdinalIgnoreCase);
                 for (int lineIndex = 0; lineIndex < lines.Length; lineIndex++)
                 {
                     string line = lines[lineIndex];
                     int lineNumber = lineIndex + 1;
-                    foreach (Match match in FixedReference.Matches(line))
+                    bool scanMutableReferences = !isCSharp || LegacyDslLine.IsMatch(line);
+                    if (scanMutableReferences)
                     {
-                        string prefix = match.Groups["prefix"].Value.ToUpperInvariant();
-                        counts[prefix] = counts.TryGetValue(prefix, out int count) ? count + 1 : 1;
-                        int index = int.Parse(match.Groups["index"].Value, System.Globalization.CultureInfo.InvariantCulture);
-                        int maximum = prefix is "U" or "T" or "J" or "Z" ? 499 : 999;
-                        if (index > maximum)
+                        foreach (Match match in FixedReference.Matches(line))
+                        {
+                            string prefix = match.Groups["prefix"].Value.ToUpperInvariant();
+                            counts[prefix] = counts.TryGetValue(prefix, out int count) ? count + 1 : 1;
+                            int index = int.Parse(match.Groups["index"].Value, System.Globalization.CultureInfo.InvariantCulture);
+                            int maximum = prefix is "U" or "T" or "J" or "Z" ? 499 : 999;
+                            if (index > maximum)
+                                diagnostics.Add(new ScriptVariablePreflightDiagnostic(
+                                    "VAR07-RANGE-001", ScriptVariablePreflightSeverity.Error,
+                                    relative, lineNumber, $"{prefix}{index} 超出允许范围 0-{maximum}。"));
+                            if (prefix == "N" && index is 998 or 999)
+                                diagnostics.Add(new ScriptVariablePreflightDiagnostic(
+                                    "VAR07-RESERVED-001", ScriptVariablePreflightSeverity.Warning,
+                                    relative, lineNumber, $"{prefix}{index} 是保留兼容槽位，迁移前必须确认用途。"));
+                            if (prefix == "A")
+                                diagnostics.Add(new ScriptVariablePreflightDiagnostic(
+                                    AWrite.IsMatch(line) ? "VAR07-A-WRITE" : "VAR07-A-READ",
+                                    ScriptVariablePreflightSeverity.Warning,
+                                    relative, lineNumber,
+                                    AWrite.IsMatch(line)
+                                        ? "A 固定变量写入现在是全服共享且持久化，请确认原脚本意图。"
+                                        : "A 固定变量读取现在来自全服持久存储，请确认原脚本意图。"));
+                        }
+
+                        if (DynamicReference.IsMatch(line))
                             diagnostics.Add(new ScriptVariablePreflightDiagnostic(
-                                "VAR07-RANGE-001", ScriptVariablePreflightSeverity.Error,
-                                relative, lineNumber, $"{prefix}{index} 超出允许范围 0-{maximum}。"));
-                        if (prefix == "N" && index is 998 or 999)
+                                "VAR07-DYNAMIC-001", ScriptVariablePreflightSeverity.Error,
+                                relative, lineNumber, "动态拼接变量名无法静态确认，必须人工改为显式引用或登记映射。"));
+                        if (AbsoluteVariablePath.IsMatch(line))
                             diagnostics.Add(new ScriptVariablePreflightDiagnostic(
-                                "VAR07-RESERVED-001", ScriptVariablePreflightSeverity.Warning,
-                                relative, lineNumber, $"{prefix}{index} 是保留兼容槽位，迁移前必须确认用途。"));
-                        if (prefix == "A")
-                            diagnostics.Add(new ScriptVariablePreflightDiagnostic(
-                                AWrite.IsMatch(line) ? "VAR07-A-WRITE" : "VAR07-A-READ",
-                                ScriptVariablePreflightSeverity.Warning,
-                                relative, lineNumber,
-                                AWrite.IsMatch(line)
-                                    ? "A 固定变量写入现在是全服共享且持久化，请确认原脚本意图。"
-                                    : "A 固定变量读取现在来自全服持久存储，请确认原脚本意图。"));
+                                "VAR07-PATH-001", ScriptVariablePreflightSeverity.Warning,
+                                relative, lineNumber, "变量存取使用绝对路径，部署前必须确认路径和备份边界。"));
                     }
 
-                    if (DynamicReference.IsMatch(line))
-                        diagnostics.Add(new ScriptVariablePreflightDiagnostic(
-                            "VAR07-DYNAMIC-001", ScriptVariablePreflightSeverity.Error,
-                            relative, lineNumber, "动态拼接变量名无法静态确认，必须人工改为显式引用或登记映射。"));
-                    if (AbsoluteVariablePath.IsMatch(line))
-                        diagnostics.Add(new ScriptVariablePreflightDiagnostic(
-                            "VAR07-PATH-001", ScriptVariablePreflightSeverity.Warning,
-                            relative, lineNumber, "变量存取使用绝对路径，部署前必须确认路径和备份边界。"));
+                    foreach (Match match in ReadOnlySymbol.Matches(line))
+                    {
+                        string symbol = match.Groups["symbol"].Value.ToUpperInvariant();
+                        symbolCounts[symbol] = symbolCounts.TryGetValue(symbol, out int count) ? count + 1 : 1;
+                        if (SensitiveSymbols.Contains(symbol))
+                            diagnostics.Add(new ScriptVariablePreflightDiagnostic(
+                                "VAR08-SENSITIVE-001", ScriptVariablePreflightSeverity.Error,
+                                relative, lineNumber,
+                                $"只读占位符 {symbol} 涉及账户秘密或个人资料，兼容层明确拒绝暴露。"));
+                        else if (!ReviewedCompatibilitySymbols.Contains(symbol))
+                            diagnostics.Add(new ScriptVariablePreflightDiagnostic(
+                                "VAR08-UNKNOWN-001", ScriptVariablePreflightSeverity.Error,
+                                relative, lineNumber,
+                                $"只读占位符 {symbol} 未进入当前真实内容审核清单，必须先核对实现、权限和隐私。"));
+                    }
+
                 }
             }
 
             if (files.Length == 0)
                 diagnostics.Add(new ScriptVariablePreflightDiagnostic(
                     "VAR07-CONTENT-001", ScriptVariablePreflightSeverity.Error,
-                    root, 0, "目录中没有可预检的 TXT/INI 脚本。"));
-            return Create(root, files.Length, hashes, counts, diagnostics);
+                    root, 0, "目录中没有可预检的 TXT/INI/CS 脚本。"));
+            return Create(root, files.Length, hashes, counts, symbolCounts, diagnostics);
         }
 
         public static ScriptVariableCompatibilityActivationResult ValidateActivation(
@@ -257,6 +307,7 @@ namespace Server.Scripting.Variables
             int fileCount,
             IEnumerable<string> hashes,
             IReadOnlyDictionary<string, int> counts,
+            IReadOnlyDictionary<string, int> symbolCounts,
             IEnumerable<ScriptVariablePreflightDiagnostic> diagnostics)
         {
             string manifest = string.Join("\n", hashes);
@@ -267,6 +318,8 @@ namespace Server.Scripting.Variables
                 digest,
                 counts.OrderBy(pair => pair.Key, StringComparer.OrdinalIgnoreCase)
                     .Select(pair => new ScriptVariablePrefixUsage(pair.Key.ToUpperInvariant(), pair.Value)).ToArray(),
+                symbolCounts.OrderBy(pair => pair.Key, StringComparer.OrdinalIgnoreCase)
+                    .Select(pair => new ScriptVariableSymbolUsage(pair.Key.ToUpperInvariant(), pair.Value)).ToArray(),
                 diagnostics.OrderBy(item => item.File, StringComparer.OrdinalIgnoreCase)
                     .ThenBy(item => item.Line).ThenBy(item => item.Code, StringComparer.Ordinal).ToArray());
         }

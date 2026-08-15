@@ -126,3 +126,4 @@ nunit-*.xml
 
 # 引擎说明书静态站点构建产物；内容事实源位于 Manual/Engine/docs/。
 /Manual/Engine/site/
+/Manual/Engine/dist/

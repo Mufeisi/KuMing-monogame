@@ -75,7 +75,11 @@ namespace Server.Scripting
             _importingModuleKeys.Clear();
         }
 
-        internal void SealVariableDeclarations() => Variables.Seal();
+        internal void SealVariableDeclarations()
+        {
+            ScriptVariableTextDeclarationParser.Register(TextFiles, Variables);
+            Variables.Seal();
+        }
 
         /// <summary>
         /// 组合导入其它脚本模块（用于替代 legacy 的 #INSERT/#INCLUDE 文本拼接）。

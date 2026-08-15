@@ -1,6 +1,6 @@
 # 声明、初始化与热重载
 
-- 功能状态：实验性（当前仅 C# 注册声明）
+- 功能状态：实验性（TXT 与 C# 声明共用原子注册表）
 - 首次支持版本：开发版 2026-08-15
 
 ## 声明变量
@@ -11,7 +11,13 @@ VAR Decimal G EventRate DEFAULT 2.5
 VAR Integer HUMAN KillCount DEFAULT 0
 ```
 
-当前开发版使用 C# 脚本注册等价声明：
+这些 `VAR` 行可以放在服务器启动脚本、QM 或其他已注册的 `TextFileDefinition` 中。它们在脚本加载期收集，不会等到人物登录后才声明。字符串默认值包含空格时可加双引号：
+
+```text
+VAR String A Notice DEFAULT "全服活动 已开启"
+```
+
+也可使用 C# 脚本注册等价声明：
 
 ```csharp
 using Server.Scripting;
@@ -30,15 +36,21 @@ public sealed class VariableDeclarations : IScriptModule
 }
 ```
 
-`VAR Decimal P DropRate DEFAULT 1.0` 的纯 TXT 声明语法仍在规划中；TXT NPC 可以操作由 C# 启动脚本声明的 `P/D/M/N/I/U/G/J/HUMAN/GUILD/GLOBAL.名称`，也可操作已声明的 `T/A/Z.名称` 字符串。Call 声明仅供 C# 调用帧使用。
+TXT 和 C# 声明支持 `P/D/M/N/I/U/T/G/A/J/Z/HUMAN/GUILD/GLOBAL/Call`。`S$名称` 和 `N$名称` 免声明；L$/D$ 为临时复合值，也不使用 `VAR`。同一声明可重复出现，但类型或默认契约不同会让整次候选重载失败。
 
 当前声明注册名称、类型、作用域、默认值和来源位置，不会立即为所有人物、行会或服务器写入数据库。因此私人、行会和全局变量都可以在服务器启动或脚本加载阶段统一声明；声明不需要对应所有者在线。J/Z 的每日重置策略由作用域固定，不允许热重载改成永久变量。
 
 ## 默认值与首次写入
 
-读取尚未写入的命名变量时，引擎返回声明中的默认值，但不会立即为所有人物生成数据库记录。第一次 `MOV/INC/DEC/MUL/DIV` 成功后才保存实际值。`INITVAR` 尚未开放，当前不要在 QM 中使用它。
+读取尚未写入的命名变量时，引擎返回声明中的默认值，但不会立即为所有人物生成数据库记录。第一次 `MOV/INC/DEC/MUL/DIV` 成功后才保存实际值。需要明确落盘默认值时使用：
 
-若在登录 QM 中执行 `MOV U.SpecialRate 1.5`，每次登录都会覆盖旧值；只需要默认值时应直接读取声明默认值。
+```text
+INITVAR U.SpecialRate
+```
+
+`INITVAR` 只在当前角色尚无实际值时写入默认值；重复登录执行不会覆盖存量。
+
+若在登录 QM 中执行 `MOV U.SpecialRate 1.5`，每次登录都会覆盖旧值；只需要默认值时应直接读取声明默认值，确需落盘时使用 `INITVAR`。
 
 ## 热重载
 
@@ -50,7 +62,7 @@ public sealed class VariableDeclarations : IScriptModule
 4. 在主线程安全点原子切换；
 5. 新调用立即使用新声明。
 
-脚本文件保存后由现有 C# 热重载监视器重新编译。也可在脚本调试界面执行现有重载操作；不需要重启服务端。
+脚本文件保存后由现有 C# 热重载监视器重新编译，TXT `VAR` 行与 C# 注册声明在同一候选版本内校验和切换。也可执行现有重载操作；不需要重启服务端。
 
 解析或校验失败时，旧脚本和旧声明继续运行。
 

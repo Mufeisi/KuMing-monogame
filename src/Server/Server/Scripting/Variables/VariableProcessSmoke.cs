@@ -112,12 +112,23 @@ namespace Server.Scripting.Variables
                 actions.ParseAct(actions.ActList, "MOV D$Score {张三:100,李四:200}");
                 actions.ParseAct(actions.ActList, "MOV D$Score[王五] 300");
                 actions.ParseAct(actions.ActList, "FORMULATION (P.Rate + 0.25) * 2 P.FormulaResult");
+                actions.ParseAct(actions.ActList, "MOV T1 3.125");
+                actions.ParseAct(actions.ActList, "MOV P.Parsed PARSEDECIMAL T1");
+                actions.ParseAct(actions.ActList, "INITVAR U.InitRate");
+                actions.ParseAct(actions.ActList, "MOV U.InitRate 4.25");
+                actions.ParseAct(actions.ActList, "INITVAR U.InitRate");
                 actions.ParseAct(actions.ActList, "MOV S$TargetName 变量冒烟目标");
                 actions.ParseAct(actions.ActList, "SETHUMVAR S$TargetName HUMAN.Shared 2.5");
                 actions.ParseAct(actions.ActList, "GETHUMVAR S$TargetName HUMAN.Shared P.CrossResult");
                 actions.ParseAct(actions.ActList, "SETCURRTARGET S$TargetName");
                 if (!actions.Check(player))
                     return Failure(4, "VARIABLE_SMOKE_TXT_ACTION_FAILED");
+                actions.AddVariable(player, "A1", "定位地图");
+                AssertResult(
+                    commands.Format(context, "A1").Text == "定位地图" &&
+                    actions.FindVariable(player, "%A1") == "定位地图" &&
+                    player.NPCVar.All(item => !string.Equals(item.Key, "A1", StringComparison.OrdinalIgnoreCase)),
+                    "VARIABLE_SMOKE_LEGACY_A_ADAPTER_FAILED");
                 AssertResult(commands.Mutate(context, "M0", "MOV", "22").Success,
                     "VARIABLE_SMOKE_MAP_COMMAND_FAILED");
 
@@ -148,12 +159,20 @@ namespace Server.Scripting.Variables
                     commands.Format(context, "L$Bag").Text != "[11,22,33,44]" ||
                     commands.Format(context, "D$Score[王五]").Text != "300" ||
                     commands.Format(context, "P.FormulaResult", 2).Text != "26.00" ||
+                    commands.Format(context, "P.Parsed", 3).Text != "3.125" ||
+                    commands.Format(context, "U.InitRate", 2).Text != "4.25" ||
                     commands.Format(context, "P.CrossResult", 2).Text != "2.50" ||
                     commands.Format(ScriptVariableContext.ForPlayer(targetPlayer), "HUMAN.Shared", 2).Text != "2.50" ||
                     !commands.Chance(context, "P.Rate", ScriptProbabilityUnit.Percent,
                         (minimum, maximum) => 127_499).Matched ||
                     !player.NPCSpeech.Any(line => line.Contains("整数3 小数12.75 目标2.5", StringComparison.Ordinal)))
-                    return Failure(4, "VARIABLE_SMOKE_COMMAND_FAILED");
+                    return Failure(4,
+                        "VARIABLE_SMOKE_COMMAND_FAILED;" +
+                        $"PARSED={commands.Format(context, "P.Parsed", 3).Text};" +
+                        $"INIT={commands.Format(context, "U.InitRate", 2).Text};" +
+                        $"A0={commands.Format(context, "A0").Text};" +
+                        $"A1={commands.Format(context, "A1").Text};" +
+                        $"SPEECH={string.Join("|", player.NPCSpeech)}");
 
                 var guild = new GuildInfo { GuildIndex = 900, Name = "变量冒烟行会" };
                 var guildContext = ScriptVariableContext.ForPlayer(guild);
@@ -260,6 +279,7 @@ namespace Server.Scripting.Variables
                 if (envir.CSharpScripts.VariableCommands.Format(restartedContext, "U0").Text != "55" ||
                     envir.CSharpScripts.VariableCommands.Format(restartedContext, "T0").Text != "永久文本" ||
                     envir.CSharpScripts.VariableCommands.Format(restartedContext, "U.PersistentRate", 2).Text != "6.25" ||
+                    envir.CSharpScripts.VariableCommands.Format(restartedContext, "U.InitRate", 2).Text != "4.25" ||
                     envir.CSharpScripts.VariableCommands.Format(restartedContext, "G0").Text != "66" ||
                     envir.CSharpScripts.VariableCommands.Format(restartedContext, "G.EventRate", 2).Text != "2.50" ||
                     envir.CSharpScripts.VariableCommands.Format(restartedContext, "A0").Text != "固定公告" ||
@@ -275,7 +295,8 @@ namespace Server.Scripting.Variables
                     $"VARIABLE_SMOKE_OK;VERSION={rejectedVersion};INTEGER=3;DECIMAL=12.75;" +
                     "RESET=1.5;BONUS=0.5;RUNTIME_SCOPES=True;PRIVATE_PERSISTENCE=True;SERVER_PERSISTENCE=True;SERVER_RESTART_CLEAR=True;" +
                     "DAILY_RESET=True;CUSTOM_PERSISTENT_SCOPES=True;COMPOSITES=True;FORMULA=True;PROBABILITY=True;" +
-                    "CROSS_OBJECT=True;COMPATIBILITY_PREFLIGHT=True;CONFLICT_REJECTED=True");
+                    "INITIALIZE=True;PARSE_DECIMAL=True;LEGACY_A_ADAPTER=True;CROSS_OBJECT=True;" +
+                    "COMPATIBILITY_PREFLIGHT=True;CONFLICT_REJECTED=True");
             }
             catch (Exception ex)
             {
@@ -347,6 +368,9 @@ namespace Server.Scripting.Variables
                             ScriptVariableScope.Guild, "Score", ScriptVariableKind.Integer, "0");
                         registry.RegisterVariable(
                             ScriptVariableScope.Global, "Score", ScriptVariableKind.Integer, "0");
+                        registry.TextFiles.Register(new TextFileDefinition("Variables/Declarations")
+                            .AddLine("VAR Decimal P Parsed DEFAULT 0")
+                            .AddLine("VAR Decimal U InitRate DEFAULT 1.75"));
                         {{bonus}}
                     }
                 }

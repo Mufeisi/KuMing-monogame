@@ -174,6 +174,20 @@ namespace Server.MirObjects
 
         public void AddVariable(MapObject player, string key, string value)
         {
+            if (player is PlayerObject playerObject &&
+                TryParseRuntimeVariableReference(key, out var reference) &&
+                reference.Scope == ScriptVariableScope.A)
+            {
+                var context = ScriptVariableContext.ForConversation(
+                    playerObject, playerObject.NPCObjectID, playerObject.CurrentMap);
+                ScriptVariableMutationResult result = Envir.CSharpScripts.VariableCommands.Mutate(
+                    context, key, "MOV", value);
+                if (!result.Success)
+                    MessageQueue.Enqueue(
+                        $"[Variables][TXT] LOADVALUE 写入 A 变量失败：{result.ErrorCode} {result.Diagnostic}，页码：{Key}");
+                return;
+            }
+
             Regex regex = new Regex(@"[A-Za-z][0-9]");
 
             if (!regex.Match(key).Success) return;
@@ -190,6 +204,21 @@ namespace Server.MirObjects
 
         public string FindVariable(MapObject player, string key)
         {
+            bool isVariableValue = (key ?? string.Empty).StartsWith("%", StringComparison.Ordinal);
+            string runtimeKey = isVariableValue ? key.Substring(1) : string.Empty;
+            if (isVariableValue && player is PlayerObject playerObject &&
+                TryParseRuntimeVariableReference(runtimeKey, out var reference) &&
+                reference.Scope == ScriptVariableScope.A)
+            {
+                var context = ScriptVariableContext.ForConversation(
+                    playerObject, playerObject.NPCObjectID, playerObject.CurrentMap);
+                ScriptVariableTextResult result = Envir.CSharpScripts.VariableCommands.Format(context, runtimeKey);
+                if (result.Success) return result.Text;
+                MessageQueue.Enqueue(
+                    $"[Variables][TXT] 读取 A 变量失败：{result.ErrorCode} {result.Diagnostic}，页码：{Key}");
+                return key;
+            }
+
             Regex regex = new Regex(@"\%[A-Za-z][0-9]");
 
             if (!regex.Match(key).Success) return key;
@@ -1025,7 +1054,8 @@ namespace Server.MirObjects
                         string conversion = parts[2].ToUpperInvariant();
                         if (parts.Length >= 4 &&
                             (conversion == "ROUND" || conversion == "FLOOR" ||
-                             conversion == "CEIL" || conversion == "TRUNC") &&
+                             conversion == "CEIL" || conversion == "TRUNC" ||
+                             conversion == "PARSEDECIMAL") &&
                             TryParseRuntimeVariableReference(parts[3], out _))
                         {
                             acts.Add(new NPCActions(
@@ -1039,6 +1069,11 @@ namespace Server.MirObjects
                     else if (match.Success)
                         acts.Add(new NPCActions(ActionType.Mov, parts[1], valueToStore));
 
+                    break;
+
+                case "INITVAR":
+                    if (parts.Length != 2 || !TryParseRuntimeVariableReference(parts[1], out _)) return;
+                    acts.Add(new NPCActions(ActionType.VariableInitialize, parts[1]));
                     break;
 
                 case "INC":
@@ -3996,6 +4031,17 @@ namespace Server.MirObjects
                                 context, param[0], param[1], param[2]);
                             if (!result.Success)
                                 MessageQueue.Enqueue($"[Variables][TXT] {param[1]} 失败：{result.ErrorCode} {result.Diagnostic}，页码：{Key}");
+                        }
+                        break;
+
+                    case ActionType.VariableInitialize:
+                        {
+                            if (player.NPCObjectID == 0) return;
+                            var context = ScriptVariableContext.ForConversation(player, player.NPCObjectID, player.CurrentMap);
+                            ScriptVariableMutationResult result = Envir.CSharpScripts.VariableCommands.Initialize(
+                                context, param[0]);
+                            if (!result.Success)
+                                MessageQueue.Enqueue($"[Variables][TXT] INITVAR 失败：{result.ErrorCode} {result.Diagnostic}，页码：{Key}");
                         }
                         break;
 

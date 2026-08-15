@@ -24,7 +24,7 @@
 | `FORMULATION` | 受控十进制公式 | 除零、溢出、复杂度超限 |
 | `CHANCE` | 显式单位概率判定 | 单位或范围无效 |
 
-当前已实现 `MOV/INC/DEC/MUL/DIV/CHECK`、`$STR/$FORMAT` 和 `ROUND/FLOOR/CEIL/TRUNC`。`INITVAR` 与 `PARSEDECIMAL` 随持久及字符串作用域阶段交付，当前不要使用。
+以上标量命令均已实现。`INITVAR` 只在当前所有者尚无实际值时写入声明默认值；重复执行不会覆盖已有值。`PARSEDECIMAL` 是 `MOV` 的显式转换形式，来源必须是 String，目标必须是已声明的 Decimal。
 
 L$/D$ 的专用命令见[列表与字典](composites.md)，公式与概率见[公式、概率与格式化](formula-probability.md)。
 
@@ -36,6 +36,8 @@ DIV P0 2
 MOV P.DropRate 12.5
 INC P.DropRate 0.25
 CHECK P.DropRate >= 12.75
+INITVAR P.DropRate
+MOV P.DropRate PARSEDECIMAL T0
 ```
 
 显示写在 NPC 文本中：
@@ -127,3 +129,20 @@ DIV P.Rate 4
 ## 错误原子性
 
 任何运算失败都不修改旧值。脚本可以根据稳定错误代码记录和处理失败，禁止出现“写入一半”或失败后变成零。
+
+## 初始化和字符串转小数
+
+```text
+VAR Decimal U DropRate DEFAULT 1.25
+INITVAR U.DropRate
+```
+
+第一次执行会把 `1.25` 写入该角色的持久存储；已有值时直接成功返回原值，不触发覆盖或额外自动保存。声明默认值本身已可直接读取，只有确实需要生成持久记录时才使用 `INITVAR`。
+
+```text
+VAR Decimal P ParsedRate DEFAULT 0
+MOV T0 3.125
+MOV P.ParsedRate PARSEDECIMAL T0
+```
+
+解析固定使用文化无关的小数点 `.`，最多 8 位小数。`3,125`、非数字或超精度输入返回 `InvalidExpression`，`P.ParsedRate` 保持原值。
