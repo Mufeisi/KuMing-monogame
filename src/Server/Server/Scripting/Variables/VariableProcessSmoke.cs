@@ -97,6 +97,11 @@ namespace Server.Scripting.Variables
                 actions.ParseAct(actions.ActList, "MOV Z0 今日文本");
                 actions.ParseAct(actions.ActList, "MOV HUMAN.Lifetime 8.5");
                 actions.ParseAct(actions.ActList, "MOV GLOBAL.Score 99");
+                actions.ParseAct(actions.ActList, "MOV L$Bag [11,22,33]");
+                actions.ParseAct(actions.ActList, "INSERTTOLIST L$Bag 44 -1");
+                actions.ParseAct(actions.ActList, "MOV D$Score {张三:100,李四:200}");
+                actions.ParseAct(actions.ActList, "MOV D$Score[王五] 300");
+                actions.ParseAct(actions.ActList, "FORMULATION (P.Rate + 0.25) * 2 P.FormulaResult");
                 if (!actions.Check(player))
                     return Failure(4, "VARIABLE_SMOKE_TXT_ACTION_FAILED");
                 AssertResult(commands.Mutate(context, "M0", "MOV", "22").Success,
@@ -126,6 +131,11 @@ namespace Server.Scripting.Variables
                     commands.Format(context, "Z0").Text != "今日文本" ||
                     commands.Format(context, "HUMAN.Lifetime", 2).Text != "8.50" ||
                     commands.Format(context, "GLOBAL.Score").Text != "99" ||
+                    commands.Format(context, "L$Bag").Text != "[11,22,33,44]" ||
+                    commands.Format(context, "D$Score[王五]").Text != "300" ||
+                    commands.Format(context, "P.FormulaResult", 2).Text != "26.00" ||
+                    !commands.Chance(context, "P.Rate", ScriptProbabilityUnit.Percent,
+                        (minimum, maximum) => 127_499).Matched ||
                     !player.NPCSpeech.Any(line => line.Contains("整数3 小数12.75", StringComparison.Ordinal)))
                     return Failure(4, "VARIABLE_SMOKE_COMMAND_FAILED");
 
@@ -170,6 +180,10 @@ namespace Server.Scripting.Variables
                         nextMapContext, ScriptVariableReference.Named(ScriptVariableScope.N, "Score")).Found &&
                     !envir.CSharpScripts.VariableModule.Read(
                         nextMapContext, ScriptVariableReference.Named(ScriptVariableScope.S, "Label")).Found &&
+                    !envir.CSharpScripts.VariableModule.Read(
+                        nextMapContext, ScriptVariableReference.Named(ScriptVariableScope.L, "Bag")).Found &&
+                    !envir.CSharpScripts.VariableModule.Read(
+                        nextMapContext, ScriptVariableReference.Named(ScriptVariableScope.Dict, "Score")).Found &&
                     commands.Format(nextMapContext, "I0").Text == "44" &&
                     commands.Format(nextMapContext, "U0").Text == "55" &&
                     commands.Format(nextMapContext, "T0").Text == "永久文本" &&
@@ -244,7 +258,7 @@ namespace Server.Scripting.Variables
                     0,
                     $"VARIABLE_SMOKE_OK;VERSION={rejectedVersion};INTEGER=3;DECIMAL=12.75;" +
                     "RESET=1.5;BONUS=0.5;RUNTIME_SCOPES=True;PRIVATE_PERSISTENCE=True;SERVER_PERSISTENCE=True;SERVER_RESTART_CLEAR=True;" +
-                    "DAILY_RESET=True;CUSTOM_PERSISTENT_SCOPES=True;CONFLICT_REJECTED=True");
+                    "DAILY_RESET=True;CUSTOM_PERSISTENT_SCOPES=True;COMPOSITES=True;FORMULA=True;PROBABILITY=True;CONFLICT_REJECTED=True");
             }
             catch (Exception ex)
             {
@@ -295,6 +309,8 @@ namespace Server.Scripting.Variables
                     {
                         registry.RegisterVariable(
                             ScriptVariableScope.P, "Rate", ScriptVariableKind.{{kind}}, "{{defaultValue}}");
+                        registry.RegisterVariable(
+                            ScriptVariableScope.P, "FormulaResult", ScriptVariableKind.Decimal, "0");
                         registry.RegisterVariable(
                             ScriptVariableScope.Call, "Rate", ScriptVariableKind.Decimal, "4.5");
                         registry.RegisterVariable(

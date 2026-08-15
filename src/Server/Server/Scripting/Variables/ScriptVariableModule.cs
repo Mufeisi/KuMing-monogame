@@ -1,4 +1,5 @@
 using System.Runtime.CompilerServices;
+using System.Text;
 using Server.MirDatabase;
 using Server.MirObjects;
 
@@ -183,6 +184,10 @@ namespace Server.Scripting.Variables
 
     public sealed class ScriptVariableModule : IScriptVariableModule
     {
+        public const int MaximumCompositeItems = 256;
+        public const int MaximumCompositeItemUtf8Bytes = 1024;
+        public const int MaximumOwnerCompositeUtf8Bytes = 256 * 1024;
+
         private sealed class OwnerState
         {
             public uint NpcObjectId;
@@ -290,6 +295,10 @@ namespace Server.Scripting.Variables
             if (!coerced.Success)
                 return MutationFailure(coerced.ErrorCode, current.Value, coerced.Diagnostic);
 
+            if ((targetKind == ScriptVariableKind.List || targetKind == ScriptVariableKind.Dictionary) &&
+                !TryValidateCompositeMutation(context, mutation.Reference, coerced.Value, out diagnostic))
+                return MutationFailure(ScriptVariableErrorCode.QuotaExceeded, current.Value, diagnostic);
+
             if (TryGetPersistentStore(context, mutation.Reference.Scope, out var persistentStore))
             {
                 try
@@ -381,6 +390,50 @@ namespace Server.Scripting.Variables
             return state.GetScope(scope);
         }
 
+        private bool TryValidateCompositeMutation(
+            in ScriptVariableContext context,
+            ScriptVariableReference reference,
+            ScriptVariableValue value,
+            out string diagnostic)
+        {
+            diagnostic = string.Empty;
+            int count = value.Kind == ScriptVariableKind.List ? value.List.Count : value.Dictionary.Count;
+            if (count > MaximumCompositeItems)
+            {
+                diagnostic = $"单个复合变量最多允许 {MaximumCompositeItems} 项。";
+                return false;
+            }
+
+            IEnumerable<string> parts = value.Kind == ScriptVariableKind.List
+                ? value.List
+                : value.Dictionary.SelectMany(pair => new[] { pair.Key, pair.Value });
+            if (parts.Any(part => Encoding.UTF8.GetByteCount(part ?? string.Empty) > MaximumCompositeItemUtf8Bytes))
+            {
+                diagnostic = $"复合变量单项最多允许 {MaximumCompositeItemUtf8Bytes} 个 UTF-8 字节。";
+                return false;
+            }
+
+            OwnerState state = _owners.GetOrCreateValue(context.Owner);
+            int total = state.Scopes
+                .Where(scope => scope.Key == ScriptVariableScope.L || scope.Key == ScriptVariableScope.Dict)
+                .Sum(scope => scope.Value
+                    .Where(entry => scope.Key != reference.Scope ||
+                                    !string.Equals(entry.Key, reference.StorageKey, StringComparison.Ordinal))
+                    .Sum(entry => GetCompositeUtf8Bytes(entry.Value)));
+            total += GetCompositeUtf8Bytes(value);
+            if (total <= MaximumOwnerCompositeUtf8Bytes) return true;
+
+            diagnostic = $"单个角色的临时复合变量总量最多允许 {MaximumOwnerCompositeUtf8Bytes} 个 UTF-8 字节。";
+            return false;
+        }
+
+        private static int GetCompositeUtf8Bytes(ScriptVariableValue value)
+        {
+            return value.Kind == ScriptVariableKind.List || value.Kind == ScriptVariableKind.Dictionary
+                ? Encoding.UTF8.GetByteCount(value.Format())
+                : 0;
+        }
+
         private static bool TryValidateContext(
             in ScriptVariableContext context,
             ScriptVariableScope scope,
@@ -396,6 +449,8 @@ namespace Server.Scripting.Variables
                 case ScriptVariableScope.D:
                 case ScriptVariableScope.N:
                 case ScriptVariableScope.S:
+                case ScriptVariableScope.L:
+                case ScriptVariableScope.Dict:
                     if (context.Owner != null) return true;
                     diagnostic = $"{scope} 变量需要有效人物在线上下文。";
                     return false;
@@ -465,7 +520,8 @@ namespace Server.Scripting.Variables
             return context.Owner != null &&
                    (scope == ScriptVariableScope.P || scope == ScriptVariableScope.D ||
                     scope == ScriptVariableScope.M || scope == ScriptVariableScope.N ||
-                    scope == ScriptVariableScope.S);
+                    scope == ScriptVariableScope.S || scope == ScriptVariableScope.L ||
+                    scope == ScriptVariableScope.Dict);
         }
 
         private bool TryResolveContract(
@@ -522,6 +578,16 @@ namespace Server.Scripting.Variables
             {
                 kind = ScriptVariableKind.String;
                 defaultValue = ScriptVariableValue.FromString(string.Empty);
+                return true;
+            }
+            if (reference.Scope == ScriptVariableScope.L || reference.Scope == ScriptVariableScope.Dict)
+            {
+                kind = reference.Scope == ScriptVariableScope.L
+                    ? ScriptVariableKind.List
+                    : ScriptVariableKind.Dictionary;
+                defaultValue = kind == ScriptVariableKind.List
+                    ? ScriptVariableValue.FromList(Array.Empty<string>())
+                    : ScriptVariableValue.FromDictionary(Array.Empty<KeyValuePair<string, string>>());
                 return true;
             }
 

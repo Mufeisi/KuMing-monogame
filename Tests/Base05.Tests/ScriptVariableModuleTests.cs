@@ -930,6 +930,136 @@ public sealed class ScriptVariableModuleTests
         Assert.All(segment.ActList, action => Assert.Equal(ActionType.VariableMutate, action.Type));
     }
 
+    [Fact]
+    public void CompositeListsSupportNegativeIndexesMutationSortSliceAndStrictQuota()
+    {
+        var module = new ScriptVariableModule(new ScriptVariableDeclarationCatalog());
+        var commands = new ScriptVariableCommands(module);
+        ScriptVariableContext context = ScriptVariableContext.ForPlayer(new object());
+
+        Assert.True(commands.Mutate(context, "L$Bag", "MOV", "[11,33,22,aa]").Success);
+        Assert.Equal("aa", commands.Composites.Read(context, "L$Bag[-1]").Value.Text);
+        Assert.True(commands.Mutate(context, "L$Bag[1]", "MOV", "44").Success);
+        Assert.True(commands.Composites.InsertList(context, "L$Bag", "20", 1).Success);
+        Assert.True(commands.Composites.RemoveListByContent(context, "L$Bag", "aa").Success);
+        Assert.True(commands.Composites.SortList(context, "L$Bag", "L$Sorted", false, true).Success);
+        Assert.Equal("[11,20,22,44]", commands.Format(context, "L$Sorted").Text);
+        Assert.True(commands.Composites.SliceList(context, "L$Sorted", "L$Slice", 1, -1, 2).Success);
+        Assert.Equal("[20,44]", commands.Format(context, "L$Slice").Text);
+
+        string overQuota = "[" + string.Join(',', Enumerable.Range(0, 257)) + "]";
+        ScriptVariableMutationResult rejected = commands.Mutate(context, "L$TooMany", "MOV", overQuota);
+        Assert.False(rejected.Success);
+        Assert.Equal(ScriptVariableErrorCode.QuotaExceeded, rejected.ErrorCode);
+    }
+
+    [Fact]
+    public void CompositeDictionariesSupportKeyMutationItemsChecksAndNumericExtremum()
+    {
+        var module = new ScriptVariableModule(new ScriptVariableDeclarationCatalog());
+        var commands = new ScriptVariableCommands(module);
+        ScriptVariableContext context = ScriptVariableContext.ForPlayer(new object());
+
+        Assert.True(commands.Mutate(context, "D$Score", "MOV", "{张三:100,李四:200}").Success);
+        Assert.True(commands.Mutate(context, "D$Score[王五]", "MOV", "300").Success);
+        Assert.True(commands.Mutate(context, "D$Score", "DEC", "张三").Success);
+        Assert.Equal("200", commands.Composites.Read(context, "D$Score[李四]").Value.Text);
+        Assert.True(commands.Composites.Contains(context, "D$Score", "300", dictionaryValues: true).Matched);
+        Assert.True(commands.Composites.DictionaryItems(context, "D$Score", "L$Keys", values: false).Success);
+        Assert.Equal("[李四,王五]", commands.Format(context, "L$Keys").Text);
+        ScriptCompositeResult maximum = commands.Composites.NumericExtremum(context, "D$Score", maximum: true);
+        Assert.True(maximum.Success);
+        Assert.Equal(300m, maximum.Value.Decimal);
+        Assert.Equal("王五", maximum.Diagnostic);
+    }
+
+    [Fact]
+    public void DecimalFormulaIsBoundedAtomicAndSupportsInclusiveControlledRandom()
+    {
+        var catalog = new ScriptVariableDeclarationCatalog();
+        Assert.True(catalog.TryReload(new[]
+        {
+            Declaration(ScriptVariableScope.P, "Rate", ScriptVariableKind.Decimal, "1.5"),
+            Declaration(ScriptVariableScope.P, "Result", ScriptVariableKind.Decimal, "9"),
+            Declaration(ScriptVariableScope.P, "IntegerResult", ScriptVariableKind.Integer, "7")
+        }).Success);
+        var commands = new ScriptVariableCommands(new ScriptVariableModule(catalog));
+        ScriptVariableContext context = ScriptVariableContext.ForConversation(new object(), 1);
+
+        ScriptVariableMutationResult success = commands.Formulate(
+            context, "(P.Rate+0.5)*2+Random(1,3)^2", "P.Result", (minimum, maximum) => maximum - 1);
+        Assert.True(success.Success, success.Diagnostic);
+        Assert.Equal(13m, success.NewValue.Decimal);
+
+        ScriptVariableMutationResult divideByZero = commands.Formulate(context, "1/(3-3)", "P.Result");
+        Assert.False(divideByZero.Success);
+        Assert.Equal(ScriptVariableErrorCode.InvalidExpression, divideByZero.ErrorCode);
+        Assert.Equal(13m, commands.Format(context, "P.Result").Success
+            ? decimal.Parse(commands.Format(context, "P.Result").Text, CultureInfo.InvariantCulture)
+            : -1m);
+
+        ScriptVariableMutationResult implicitTruncate = commands.Formulate(context, "1/2", "P.IntegerResult");
+        Assert.False(implicitTruncate.Success);
+        Assert.Equal(ScriptVariableErrorCode.TypeMismatch, implicitTruncate.ErrorCode);
+        Assert.False(commands.Formulate(context, new string('1', 1025), "P.Result").Success);
+    }
+
+    [Fact]
+    public void ProbabilityUsesExplicitUnitsAndExactIntegerThresholdBoundaries()
+    {
+        Assert.True(ScriptVariableProbability.Check(12.5m, ScriptProbabilityUnit.Percent, 124_999).Matched);
+        Assert.False(ScriptVariableProbability.Check(12.5m, ScriptProbabilityUnit.Percent, 125_000).Matched);
+        Assert.True(ScriptVariableProbability.Check(0.5m, ScriptProbabilityUnit.Fraction, 499_999).Matched);
+        Assert.False(ScriptVariableProbability.Check(0.5m, ScriptProbabilityUnit.Percent, 5_000).Matched);
+        Assert.False(ScriptVariableProbability.Check(-0.1m, ScriptProbabilityUnit.Percent, 0).Success);
+        Assert.False(ScriptVariableProbability.Check(100.01m, ScriptProbabilityUnit.Percent, 0).Success);
+    }
+
+    [Fact]
+    public void TxtNpcParserRoutesCompositeFormulaAndChanceCommands()
+    {
+        var segment = new NPCSegment(
+            new NPCPage("[@MAIN]"), new List<string>(), new List<string>(), new List<string>(),
+            new List<string>(), new List<string>());
+
+        segment.ParseAct(segment.ActList, "MOV L$Bag [1,2,3]");
+        segment.ParseAct(segment.ActList, "MOV D$Score {张三:100}");
+        segment.ParseAct(segment.ActList, "INSERTTOLIST L$Bag 9 -1");
+        segment.ParseAct(segment.ActList, "GETDICTITEMS D$Score 0 L$Keys");
+        segment.ParseAct(segment.ActList, "FORMULATION (P.Rate + 0.5) * 2 P.Result");
+        segment.ParseCheck("CHANCE P.Rate PERCENT");
+        segment.ParseCheck("CHECKVARINLIST L$Bag 2");
+
+        Assert.Equal(ActionType.VariableMutate, segment.ActList[0].Type);
+        Assert.Equal(ActionType.VariableMutate, segment.ActList[1].Type);
+        Assert.Equal(ActionType.VariableComposite, segment.ActList[2].Type);
+        Assert.Equal(ActionType.VariableComposite, segment.ActList[3].Type);
+        Assert.Equal(ActionType.VariableFormulation, segment.ActList[4].Type);
+        Assert.Equal(CheckType.VariableChance, segment.CheckList[0].Type);
+        Assert.Equal(CheckType.VariableComposite, segment.CheckList[1].Type);
+    }
+
+    [Fact]
+    public void FormulaEvaluationHasAConservativeMainThreadPerformanceGate()
+    {
+        var catalog = new ScriptVariableDeclarationCatalog();
+        Assert.True(catalog.TryReload(new[]
+        {
+            Declaration(ScriptVariableScope.P, "Rate", ScriptVariableKind.Decimal, "1.25"),
+            Declaration(ScriptVariableScope.P, "Result", ScriptVariableKind.Decimal, "0")
+        }).Success);
+        var commands = new ScriptVariableCommands(new ScriptVariableModule(catalog));
+        ScriptVariableContext context = ScriptVariableContext.ForConversation(new object(), 1);
+        var watch = System.Diagnostics.Stopwatch.StartNew();
+
+        for (int i = 0; i < 1_000; i++)
+            Assert.True(commands.Formulate(context, "(P.Rate+0.75)*2", "P.Result").Success);
+
+        watch.Stop();
+        Assert.True(watch.Elapsed < TimeSpan.FromSeconds(3),
+            $"1000 次受控公式计算耗时 {watch.Elapsed}，超过 3 秒门禁。");
+    }
+
     private static ScriptVariableDeclaration Declaration(
         ScriptVariableScope scope,
         string key,

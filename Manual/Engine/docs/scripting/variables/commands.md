@@ -1,6 +1,6 @@
 # 操作与显示命令
 
-- 功能状态：实验性（当前支持 P/D/M/N/S/I/Call/U/T/G/A/J/Z/HUMAN/GUILD/GLOBAL）
+- 功能状态：实验性（当前支持标量作用域以及临时 L$/D$）
 - 首次支持版本：开发版 2026-08-15
 
 整数和小数共用以下命令。变量模块根据声明类型选择运算规则。
@@ -21,8 +21,12 @@
 | `CEIL` | 向上取整 | 溢出 |
 | `TRUNC` | 截去小数部分 | 溢出 |
 | `PARSEDECIMAL` | 显式解析字符串 | 格式非法、小数位超限 |
+| `FORMULATION` | 受控十进制公式 | 除零、溢出、复杂度超限 |
+| `CHANCE` | 显式单位概率判定 | 单位或范围无效 |
 
 当前已实现 `MOV/INC/DEC/MUL/DIV/CHECK`、`$STR/$FORMAT` 和 `ROUND/FLOOR/CEIL/TRUNC`。`INITVAR` 与 `PARSEDECIMAL` 随持久及字符串作用域阶段交付，当前不要使用。
+
+L$/D$ 的专用命令见[列表与字典](composites.md)，公式与概率见[公式、概率与格式化](formula-probability.md)。
 
 ## TXT NPC 写法
 

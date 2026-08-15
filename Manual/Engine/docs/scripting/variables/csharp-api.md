@@ -84,6 +84,29 @@ ScriptVariableResetResult reset = context.Api.ResetConversationVariables(player,
 dotnet Server.dll --headless-variable-smoke
 ```
 
+## 复合变量、公式与概率
+
+```csharp
+context.Api.MutateVariable(player, call, "L$Rewards", "MOV", "[Gold,Exp,Item]");
+ScriptVariableContext variableContext = ScriptVariableContext.ForConversation(
+    player, call.NpcObjectID, player.CurrentMap, call);
+context.Api.CompositeVariables.InsertList(variableContext, "L$Rewards", "Token", 1);
+
+context.Api.FormulateVariable(
+    player,
+    call,
+    "(P.BaseRate + P.BonusRate) * 1.5",
+    "P.FinalRate");
+
+ScriptVariableCheckResult hit = context.Api.ChanceVariable(
+    player,
+    call,
+    "P.FinalRate",
+    ScriptProbabilityUnit.Percent);
+```
+
+L$/D$ 的 `MOV/INC/DEC` 直接使用 `MutateVariable`；排序、切片等专用操作通过 `CompositeVariables` 调用。所有 API 仍要求服务端主线程上下文，失败时检查 `ErrorCode` 和 `Diagnostic`。
+
 该命令不会监听网络，也不会加载或保存正式游戏数据。它会在独立临时目录编译声明脚本，并通过真实 `Envir`、`NPCSegment` 和 `PlayerObject` 路径验证 TXT 整数/小数运算、比较、显示、P/D/M/N/S/I 生命周期、U/T 与 G/A 跨小退和服务停启保留、调用帧隔离、兼容热重载和冲突保旧。数据库往返由隔离的 SQLite 集成测试负责。
 
 成功时退出码为 `0`，并输出以 `VARIABLE_SMOKE_OK` 开头的结构化结果；其他退出码和 `VARIABLE_SMOKE_*_FAILED` 信息表示对应阶段失败。

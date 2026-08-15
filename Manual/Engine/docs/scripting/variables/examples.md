@@ -1,6 +1,6 @@
 # 完整使用示例
 
-- 功能状态：混合；VAR-01～05 的运行时和持久作用域示例可用
+- 功能状态：混合；VAR-01～06 的运行时、持久和复合变量示例可用
 - 首次支持版本：开发版 2026-08-15
 
 ## 在线与地图临时变量
@@ -98,3 +98,19 @@ SENDMSG 0 当前赛季倍率：<$FORMAT(GLOBAL.SeasonRate,2)>
 ```
 
 同一行会成员立即看到相同 WarScore；无行会人物执行 GUILD 命令会失败且不改值。GLOBAL 是服务器范围共享状态，正常重启后保留。
+
+## 临时奖励集合与小数几率
+
+```text
+MOV L$候选奖励 [金币,经验,装备]
+INSERTTOLIST L$候选奖励 元宝 1
+MOV D$奖励权重 {金币:50,元宝:12.5,装备:2.5}
+
+FORMULATION P.BaseRate + P.BonusRate P.FinalRate
+#IF
+CHANCE P.FinalRate PERCENT
+#ACT
+SENDMSG 6 命中几率，候选奖励：<$STR(L$候选奖励)>
+```
+
+L$/D$ 在人物小退时清除。`P.FinalRate=12.5` 配合 `PERCENT` 明确表示 12.5%，不会被解释为 1250% 或 0.125%。

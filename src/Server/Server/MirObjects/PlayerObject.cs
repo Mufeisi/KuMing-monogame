@@ -280,6 +280,8 @@ namespace Server.MirObjects
                          Server.Scripting.Variables.ScriptVariableScope.M,
                          Server.Scripting.Variables.ScriptVariableScope.N,
                          Server.Scripting.Variables.ScriptVariableScope.S,
+                         Server.Scripting.Variables.ScriptVariableScope.L,
+                         Server.Scripting.Variables.ScriptVariableScope.Dict,
                      })
             {
                 Envir.CSharpScripts.VariableModule.Reset(

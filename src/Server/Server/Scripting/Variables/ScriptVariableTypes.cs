@@ -28,6 +28,8 @@ namespace Server.Scripting.Variables
         Human,
         Guild,
         Global,
+        L,
+        Dict,
         Call
     }
 
@@ -72,13 +74,23 @@ namespace Server.Scripting.Variables
         private readonly long _integer;
         private readonly decimal _decimal;
         private readonly string _text;
+        private readonly string[] _list;
+        private readonly KeyValuePair<string, string>[] _dictionary;
 
-        private ScriptVariableValue(ScriptVariableKind kind, long integer, decimal decimalValue, string text)
+        private ScriptVariableValue(
+            ScriptVariableKind kind,
+            long integer,
+            decimal decimalValue,
+            string text,
+            string[] list = null,
+            KeyValuePair<string, string>[] dictionary = null)
         {
             Kind = kind;
             _integer = integer;
             _decimal = decimalValue;
             _text = text ?? string.Empty;
+            _list = list;
+            _dictionary = dictionary;
         }
 
         public ScriptVariableKind Kind { get; }
@@ -91,6 +103,12 @@ namespace Server.Scripting.Variables
         public string Text => Kind == ScriptVariableKind.String
             ? _text ?? string.Empty
             : throw new InvalidOperationException("变量不是字符串。");
+        public IReadOnlyList<string> List => Kind == ScriptVariableKind.List
+            ? _list ?? Array.Empty<string>()
+            : throw new InvalidOperationException("变量不是列表。");
+        public IReadOnlyList<KeyValuePair<string, string>> Dictionary => Kind == ScriptVariableKind.Dictionary
+            ? _dictionary ?? Array.Empty<KeyValuePair<string, string>>()
+            : throw new InvalidOperationException("变量不是字典。");
 
         public static ScriptVariableValue FromInteger(long value) =>
             new ScriptVariableValue(ScriptVariableKind.Integer, value, default, string.Empty);
@@ -105,6 +123,18 @@ namespace Server.Scripting.Variables
 
         public static ScriptVariableValue FromString(string value) =>
             new ScriptVariableValue(ScriptVariableKind.String, default, default, value ?? string.Empty);
+
+        public static ScriptVariableValue FromList(IEnumerable<string> values) =>
+            new ScriptVariableValue(
+                ScriptVariableKind.List, default, default, string.Empty,
+                (values ?? Array.Empty<string>()).Select(value => value ?? string.Empty).ToArray());
+
+        public static ScriptVariableValue FromDictionary(IEnumerable<KeyValuePair<string, string>> values) =>
+            new ScriptVariableValue(
+                ScriptVariableKind.Dictionary, default, default, string.Empty, null,
+                (values ?? Array.Empty<KeyValuePair<string, string>>())
+                .Select(pair => new KeyValuePair<string, string>(pair.Key ?? string.Empty, pair.Value ?? string.Empty))
+                .ToArray());
 
         public static bool TryParseDecimal(string text, out ScriptVariableValue value)
         {
@@ -135,8 +165,13 @@ namespace Server.Scripting.Variables
                     return _decimal.ToString("F" + decimalDigits.Value, CultureInfo.InvariantCulture);
                 case ScriptVariableKind.String:
                     return _text ?? string.Empty;
+                case ScriptVariableKind.List:
+                    return "[" + string.Join(",", _list ?? Array.Empty<string>()) + "]";
+                case ScriptVariableKind.Dictionary:
+                    return "{" + string.Join(",", (_dictionary ?? Array.Empty<KeyValuePair<string, string>>())
+                        .Select(pair => pair.Key + ":" + pair.Value)) + "}";
                 default:
-                    throw new InvalidOperationException("复合变量尚不支持直接格式化。");
+                    throw new InvalidOperationException("未知变量类型。");
             }
         }
 
@@ -149,6 +184,10 @@ namespace Server.Scripting.Variables
                 ScriptVariableKind.Integer => _integer == other._integer,
                 ScriptVariableKind.Decimal => _decimal == other._decimal,
                 ScriptVariableKind.String => string.Equals(_text, other._text, StringComparison.Ordinal),
+                ScriptVariableKind.List => (_list ?? Array.Empty<string>()).SequenceEqual(
+                    other._list ?? Array.Empty<string>(), StringComparer.Ordinal),
+                ScriptVariableKind.Dictionary => (_dictionary ?? Array.Empty<KeyValuePair<string, string>>()).SequenceEqual(
+                    other._dictionary ?? Array.Empty<KeyValuePair<string, string>>()),
                 _ => false
             };
 

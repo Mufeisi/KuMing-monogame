@@ -31,7 +31,11 @@ namespace Server.MirObjects
             string text,
             out ScriptVariableReference reference)
         {
-            return ScriptVariableReferenceParser.TryParse(text, out reference) &&
+            string source = (text ?? string.Empty).Trim();
+            int selector = source.LastIndexOf('[');
+            if (selector >= 0 && source.EndsWith("]", StringComparison.Ordinal))
+                source = source.Substring(0, selector);
+            return ScriptVariableReferenceParser.TryParse(source, out reference) &&
                    (reference.Scope == ScriptVariableScope.P ||
                     reference.Scope == ScriptVariableScope.D ||
                     reference.Scope == ScriptVariableScope.M ||
@@ -46,7 +50,9 @@ namespace Server.MirObjects
                     reference.Scope == ScriptVariableScope.A ||
                     reference.Scope == ScriptVariableScope.Human ||
                     reference.Scope == ScriptVariableScope.Guild ||
-                    reference.Scope == ScriptVariableScope.Global);
+                    reference.Scope == ScriptVariableScope.Global ||
+                    reference.Scope == ScriptVariableScope.L ||
+                    reference.Scope == ScriptVariableScope.Dict);
         }
 
         private bool TryFormatScriptVariable(PlayerObject player, string expression, out string text)
@@ -348,6 +354,20 @@ namespace Server.MirObjects
                     if (parts.Length < 2) return;
 
                     CheckList.Add(new NPCChecks(CheckType.Random, parts[1]));
+                    break;
+                case "CHANCE":
+                    if (parts.Length < 2 || !TryParseRuntimeVariableReference(parts[1], out _)) return;
+                    CheckList.Add(new NPCChecks(
+                        CheckType.VariableChance, parts[1], parts.Length > 2 ? parts[2] : "PERCENT"));
+                    break;
+                case "CHECKVARINLIST":
+                case "CHECKLISTALLDIGIT":
+                case "CHECKINDICT":
+                case "CHECKDICTALLDIGIT":
+                    if (parts.Length < 2 || !TryParseRuntimeVariableReference(parts[1], out _)) return;
+                    CheckList.Add(new NPCChecks(
+                        CheckType.VariableComposite,
+                        new[] { parts[0].ToUpperInvariant() }.Concat(parts.Skip(1)).ToArray()));
                     break;
 
                 case "GROUPLEADER":
@@ -1020,6 +1040,36 @@ namespace Server.MirObjects
                     if (match.Success)
                         acts.Add(new NPCActions(ActionType.Calc, "%" + parts[1], parts[2], valueToStore, parts[1].Insert(1, "-")));
 
+                    break;
+
+                case "FORMULATION":
+                    if (parts.Length < 3 || !TryParseRuntimeVariableReference(parts[^1], out _)) return;
+                    acts.Add(new NPCActions(
+                        ActionType.VariableFormulation,
+                        string.Join(" ", parts.Skip(1).Take(parts.Length - 2)),
+                        parts[^1]));
+                    break;
+
+                case "ADDTOLIST":
+                case "INSERTTOLIST":
+                case "REPLACELISTBYINDEX":
+                case "REMOVELISTBYINDEX":
+                case "REMOVELISTBYCONTENT":
+                case "REVERSELIST":
+                case "SORTLIST":
+                case "EXTRACTLIST":
+                case "GETLISTVARINDEX":
+                case "GETLISTVARCOUNT":
+                case "GETLISTMAXVAR":
+                case "GETLISTMINVAR":
+                case "GETDICTKEYCOUNT":
+                case "GETDICTITEMS":
+                case "GETDICTMAXVALUE":
+                case "GETDICTMINVALUE":
+                    if (parts.Length < 2 || !TryParseRuntimeVariableReference(parts[1], out _)) return;
+                    acts.Add(new NPCActions(
+                        ActionType.VariableComposite,
+                        new[] { parts[0].ToUpperInvariant() }.Concat(parts.Skip(1)).ToArray()));
                     break;
 
                 case "GIVEBUFF":
@@ -2528,6 +2578,41 @@ namespace Server.MirObjects
                                 MessageQueue.Enqueue($"[Variables][TXT] CHECK 失败：{result.ErrorCode} {result.Diagnostic}，页码：{Key}");
                         }
                         break;
+                    case CheckType.VariableChance:
+                        {
+                            if (player.NPCObjectID == 0)
+                            {
+                                failed = true;
+                                break;
+                            }
+                            if (!Enum.TryParse(param[1], true, out ScriptProbabilityUnit unit))
+                            {
+                                failed = true;
+                                MessageQueue.Enqueue($"[Variables][TXT] CHANCE 概率单位无效：{param[1]}，页码：{Key}");
+                                break;
+                            }
+                            var context = ScriptVariableContext.ForConversation(player, player.NPCObjectID, player.CurrentMap);
+                            ScriptVariableCheckResult result = Envir.CSharpScripts.VariableCommands.Chance(
+                                context, param[0], unit, Envir.Random.Next);
+                            failed = !result.Success || !result.Matched;
+                            if (!result.Success)
+                                MessageQueue.Enqueue($"[Variables][TXT] CHANCE 失败：{result.ErrorCode} {result.Diagnostic}，页码：{Key}");
+                        }
+                        break;
+                    case CheckType.VariableComposite:
+                        {
+                            if (player.NPCObjectID == 0)
+                            {
+                                failed = true;
+                                break;
+                            }
+                            var context = ScriptVariableContext.ForConversation(player, player.NPCObjectID, player.CurrentMap);
+                            ScriptCompositeResult result = EvaluateCompositeCheck(context, param);
+                            failed = !result.Success || !result.Matched;
+                            if (!result.Success)
+                                MessageQueue.Enqueue($"[Variables][TXT] {param[0]} 失败：{result.ErrorCode} {result.Diagnostic}，页码：{Key}");
+                        }
+                        break;
                     case CheckType.InGuild:
                         if (param[0].Length > 0)
                         {
@@ -3880,6 +3965,27 @@ namespace Server.MirObjects
                         }
                         break;
 
+                    case ActionType.VariableFormulation:
+                        {
+                            if (player.NPCObjectID == 0) return;
+                            var context = ScriptVariableContext.ForConversation(player, player.NPCObjectID, player.CurrentMap);
+                            ScriptVariableMutationResult result = Envir.CSharpScripts.VariableCommands.Formulate(
+                                context, param[0], param[1], Envir.Random.Next);
+                            if (!result.Success)
+                                MessageQueue.Enqueue($"[Variables][TXT] FORMULATION 失败：{result.ErrorCode} {result.Diagnostic}，页码：{Key}");
+                        }
+                        break;
+
+                    case ActionType.VariableComposite:
+                        {
+                            if (player.NPCObjectID == 0) return;
+                            var context = ScriptVariableContext.ForConversation(player, player.NPCObjectID, player.CurrentMap);
+                            ScriptVariableMutationResult result = ExecuteCompositeAction(context, param);
+                            if (!result.Success)
+                                MessageQueue.Enqueue($"[Variables][TXT] {param[0]} 失败：{result.ErrorCode} {result.Diagnostic}，页码：{Key}");
+                        }
+                        break;
+
                     case ActionType.GiveBuff:
                         {
                             if (!Enum.IsDefined(typeof(BuffType), param[0]))
@@ -4876,6 +4982,117 @@ namespace Server.MirObjects
                 default: throw new ArgumentException("无效的-比较运算符: {0}", op);
             }
         }
+
+        private static ScriptVariableMutationResult ExecuteCompositeAction(
+            in ScriptVariableContext context, IReadOnlyList<string> param)
+        {
+            ScriptVariableCommands commands = Envir.CSharpScripts.VariableCommands;
+            ScriptCompositeVariableCommands composite = commands.Composites;
+            string command = param.Count == 0 ? string.Empty : param[0].ToUpperInvariant();
+            try
+            {
+                switch (command)
+                {
+                    case "ADDTOLIST" when param.Count >= 3:
+                        return commands.Mutate(context, param[1], "INC", param[2]);
+                    case "INSERTTOLIST" when param.Count >= 4 && TryInteger(param[3], out int insertIndex):
+                        return composite.InsertList(context, param[1], param[2], insertIndex);
+                    case "REPLACELISTBYINDEX" when param.Count >= 4:
+                        return commands.Mutate(context, $"{param[1]}[{param[3]}]", "MOV", param[2]);
+                    case "REMOVELISTBYINDEX" when param.Count >= 3 && TryInteger(param[2], out int removeIndex):
+                        return composite.RemoveListByIndex(context, param[1], removeIndex);
+                    case "REMOVELISTBYCONTENT" when param.Count >= 3:
+                        return composite.RemoveListByContent(
+                            context, param[1], param[2], param.Count < 4 || param[3] == "1");
+                    case "REVERSELIST" when param.Count >= 3:
+                        return composite.ReverseList(context, param[1], param[2]);
+                    case "SORTLIST" when param.Count >= 3:
+                        return composite.SortList(
+                            context, param[1], param[2],
+                            param.Count > 3 && param[3] == "1",
+                            param.Count <= 4 || param[4] != "1");
+                    case "EXTRACTLIST" when param.Count >= 5 &&
+                        TryInteger(param[3], out int start) && TryInteger(param[4], out int end) &&
+                        (param.Count <= 5 || TryInteger(param[5], out _)):
+                        return composite.SliceList(
+                            context, param[1], param[2], start, end,
+                            param.Count > 5 ? int.Parse(param[5], CultureInfo.InvariantCulture) : 1);
+                    case "GETLISTVARINDEX" when param.Count >= 4:
+                        return StoreCompositeNumber(commands, context,
+                            composite.FindListIndex(context, param[1], param[2]), param[3]);
+                    case "GETLISTVARCOUNT" when param.Count >= 3:
+                    case "GETDICTKEYCOUNT" when param.Count >= 3:
+                        return StoreCompositeNumber(commands, context, composite.Count(context, param[1]), param[2]);
+                    case "GETLISTMAXVAR" when param.Count >= 3:
+                    case "GETLISTMINVAR" when param.Count >= 3:
+                        return StoreCompositeValue(commands, context,
+                            composite.NumericExtremum(context, param[1], command == "GETLISTMAXVAR"), param[2]);
+                    case "GETDICTITEMS" when param.Count >= 4:
+                        return composite.DictionaryItems(context, param[1], param[3], param[2] == "1");
+                    case "GETDICTMAXVALUE" when param.Count >= 4:
+                    case "GETDICTMINVALUE" when param.Count >= 4:
+                        {
+                            ScriptCompositeResult extremum = composite.NumericExtremum(
+                                context, param[1], command == "GETDICTMAXVALUE");
+                            if (!extremum.Success) return CompositeFailure(extremum);
+                            ScriptVariableMutationResult key = commands.Mutate(
+                                context, param[2], "MOV", extremum.Diagnostic);
+                            return key.Success
+                                ? commands.Mutate(context, param[3], "MOV", extremum.Value.Format())
+                                : key;
+                        }
+                    default:
+                        return new ScriptVariableMutationResult(false, ScriptVariableErrorCode.InvalidExpression,
+                            default, default, "复合变量命令参数不足或格式无效。");
+                }
+            }
+            catch (FormatException)
+            {
+                return new ScriptVariableMutationResult(false, ScriptVariableErrorCode.InvalidExpression,
+                    default, default, "复合变量命令包含无效整数参数。");
+            }
+        }
+
+        private static ScriptCompositeResult EvaluateCompositeCheck(
+            in ScriptVariableContext context, IReadOnlyList<string> param)
+        {
+            ScriptCompositeVariableCommands composite = Envir.CSharpScripts.VariableCommands.Composites;
+            if (param.Count < 2)
+                return new ScriptCompositeResult(false, ScriptVariableErrorCode.InvalidExpression,
+                    default, 0, false, "复合变量检查参数不足。");
+            return param[0].ToUpperInvariant() switch
+            {
+                "CHECKVARINLIST" when param.Count >= 3 => composite.Contains(context, param[1], param[2]),
+                "CHECKLISTALLDIGIT" => composite.AllNumeric(context, param[1]),
+                "CHECKINDICT" when param.Count >= 3 => composite.Contains(
+                    context, param[1], param[2], param.Count > 3 && param[3] == "1"),
+                "CHECKDICTALLDIGIT" => composite.AllNumeric(context, param[1]),
+                _ => new ScriptCompositeResult(false, ScriptVariableErrorCode.InvalidExpression,
+                    default, 0, false, "复合变量检查命令无效。")
+            };
+        }
+
+        private static ScriptVariableMutationResult StoreCompositeNumber(
+            ScriptVariableCommands commands,
+            in ScriptVariableContext context,
+            ScriptCompositeResult result,
+            string destination) => result.Success
+                ? commands.Mutate(context, destination, "MOV", result.Number.ToString(CultureInfo.InvariantCulture))
+                : CompositeFailure(result);
+
+        private static ScriptVariableMutationResult StoreCompositeValue(
+            ScriptVariableCommands commands,
+            in ScriptVariableContext context,
+            ScriptCompositeResult result,
+            string destination) => result.Success
+                ? commands.Mutate(context, destination, "MOV", result.Value.Format())
+                : CompositeFailure(result);
+
+        private static ScriptVariableMutationResult CompositeFailure(ScriptCompositeResult result) =>
+            new ScriptVariableMutationResult(false, result.ErrorCode, default, default, result.Diagnostic);
+
+        private static bool TryInteger(string text, out int value) =>
+            int.TryParse(text, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out value);
 
         public static int Calculate(string op, int left, int right)
         {

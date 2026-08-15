@@ -11,11 +11,16 @@ namespace Server.Scripting.Variables
 
             string value = text.Trim();
             if (value.Length > 2 && value[1] == '$' &&
-                (value[0] == 'N' || value[0] == 'n' || value[0] == 'S' || value[0] == 's'))
+                (value[0] == 'N' || value[0] == 'n' || value[0] == 'S' || value[0] == 's' ||
+                 value[0] == 'L' || value[0] == 'l' || value[0] == 'D' || value[0] == 'd'))
             {
-                ScriptVariableScope extendedScope = value[0] == 'N' || value[0] == 'n'
-                    ? ScriptVariableScope.N
-                    : ScriptVariableScope.S;
+                ScriptVariableScope extendedScope = char.ToUpperInvariant(value[0]) switch
+                {
+                    'N' => ScriptVariableScope.N,
+                    'S' => ScriptVariableScope.S,
+                    'L' => ScriptVariableScope.L,
+                    _ => ScriptVariableScope.Dict
+                };
                 try
                 {
                     reference = ScriptVariableReference.Named(extendedScope, value.Substring(2));
@@ -100,11 +105,15 @@ namespace Server.Scripting.Variables
     public sealed class ScriptVariableCommands
     {
         private readonly IScriptVariableModule _module;
+        private readonly ScriptCompositeVariableCommands _composites;
 
         public ScriptVariableCommands(IScriptVariableModule module)
         {
             _module = module ?? throw new ArgumentNullException(nameof(module));
+            _composites = new ScriptCompositeVariableCommands(_module);
         }
+
+        public ScriptCompositeVariableCommands Composites => _composites;
 
         public ScriptVariableMutationResult Mutate(
             in ScriptVariableContext context,
@@ -112,6 +121,8 @@ namespace Server.Scripting.Variables
             string command,
             string operandText)
         {
+            if (_composites.IsCompositeReference(referenceText))
+                return _composites.Mutate(context, referenceText, command, operandText);
             if (!ScriptVariableReferenceParser.TryParse(referenceText, out var reference))
                 return MutationFailure(ScriptVariableErrorCode.UnknownReference, "变量引用无效。", default);
             if (!TryMapOperation(command, out var operation))
@@ -165,6 +176,18 @@ namespace Server.Scripting.Variables
             string referenceText,
             int? decimalDigits = null)
         {
+            if (_composites.IsCompositeReference(referenceText))
+            {
+                if (decimalDigits.HasValue)
+                    return new ScriptVariableTextResult(false, ScriptVariableErrorCode.TypeMismatch,
+                        string.Empty, "复合变量不支持小数位格式化。");
+                ScriptCompositeResult composite = _composites.Read(context, referenceText);
+                return composite.Success
+                    ? new ScriptVariableTextResult(true, ScriptVariableErrorCode.None,
+                        composite.Value.Format(), string.Empty)
+                    : new ScriptVariableTextResult(false, composite.ErrorCode,
+                        string.Empty, composite.Diagnostic);
+            }
             if (!ScriptVariableReferenceParser.TryParse(referenceText, out var reference))
                 return new ScriptVariableTextResult(false, ScriptVariableErrorCode.UnknownReference, string.Empty, "变量引用无效。");
 
@@ -200,6 +223,70 @@ namespace Server.Scripting.Variables
             if (!TryCompare(current.Value, comparison, operand, out var matched))
                 return CheckFailure(ScriptVariableErrorCode.InvalidExpression, "比较操作符或类型无效。");
             return new ScriptVariableCheckResult(true, matched, ScriptVariableErrorCode.None, string.Empty);
+        }
+
+        public ScriptVariableMutationResult Formulate(
+            in ScriptVariableContext context,
+            string expression,
+            string destinationText,
+            Func<int, int, int> random = null)
+        {
+            if (!ScriptVariableReferenceParser.TryParse(destinationText, out var destination))
+                return MutationFailure(ScriptVariableErrorCode.UnknownReference, "公式目标变量引用无效。", default);
+            ScriptVariableReadResult target = _module.Read(context, destination);
+            if (!target.Success) return MutationFailure(target.ErrorCode, target.Diagnostic, target.Value);
+            if (target.Value.Kind != ScriptVariableKind.Integer && target.Value.Kind != ScriptVariableKind.Decimal)
+                return MutationFailure(ScriptVariableErrorCode.TypeMismatch, "公式目标必须是整数或小数变量。", target.Value);
+
+            ScriptVariableContext expressionContext = context;
+            var parser = new ScriptDecimalExpressionParser(
+                expression,
+                name =>
+                {
+                    if (!ScriptVariableReferenceParser.TryParse(name, out var reference))
+                        return ScriptVariableResult.Fail(ScriptVariableErrorCode.UnknownReference, $"公式变量引用无效：{name}");
+                    ScriptVariableReadResult read = _module.Read(expressionContext, reference);
+                    return read.Success
+                        ? ScriptVariableResult.Ok(read.Value)
+                        : ScriptVariableResult.Fail(read.ErrorCode, read.Diagnostic);
+                },
+                random ?? Random.Shared.Next);
+            ScriptVariableResult evaluated = parser.Parse();
+            if (!evaluated.Success)
+                return MutationFailure(evaluated.ErrorCode, evaluated.Diagnostic, target.Value);
+
+            ScriptVariableValue result = evaluated.Value;
+            if (target.Value.Kind == ScriptVariableKind.Integer)
+            {
+                if (result.Decimal != decimal.Truncate(result.Decimal) ||
+                    result.Decimal < long.MinValue || result.Decimal > long.MaxValue)
+                    return MutationFailure(ScriptVariableErrorCode.TypeMismatch,
+                        "公式结果含小数；请使用 Decimal 目标或先显式取整。", target.Value);
+                result = ScriptVariableValue.FromInteger(decimal.ToInt64(result.Decimal));
+            }
+            return _module.Mutate(context, ScriptVariableMutation.Set(destination, result));
+        }
+
+        public ScriptVariableCheckResult Chance(
+            in ScriptVariableContext context,
+            string referenceText,
+            ScriptProbabilityUnit unit = ScriptProbabilityUnit.Percent,
+            Func<int, int, int> random = null)
+        {
+            if (!ScriptVariableReferenceParser.TryParse(referenceText, out var reference))
+                return CheckFailure(ScriptVariableErrorCode.UnknownReference, "概率变量引用无效。");
+            ScriptVariableReadResult read = _module.Read(context, reference);
+            if (!read.Success) return CheckFailure(read.ErrorCode, read.Diagnostic);
+            decimal chance = read.Value.Kind switch
+            {
+                ScriptVariableKind.Integer => read.Value.Integer,
+                ScriptVariableKind.Decimal => read.Value.Decimal,
+                _ => decimal.MinValue
+            };
+            if (chance == decimal.MinValue)
+                return CheckFailure(ScriptVariableErrorCode.TypeMismatch, "概率变量必须是整数或小数。");
+            int roll = (random ?? Random.Shared.Next)(0, ScriptVariableProbability.Resolution);
+            return ScriptVariableProbability.Check(chance, unit, roll);
         }
 
         private static bool TryMapOperation(string command, out ScriptVariableOperation operation)

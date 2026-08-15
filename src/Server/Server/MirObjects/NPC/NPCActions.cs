@@ -59,6 +59,8 @@
         Calc,
         VariableMutate,
         VariableConvert,
+        VariableFormulation,
+        VariableComposite,
         GiveBuff,
         RemoveBuff,
         AddToGuild,

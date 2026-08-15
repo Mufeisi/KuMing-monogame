@@ -32,6 +32,8 @@
         CheckRange,
         Check,
         Variable,
+        VariableChance,
+        VariableComposite,
         CheckHum,
         CheckMon,
         CheckExactMon,

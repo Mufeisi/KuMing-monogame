@@ -160,6 +160,35 @@ namespace Server.Scripting
             return Envir.CSharpScripts.VariableCommands.Check(context, reference, comparison, operand);
         }
 
+        public ScriptVariableMutationResult FormulateVariable(
+            PlayerObject player,
+            NpcPageCall call,
+            string expression,
+            string destination)
+        {
+            if (!TryCreateConversationVariableContext(player, call, out var context, out var diagnostic))
+                return new ScriptVariableMutationResult(
+                    false, ScriptVariableErrorCode.ContextUnavailable, default, default, diagnostic);
+            return Envir.CSharpScripts.VariableCommands.Formulate(
+                context, expression, destination, Envir.Random.Next);
+        }
+
+        public ScriptVariableCheckResult ChanceVariable(
+            PlayerObject player,
+            NpcPageCall call,
+            string reference,
+            ScriptProbabilityUnit unit = ScriptProbabilityUnit.Percent)
+        {
+            if (!TryCreateConversationVariableContext(player, call, out var context, out var diagnostic))
+                return new ScriptVariableCheckResult(
+                    false, false, ScriptVariableErrorCode.ContextUnavailable, diagnostic);
+            return Envir.CSharpScripts.VariableCommands.Chance(
+                context, reference, unit, Envir.Random.Next);
+        }
+
+        public ScriptCompositeVariableCommands CompositeVariables =>
+            Envir.CSharpScripts.VariableCommands.Composites;
+
         public ScriptVariableResetResult ResetConversationVariables(PlayerObject player, NpcPageCall call = null)
         {
             if (!TryCreateConversationVariableContext(player, call, out var context, out var diagnostic))
