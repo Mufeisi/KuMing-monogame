@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="500" viewBox="0 0 1080 500" role="img" aria-labelledby="title desc">
+  <title id="title">变量作用域与生命周期</title>
+  <desc id="desc">从 NPC 对话、角色连接、地图停留、在线会话到人物、行会和服务器持久变量的生命周期示意图。</desc>
+  <defs>
+    <style>
+      .bg{fill:#f7f9fc}.lane{fill:#fff;stroke:#52677f;stroke-width:2}.temp{fill:#d8ecff}.persist{fill:#dff4e5}.title{font:700 24px 'Microsoft YaHei',sans-serif;fill:#172b4d}.text{font:18px 'Microsoft YaHei',sans-serif;fill:#172b4d}.small{font:15px 'Microsoft YaHei',sans-serif;fill:#42526e}.arrow{stroke:#52677f;stroke-width:3;marker-end:url(#head)}
+    </style>
+    <marker id="head" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path d="M0,0 L10,4 L0,8 z" fill="#52677f"/></marker>
+  </defs>
+  <rect class="bg" width="1080" height="500"/>
+  <text class="title" x="40" y="45">变量声明与具体值分离</text>
+  <rect class="lane" x="40" y="75" width="1000" height="80" rx="12"/>
+  <text class="text" x="70" y="110">服务器启动 / 脚本热重载</text>
+  <text class="small" x="70" y="138">统一注册 P、D、M、N、I、G、U、J、HUMAN、GUILD、GLOBAL 的名称、类型和默认值</text>
+  <line class="arrow" x1="540" y1="155" x2="540" y2="195"/>
+  <rect class="temp" x="40" y="210" width="230" height="105" rx="12" stroke="#52677f"/>
+  <text class="text" x="65" y="245">短生命周期</text>
+  <text class="small" x="65" y="275">P 对话 / D 连接</text>
+  <text class="small" x="65" y="297">M 地图 / N 在线</text>
+  <rect class="temp" x="295" y="210" width="230" height="105" rx="12" stroke="#52677f"/>
+  <text class="text" x="320" y="245">服务器运行期</text>
+  <text class="small" x="320" y="275">I 进程变量</text>
+  <text class="small" x="320" y="297">重启时清除</text>
+  <rect class="persist" x="550" y="210" width="230" height="105" rx="12" stroke="#52677f"/>
+  <text class="text" x="575" y="245">私人持久</text>
+  <text class="small" x="575" y="275">U / J / HUMAN</text>
+  <text class="small" x="575" y="297">按人物延迟加载</text>
+  <rect class="persist" x="805" y="210" width="235" height="105" rx="12" stroke="#52677f"/>
+  <text class="text" x="830" y="245">共享持久</text>
+  <text class="small" x="830" y="275">G / GUILD / GLOBAL</text>
+  <text class="small" x="830" y="297">启动或所有者加载</text>
+  <line class="arrow" x1="155" y1="315" x2="155" y2="370"/>
+  <line class="arrow" x1="410" y1="315" x2="410" y2="370"/>
+  <line class="arrow" x1="665" y1="315" x2="665" y2="370"/>
+  <line class="arrow" x1="922" y1="315" x2="922" y2="370"/>
+  <rect class="lane" x="40" y="385" width="1000" height="75" rx="12"/>
+  <text class="text" x="70" y="420">同一变量模块执行 MOV / INC / DEC / MUL / DIV / CHECK / $STR / $FORMAT</text>
+  <text class="small" x="70" y="447">固定编号保持整数兼容；命名 Decimal 使用精确十进制；失败不改变旧值</text>
+</svg>

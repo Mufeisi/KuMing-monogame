@@ -1,0 +1,91 @@
+site_name: LyoCrystal 引擎说明书
+site_description: LyoCrystal 服务端、脚本、功能系统和运维的产品说明书
+site_author: LyoCrystal 项目
+copyright: LyoCrystal 项目说明书
+docs_dir: docs
+site_dir: site
+use_directory_urls: false
+strict: true
+
+theme:
+  name: material
+  language: zh
+  logo: assets/brand/lyocrystal-mark.svg
+  favicon: assets/brand/lyocrystal-mark.svg
+  features:
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.sections
+    - navigation.expand
+    - navigation.indexes
+    - navigation.path
+    - navigation.top
+    - navigation.footer
+    - toc.follow
+    - search.suggest
+    - search.highlight
+    - search.share
+    - content.code.copy
+    - content.tabs.link
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: blue grey
+      accent: blue
+      toggle:
+        icon: material/brightness-7
+        name: 切换到深色模式
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: blue grey
+      accent: light blue
+      toggle:
+        icon: material/brightness-4
+        name: 切换到浅色模式
+
+plugins:
+  - search:
+      lang: zh
+      jieba_dict_user: search-dictionary.txt
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+
+extra_css:
+  - assets/stylesheets/extra.css
+
+extra:
+  status:
+    planned: 规划中
+    experimental: 实验性
+    implemented: 已实现
+
+nav:
+  - 首页: index.md
+  - 快速开始:
+      - 阅读与查询说明书: getting-started/index.md
+  - 脚本开发:
+      - 脚本开发入口: scripting/index.md
+      - 变量系统:
+          - 变量系统概览: scripting/variables/overview.md
+          - 作用域与生命周期: scripting/variables/scopes.md
+          - 声明、初始化与热重载: scripting/variables/declarations.md
+          - 命名小数变量: scripting/variables/decimal.md
+          - 操作与显示命令: scripting/variables/commands.md
+          - 完整使用示例: scripting/variables/examples.md
+          - 错误与排查: scripting/variables/errors.md
+  - 参考:
+      - 功能状态: reference/feature-status.md
+  - 说明书维护:
+      - 功能页面模板: contributing/page-template.md

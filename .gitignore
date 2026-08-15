@@ -121,3 +121,6 @@ nunit-*.xml
 
 # 本地代码图分析缓存，仅用于临时审查。
 /graphify-out/
+
+# 引擎说明书静态站点构建产物；内容事实源位于 Manual/Engine/docs/。
+/Manual/Engine/site/

@@ -1,0 +1,154 @@
+:root {
+  --lyo-status-planned: #8a5a00;
+  --lyo-brand-900: #102a43;
+  --lyo-brand-700: #1f4f78;
+  --lyo-brand-500: #2f7ebc;
+  --lyo-accent: #49a6d9;
+  --lyo-surface: #f6f9fc;
+}
+
+.md-header {
+  background: linear-gradient(105deg, var(--lyo-brand-900), var(--lyo-brand-700));
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.08), 0 6px 20px rgba(16, 42, 67, 0.18);
+}
+
+.md-tabs {
+  background: var(--lyo-brand-900);
+}
+
+.md-grid {
+  max-width: 92rem;
+}
+
+.md-content__inner {
+  max-width: 56rem;
+  padding-bottom: 4rem;
+}
+
+.md-typeset h1 {
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--lyo-brand-900);
+}
+
+[data-md-color-scheme="slate"] .md-typeset h1 {
+  color: #e6f4ff;
+}
+
+.md-typeset h2 {
+  margin-top: 2.2em;
+  padding-bottom: 0.35em;
+  border-bottom: 1px solid var(--md-default-fg-color--lightest);
+}
+
+.md-typeset table:not([class]) th {
+  white-space: nowrap;
+  background: color-mix(in srgb, var(--lyo-brand-500) 9%, transparent);
+}
+
+.md-typeset img {
+  border: 1px solid var(--md-default-fg-color--lightest);
+  border-radius: 0.35rem;
+}
+
+.md-typeset code {
+  border-radius: 0.25rem;
+}
+
+.lyo-hero {
+  margin: -0.8rem 0 2rem;
+  padding: 2.6rem 2.8rem;
+  border: 1px solid rgba(47, 126, 188, 0.16);
+  border-radius: 1rem;
+  background:
+    radial-gradient(circle at 92% 18%, rgba(73, 166, 217, 0.22), transparent 32%),
+    linear-gradient(135deg, #f7fbff 0%, #edf6fc 100%);
+  box-shadow: 0 18px 45px rgba(16, 42, 67, 0.08);
+}
+
+.lyo-hero h1 {
+  margin-top: 0;
+  font-size: clamp(2rem, 4vw, 3.25rem);
+}
+
+.lyo-hero > p {
+  max-width: 48rem;
+  font-size: 1.05rem;
+  color: #334e68;
+}
+
+[data-md-color-scheme="slate"] .lyo-hero {
+  border-color: rgba(126, 196, 235, 0.18);
+  background:
+    radial-gradient(circle at 92% 18%, rgba(73, 166, 217, 0.18), transparent 34%),
+    linear-gradient(135deg, #172c3d 0%, #102432 100%);
+}
+
+[data-md-color-scheme="slate"] .lyo-hero > p {
+  color: #c4d7e6;
+}
+
+.lyo-card-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  margin: 1.4rem 0 2.2rem;
+}
+
+.lyo-card {
+  display: flex;
+  min-height: 7rem;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 1.15rem 1.25rem;
+  color: inherit !important;
+  text-decoration: none;
+  border: 1px solid var(--md-default-fg-color--lightest);
+  border-radius: 0.75rem;
+  background: var(--md-default-bg-color);
+  box-shadow: 0 5px 18px rgba(16, 42, 67, 0.06);
+  transition: transform 150ms ease, border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.lyo-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--lyo-accent);
+  box-shadow: 0 12px 28px rgba(16, 42, 67, 0.12);
+}
+
+.lyo-card strong {
+  color: var(--lyo-brand-700);
+  font-size: 1.05rem;
+}
+
+[data-md-color-scheme="slate"] .lyo-card strong {
+  color: #8ed2f4;
+}
+
+.lyo-card span {
+  color: var(--md-default-fg-color--light);
+  line-height: 1.65;
+}
+
+@media screen and (max-width: 52rem) {
+  .lyo-hero {
+    padding: 1.7rem 1.4rem;
+  }
+
+  .lyo-card-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media print {
+  .md-header,
+  .md-sidebar,
+  .md-footer {
+    display: none;
+  }
+
+  .lyo-hero,
+  .lyo-card {
+    box-shadow: none;
+  }
+}

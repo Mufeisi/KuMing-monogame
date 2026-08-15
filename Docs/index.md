@@ -2,7 +2,7 @@
 
 - 状态：已接受
 - 负责人：项目所有者
-- 最后复核日期：2026-08-14
+- 最后复核日期：2026-08-15
 - 目的：提供文档入口与事实源导航，不复制动态开发状态
 
 ## 当前状态入口
@@ -24,6 +24,7 @@ LEG-09、LEG-10 与传奇类参考源码吸收路线均已完成并转入维护�
 | [`../README.md`](../README.md) | 项目简介、构建与资源入口 | 快速开始 |
 | [`../AGENTS.md`](../AGENTS.md) | Agent 执行铁律 | 全仓库执行约束 |
 | [`governance/工程开发规范.md`](governance/工程开发规范.md) | 标准开发生命周期与质量门禁 | 后续工程工作方式 |
+| [`governance/引擎说明书维护规范.md`](governance/引擎说明书维护规范.md) | 产品说明书的信息架构、页面标准、中文搜索和功能完成门禁 | 引擎说明书维护方式 |
 | [`governance/工程治理实施路线.md`](governance/工程治理实施路线.md) | 从当前现状达到工程规范的分阶段任务 | 工程治理动态状态唯一事实源 |
 | [`guides/开发者指南.md`](guides/开发者指南.md) | 环境、构建、测试、调试和产物入口 | 开发者操作事实源 |
 | [`guides/模块地图.md`](guides/模块地图.md) | 子系统职责、依赖方向、接缝和测试入口 | 模块导航与变更定位 |
@@ -53,6 +54,8 @@ LEG-09、LEG-10 与传奇类参考源码吸收路线均已完成并转入维护�
 | 启动器/微端 | [`design/launcher/`](design/launcher/)、[`requirements/`](requirements/) | 产品设计、实施规格和候选路线 |
 | 桌面作者工具 GUI | [`design/launcher/桌面作者工具GUI设计规范.md`](design/launcher/桌面作者工具GUI设计规范.md) | 启动器编辑器及后续桌面作者工具的信息架构、设计令牌、交互、无障碍与验收唯一规范 |
 | 自定义游戏 GUI | [`design/custom-gui/游戏GUI运行描述规范.md`](design/custom-gui/游戏GUI运行描述规范.md)、[`design/custom-gui/游戏GUI动态协议规范.md`](design/custom-gui/游戏GUI动态协议规范.md) | 静态运行描述、动态协议、上限和失败关闭语义 |
+| 脚本变量系统 | [`design/scripting/翎风变量系统兼容实施规格.md`](design/scripting/翎风变量系统兼容实施规格.md) | 翎风变量行为盘点、LyoCrystal 兼容设计、分阶段进度、迁移与验证门禁 |
+| 引擎用户说明书 | [`../Manual/Engine/README.md`](../Manual/Engine/README.md)、[`governance/引擎说明书维护规范.md`](governance/引擎说明书维护规范.md) | Material for MkDocs 源工程、中文搜索、图文页面、离线构建和功能同步门禁 |
 | 构建/Android | [`runbooks/build/`](runbooks/build/) | 平台构建与打包专项说明 |
 
 ## 证据与历史
