@@ -23,6 +23,13 @@ namespace Server.Scripting.Variables
                 throw new ArgumentException("G 作用域只允许 Integer 或 Decimal；全局持久字符串请使用 A。", nameof(kind));
             if (scope == ScriptVariableScope.A && kind != ScriptVariableKind.String)
                 throw new ArgumentException("A 作用域只允许 String；全局持久数值请使用 G。", nameof(kind));
+            if (scope == ScriptVariableScope.J && kind == ScriptVariableKind.String)
+                throw new ArgumentException("J 作用域只允许 Integer 或 Decimal；每日字符串请使用 Z。", nameof(kind));
+            if (scope == ScriptVariableScope.Z && kind != ScriptVariableKind.String)
+                throw new ArgumentException("Z 作用域只允许 String；每日数值请使用 J。", nameof(kind));
+            if ((scope == ScriptVariableScope.Human || scope == ScriptVariableScope.Guild ||
+                 scope == ScriptVariableScope.Global) && kind == ScriptVariableKind.String)
+                throw new ArgumentException($"{scope} 自定义持久作用域只允许 Integer 或 Decimal。", nameof(kind));
 
             Scope = scope;
             Key = normalizedKey;

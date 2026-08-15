@@ -1,6 +1,6 @@
 # 完整使用示例
 
-- 功能状态：混合；运行时作用域、U/T 私人持久和 G/A 全局持久示例可用
+- 功能状态：混合；VAR-01～05 的运行时和持久作用域示例可用
 - 首次支持版本：开发版 2026-08-15
 
 ## 在线与地图临时变量
@@ -76,3 +76,25 @@ SENDMSG 6 本次预览几率：<$FORMAT(P.PreviewRate, 2)>%
 ```
 
 关闭或切换 NPC 后，`P.PreviewRate` 自动清除；`U.DropRate` 和 `G.EventRate` 保留。
+
+## 每日次数与永久累计
+
+```text
+CHECK J0 > 0
+DEC J0 1
+INC HUMAN.LifetimeRuns 1
+SENDMSG 6 今日剩余：<$STR(J0)>，永久完成：<$STR(HUMAN.LifetimeRuns)>
+```
+
+J0 在配置的每日边界清除；HUMAN.LifetimeRuns 永久保留。不要在登录 QM 中用 `MOV J0` 重设次数，后续条件初始化能力开放前应由活动逻辑明确发放。
+
+## 行会与赛季倍率
+
+```text
+INC GUILD.WarScore 10
+MOV GLOBAL.SeasonRate 1.25
+SENDMSG 6 行会积分：<$STR(GUILD.WarScore)>
+SENDMSG 0 当前赛季倍率：<$FORMAT(GLOBAL.SeasonRate,2)>
+```
+
+同一行会成员立即看到相同 WarScore；无行会人物执行 GUILD 命令会失败且不改值。GLOBAL 是服务器范围共享状态，正常重启后保留。

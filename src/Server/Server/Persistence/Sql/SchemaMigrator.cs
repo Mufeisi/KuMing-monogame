@@ -1124,6 +1124,25 @@ namespace Server.Persistence.Sql
                         "PRIMARY KEY(variable_namespace, variable_key)" +
                         ")",
                     ]),
+                new SchemaMigration(
+                    version: 20,
+                    description: "每日、自定义人物与行会持久变量",
+                    statements:
+                    [
+                        "CREATE TABLE IF NOT EXISTS guild_script_variables (" +
+                        "guild_id BIGINT NOT NULL, " +
+                        "variable_namespace VARCHAR(16) NOT NULL, " +
+                        "variable_key VARCHAR(96) NOT NULL, " +
+                        "value_kind INTEGER NOT NULL, " +
+                        "integer_value BIGINT NOT NULL DEFAULT 0, " +
+                        "decimal_text VARCHAR(64) NOT NULL DEFAULT '', " +
+                        "updated_utc_ms BIGINT NOT NULL, " +
+                        "PRIMARY KEY(guild_id, variable_namespace, variable_key)" +
+                        ")",
+                        "CREATE INDEX guild_script_variables_ix_rank ON guild_script_variables(variable_namespace, variable_key, integer_value)",
+                        "CREATE INDEX character_script_variables_ix_rank ON character_script_variables(variable_namespace, variable_key, integer_value)",
+                        "CREATE INDEX server_script_variables_ix_rank ON server_script_variables(variable_namespace, variable_key, integer_value)",
+                    ]),
             };
         }
     }

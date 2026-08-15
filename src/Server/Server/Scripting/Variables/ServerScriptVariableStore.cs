@@ -158,12 +158,15 @@ namespace Server.Scripting.Variables
 
         private static void Validate(ScriptVariableScope scope, string key, ScriptVariableValue value)
         {
-            if (scope != ScriptVariableScope.G && scope != ScriptVariableScope.A)
+            if (scope != ScriptVariableScope.G && scope != ScriptVariableScope.A &&
+                scope != ScriptVariableScope.Global)
                 throw new InvalidDataException($"服务器持久作用域无效：{scope}。");
             if (scope == ScriptVariableScope.G && value.Kind == ScriptVariableKind.String)
                 throw new InvalidDataException("G 变量只能保存整数或小数。");
             if (scope == ScriptVariableScope.A && value.Kind != ScriptVariableKind.String)
                 throw new InvalidDataException("A 变量只能保存字符串。");
+            if (scope == ScriptVariableScope.Global && value.Kind == ScriptVariableKind.String)
+                throw new InvalidDataException("GLOBAL 变量只能保存整数或小数。");
         }
 
         private static string NormalizeKey(string key)

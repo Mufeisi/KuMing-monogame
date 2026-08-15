@@ -1,6 +1,6 @@
 # C# 脚本变量 API
 
-- 功能状态：实验性（当前支持 P/D/M/N/S/I/Call/U/T/G/A）
+- 功能状态：实验性（当前支持 P/D/M/N/S/I/Call/U/T/G/A/J/Z/HUMAN/GUILD/GLOBAL）
 - 首次支持版本：开发版 2026-08-15
 
 ## 注册声明
@@ -40,7 +40,7 @@ if (!moved.Success || !increased.Success)
 
 `command` 支持 `MOV`、`INC`、`DEC`、`MUL`、`DIV` 和 `MOD`。操作数可以是字面量，也可以是另一个变量引用。
 
-同一组 API 也可直接使用 `D0`、`M0`、`N0`、`S0`、`I0`、`U0`、`T0`、`G0`、`A0`、`N$名称`、`S$名称` 和已声明的 `Call.名称`。非 P 变量不要求存在 NPC 对话对象；M 必须有当前地图，U/T 必须有角色，G/A 可使用服务器上下文，Call 必须传入当前 `NpcPageCall`。
+同一组 API 也可直接使用 `D0`、`M0`、`N0`、`S0`、`I0`、`U0`、`T0`、`G0`、`A0`、`J0`、`Z0`、`N$名称`、`S$名称` 及已声明的 HUMAN/GUILD/GLOBAL/Call。M 必须有当前地图，U/T/J/Z/HUMAN 必须有角色，GUILD 必须有行会，G/A/GLOBAL 可使用服务器上下文，Call 必须传入当前 `NpcPageCall`。
 
 ## 比较和显示
 

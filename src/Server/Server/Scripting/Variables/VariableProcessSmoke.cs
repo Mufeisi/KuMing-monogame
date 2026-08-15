@@ -93,6 +93,10 @@ namespace Server.Scripting.Variables
                 actions.ParseAct(actions.ActList, "MOV G.EventRate 2.5");
                 actions.ParseAct(actions.ActList, "MOV A0 固定公告");
                 actions.ParseAct(actions.ActList, "MOV A.Notice 全服公告");
+                actions.ParseAct(actions.ActList, "MOV J0 77");
+                actions.ParseAct(actions.ActList, "MOV Z0 今日文本");
+                actions.ParseAct(actions.ActList, "MOV HUMAN.Lifetime 8.5");
+                actions.ParseAct(actions.ActList, "MOV GLOBAL.Score 99");
                 if (!actions.Check(player))
                     return Failure(4, "VARIABLE_SMOKE_TXT_ACTION_FAILED");
                 AssertResult(commands.Mutate(context, "M0", "MOV", "22").Success,
@@ -118,8 +122,25 @@ namespace Server.Scripting.Variables
                     commands.Format(context, "G.EventRate", 2).Text != "2.50" ||
                     commands.Format(context, "A0").Text != "固定公告" ||
                     commands.Format(context, "A.Notice").Text != "全服公告" ||
+                    commands.Format(context, "J0").Text != "77" ||
+                    commands.Format(context, "Z0").Text != "今日文本" ||
+                    commands.Format(context, "HUMAN.Lifetime", 2).Text != "8.50" ||
+                    commands.Format(context, "GLOBAL.Score").Text != "99" ||
                     !player.NPCSpeech.Any(line => line.Contains("整数3 小数12.75", StringComparison.Ordinal)))
                     return Failure(4, "VARIABLE_SMOKE_COMMAND_FAILED");
+
+                var guild = new GuildInfo { GuildIndex = 900, Name = "变量冒烟行会" };
+                var guildContext = ScriptVariableContext.ForPlayer(guild);
+                AssertResult(commands.Mutate(guildContext, "GUILD.Score", "MOV", "123").Success &&
+                             commands.Format(guildContext, "GUILD.Score").Text == "123" && guild.NeedSave,
+                    "VARIABLE_SMOKE_GUILD_SCOPE_FAILED");
+
+                long nextDailyPeriod = player.Info.ScriptVariables.DailyResetPeriodId + 1;
+                player.Info.ScriptVariables.EnsureDailyPeriod(nextDailyPeriod);
+                AssertResult(commands.Format(context, "J0").Text == "0" &&
+                             commands.Format(context, "Z0").Text == string.Empty &&
+                             commands.Format(context, "HUMAN.Lifetime", 2).Text == "8.50",
+                    "VARIABLE_SMOKE_DAILY_RESET_FAILED");
 
                 AssertResult(commands.Mutate(context, "Call.Rate", "MOV", "4.75").Success,
                     "VARIABLE_SMOKE_CALL_FRAME_FAILED");
@@ -181,7 +202,9 @@ namespace Server.Scripting.Variables
                     !diskRestored.TryGet(ScriptVariableScope.A, "#0", out var diskFixedNotice) ||
                     diskFixedNotice.Text != "固定公告" ||
                     !diskRestored.TryGet(ScriptVariableScope.A, "NOTICE", out var diskNotice) ||
-                    diskNotice.Text != "全服公告")
+                    diskNotice.Text != "全服公告" ||
+                    !diskRestored.TryGet(ScriptVariableScope.Global, "SCORE", out var diskGlobal) ||
+                    diskGlobal.Integer != 99)
                     return Failure(8, "VARIABLE_SMOKE_SERVER_DISK_PERSISTENCE_FAILED");
 
                 envir.Stop();
@@ -210,7 +233,10 @@ namespace Server.Scripting.Variables
                     envir.CSharpScripts.VariableCommands.Format(restartedContext, "G0").Text != "66" ||
                     envir.CSharpScripts.VariableCommands.Format(restartedContext, "G.EventRate", 2).Text != "2.50" ||
                     envir.CSharpScripts.VariableCommands.Format(restartedContext, "A0").Text != "固定公告" ||
-                    envir.CSharpScripts.VariableCommands.Format(restartedContext, "A.Notice").Text != "全服公告")
+                    envir.CSharpScripts.VariableCommands.Format(restartedContext, "A.Notice").Text != "全服公告" ||
+                    envir.CSharpScripts.VariableCommands.Format(restartedContext, "HUMAN.Lifetime", 2).Text != "8.50" ||
+                    envir.CSharpScripts.VariableCommands.Format(restartedContext, "GLOBAL.Score").Text != "99" ||
+                    envir.CSharpScripts.VariableCommands.Format(restartedContext, "J0").Text != "0")
                     return Failure(10, "VARIABLE_SMOKE_PERSISTENCE_FAILED");
 
                 return new VariableProcessSmokeResult(
@@ -218,7 +244,7 @@ namespace Server.Scripting.Variables
                     0,
                     $"VARIABLE_SMOKE_OK;VERSION={rejectedVersion};INTEGER=3;DECIMAL=12.75;" +
                     "RESET=1.5;BONUS=0.5;RUNTIME_SCOPES=True;PRIVATE_PERSISTENCE=True;SERVER_PERSISTENCE=True;SERVER_RESTART_CLEAR=True;" +
-                    "CONFLICT_REJECTED=True");
+                    "DAILY_RESET=True;CUSTOM_PERSISTENT_SCOPES=True;CONFLICT_REJECTED=True");
             }
             catch (Exception ex)
             {
@@ -277,6 +303,12 @@ namespace Server.Scripting.Variables
                             ScriptVariableScope.G, "EventRate", ScriptVariableKind.Decimal, "1.0");
                         registry.RegisterVariable(
                             ScriptVariableScope.A, "Notice", ScriptVariableKind.String, "未开放");
+                        registry.RegisterVariable(
+                            ScriptVariableScope.Human, "Lifetime", ScriptVariableKind.Decimal, "0");
+                        registry.RegisterVariable(
+                            ScriptVariableScope.Guild, "Score", ScriptVariableKind.Integer, "0");
+                        registry.RegisterVariable(
+                            ScriptVariableScope.Global, "Score", ScriptVariableKind.Integer, "0");
                         {{bonus}}
                     }
                 }

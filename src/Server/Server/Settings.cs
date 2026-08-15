@@ -130,6 +130,7 @@ namespace Server
 
         //C# Scripts (Roslyn + HotReload)
         public static bool CSharpScriptsEnabled = true;
+        public static int ScriptVariableDailyResetHour = 0;
         public static string CSharpScriptsPath = EnvirPath;
         public static long CustomGuiPackageSequence = 1;
         public static bool CSharpScriptsHotReloadEnabled = true;
@@ -550,6 +551,8 @@ namespace Server
 
             //C# Scripts
             CSharpScriptsEnabled = Reader.ReadBoolean("CSharpScripts", "CSharpScriptsEnabled", CSharpScriptsEnabled);
+            ScriptVariableDailyResetHour = Reader.ReadInt32(
+                "CSharpScripts", "ScriptVariableDailyResetHour", ScriptVariableDailyResetHour);
             CSharpScriptsPath = Reader.ReadString("CSharpScripts", "CSharpScriptsPath", CSharpScriptsPath);
             CustomGuiPackageSequence = Math.Max(1, Reader.ReadInt64("CSharpScripts", "CustomGuiPackageSequence", CustomGuiPackageSequence));
             CSharpScriptsHotReloadEnabled = Reader.ReadBoolean("CSharpScripts", "CSharpScriptsHotReloadEnabled", CSharpScriptsHotReloadEnabled);
@@ -876,6 +879,7 @@ namespace Server
 
             //C# Scripts
             Reader.Write("CSharpScripts", "CSharpScriptsEnabled", CSharpScriptsEnabled);
+            Reader.Write("CSharpScripts", "ScriptVariableDailyResetHour", ScriptVariableDailyResetHour);
             Reader.Write("CSharpScripts", "CSharpScriptsPath", CSharpScriptsPath);
             Reader.Write("CSharpScripts", "CustomGuiPackageSequence", CustomGuiPackageSequence);
             Reader.Write("CSharpScripts", "CSharpScriptsHotReloadEnabled", CSharpScriptsHotReloadEnabled);

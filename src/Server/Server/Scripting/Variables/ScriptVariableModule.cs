@@ -208,15 +208,17 @@ namespace Server.Scripting.Variables
         private readonly Action _requestAutoSave;
         private readonly ServerScriptVariableStore _serverPersistent;
         private readonly Action _requestServerAutoSave;
+        private readonly Func<long> _currentDailyPeriod;
 
         public ScriptVariableModule(
             ScriptVariableDeclarationCatalog catalog,
             Func<bool> canWrite = null,
             Action requestAutoSave = null,
             ServerScriptVariableStore serverPersistent = null,
-            Action requestServerAutoSave = null)
+            Action requestServerAutoSave = null,
+            Func<long> currentDailyPeriod = null)
             : this(() => (catalog ?? throw new ArgumentNullException(nameof(catalog))).Current,
-                canWrite, requestAutoSave, serverPersistent, requestServerAutoSave)
+                canWrite, requestAutoSave, serverPersistent, requestServerAutoSave, currentDailyPeriod)
         {
         }
 
@@ -225,7 +227,8 @@ namespace Server.Scripting.Variables
             Func<bool> canWrite = null,
             Action requestAutoSave = null,
             ServerScriptVariableStore serverPersistent = null,
-            Action requestServerAutoSave = null)
+            Action requestServerAutoSave = null,
+            Func<long> currentDailyPeriod = null)
         {
             _declarations = declarations ?? throw new ArgumentNullException(nameof(declarations));
             int creatorThread = Environment.CurrentManagedThreadId;
@@ -233,6 +236,8 @@ namespace Server.Scripting.Variables
             _requestAutoSave = requestAutoSave;
             _serverPersistent = serverPersistent ?? new ServerScriptVariableStore();
             _requestServerAutoSave = requestServerAutoSave;
+            _currentDailyPeriod = currentDailyPeriod ??
+                (() => ScriptVariableDailyPeriod.FromServerTime(DateTime.Now));
         }
 
         public ScriptVariableReadResult Read(in ScriptVariableContext context, ScriptVariableReference reference)
@@ -247,6 +252,7 @@ namespace Server.Scripting.Variables
 
             if (TryGetPersistentStore(context, reference.Scope, out var persistentStore))
             {
+                EnsureDailyPeriod(context, reference.Scope, persistentStore);
                 if (persistentStore.TryGet(reference.Scope, reference.StorageKey, out var persistentValue))
                     return new ScriptVariableReadResult(true, true, ScriptVariableErrorCode.None, persistentValue, string.Empty);
                 return new ScriptVariableReadResult(true, false, ScriptVariableErrorCode.None, defaultValue, string.Empty);
@@ -289,7 +295,7 @@ namespace Server.Scripting.Variables
                 try
                 {
                     persistentStore.Set(mutation.Reference.Scope, mutation.Reference.StorageKey, coerced.Value);
-                    _requestAutoSave?.Invoke();
+                    MarkPersistentOwnerDirty(context, mutation.Reference.Scope);
                 }
                 catch (InvalidOperationException ex)
                 {
@@ -335,8 +341,9 @@ namespace Server.Scripting.Variables
             int count;
             if (TryGetPersistentStore(context, selector.Scope, out var persistentStore))
             {
+                EnsureDailyPeriod(context, selector.Scope, persistentStore);
                 count = persistentStore.Clear(selector.Scope);
-                if (count > 0) _requestAutoSave?.Invoke();
+                if (count > 0) MarkPersistentOwnerDirty(context, selector.Scope);
             }
             else if (IsServerPersistentScope(selector.Scope))
             {
@@ -394,6 +401,9 @@ namespace Server.Scripting.Variables
                     return false;
                 case ScriptVariableScope.U:
                 case ScriptVariableScope.T:
+                case ScriptVariableScope.J:
+                case ScriptVariableScope.Z:
+                case ScriptVariableScope.Human:
                     if (ResolveCharacter(context.Owner) != null) return true;
                     diagnostic = $"{scope} 变量需要有效角色持久化上下文。";
                     return false;
@@ -404,7 +414,12 @@ namespace Server.Scripting.Variables
                 case ScriptVariableScope.I:
                 case ScriptVariableScope.G:
                 case ScriptVariableScope.A:
+                case ScriptVariableScope.Global:
                     return true;
+                case ScriptVariableScope.Guild:
+                    if (ResolveGuild(context.Owner) != null) return true;
+                    diagnostic = "GUILD 变量需要有效行会成员或行会上下文。";
+                    return false;
                 case ScriptVariableScope.Call:
                     if (context.CallFrame != null) return true;
                     diagnostic = "Call 变量需要有效脚本调用帧。";
@@ -430,12 +445,27 @@ namespace Server.Scripting.Variables
                 diagnostic = context.CallFrame == null ? "Call 变量需要有效脚本调用帧。" : string.Empty;
                 return context.CallFrame != null;
             }
+            if (scope == ScriptVariableScope.U || scope == ScriptVariableScope.T ||
+                scope == ScriptVariableScope.J || scope == ScriptVariableScope.Z ||
+                scope == ScriptVariableScope.Human)
+            {
+                diagnostic = ResolveCharacter(context.Owner) == null
+                    ? $"{scope} 变量需要有效角色持久化上下文。"
+                    : string.Empty;
+                return ResolveCharacter(context.Owner) != null;
+            }
+            if (scope == ScriptVariableScope.Guild)
+            {
+                diagnostic = ResolveGuild(context.Owner) == null
+                    ? "GUILD 变量需要有效行会成员或行会上下文。"
+                    : string.Empty;
+                return ResolveGuild(context.Owner) != null;
+            }
             diagnostic = context.Owner == null ? "缺少变量所有者。" : string.Empty;
             return context.Owner != null &&
                    (scope == ScriptVariableScope.P || scope == ScriptVariableScope.D ||
                     scope == ScriptVariableScope.M || scope == ScriptVariableScope.N ||
-                    scope == ScriptVariableScope.S || scope == ScriptVariableScope.U ||
-                    scope == ScriptVariableScope.T);
+                    scope == ScriptVariableScope.S);
         }
 
         private bool TryResolveContract(
@@ -447,12 +477,22 @@ namespace Server.Scripting.Variables
             diagnostic = string.Empty;
             if (reference.IsLegacy)
             {
-                if ((reference.Scope == ScriptVariableScope.U || reference.Scope == ScriptVariableScope.T) &&
+                if ((reference.Scope == ScriptVariableScope.U || reference.Scope == ScriptVariableScope.T ||
+                     reference.Scope == ScriptVariableScope.J || reference.Scope == ScriptVariableScope.Z) &&
                     reference.LegacyIndex > 499)
                 {
                     kind = default;
                     defaultValue = default;
                     diagnostic = $"{reference.Scope} 固定编号范围为 0-499。";
+                    return false;
+                }
+                if (reference.Scope == ScriptVariableScope.Human ||
+                    reference.Scope == ScriptVariableScope.Guild ||
+                    reference.Scope == ScriptVariableScope.Global)
+                {
+                    kind = default;
+                    defaultValue = default;
+                    diagnostic = $"{reference.Scope} 仅支持显式命名变量。";
                     return false;
                 }
                 kind = IsLegacyStringScope(reference.Scope)
@@ -509,7 +549,8 @@ namespace Server.Scripting.Variables
             scope == ScriptVariableScope.Z;
 
         private static bool IsServerPersistentScope(ScriptVariableScope scope) =>
-            scope == ScriptVariableScope.G || scope == ScriptVariableScope.A;
+            scope == ScriptVariableScope.G || scope == ScriptVariableScope.A ||
+            scope == ScriptVariableScope.Global;
 
         private static bool TryGetPersistentStore(
             in ScriptVariableContext context,
@@ -517,7 +558,16 @@ namespace Server.Scripting.Variables
             out CharacterScriptVariableStore store)
         {
             store = null;
-            if (scope != ScriptVariableScope.U && scope != ScriptVariableScope.T) return false;
+            if (scope == ScriptVariableScope.Guild)
+            {
+                GuildInfo guild = ResolveGuild(context.Owner);
+                if (guild == null) return false;
+                store = guild.ScriptVariables;
+                return true;
+            }
+            if (scope != ScriptVariableScope.U && scope != ScriptVariableScope.T &&
+                scope != ScriptVariableScope.J && scope != ScriptVariableScope.Z &&
+                scope != ScriptVariableScope.Human) return false;
             CharacterInfo character = ResolveCharacter(context.Owner);
             if (character == null) return false;
             store = character.ScriptVariables;
@@ -530,6 +580,35 @@ namespace Server.Scripting.Variables
             HumanObject human => human.Info,
             _ => null
         };
+
+        private static GuildInfo ResolveGuild(object owner) => owner switch
+        {
+            GuildInfo guild => guild,
+            GuildObject guildObject => guildObject.Info,
+            HumanObject human => human.MyGuild?.Info,
+            _ => null
+        };
+
+        private void EnsureDailyPeriod(
+            in ScriptVariableContext context,
+            ScriptVariableScope scope,
+            CharacterScriptVariableStore store)
+        {
+            if (scope != ScriptVariableScope.J && scope != ScriptVariableScope.Z) return;
+            if (store.EnsureDailyPeriod(_currentDailyPeriod()))
+                MarkPersistentOwnerDirty(context, scope);
+        }
+
+        private void MarkPersistentOwnerDirty(in ScriptVariableContext context, ScriptVariableScope scope)
+        {
+            if (scope == ScriptVariableScope.Guild)
+            {
+                GuildInfo guild = ResolveGuild(context.Owner);
+                if (guild != null) guild.NeedSave = true;
+                return;
+            }
+            _requestAutoSave?.Invoke();
+        }
 
         private static ScriptVariableReadResult ReadFailure(ScriptVariableErrorCode code, string diagnostic) =>
             new ScriptVariableReadResult(false, false, code, default, diagnostic);

@@ -2,6 +2,7 @@ using System;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
+using System.Globalization;
 using System.Reflection;
 using System.Text;
 using System.Threading;
@@ -13,6 +14,18 @@ using Shared.Diagnostics;
 
 namespace Server.Persistence.Sql
 {
+    public readonly struct ScriptVariableRankEntry
+    {
+        public ScriptVariableRankEntry(long ownerId, long value)
+        {
+            OwnerId = ownerId;
+            Value = value;
+        }
+
+        public long OwnerId { get; }
+        public long Value { get; }
+    }
+
     /// <summary>
     /// SQL 持久化入口（SQLite/MySQL）。
     /// 当前阶段：仅用于把调用链切换到“持久化层”，具体各域表结构与加载/保存闭环将按升级计划逐步落地。
@@ -180,6 +193,8 @@ namespace Server.Persistence.Sql
             public long IntegerValue { get; set; }
             public string DecimalText { get; set; }
             public string TextValue { get; set; }
+            public string ResetPolicy { get; set; }
+            public string ResetPeriodId { get; set; }
         }
 
         private sealed class ServerScriptVariableRow
@@ -190,6 +205,22 @@ namespace Server.Persistence.Sql
             public long IntegerValue { get; set; }
             public string DecimalText { get; set; }
             public string TextValue { get; set; }
+        }
+
+        private sealed class GuildScriptVariableRow
+        {
+            public long GuildId { get; set; }
+            public string VariableNamespace { get; set; }
+            public string VariableKey { get; set; }
+            public int ValueKind { get; set; }
+            public long IntegerValue { get; set; }
+            public string DecimalText { get; set; }
+        }
+
+        private sealed class ScriptVariableRankRow
+        {
+            public long OwnerId { get; set; }
+            public long Value { get; set; }
         }
 
         private sealed class ItemRow
@@ -4180,6 +4211,12 @@ namespace Server.Persistence.Sql
                             IntegerValue = entry.Value.Kind == ScriptVariableKind.Integer ? entry.Value.Integer : 0,
                             DecimalText = entry.Value.Kind == ScriptVariableKind.Decimal ? entry.Value.Format() : string.Empty,
                             TextValue = entry.Value.Kind == ScriptVariableKind.String ? entry.Value.Text : string.Empty,
+                            ResetPolicy = entry.Scope == ScriptVariableScope.J || entry.Scope == ScriptVariableScope.Z
+                                ? "Daily"
+                                : "Never",
+                            ResetPeriodId = entry.Scope == ScriptVariableScope.J || entry.Scope == ScriptVariableScope.Z
+                                ? character.ScriptVariables.DailyResetPeriodId.ToString(CultureInfo.InvariantCulture)
+                                : string.Empty,
                         });
                     }
                 });
@@ -4411,7 +4448,8 @@ namespace Server.Persistence.Sql
             return session.Query<CharacterScriptVariableRow>(
                 "SELECT character_id AS CharacterId, variable_namespace AS VariableNamespace, " +
                 "variable_key AS VariableKey, value_kind AS ValueKind, integer_value AS IntegerValue, " +
-                "decimal_text AS DecimalText, text_value AS TextValue " +
+                "decimal_text AS DecimalText, text_value AS TextValue, reset_policy AS ResetPolicy, " +
+                "reset_period_id AS ResetPeriodId " +
                 "FROM character_script_variables ORDER BY character_id, variable_namespace, variable_key");
         }
 
@@ -5384,8 +5422,8 @@ namespace Server.Persistence.Sql
                 integer_value = row.IntegerValue,
                 decimal_text = row.DecimalText ?? string.Empty,
                 text_value = row.TextValue ?? string.Empty,
-                reset_policy = "Never",
-                reset_period_id = string.Empty,
+                reset_policy = row.ResetPolicy ?? "Never",
+                reset_period_id = row.ResetPeriodId ?? string.Empty,
                 updated_utc_ms = nowMs,
             }).ToArray();
             if (batch.Length > 0) session.Execute(sql, batch);
@@ -6197,7 +6235,14 @@ namespace Server.Persistence.Sql
                     if (row == null || row.CharacterId <= 0 || row.CharacterId > int.MaxValue) continue;
                     if (!characterById.TryGetValue((int)row.CharacterId, out var character)) continue;
                     if (!Enum.TryParse(row.VariableNamespace, true, out ScriptVariableScope scope) ||
-                        (scope != ScriptVariableScope.U && scope != ScriptVariableScope.T)) continue;
+                        (scope != ScriptVariableScope.U && scope != ScriptVariableScope.T &&
+                         scope != ScriptVariableScope.J && scope != ScriptVariableScope.Z &&
+                         scope != ScriptVariableScope.Human)) continue;
+
+                    if ((scope == ScriptVariableScope.J || scope == ScriptVariableScope.Z) &&
+                        long.TryParse(row.ResetPeriodId, NumberStyles.None, CultureInfo.InvariantCulture,
+                            out long periodId))
+                        character.ScriptVariables.RestoreDailyPeriod(periodId);
 
                     ScriptVariableValue value;
                     switch ((ScriptVariableKind)row.ValueKind)
@@ -6368,7 +6413,8 @@ namespace Server.Persistence.Sql
             foreach (var row in rows)
             {
                 if (row == null || !Enum.TryParse(row.VariableNamespace, true, out ScriptVariableScope scope) ||
-                    (scope != ScriptVariableScope.G && scope != ScriptVariableScope.A)) continue;
+                    (scope != ScriptVariableScope.G && scope != ScriptVariableScope.A &&
+                     scope != ScriptVariableScope.Global)) continue;
                 ScriptVariableValue value;
                 switch ((ScriptVariableKind)row.ValueKind)
                 {
@@ -6434,6 +6480,40 @@ namespace Server.Persistence.Sql
                     session.Execute("DELETE FROM server_script_variables");
                     if (batch.Length > 0) session.Execute(sql, batch);
                 });
+        }
+
+        public IReadOnlyList<ScriptVariableRankEntry> QueryIntegerVariableRanking(
+            ScriptVariableScope scope,
+            string key,
+            int limit)
+        {
+            if (!ScriptVariableName.TryNormalize(key, out string normalizedKey))
+                throw new ArgumentException("排行变量名称无效。", nameof(key));
+            if (limit < 1 || limit > 1000)
+                throw new ArgumentOutOfRangeException(nameof(limit), "排行数量必须是 1-1000。");
+
+            string sql = scope switch
+            {
+                ScriptVariableScope.Human =>
+                    "SELECT character_id AS OwnerId, integer_value AS Value FROM character_script_variables " +
+                    "WHERE variable_namespace = 'Human' AND variable_key = @key AND value_kind = 0 " +
+                    "ORDER BY integer_value DESC, character_id ASC LIMIT @limit",
+                ScriptVariableScope.Guild =>
+                    "SELECT guild_id AS OwnerId, integer_value AS Value FROM guild_script_variables " +
+                    "WHERE variable_namespace = 'Guild' AND variable_key = @key AND value_kind = 0 " +
+                    "ORDER BY integer_value DESC, guild_id ASC LIMIT @limit",
+                ScriptVariableScope.Global =>
+                    "SELECT 0 AS OwnerId, integer_value AS Value FROM server_script_variables " +
+                    "WHERE variable_namespace = 'Global' AND variable_key = @key AND value_kind = 0 LIMIT 1",
+                _ => throw new ArgumentOutOfRangeException(nameof(scope),
+                    "排行查询仅支持 HUMAN/GUILD/GLOBAL Integer。")
+            };
+
+            EnsureInitialized();
+            using var session = SqlSession.Open(_provider, _databaseOptions, maxRetries: 3, baseRetryDelayMs: 200);
+            return session.Query<ScriptVariableRankRow>(sql, new { key = normalizedKey, limit })
+                .Select(row => new ScriptVariableRankEntry(row.OwnerId, row.Value))
+                .ToArray();
         }
 
         public void LoadAccounts(Envir envir)
@@ -6948,6 +7028,84 @@ namespace Server.Persistence.Sql
             }
         }
 
+        private static IReadOnlyList<GuildScriptVariableRow> CaptureGuildScriptVariables(Envir envir)
+        {
+            return (envir?.GuildList ?? new List<GuildInfo>())
+                .Where(guild => guild != null)
+                .SelectMany(guild => guild.ScriptVariables.Snapshot()
+                    .Where(entry => entry.Scope == ScriptVariableScope.Guild)
+                    .Select(entry => new GuildScriptVariableRow
+                    {
+                        GuildId = guild.GuildIndex,
+                        VariableNamespace = entry.Scope.ToString(),
+                        VariableKey = entry.Key,
+                        ValueKind = (int)entry.Value.Kind,
+                        IntegerValue = entry.Value.Kind == ScriptVariableKind.Integer ? entry.Value.Integer : 0,
+                        DecimalText = entry.Value.Kind == ScriptVariableKind.Decimal ? entry.Value.Format() : string.Empty,
+                    }))
+                .OrderBy(row => row.GuildId)
+                .ThenBy(row => row.VariableKey, StringComparer.Ordinal)
+                .ToArray();
+        }
+
+        private static void ReplaceGuildScriptVariables(
+            SqlSession session,
+            IReadOnlyList<GuildScriptVariableRow> rows)
+        {
+            rows ??= Array.Empty<GuildScriptVariableRow>();
+            string sql = session.Dialect.BuildUpsert(
+                "guild_script_variables",
+                ["guild_id", "variable_namespace", "variable_key", "value_kind", "integer_value", "decimal_text", "updated_utc_ms"],
+                ["guild_id", "variable_namespace", "variable_key"],
+                ["value_kind", "integer_value", "decimal_text", "updated_utc_ms"]);
+            long nowMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+            object[] batch = rows.Select(row => (object)new
+            {
+                guild_id = row.GuildId,
+                variable_namespace = row.VariableNamespace,
+                variable_key = row.VariableKey,
+                value_kind = row.ValueKind,
+                integer_value = row.IntegerValue,
+                decimal_text = row.DecimalText ?? string.Empty,
+                updated_utc_ms = nowMs,
+            }).ToArray();
+            session.Execute("DELETE FROM guild_script_variables");
+            if (batch.Length > 0) session.Execute(sql, batch);
+        }
+
+        private void LoadGuildScriptVariables(Envir envir)
+        {
+            try
+            {
+                using var session = SqlSession.Open(_provider, _databaseOptions, maxRetries: 3, baseRetryDelayMs: 200);
+                var rows = session.Query<GuildScriptVariableRow>(
+                    "SELECT guild_id AS GuildId, variable_namespace AS VariableNamespace, " +
+                    "variable_key AS VariableKey, value_kind AS ValueKind, integer_value AS IntegerValue, " +
+                    "decimal_text AS DecimalText FROM guild_script_variables ORDER BY guild_id, variable_key");
+                var guilds = (envir.GuildList ?? new List<GuildInfo>())
+                    .Where(guild => guild != null)
+                    .ToDictionary(guild => (long)guild.GuildIndex);
+                foreach (var row in rows)
+                {
+                    if (row == null || !guilds.TryGetValue(row.GuildId, out GuildInfo guild)) continue;
+                    ScriptVariableValue value;
+                    if ((ScriptVariableKind)row.ValueKind == ScriptVariableKind.Integer)
+                        value = ScriptVariableValue.FromInteger(row.IntegerValue);
+                    else if ((ScriptVariableKind)row.ValueKind == ScriptVariableKind.Decimal &&
+                             ScriptVariableValue.TryParseDecimal(row.DecimalText, out var parsed))
+                        value = parsed;
+                    else
+                        continue;
+                    try { guild.ScriptVariables.Set(ScriptVariableScope.Guild, row.VariableKey, value); }
+                    catch (Exception) { /* 单条损坏数据不阻止其他行会加载。 */ }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageQueue.Instance.EnqueueDebugging($"[SQL:{_provider}] Guild 变量表加载失败，保留行会二进制值：{ex}");
+            }
+        }
+
         public void LoadGuilds(Envir envir)
         {
             if (envir == null) throw new ArgumentNullException(nameof(envir));
@@ -6964,6 +7122,7 @@ namespace Server.Persistence.Sql
             {
                 MessageQueue.Instance.EnqueueDebugging($"[SQL:{_provider}] Guilds legacy_files 读取失败，回退到文件：{ex}");
                 envir.Legacy_LoadGuilds();
+                LoadGuildScriptVariables(envir);
                 return;
             }
 
@@ -6980,17 +7139,20 @@ namespace Server.Persistence.Sql
                         work: (session, snapshot) => ReplaceLegacyFiles(session, LegacyFilesDomainGuilds, snapshot));
                 }
 
+                LoadGuildScriptVariables(envir);
                 return;
             }
 
             try
             {
                 ApplyGuildsFromLegacyFiles(envir, files);
+                LoadGuildScriptVariables(envir);
             }
             catch (Exception ex)
             {
                 MessageQueue.Instance.Enqueue($"[SQL:{_provider}] Guilds 从 DB 加载失败，回退到文件：{ex}");
                 envir.Legacy_LoadGuilds();
+                LoadGuildScriptVariables(envir);
             }
         }
 
@@ -7002,8 +7164,14 @@ namespace Server.Persistence.Sql
 
             RunSaveWithSnapshot(
                 domain: SqlSaveDomain.Guilds,
-                snapshotFactory: () => CaptureGuildLegacyFiles(envir),
-                work: (session, snapshot) => ReplaceLegacyFiles(session, LegacyFilesDomainGuilds, snapshot));
+                snapshotFactory: () => (
+                    Files: CaptureGuildLegacyFiles(envir),
+                    Variables: CaptureGuildScriptVariables(envir)),
+                work: (session, snapshot) =>
+                {
+                    ReplaceLegacyFiles(session, LegacyFilesDomainGuilds, snapshot.Files);
+                    ReplaceGuildScriptVariables(session, snapshot.Variables);
+                });
         }
 
         public void SaveGoods(Envir envir, bool forced)

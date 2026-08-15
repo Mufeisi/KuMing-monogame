@@ -24,14 +24,15 @@ namespace Server.Scripting
         private static readonly TimeSpan CompileFailureLogSuppressWindow = TimeSpan.FromSeconds(10);
 
         public ScriptManager()
-            : this(new ServerScriptVariableStore(), null, null)
+            : this(new ServerScriptVariableStore(), null, null, null)
         {
         }
 
         internal ScriptManager(
             ServerScriptVariableStore serverVariables,
             Action requestAccountAutoSave,
-            Action requestServerVariableAutoSave)
+            Action requestServerVariableAutoSave,
+            Func<long> currentDailyPeriod)
         {
             _currentRegistry = CreateRegistry();
             _currentRegistry.SealVariableDeclarations();
@@ -39,7 +40,8 @@ namespace Server.Scripting
                 () => CurrentRegistry.VariableDeclarations,
                 requestAutoSave: requestAccountAutoSave,
                 serverPersistent: serverVariables,
-                requestServerAutoSave: requestServerVariableAutoSave);
+                requestServerAutoSave: requestServerVariableAutoSave,
+                currentDailyPeriod: currentDailyPeriod);
             VariableCommands = new ScriptVariableCommands(VariableModule);
         }
 

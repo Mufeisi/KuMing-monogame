@@ -30,9 +30,9 @@ public sealed class VariableDeclarations : IScriptModule
 }
 ```
 
-`VAR Decimal P DropRate DEFAULT 1.0` 的纯 TXT 声明语法仍在规划中；TXT NPC 可以操作由 C# 启动脚本声明的 `P/D/M/N/I/U/G.名称`，也可操作已声明的 `T/A.名称` 字符串。Call 声明仅供 C# 调用帧使用。
+`VAR Decimal P DropRate DEFAULT 1.0` 的纯 TXT 声明语法仍在规划中；TXT NPC 可以操作由 C# 启动脚本声明的 `P/D/M/N/I/U/G/J/HUMAN/GUILD/GLOBAL.名称`，也可操作已声明的 `T/A/Z.名称` 字符串。Call 声明仅供 C# 调用帧使用。
 
-当前声明注册名称、类型、作用域、默认值和来源位置，不会立即为所有人物或服务器写入数据库。因此私人和全局变量都可以在服务器启动或脚本加载阶段统一声明；声明 G/A 不需要在线人物。重置策略元数据属于 VAR-05。
+当前声明注册名称、类型、作用域、默认值和来源位置，不会立即为所有人物、行会或服务器写入数据库。因此私人、行会和全局变量都可以在服务器启动或脚本加载阶段统一声明；声明不需要对应所有者在线。J/Z 的每日重置策略由作用域固定，不允许热重载改成永久变量。
 
 ## 默认值与首次写入
 

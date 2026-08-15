@@ -13,8 +13,8 @@
 | Call 调用帧变量 | 实验性 | C# `NpcPageCall` 隔离；回调释放后失效 | VAR-02 |
 | U/T 私人持久变量 | 实验性 | Legacy/SQLite/MySQL 可用；自动保存与归档恢复已接入 | VAR-03 |
 | G/A 全局持久变量 | 实验性 | Legacy 原子 JSON、SQLite/MySQL 表可用；共享与自动保存已接入 | VAR-04 |
-| J/Z 每日变量 | 规划中 | 不可按本文语义使用 | VAR-05 |
-| HUMAN/GUILD/GLOBAL 自定义变量 | 规划中 | 不可按本文语义使用 | VAR-05 |
+| J/Z 每日变量 | 实验性 | 可配置本地重置小时；跨日、停服跨日和回拨边界已接入 | VAR-05 |
+| HUMAN/GUILD/GLOBAL 自定义变量 | 实验性 | 角色、行会、服务器所有权与三 Provider 持久化可用 | VAR-05 |
 | L$/D$、公式与概率 | 规划中 | 不可按本文语义使用 | VAR-06 |
 | 翎风兼容模式 | 规划中 | 缺真实部署脚本预检 | VAR-07 |
 

@@ -103,7 +103,9 @@ namespace Server.MirEnvir
             CSharpScripts = new ScriptManager(
                 ScriptVariables,
                 RequestAutoSave,
-                RequestServerVariableAutoSave);
+                RequestServerVariableAutoSave,
+                () => ScriptVariableDailyPeriod.FromServerTime(
+                    Now, Settings.ScriptVariableDailyResetHour));
         }
 
         private IServerPersistence? _persistence;
@@ -173,7 +175,7 @@ namespace Server.MirEnvir
 
         public const int MinVersion = 60;
         public const int Version = 110;
-        public const int CustomVersion = 1;
+        public const int CustomVersion = 2;
         public static readonly string DatabasePath = Path.Combine(".", "Server.MirDB");
         public static readonly string AccountPath = Path.Combine(".", "Server.MirADB");
         public static readonly string ScriptVariablePath = Path.Combine(".", "Server.Variables.json");
@@ -560,6 +562,7 @@ namespace Server.MirEnvir
 
         private long warTime, guildTime, conquestTime, rentalItemsTime, auctionTime, spawnTime, robotTime, timerTime;
         private int dailyTime = DateTime.Now.Day;
+        private long dailyVariablePeriod;
 
         private bool MagicExists(Spell spell)
         {
@@ -1445,6 +1448,14 @@ namespace Server.MirEnvir
             {
                 dailyTime = Now.Day;
                 ProcessNewDay();
+            }
+
+            long currentVariablePeriod = ScriptVariableDailyPeriod.FromServerTime(
+                Now, Settings.ScriptVariableDailyResetHour);
+            if (currentVariablePeriod != dailyVariablePeriod)
+            {
+                dailyVariablePeriod = currentVariablePeriod;
+                ProcessDailyScriptVariables(currentVariablePeriod);
             }
 
             if (Time >= warTime)
@@ -3874,6 +3885,8 @@ namespace Server.MirEnvir
         {
             if (Running || _thread != null) return;
             if (options == null) throw new ArgumentNullException(nameof(options));
+            if (Settings.ScriptVariableDailyResetHour < 0 || Settings.ScriptVariableDailyResetHour > 23)
+                throw new InvalidOperationException("ScriptVariableDailyResetHour 必须是 0-23。");
 
             _startOptions = options;
             Interlocked.Exchange(ref _shutdownSavePrepared, 0);
@@ -6417,6 +6430,16 @@ namespace Server.MirEnvir
 
                 c.Player?.CallDefaultNPC(DefaultNPCType.Daily);
             }
+        }
+
+        internal void ProcessDailyScriptVariables(long periodId)
+        {
+            bool changed = false;
+            foreach (var character in CharacterList)
+                changed |= character.ScriptVariables.EnsureDailyPeriod(periodId);
+            foreach (var hero in HeroList)
+                changed |= hero.ScriptVariables.EnsureDailyPeriod(periodId);
+            if (changed) RequestAutoSave();
         }
 
         private void ProcessRentedItems()

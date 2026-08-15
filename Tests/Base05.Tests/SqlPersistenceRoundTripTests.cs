@@ -6,6 +6,7 @@ using Server.Persistence.Sql;
 using Server.Utils;
 using Shared.Diagnostics;
 using Server.Scripting.Variables;
+using Microsoft.Data.Sqlite;
 using Xunit;
 
 namespace Base05.Tests;
@@ -67,6 +68,32 @@ public sealed class SqlPersistenceRoundTripTests
     }
 
     [Fact]
+    public void Var05SchemaDefinesGuildVariablesAndRankingIndex()
+    {
+        SchemaMigration migration = Assert.Single(
+            SchemaMigrator.CreateDefaultMigrations(), item => item.Version == 20);
+        Assert.Contains(migration.Statements, statement =>
+            statement.Contains("CREATE TABLE IF NOT EXISTS guild_script_variables", StringComparison.Ordinal));
+        Assert.Contains(migration.Statements, statement =>
+            statement.Contains("guild_script_variables_ix_rank", StringComparison.Ordinal));
+        Assert.Contains(migration.Statements, statement =>
+            statement.Contains("character_script_variables_ix_rank", StringComparison.Ordinal));
+        Assert.Contains(migration.Statements, statement =>
+            statement.Contains("server_script_variables_ix_rank", StringComparison.Ordinal));
+        string[] columns =
+        [
+            "guild_id", "variable_namespace", "variable_key", "value_kind",
+            "integer_value", "decimal_text", "updated_utc_ms"
+        ];
+        string[] keys = ["guild_id", "variable_namespace", "variable_key"];
+        string[] updates = columns.Except(keys).ToArray();
+        Assert.Contains("ON CONFLICT", SqlDialectFactory.Create(DatabaseProviderKind.Sqlite)
+            .BuildUpsert("guild_script_variables", columns, keys, updates), StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("ON DUPLICATE KEY UPDATE", SqlDialectFactory.Create(DatabaseProviderKind.MySql)
+            .BuildUpsert("guild_script_variables", columns, keys, updates), StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public void Sqlite_round_trips_server_persistent_variables()
     {
         var databasePath = Path.Combine(Path.GetTempPath(), $"base05-global-vars-{Guid.NewGuid():N}.db");
@@ -80,6 +107,8 @@ public sealed class SqlPersistenceRoundTripTests
                 ScriptVariableScope.G, "EVENTRATE", ScriptVariableValue.FromDecimal(3.125m));
             source.ScriptVariables.Set(
                 ScriptVariableScope.A, "#0", ScriptVariableValue.FromString("跨服重启公告"));
+            source.ScriptVariables.Set(
+                ScriptVariableScope.Global, "score", ScriptVariableValue.FromInteger(456));
             persistence.SaveScriptVariables(source);
             ((IPendingSaveCoordinator)persistence).DrainPendingSaves();
 
@@ -91,9 +120,13 @@ public sealed class SqlPersistenceRoundTripTests
             Assert.True(restored.ScriptVariables.TryGet(
                 ScriptVariableScope.A, "#0", out var text));
             Assert.Equal("跨服重启公告", text.Text);
+            Assert.True(restored.ScriptVariables.TryGet(
+                ScriptVariableScope.Global, "score", out var globalScore));
+            Assert.Equal(456L, globalScore.Integer);
 
             source.ScriptVariables.Clear(ScriptVariableScope.G);
             source.ScriptVariables.Clear(ScriptVariableScope.A);
+            source.ScriptVariables.Clear(ScriptVariableScope.Global);
             persistence.SaveScriptVariables(source);
             ((IPendingSaveCoordinator)persistence).DrainPendingSaves();
 
@@ -173,6 +206,13 @@ public sealed class SqlPersistenceRoundTripTests
                 ScriptVariableScope.U, "droprate", ScriptVariableValue.FromDecimal(12.75m));
             character.ScriptVariables.Set(
                 ScriptVariableScope.T, "#0", ScriptVariableValue.FromString("永久称号"));
+            character.ScriptVariables.EnsureDailyPeriod(20260815);
+            character.ScriptVariables.Set(
+                ScriptVariableScope.J, "#0", ScriptVariableValue.FromInteger(7));
+            character.ScriptVariables.Set(
+                ScriptVariableScope.Z, "#0", ScriptVariableValue.FromString("今日阶段"));
+            character.ScriptVariables.Set(
+                ScriptVariableScope.Human, "lifetime", ScriptVariableValue.FromDecimal(8.5m));
 
             persistence.SaveAccounts(source);
             ((IPendingSaveCoordinator)persistence).DrainPendingSaves();
@@ -236,10 +276,60 @@ public sealed class SqlPersistenceRoundTripTests
             Assert.True(restoredCharacter.ScriptVariables.TryGet(
                 ScriptVariableScope.T, "#0", out var restoredTitle));
             Assert.Equal("永久称号", restoredTitle.Text);
+            Assert.Equal(20260815, restoredCharacter.ScriptVariables.DailyResetPeriodId);
+            Assert.True(restoredCharacter.ScriptVariables.TryGet(
+                ScriptVariableScope.J, "#0", out var restoredDaily));
+            Assert.Equal(7L, restoredDaily.Integer);
+            Assert.True(restoredCharacter.ScriptVariables.TryGet(
+                ScriptVariableScope.Z, "#0", out var restoredDailyText));
+            Assert.Equal("今日阶段", restoredDailyText.Text);
+            Assert.True(restoredCharacter.ScriptVariables.TryGet(
+                ScriptVariableScope.Human, "lifetime", out var restoredLifetime));
+            Assert.Equal(8.5m, restoredLifetime.Decimal);
         }
         finally
         {
             PerformanceMetrics.Configure(enabled: false);
+            TryDelete(databasePath);
+            TryDelete(databasePath + "-wal");
+            TryDelete(databasePath + "-shm");
+        }
+    }
+
+    [Fact]
+    public void Sqlite_persists_guild_custom_variables_in_relational_table()
+    {
+        string databasePath = Path.Combine(Path.GetTempPath(), $"base05-guild-vars-{Guid.NewGuid():N}.db");
+        var persistence = new SqlServerPersistence(
+            DatabaseProviderKind.Sqlite,
+            new SqlDatabaseOptions { SqlitePath = databasePath });
+        try
+        {
+            var envir = new Envir();
+            var guild = new GuildInfo { GuildIndex = 77, Name = "变量行会" };
+            guild.ScriptVariables.Set(
+                ScriptVariableScope.Guild, "score", ScriptVariableValue.FromInteger(123));
+            envir.GuildList.Add(guild);
+
+            persistence.SaveGuilds(envir, forced: true);
+            ((IPendingSaveCoordinator)persistence).DrainPendingSaves();
+
+            ScriptVariableRankEntry rank = Assert.Single(
+                persistence.QueryIntegerVariableRanking(ScriptVariableScope.Guild, "score", 10));
+            Assert.Equal(77L, rank.OwnerId);
+            Assert.Equal(123L, rank.Value);
+
+            using var connection = new SqliteConnection($"Data Source={databasePath};Pooling=False");
+            connection.Open();
+            using var command = connection.CreateCommand();
+            command.CommandText =
+                "SELECT integer_value FROM guild_script_variables " +
+                "WHERE guild_id = 77 AND variable_namespace = 'Guild' AND variable_key = 'SCORE'";
+            Assert.Equal(123L, Convert.ToInt64(command.ExecuteScalar()));
+        }
+        finally
+        {
+            SqliteConnection.ClearAllPools();
             TryDelete(databasePath);
             TryDelete(databasePath + "-wal");
             TryDelete(databasePath + "-shm");

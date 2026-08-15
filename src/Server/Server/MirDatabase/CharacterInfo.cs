@@ -384,7 +384,7 @@ namespace Server.MirDatabase
                 HeroBehaviour = (HeroBehaviour)reader.ReadByte();
 
             if (customVersion >= 1)
-                ScriptVariables.Load(reader);
+                ScriptVariables.Load(reader, includesDailyPeriod: customVersion >= 2);
         }
 
         public virtual void Save(BinaryWriter writer)

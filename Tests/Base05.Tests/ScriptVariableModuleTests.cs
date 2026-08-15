@@ -561,6 +561,11 @@ public sealed class ScriptVariableModuleTests
         source.Set(ScriptVariableScope.U, "#0", ScriptVariableValue.FromInteger(long.MaxValue));
         source.Set(ScriptVariableScope.U, "droprate", ScriptVariableValue.FromDecimal(0.125m));
         source.Set(ScriptVariableScope.T, "#1", ScriptVariableValue.FromString("中文标题"));
+        source.EnsureDailyPeriod(20260815);
+        source.Set(ScriptVariableScope.J, "#2", ScriptVariableValue.FromInteger(7));
+        source.Set(ScriptVariableScope.Z, "#3", ScriptVariableValue.FromString("今日"));
+        source.Set(ScriptVariableScope.Human, "score", ScriptVariableValue.FromDecimal(2.5m));
+        source.Set(ScriptVariableScope.Guild, "score", ScriptVariableValue.FromInteger(9));
 
         using var stream = new MemoryStream();
         using (var writer = new BinaryWriter(stream, System.Text.Encoding.UTF8, leaveOpen: true))
@@ -570,13 +575,40 @@ public sealed class ScriptVariableModuleTests
         using (var reader = new BinaryReader(stream, System.Text.Encoding.UTF8, leaveOpen: true))
             restored.Load(reader);
 
-        Assert.Equal(3, restored.Count);
+        Assert.Equal(7, restored.Count);
+        Assert.Equal(20260815, restored.DailyResetPeriodId);
         Assert.True(restored.TryGet(ScriptVariableScope.U, "#0", out var integer));
         Assert.Equal(long.MaxValue, integer.Integer);
         Assert.True(restored.TryGet(ScriptVariableScope.U, "droprate", out var decimalValue));
         Assert.Equal(0.125m, decimalValue.Decimal);
         Assert.True(restored.TryGet(ScriptVariableScope.T, "#1", out var text));
         Assert.Equal("中文标题", text.Text);
+        Assert.True(restored.TryGet(ScriptVariableScope.J, "#2", out var daily));
+        Assert.Equal(7L, daily.Integer);
+        Assert.True(restored.TryGet(ScriptVariableScope.Guild, "score", out var guild));
+        Assert.Equal(9L, guild.Integer);
+    }
+
+    [Fact]
+    public void CharacterStoreReadsVar03PayloadWithoutDailyPeriodHeader()
+    {
+        using var stream = new MemoryStream();
+        using (var writer = new BinaryWriter(stream, System.Text.Encoding.UTF8, leaveOpen: true))
+        {
+            writer.Write(1);
+            writer.Write((byte)ScriptVariableScope.U);
+            writer.Write("#0");
+            writer.Write((byte)ScriptVariableKind.Integer);
+            writer.Write(42L);
+        }
+        stream.Position = 0;
+        var restored = new CharacterScriptVariableStore();
+        using (var reader = new BinaryReader(stream, System.Text.Encoding.UTF8, leaveOpen: true))
+            restored.Load(reader, includesDailyPeriod: false);
+
+        Assert.Equal(0, restored.DailyResetPeriodId);
+        Assert.True(restored.TryGet(ScriptVariableScope.U, "#0", out var value));
+        Assert.Equal(42L, value.Integer);
     }
 
     [Fact]
@@ -697,6 +729,158 @@ public sealed class ScriptVariableModuleTests
     }
 
     [Fact]
+    public void DailyVariablesResetForwardOnceAndIgnoreClockRollback()
+    {
+        long period = 20260815;
+        int saveRequests = 0;
+        var catalog = new ScriptVariableDeclarationCatalog();
+        Assert.True(catalog.TryReload(new[]
+        {
+            Declaration(ScriptVariableScope.J, "Rate", ScriptVariableKind.Decimal, "1.5"),
+            Declaration(ScriptVariableScope.Z, "Label", ScriptVariableKind.String, "未开始"),
+            Declaration(ScriptVariableScope.Human, "Lifetime", ScriptVariableKind.Integer, "0")
+        }).Success);
+        var module = new ScriptVariableModule(
+            catalog,
+            requestAutoSave: () => saveRequests++,
+            currentDailyPeriod: () => period);
+        var character = new CharacterInfo();
+        ScriptVariableContext context = ScriptVariableContext.ForPlayer(character);
+
+        Assert.True(module.Mutate(context, ScriptVariableMutation.Set(
+            ScriptVariableReference.Legacy(ScriptVariableScope.J, 0),
+            ScriptVariableValue.FromInteger(9))).Success);
+        Assert.True(module.Mutate(context, ScriptVariableMutation.Set(
+            ScriptVariableReference.Named(ScriptVariableScope.Z, "Label"),
+            ScriptVariableValue.FromString("进行中"))).Success);
+        Assert.True(module.Mutate(context, ScriptVariableMutation.Set(
+            ScriptVariableReference.Named(ScriptVariableScope.Human, "Lifetime"),
+            ScriptVariableValue.FromInteger(88))).Success);
+
+        period = 20260816;
+        Assert.False(module.Read(context,
+            ScriptVariableReference.Legacy(ScriptVariableScope.J, 0)).Found);
+        Assert.Equal("未开始", module.Read(context,
+            ScriptVariableReference.Named(ScriptVariableScope.Z, "Label")).Value.Text);
+        Assert.Equal(88L, module.Read(context,
+            ScriptVariableReference.Named(ScriptVariableScope.Human, "Lifetime")).Value.Integer);
+
+        Assert.True(module.Mutate(context, ScriptVariableMutation.Set(
+            ScriptVariableReference.Legacy(ScriptVariableScope.J, 0),
+            ScriptVariableValue.FromInteger(5))).Success);
+        period = 20260815;
+        Assert.Equal(5L, module.Read(context,
+            ScriptVariableReference.Legacy(ScriptVariableScope.J, 0)).Value.Integer);
+        Assert.Equal(20260816, character.ScriptVariables.DailyResetPeriodId);
+        Assert.True(saveRequests >= 5);
+    }
+
+    [Fact]
+    public void DailyPeriodSupportsConfiguredHourAndRejectsInvalidConfiguration()
+    {
+        Assert.Equal(20260814,
+            ScriptVariableDailyPeriod.FromServerTime(new DateTime(2026, 8, 15, 3, 59, 0), 4));
+        Assert.Equal(20260815,
+            ScriptVariableDailyPeriod.FromServerTime(new DateTime(2026, 8, 15, 4, 0, 0), 4));
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            ScriptVariableDailyPeriod.FromServerTime(DateTime.Now, 24));
+    }
+
+    [Fact]
+    public void EnvironmentDailyBatchClearsCharactersAndHeroesAndRequestsSave()
+    {
+        var envir = new Server.MirEnvir.Envir();
+        var character = new CharacterInfo();
+        var hero = new HeroInfo();
+        foreach (CharacterInfo owner in new CharacterInfo[] { character, hero })
+        {
+            owner.ScriptVariables.EnsureDailyPeriod(20260815);
+            owner.ScriptVariables.Set(
+                ScriptVariableScope.J, "#0", ScriptVariableValue.FromInteger(1));
+            owner.ScriptVariables.Set(
+                ScriptVariableScope.Human, "score", ScriptVariableValue.FromInteger(2));
+        }
+        envir.CharacterList.Add(character);
+        envir.HeroList.Add(hero);
+
+        envir.ProcessDailyScriptVariables(20260816);
+
+        Assert.False(character.ScriptVariables.TryGet(
+            ScriptVariableScope.J, "#0", out _));
+        Assert.False(hero.ScriptVariables.TryGet(
+            ScriptVariableScope.J, "#0", out _));
+        Assert.True(character.ScriptVariables.TryGet(
+            ScriptVariableScope.Human, "score", out _));
+        Assert.True(envir.HasPendingAutoSave);
+    }
+
+    [Fact]
+    public void HumanGuildAndGlobalVariablesFollowTheirOwners()
+    {
+        var catalog = new ScriptVariableDeclarationCatalog();
+        Assert.True(catalog.TryReload(new[]
+        {
+            Declaration(ScriptVariableScope.Human, "Score", ScriptVariableKind.Decimal, "0"),
+            Declaration(ScriptVariableScope.Guild, "Score", ScriptVariableKind.Integer, "0"),
+            Declaration(ScriptVariableScope.Global, "Score", ScriptVariableKind.Integer, "0")
+        }).Success);
+        var server = new ServerScriptVariableStore();
+        var module = new ScriptVariableModule(catalog, serverPersistent: server);
+        var firstCharacter = new CharacterInfo();
+        var secondCharacter = new CharacterInfo();
+        var firstGuild = new GuildInfo { GuildIndex = 1, Name = "甲" };
+        var secondGuild = new GuildInfo { GuildIndex = 2, Name = "乙" };
+
+        Assert.True(module.Mutate(ScriptVariableContext.ForPlayer(firstCharacter),
+            ScriptVariableMutation.Set(
+                ScriptVariableReference.Named(ScriptVariableScope.Human, "Score"),
+                ScriptVariableValue.FromDecimal(2.5m))).Success);
+        Assert.False(module.Read(ScriptVariableContext.ForPlayer(secondCharacter),
+            ScriptVariableReference.Named(ScriptVariableScope.Human, "Score")).Found);
+
+        Assert.True(module.Mutate(ScriptVariableContext.ForPlayer(firstGuild),
+            ScriptVariableMutation.Set(
+                ScriptVariableReference.Named(ScriptVariableScope.Guild, "Score"),
+                ScriptVariableValue.FromInteger(7))).Success);
+        Assert.Equal(7L, module.Read(ScriptVariableContext.ForPlayer(firstGuild),
+            ScriptVariableReference.Named(ScriptVariableScope.Guild, "Score")).Value.Integer);
+        Assert.False(module.Read(ScriptVariableContext.ForPlayer(secondGuild),
+            ScriptVariableReference.Named(ScriptVariableScope.Guild, "Score")).Found);
+        Assert.True(firstGuild.NeedSave);
+
+        Assert.True(module.Mutate(ScriptVariableContext.ForServer(),
+            ScriptVariableMutation.Set(
+                ScriptVariableReference.Named(ScriptVariableScope.Global, "Score"),
+                ScriptVariableValue.FromInteger(99))).Success);
+        Assert.Equal(99L, module.Read(ScriptVariableContext.ForPlayer(firstCharacter),
+            ScriptVariableReference.Named(ScriptVariableScope.Global, "Score")).Value.Integer);
+    }
+
+    [Fact]
+    public void Var05ScopesRejectInvalidKindsAndFixedCustomReferences()
+    {
+        Assert.Throws<ArgumentException>(() =>
+            Declaration(ScriptVariableScope.J, "Text", ScriptVariableKind.String, "x"));
+        Assert.Throws<ArgumentException>(() =>
+            Declaration(ScriptVariableScope.Z, "Count", ScriptVariableKind.Integer, "0"));
+        Assert.Throws<ArgumentException>(() =>
+            Declaration(ScriptVariableScope.Guild, "Text", ScriptVariableKind.String, "x"));
+
+        var module = new ScriptVariableModule(new ScriptVariableDeclarationCatalog());
+        ScriptVariableReadResult result = module.Read(
+            ScriptVariableContext.ForPlayer(new CharacterInfo()),
+            ScriptVariableReference.Legacy(ScriptVariableScope.Human, 0));
+        Assert.False(result.Success);
+        Assert.Equal(ScriptVariableErrorCode.UnknownReference, result.ErrorCode);
+
+        ScriptVariableResetResult guildReset = module.Reset(
+            ScriptVariableContext.ForPlayer(new CharacterInfo()),
+            ScriptVariableSelector.ScopeOnly(ScriptVariableScope.Guild));
+        Assert.False(guildReset.Success);
+        Assert.Equal(ScriptVariableErrorCode.ContextUnavailable, guildReset.ErrorCode);
+    }
+
+    [Fact]
     public void TxtNpcParserRoutesPrivatePersistentPrefixesToUnifiedCommands()
     {
         var page = new NPCPage("[@MAIN]");
@@ -730,6 +914,20 @@ public sealed class ScriptVariableModuleTests
         Assert.Equal(3, segment.ActList.Count);
         Assert.All(segment.ActList, action => Assert.Equal(ActionType.VariableMutate, action.Type));
         Assert.Equal(CheckType.Variable, Assert.Single(segment.CheckList).Type);
+    }
+
+    [Fact]
+    public void TxtNpcParserRoutesVar05PrefixesToUnifiedCommands()
+    {
+        var segment = new NPCSegment(
+            new NPCPage("[@MAIN]"), new List<string>(), new List<string>(), new List<string>(),
+            new List<string>(), new List<string>());
+        foreach (string line in new[]
+                 { "MOV J0 1", "MOV Z0 今日", "INC HUMAN.Score 2", "INC GUILD.Score 3", "INC GLOBAL.Score 4" })
+            segment.ParseAct(segment.ActList, line);
+
+        Assert.Equal(5, segment.ActList.Count);
+        Assert.All(segment.ActList, action => Assert.Equal(ActionType.VariableMutate, action.Type));
     }
 
     private static ScriptVariableDeclaration Declaration(

@@ -1,6 +1,7 @@
 using System.Drawing;
 ﻿using Server.MirEnvir;
 using Server.MirObjects;
+using Server.Scripting.Variables;
 
 namespace Server.MirDatabase
 {
@@ -30,11 +31,14 @@ namespace Server.MirDatabase
         public Color FlagColour = Color.White;
 
         public bool NeedSave = false;
+        public CharacterScriptVariableStore ScriptVariables { get; } = new CharacterScriptVariableStore();
 
         protected static Envir Envir
         {
             get { return Envir.Main; }
         }
+
+        public GuildInfo() { }
 
         public GuildInfo(PlayerObject owner, string name)
         {
@@ -164,6 +168,9 @@ namespace Server.MirDatabase
                 FlagImage = reader.ReadUInt16();
                 FlagColour = Color.FromArgb(reader.ReadInt32());
             }
+
+            if (customversion >= 2)
+                ScriptVariables.Load(reader);
         }
 
         public void Save(BinaryWriter writer)
@@ -226,6 +233,7 @@ namespace Server.MirDatabase
 
             writer.Write(FlagImage);
             writer.Write(FlagColour.ToArgb());
+            ScriptVariables.Save(writer);
         }
 
     }

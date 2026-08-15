@@ -1,11 +1,11 @@
 # 变量系统概览
 
-- 功能状态：实验性（VAR-01～04）
+- 功能状态：实验性（VAR-01～05）
 - 首次支持版本：开发版 2026-08-15
 - 适用端：服务端脚本
 
 !!! warning "开发版功能"
-    当前已实现 P/D/M/N/S/I/Call 运行时作用域、U/T 私人持久作用域、G/A 全局持久作用域、编号变量、N$/S$ 在线扩展、显式命名 Decimal、统一运算/比较/显示以及 C# 声明热重载。J/Z 等周期作用域仍是规划能力。
+    当前已实现 P/D/M/N/S/I/Call 运行时作用域、U/T 私人持久、G/A 全局持久、J/Z 每日周期、HUMAN/GUILD/GLOBAL 自定义持久、编号变量、显式命名 Decimal、统一运算/比较/显示以及 C# 声明热重载。复合值、公式与跨对象访问仍是后续能力。
 
 变量系统用于在 NPC 对话、人物在线、地图停留、服务器运行和持久化数据之间保存状态。所有变量都由四部分确定：
 
@@ -45,6 +45,8 @@ VAR Integer HUMAN KillCount DEFAULT 0
 - [作用域与生命周期](scopes.md)
 - [私人持久变量与数据库](persistence.md)
 - [全局持久变量与数据库](global-persistence.md)
+- [每日周期变量](daily-variables.md)
+- [自定义持久作用域](custom-scopes.md)
 - [声明、初始化与热重载](declarations.md)
 - [命名小数变量](decimal.md)
 - [操作与显示命令](commands.md)

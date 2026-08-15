@@ -6,8 +6,10 @@ namespace Server.Scripting.Variables
     {
         public CharacterScriptVariableEntry(ScriptVariableScope scope, string key, ScriptVariableValue value)
         {
-            if (scope != ScriptVariableScope.U && scope != ScriptVariableScope.T)
-                throw new ArgumentOutOfRangeException(nameof(scope), "当前角色持久变量仅支持 U/T。");
+            if (scope != ScriptVariableScope.U && scope != ScriptVariableScope.T &&
+                scope != ScriptVariableScope.J && scope != ScriptVariableScope.Z &&
+                scope != ScriptVariableScope.Human && scope != ScriptVariableScope.Guild)
+                throw new ArgumentOutOfRangeException(nameof(scope), "角色持久变量作用域无效。");
             if (string.IsNullOrWhiteSpace(key))
                 throw new ArgumentException("持久变量键不能为空。", nameof(key));
 
@@ -29,6 +31,7 @@ namespace Server.Scripting.Variables
             new Dictionary<string, ScriptVariableValue>(StringComparer.Ordinal);
 
         public int Count => _values.Count;
+        public long DailyResetPeriodId { get; private set; }
 
         public bool TryGet(ScriptVariableScope scope, string key, out ScriptVariableValue value)
         {
@@ -55,6 +58,22 @@ namespace Server.Scripting.Variables
             return keys.Length;
         }
 
+        public bool EnsureDailyPeriod(long periodId)
+        {
+            if (periodId <= 0) throw new ArgumentOutOfRangeException(nameof(periodId));
+            if (periodId <= DailyResetPeriodId) return false;
+            Clear(ScriptVariableScope.J);
+            Clear(ScriptVariableScope.Z);
+            DailyResetPeriodId = periodId;
+            return true;
+        }
+
+        public void RestoreDailyPeriod(long periodId)
+        {
+            if (periodId < 0) throw new InvalidDataException("每日变量周期无效。");
+            DailyResetPeriodId = Math.Max(DailyResetPeriodId, periodId);
+        }
+
         public IReadOnlyList<CharacterScriptVariableEntry> Snapshot()
         {
             var result = new List<CharacterScriptVariableEntry>(_values.Count);
@@ -72,6 +91,7 @@ namespace Server.Scripting.Variables
         public void Save(BinaryWriter writer)
         {
             if (writer == null) throw new ArgumentNullException(nameof(writer));
+            writer.Write(DailyResetPeriodId);
             IReadOnlyList<CharacterScriptVariableEntry> entries = Snapshot();
             writer.Write(entries.Count);
             foreach (var entry in entries)
@@ -96,9 +116,11 @@ namespace Server.Scripting.Variables
             }
         }
 
-        public void Load(BinaryReader reader)
+        public void Load(BinaryReader reader, bool includesDailyPeriod = true)
         {
             if (reader == null) throw new ArgumentNullException(nameof(reader));
+            long periodId = includesDailyPeriod ? reader.ReadInt64() : 0;
+            if (periodId < 0) throw new InvalidDataException("每日变量周期无效。");
             int count = reader.ReadInt32();
             if (count < 0 || count > MaximumEntries)
                 throw new InvalidDataException($"角色持久变量数量无效：{count}。");
@@ -123,6 +145,7 @@ namespace Server.Scripting.Variables
 
             _values.Clear();
             foreach (var pair in candidate) _values.Add(pair.Key, pair.Value);
+            DailyResetPeriodId = periodId;
         }
 
         private static ScriptVariableValue ReadDecimal(string text)
@@ -133,7 +156,7 @@ namespace Server.Scripting.Variables
 
         private static void Validate(ScriptVariableScope scope, string key, ScriptVariableValue value)
         {
-            if (scope != ScriptVariableScope.U && scope != ScriptVariableScope.T)
+            if (!IsSupportedScope(scope))
                 throw new InvalidDataException($"角色持久作用域无效：{scope}。");
             if (string.IsNullOrWhiteSpace(key) || key.Length > MaximumKeyLength || key.Contains(':'))
                 throw new InvalidDataException("角色持久变量键无效。");
@@ -144,6 +167,14 @@ namespace Server.Scripting.Variables
                 throw new InvalidDataException("U 变量只能保存整数或小数。");
             if (scope == ScriptVariableScope.T && value.Kind != ScriptVariableKind.String)
                 throw new InvalidDataException("T 变量只能保存字符串。");
+            if (scope == ScriptVariableScope.J && value.Kind == ScriptVariableKind.String)
+                throw new InvalidDataException("J 变量只能保存整数或小数。");
+            if (scope == ScriptVariableScope.Z && value.Kind != ScriptVariableKind.String)
+                throw new InvalidDataException("Z 变量只能保存字符串。");
+            if (scope == ScriptVariableScope.Human && value.Kind == ScriptVariableKind.String)
+                throw new InvalidDataException("HUMAN 变量只能保存整数或小数。");
+            if (scope == ScriptVariableScope.Guild && value.Kind == ScriptVariableKind.String)
+                throw new InvalidDataException("GUILD 变量只能保存整数或小数。");
         }
 
         private static string NormalizeKey(string key)
@@ -157,5 +188,10 @@ namespace Server.Scripting.Variables
         }
 
         private static string CompositeKey(ScriptVariableScope scope, string key) => scope + ":" + key;
+
+        private static bool IsSupportedScope(ScriptVariableScope scope) =>
+            scope == ScriptVariableScope.U || scope == ScriptVariableScope.T ||
+            scope == ScriptVariableScope.J || scope == ScriptVariableScope.Z ||
+            scope == ScriptVariableScope.Human || scope == ScriptVariableScope.Guild;
     }
 }

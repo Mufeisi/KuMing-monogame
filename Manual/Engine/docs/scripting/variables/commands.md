@@ -1,6 +1,6 @@
 # 操作与显示命令
 
-- 功能状态：实验性（当前支持 P/D/M/N/S/I/Call/U/T/G/A）
+- 功能状态：实验性（当前支持 P/D/M/N/S/I/Call/U/T/G/A/J/Z/HUMAN/GUILD/GLOBAL）
 - 首次支持版本：开发版 2026-08-15
 
 整数和小数共用以下命令。变量模块根据声明类型选择运算规则。
@@ -88,6 +88,18 @@ MOV A.Notice 双倍经验活动已开启
 ```
 
 G/A 修改会请求服务器变量保存。原始 NPC `A*` 临时变量已移除，`MOV A0 ...` 不再写入人物的 `NPCVar`，而是直接写入全服持久字符串。
+
+每日和自定义持久作用域仍使用相同命令：
+
+```text
+DEC J0 1
+MOV Z0 已领取
+INC HUMAN.LifetimeScore 0.5
+INC GUILD.WarScore 10
+MOV GLOBAL.SeasonRate 1.25
+```
+
+HUMAN/GUILD/GLOBAL 只能使用声明过的名称；写成 `HUMAN0` 会返回 `UnknownReference`。GUILD 缺少有效行会时返回 `ContextUnavailable`。
 
 右操作数既可以是文化无关的字面量，也可以是同一上下文中的变量引用。固定编号 `P0-P999` 始终是 `Int64`；`MOV P0 1.5` 会返回类型错误，不会动态变成小数。
 

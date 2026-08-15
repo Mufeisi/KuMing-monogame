@@ -19,6 +19,8 @@ P0
 character_script_variables
 server_script_variables
 Server.Variables.json
+每日变量
+guild_script_variables
 DeclarationConflict
 ```
 

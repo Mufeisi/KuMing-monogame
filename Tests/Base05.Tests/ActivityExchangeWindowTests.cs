@@ -156,8 +156,10 @@ public sealed class ActivityExchangeWindowTests
             source.Save(writer);
 
         byte[] currentBytes = current.ToArray();
+        Assert.Equal(0L, BitConverter.ToInt64(currentBytes, currentBytes.Length - sizeof(long) - sizeof(int)));
         Assert.Equal(0, BitConverter.ToInt32(currentBytes, currentBytes.Length - sizeof(int)));
-        using var legacy = new MemoryStream(currentBytes, 0, currentBytes.Length - sizeof(int), writable: false);
+        int variablePayloadLength = sizeof(long) + sizeof(int);
+        using var legacy = new MemoryStream(currentBytes, 0, currentBytes.Length - variablePayloadLength, writable: false);
         using var reader = new BinaryReader(legacy, System.Text.Encoding.UTF8, leaveOpen: true);
         var restored = new CharacterInfo(reader, Server.MirEnvir.Envir.Version, customVersion: 0);
 

@@ -10,7 +10,7 @@
 </section>
 
 !!! warning "当前说明书状态"
-    变量系统已交付 `VAR-01`～`VAR-04`：P/D/M/N/S/I/Call 运行时作用域、U/T 私人持久、G/A 全局持久、命名 Decimal、小数运算、显示、声明热重载及 Legacy/SQLite/MySQL 持久化可在开发版使用。J/Z 等后续范围以[功能状态](reference/feature-status.md)为准。
+    变量系统已交付 `VAR-01`～`VAR-05`：运行时、私人、全局、每日和行会作用域，命名 Decimal、小数运算、显示、声明热重载及 Legacy/SQLite/MySQL 持久化可在开发版使用。复合值、公式等后续范围以[功能状态](reference/feature-status.md)为准。
 
 <div class="lyo-card-grid" markdown>
 
