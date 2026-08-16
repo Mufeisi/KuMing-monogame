@@ -374,7 +374,7 @@ P0 每项必须确认别名，例如当前项目的 `CLASS/MAPNAME/X_COORD/Y_COO
 | 0 | LFENV-00 权威语料与验收契约 | 进行中 | 本规格、版本池、E1/E2 定义 | 项目所有者接受范围和零错误定义 |
 | 1 | LFENV-01 语料去重与版本画像 | 已验证 | 53 根摘要、家族聚类、代表样本清单 | 每个根有摘要、编码分布、文件类型、内容哈希和家族归属；5 项目录契约测试中的 2 项画像测试通过 |
 | 2 | LFENV-02 服务器常量目录 | 已验证 | `lingfeng-server-symbols.csv`、上下文/安全等级/旧实现映射 | 附件 281 个原始条目全部登记；限定 53 个 `Envir*` 根后，513 个在用符号族逐项重算一致；状态仅为 D/X，无 `?`；5 项目录契约测试全部通过 |
-| 3 | LFENV-03 常量解析深模块 | 未开始 | Resolver、Catalog、Context、结果类型 | 不修改领域对象即可解析 P0；异常不泄漏、不串号 |
+| 3 | LFENV-03 常量解析深模块 | 已实施 | Resolver、Catalog、Context、结果类型 | 不修改领域对象即可解析 P0；异常不泄漏、不串号 |
 | 4 | LFENV-04 统一文本渲染 | 未开始 | Renderer、语法/限额/诊断测试 | 多占位符、函数、中文、按钮和嵌套全部通过 |
 | 5 | LFENV-05 P0 人物/服务器常量 | 未开始 | Player/Server/Equipment Adapter | P0 清单自动化与真实 NPC 页面全部通过 |
 | 6 | LFENV-06 P1 事件常量 | 未开始 | Combat/Item/Trigger Adapter | 登录、击杀、拾取、使用、受击等真实链无上下文污染 |
@@ -393,6 +393,15 @@ P0 每项必须确认别名，例如当前项目的 `CLASS/MAPNAME/X_COORD/Y_COO
 | 19 | LFENV-19 灰度、回滚与说明书 | 未开始 | 候选、备份、回滚、正式说明书 | 真实服保存/重启/回滚与两轴审查通过 |
 
 顺序约束：LFENV-02 至 05 是后续所有玩法的基础；领域 Provider 可以在常量 P0 稳定后并行推进，但 LFENV-16 以前必须汇入同一候选快照。
+
+### 7.1 LFENV-03 实施边界
+
+- 运行时代码位于 `src/Server/Server/Scripting/ServerSymbols/`，调用方只通过 `IServerSymbolResolver.Resolve` 取得结构化结果。
+- `ServerSymbolCatalog` 在构建候选时复制为只读快照；规范名、别名或同名契约冲突会拒绝整个候选。
+- `ServerSymbolContext` 显式声明本次事件可用的领域上下文，并以只读 Binding 提供值；Resolver 不保存“上一次事件”的对象或值。
+- 参数、大小写、空白和 `<$...>` 包装由 `ServerSymbolReference` 统一归一化；别名在进入 Binding 前还原为规范名。
+- 敏感拒绝先于取值，Adapter 异常只返回不含异常正文的 `Faulted`；缺上下文和缺依赖分别返回 `ContextUnavailable`、`DependencyMissing`。
+- 本阶段不接管 `NPCSegment.ReplaceValue`，也不把目录中的 D 项升级为 B/C；统一文本接入属于 LFENV-04，人物/服务器真实 Adapter 与 P0 完整清单属于 LFENV-05。
 
 ## 8. 测试设计
 
