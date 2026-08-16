@@ -21,6 +21,7 @@ namespace Server.Scripting.ServerSymbols
     public enum ScriptTextDiagnosticCode
     {
         SymbolResolutionFailed,
+        CompatibilitySubstitute,
         InvalidSyntax,
         LimitExceeded
     }
@@ -242,7 +243,19 @@ namespace Server.Scripting.ServerSymbols
                     return fragment;
                 }
                 if (result.Success)
+                {
                     output.Append(result.Value.Format());
+                    if (result.Status == ServerSymbolStatus.CompatibilitySubstitute)
+                    {
+                        state.Diagnostics.Add(new ScriptTextDiagnostic(
+                            ScriptTextDiagnosticCode.CompatibilitySubstitute,
+                            result.Status,
+                            result.CanonicalName,
+                            sourceOffset + start,
+                            originalToken.Length,
+                            "服务器常量使用当前模型的兼容显示值。"));
+                    }
+                }
                 else
                 {
                     state.Diagnostics.Add(new ScriptTextDiagnostic(
@@ -373,6 +386,7 @@ namespace Server.Scripting.ServerSymbols
             ServerSymbolStatus.Unsupported => "服务器常量尚未登记支持。",
             ServerSymbolStatus.InvalidReference => "服务器常量引用语法无效。",
             ServerSymbolStatus.Faulted => "服务器常量解析失败。",
+            ServerSymbolStatus.CompatibilitySubstitute => "服务器常量使用当前模型的兼容显示值。",
             _ => "服务器常量未能解析。"
         };
 

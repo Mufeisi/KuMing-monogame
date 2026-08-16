@@ -376,7 +376,7 @@ P0 每项必须确认别名，例如当前项目的 `CLASS/MAPNAME/X_COORD/Y_COO
 | 2 | LFENV-02 服务器常量目录 | 已验证 | `lingfeng-server-symbols.csv`、上下文/安全等级/旧实现映射 | 附件 281 个原始条目全部登记；限定 53 个 `Envir*` 根后，513 个在用符号族逐项重算一致；状态仅为 D/X，无 `?`；5 项目录契约测试全部通过 |
 | 3 | LFENV-03 常量解析深模块 | 已验证 | Resolver、Catalog、Context、结果类型 | 不修改领域对象即可解析 P0；异常不泄漏、不串号 |
 | 4 | LFENV-04 统一文本渲染 | 已验证 | Renderer、语法/限额/诊断测试 | 多占位符、函数、中文、按钮和嵌套全部通过 |
-| 5 | LFENV-05 P0 人物/服务器常量 | 未开始 | Player/Server/Equipment Adapter | P0 清单自动化与真实 NPC 页面全部通过 |
+| 5 | LFENV-05 P0 人物/服务器常量 | 已验证 | Player/Server/Equipment Adapter | P0 清单自动化与真实 NPC 页面全部通过 |
 | 6 | LFENV-06 P1 事件常量 | 未开始 | Combat/Item/Trigger Adapter | 登录、击杀、拾取、使用、受击等真实链无上下文污染 |
 | 7 | LFENV-07 P2 英雄/宠物常量 | 未开始 | Hero/Pet Adapter 或 E 清单 | 有模型的逐项通过，无模型的依赖和迁移策略明确 |
 | 8 | LFENV-08 P3/P4 与实时常量 | 未开始 | 行会/攻城/高级系统/客户端契约 | 服务端与客户端值来源一致；敏感项失败关闭 |
@@ -410,6 +410,15 @@ P0 每项必须确认别名，例如当前项目的 `CLASS/MAPNAME/X_COORD/Y_COO
 - 默认限制为输入 8,192 字符、64 个占位符、4 层嵌套和展开后 32,768 字符；调用方即使自定义限额也不能超过 1 MiB 输入、4,096 个占位符、16 层嵌套和 4 MiB 输出。
 - 语法或限额失败整行原子返回原文；单项缺上下文、缺依赖、敏感拒绝、未支持或 Adapter 故障保留该占位符，并返回不含领域异常正文的结构化诊断。
 - 本阶段尚不挂接旧 `NPCSegment.ReplaceValue`；LFENV-05 提供 P0 Player/Server/Equipment Adapter 后，NPC 对话、命令参数、系统触发和 `ScriptApi` 才能在同一真实调用链切换，避免先接入一个只能返回 `DependencyMissing` 的空运行时。
+
+### 7.3 LFENV-05 实施边界
+
+- P0 运行时目录以 6.1 的 82 个规范名为阶段契约；`CLASS/MAPNAME/X_COORD/Y_COORD/CREDIT/ARMOUR` 等旧名称作为别名进入同一 Resolver，非翎风兼容模式继续执行旧 `switch`，不得改变默认配置行为。
+- NPC `#SAY` 每行只建立一次人物、地图、行会、装备和服务器时间只读快照；`#IF/#ACT` 参数、系统触发页与 `ScriptApi.ResolveLegacyToken` 复用同一 Renderer。快照构建或 Adapter 异常原子保留原文，只产生不含领域值和异常正文的结构化诊断。
+- 当前数据模型没有独立的游戏点、金刚石、灵符、灵玉、荣誉、假人计数、盾牌和时装槽位。显示兼容值分别为 `0` 或“空”，Resolver 返回 `CompatibilitySubstitute`，不得把兼容值冒充真实领域数据，也不得据此实现写操作。
+- 未登记常量在 Renderer 中返回 `Unsupported` 并保留原文；真实 NPC 入口必须把状态、规范名和固定诊断写入调试日志，日志不得包含玩家名、常量值、脚本文本或宿主路径。
+- `DATE/TIME/DATETIME` 在翎风兼容模式分别使用 `yyyy-MM-dd`、`HH:mm:ss`、`yyyy-MM-dd HH:mm:ss`；非翎风模式的旧 `DATE` 继续使用 `ToShortDateString()`。
+- LFENV-05 完成时，P0 在“直接”服务器常量语料中的调用覆盖基线为 `61,816 / 108,296 = 57.08%`。GATE-C0 的 80% 是 LFENV-06 至 LFENV-08 继续实现事件、英雄宠物、行会攻城后统一复算的项目门禁，不是扩大 LFENV-05 领域边界或把既有 `STR()` 变量模块重复计入 P0 的理由。
 
 ## 8. 测试设计
 

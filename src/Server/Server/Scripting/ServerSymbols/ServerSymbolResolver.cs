@@ -9,7 +9,9 @@ namespace Server.Scripting.ServerSymbols
         private ServerSymbolBinding(
             ServerSymbolContextKind contextKind,
             string canonicalName,
-            Func<ServerSymbolReference, ServerSymbolValue> resolve)
+            Func<ServerSymbolReference, ServerSymbolValue> resolve,
+            bool compatibilitySubstitute = false,
+            string diagnostic = "")
         {
             if (!ServerSymbolReference.TryNormalizeName(canonicalName, out string normalizedName))
                 throw new ArgumentException("服务器常量绑定名称无效。", nameof(canonicalName));
@@ -17,16 +19,27 @@ namespace Server.Scripting.ServerSymbols
             ContextKind = contextKind;
             CanonicalName = normalizedName;
             _resolve = resolve ?? throw new ArgumentNullException(nameof(resolve));
+            IsCompatibilitySubstitute = compatibilitySubstitute;
+            Diagnostic = diagnostic ?? string.Empty;
         }
 
         public ServerSymbolContextKind ContextKind { get; }
         public string CanonicalName { get; }
+        public bool IsCompatibilitySubstitute { get; }
+        public string Diagnostic { get; }
 
         public static ServerSymbolBinding Value(
             ServerSymbolContextKind contextKind,
             string canonicalName,
             ServerSymbolValue value) =>
             new ServerSymbolBinding(contextKind, canonicalName, _ => value);
+
+        public static ServerSymbolBinding CompatibilityValue(
+            ServerSymbolContextKind contextKind,
+            string canonicalName,
+            ServerSymbolValue value,
+            string diagnostic) =>
+            new ServerSymbolBinding(contextKind, canonicalName, _ => value, true, diagnostic);
 
         public static ServerSymbolBinding Dynamic(
             ServerSymbolContextKind contextKind,
@@ -126,7 +139,9 @@ namespace Server.Scripting.ServerSymbols
                         definition.CanonicalName,
                         "服务器常量 Adapter 返回了不兼容的数据类型。");
 
-                return ServerSymbolResult.Resolved(definition.CanonicalName, value);
+                return binding.IsCompatibilitySubstitute
+                    ? ServerSymbolResult.CompatibilitySubstitute(definition.CanonicalName, value, binding.Diagnostic)
+                    : ServerSymbolResult.Resolved(definition.CanonicalName, value);
             }
             catch
             {

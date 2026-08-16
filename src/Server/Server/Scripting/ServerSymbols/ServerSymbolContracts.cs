@@ -12,6 +12,7 @@ namespace Server.Scripting.ServerSymbols
     {
         Faulted,
         Resolved,
+        CompatibilitySubstitute,
         ContextUnavailable,
         DependencyMissing,
         SensitiveDenied,
@@ -148,18 +149,24 @@ namespace Server.Scripting.ServerSymbols
         public string CanonicalName { get; }
         public ServerSymbolValue Value { get; }
         public string Diagnostic { get; }
-        public bool Success => Status == ServerSymbolStatus.Resolved;
+        public bool Success => Status is ServerSymbolStatus.Resolved or ServerSymbolStatus.CompatibilitySubstitute;
 
         public static ServerSymbolResult Resolved(string canonicalName, ServerSymbolValue value) =>
             new ServerSymbolResult(ServerSymbolStatus.Resolved, canonicalName, value, string.Empty);
+
+        internal static ServerSymbolResult CompatibilitySubstitute(
+            string canonicalName,
+            ServerSymbolValue value,
+            string diagnostic) =>
+            new ServerSymbolResult(ServerSymbolStatus.CompatibilitySubstitute, canonicalName, value, diagnostic);
 
         public static ServerSymbolResult Fail(
             ServerSymbolStatus status,
             string canonicalName,
             string diagnostic)
         {
-            if (status == ServerSymbolStatus.Resolved)
-                throw new ArgumentOutOfRangeException(nameof(status), "失败结果不能使用 Resolved 状态。");
+            if (status is ServerSymbolStatus.Resolved or ServerSymbolStatus.CompatibilitySubstitute)
+                throw new ArgumentOutOfRangeException(nameof(status), "失败结果不能使用成功状态。");
 
             return new ServerSymbolResult(status, canonicalName, default, diagnostic);
         }

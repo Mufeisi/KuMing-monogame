@@ -165,7 +165,7 @@ public sealed class LingFengTxtSpecialTriggerIntegrationTests
                 "[@KILLMON]\n#ACT\nGIVEGOLD 8\n" +
                 "[@M2DROPITEM]\n#ACT\nGIVEGOLD 16\n" +
                 "[@PLAYLEVELUP]\n#ACT\nGIVEGOLD 32\n" +
-                "[@LOOP]\n#SAY\n系统输出不得污染现有对话\n#ACT\nDELAYGOTO 0 @LOOP\nGOTO @LOOP\n",
+                "[@LOOP]\n#SAY\n系统输出不得污染现有对话\n#ACT\nGIVEGOLD <$LEVEL>\nDELAYGOTO 0 @LOOP\nGOTO @LOOP\n",
                 new UTF8Encoding(false));
 
             Settings.CSharpScriptsEnabled = false;
@@ -197,7 +197,7 @@ public sealed class LingFengTxtSpecialTriggerIntegrationTests
                 "[@KILLMON]\n#ACT\nGIVEGOLD 8\n" +
                 "[@M2DROPITEM]\n#ACT\nGIVEGOLD 16\n" +
                 "[@PLAYLEVELUP]\n#ACT\nGIVEGOLD 32\n" +
-                "[@LOOP]\n#SAY\n系统输出不得污染现有对话\n#ACT\nDELAYGOTO 0 @LOOP\nGOTO @LOOP\n",
+                "[@LOOP]\n#SAY\n系统输出不得污染现有对话\n#ACT\nGIVEGOLD <$LEVEL>\nDELAYGOTO 0 @LOOP\nGOTO @LOOP\n",
                 new UTF8Encoding(false));
             Envir.Main.ApplyPhysicalTextFileDefinitions();
             Envir.Main.Scripts.Remove(loadedScript.ScriptID);
@@ -260,7 +260,9 @@ public sealed class LingFengTxtSpecialTriggerIntegrationTests
             attacker.NPCPage = activePage;
             attacker.NPCSpeech = activeSpeech;
             Settings.TxtScriptsMaxImmediateTransitions = 3;
+            uint beforeSystemConstants = attacker.Account.Gold;
             Assert.True(loadedScript.CallSystem(attacker, "[@LOOP]"));
+            Assert.Equal((uint)(attacker.Level * 3), attacker.Account.Gold - beforeSystemConstants);
             Assert.Equal(123u, attacker.NPCObjectID);
             Assert.Equal(456, attacker.NPCScriptID);
             Assert.Same(activePage, attacker.NPCPage);

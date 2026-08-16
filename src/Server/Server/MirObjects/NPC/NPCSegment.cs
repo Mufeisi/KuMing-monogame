@@ -5,6 +5,7 @@ using System.Globalization;
 using System.Text.RegularExpressions;
 using Server.Scripting.Variables;
 using Server.Scripting;
+using Server.Scripting.ServerSymbols;
 using S = ServerPackets;
 using Timer = Server.MirEnvir.Timer;
 
@@ -1495,19 +1496,65 @@ namespace Server.MirObjects
         {
             for (var i = 0; i < speech.Count; i++)
             {
+                if (IsLingFengCompatibility && speech[i].Contains("<$", StringComparison.Ordinal))
+                {
+                    ScriptTextRenderResult rendered = LingFengP0ServerSymbols.Render(player, speech[i]);
+                    ReportServerSymbolDiagnostics(rendered);
+                    speech[i] = rendered.Text;
+                    if (!CanUseLegacyServerSymbolFallback(rendered))
+                        continue;
+                }
+
                 var parts = speech[i].Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
 
                 if (parts.Length == 0) continue;
 
                 foreach (var part in parts)
                 {
-                    speech[i] = speech[i].Replace(part, ReplaceValue(player, part));
+                    speech[i] = speech[i].Replace(part, ReplaceLegacyValue(player, part));
                 }
             }
             return speech;
         }
 
         public string ReplaceValue(PlayerObject player, string param)
+        {
+            if (IsLingFengCompatibility && param.Contains("<$", StringComparison.Ordinal))
+            {
+                ScriptTextRenderResult rendered = LingFengP0ServerSymbols.Render(player, param);
+                ReportServerSymbolDiagnostics(rendered);
+                if (!string.Equals(rendered.Text, param, StringComparison.Ordinal))
+                    param = rendered.Text;
+                if (!CanUseLegacyServerSymbolFallback(rendered))
+                    return param;
+            }
+
+            return ReplaceLegacyValue(player, param);
+        }
+
+        private static void ReportServerSymbolDiagnostics(ScriptTextRenderResult rendered)
+        {
+            foreach (ScriptTextDiagnostic diagnostic in rendered.Diagnostics)
+            {
+                if (diagnostic.SymbolStatus == ServerSymbolStatus.CompatibilitySubstitute)
+                    continue;
+                MessageQueue.EnqueueDebugging(
+                    $"[翎风服务器常量] {diagnostic.SymbolStatus}: {diagnostic.CanonicalName} {diagnostic.Message}");
+            }
+        }
+
+        private static bool CanUseLegacyServerSymbolFallback(ScriptTextRenderResult rendered)
+        {
+            if (rendered.Status is ScriptTextRenderStatus.Unchanged or ScriptTextRenderStatus.Rendered)
+                return true;
+
+            return rendered.Status == ScriptTextRenderStatus.CompletedWithDiagnostics &&
+                   rendered.Diagnostics.All(diagnostic =>
+                       diagnostic.SymbolStatus is ServerSymbolStatus.Unsupported or
+                           ServerSymbolStatus.CompatibilitySubstitute);
+        }
+
+        private string ReplaceLegacyValue(PlayerObject player, string param)
         {
             var regex = new Regex(@"\<\$(.*)\>");
             var varRegex = new Regex(@"(.*?)\(([A-Z][0-9])\)");

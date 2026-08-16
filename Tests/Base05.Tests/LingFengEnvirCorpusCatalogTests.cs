@@ -78,7 +78,7 @@ public sealed class LingFengEnvirCorpusCatalogTests
             .Distinct(StringComparer.OrdinalIgnoreCase).Count());
         Assert.Equal(281, rows.Count(row => row["符号种类"] == "附件原文" && row["附件出现"] == "是"));
         Assert.Equal(513, rows.Count(row => row["真实语料次数"] != "0"));
-        Assert.Equal(new[] { "D", "X" }, rows
+        Assert.Equal(new[] { "B", "D", "X" }, rows
             .Select(row => row["兼容状态"])
             .Distinct(StringComparer.Ordinal)
             .Order(StringComparer.Ordinal));
@@ -121,9 +121,9 @@ public sealed class LingFengEnvirCorpusCatalogTests
 
         IReadOnlyDictionary<string, string> username = Assert.Single(rows,
             item => item["符号种类"] == "直接" && item["规范名称"] == "USERNAME");
-        Assert.Contains("NPCSegment.ReplaceValue", username["当前实现"], StringComparison.Ordinal);
-        Assert.Equal("D", username["兼容状态"]);
-        Assert.Contains("契约测试", username["已知差异或实施结论"], StringComparison.Ordinal);
+        Assert.Contains("LingFengP0ServerSymbols", username["当前实现"], StringComparison.Ordinal);
+        Assert.Equal("B", username["兼容状态"]);
+        Assert.Contains("LFENV-05", username["已知差异或实施结论"], StringComparison.Ordinal);
 
         foreach (string symbol in Enumerable.Range(0, 10).Select(index => $"BANKACCOUNT{index}").Append("QQ"))
         {
