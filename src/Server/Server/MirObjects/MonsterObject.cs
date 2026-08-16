@@ -2,12 +2,14 @@ using System.Drawing;
 ﻿using Server.MirDatabase;
 using Server.MirEnvir;
 using Server.MirObjects.Monsters;
+using Server.Scripting;
 using S = ServerPackets;
 
 namespace Server.MirObjects
 {
     public class MonsterObject : MapObject
     {
+        private LingFengMonsterContentSnapshot _appliedLingFengContent;
         public static MonsterObject GetMonster(MonsterInfo info)
         {
             if (info == null) return null;
@@ -856,6 +858,17 @@ namespace Server.MirObjects
 
             Stats.Add(Info.Stats);
 
+            LingFengMonsterContentSnapshot lingFengContent = Info.LingFengContent;
+            _appliedLingFengContent = lingFengContent;
+            if (lingFengContent?.Equipment != null)
+            {
+                for (int index = 0; index < lingFengContent.Equipment.Count; index++)
+                {
+                    ItemInfo equipment = lingFengContent.Equipment[index];
+                    if (equipment != null) Stats.Add(equipment.Stats);
+                }
+            }
+
             MoveSpeed = Info.MoveSpeed;
             AttackSpeed = Info.AttackSpeed;
         }
@@ -1184,6 +1197,8 @@ namespace Server.MirObjects
             if (CurrentMap.Info.NoDropMonster)
                 return;
 
+            LingFengMonsterContentSnapshot lingFengContent = EnsureLingFengContentCurrent();
+
             var scriptsRuntimeActive = Settings.CSharpScriptsEnabled && Envir.CSharpScripts.Enabled;
             var txtSpecialTriggersActive = Server.Scripting.LingFengTxtSystemHookAdapter.IsCompatibilityEnabled(Envir.TextFileProvider);
             var allowCSharpBefore = scriptsRuntimeActive && Server.Scripting.ScriptDispatchPolicy.ShouldTryCSharp(Server.Scripting.ScriptHookKeys.OnMonsterDropBefore);
@@ -1205,13 +1220,20 @@ namespace Server.MirObjects
             var scriptDecision = Server.Scripting.ScriptHookDecision.Continue;
 
             List<DropInfo> drops = Info.Drops;
+            if (lingFengContent?.DropUseItems == true && lingFengContent.Equipment.Count > 0)
+            {
+                drops = new List<DropInfo>(Info.Drops);
+                int chance = Math.Max(1, lingFengContent.DropUseItemRate);
+                for (int index = 0; index < lingFengContent.Equipment.Count; index++)
+                    drops.Add(new DropInfo { Chance = chance, Item = lingFengContent.Equipment[index] });
+            }
 
             if (allowCSharpBefore)
             {
                 var request = new Server.Scripting.MonsterDropRequest(
                     this,
                     EXPOwner,
-                    Info.Drops,
+                    drops,
                     dropTableKey,
                     itemDropRatePercentOffset,
                     goldDropRatePercentOffset,
@@ -1418,6 +1440,7 @@ namespace Server.MirObjects
 
         public override void Process()
         {
+            EnsureLingFengContentCurrent();
             base.Process();
 
             RefreshNameColour();
@@ -1454,6 +1477,17 @@ namespace Server.MirObjects
             ProcessBuffs();
             ProcessRegen();
             ProcessPoison();
+        }
+
+        private LingFengMonsterContentSnapshot EnsureLingFengContentCurrent()
+        {
+            LingFengMonsterContentSnapshot current = Info.LingFengContent;
+            if (!ReferenceEquals(current, _appliedLingFengContent))
+            {
+                RefreshAll();
+                _appliedLingFengContent = current;
+            }
+            return _appliedLingFengContent;
         }
 
         public override void SetOperateTime()

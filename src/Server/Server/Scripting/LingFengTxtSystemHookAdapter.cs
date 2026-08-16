@@ -194,6 +194,17 @@ namespace Server.Scripting
             _ => null
         };
 
+        internal static bool TryDispatchDropConditionCallback(PlayerObject player, string label)
+        {
+            string normalized = (label ?? string.Empty).Trim();
+            if (normalized.Length == 0) return false;
+            if (!(normalized.StartsWith("[@", StringComparison.Ordinal) && normalized.EndsWith(']')))
+                normalized = $"[@{normalized.TrimStart('@')}]";
+            return TryDispatchTarget(false, Envir.Main.TextFileProvider, player, player,
+                cSharpEligible: false,
+                new LingFengTxtHookTarget("SystemScripts/QFunction-0", normalized));
+        }
+
         private static LingFengDamageEvent Snapshot(PlayerDamageRequest request)
         {
             if (request == null) return default;

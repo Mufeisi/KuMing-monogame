@@ -37,6 +37,13 @@ namespace Server.MirDatabase
         
         public List<DropInfo> Drops = new List<DropInfo>();
 
+        private LingFengMonsterContentSnapshot _lingFengContent;
+        public LingFengMonsterContentSnapshot LingFengContent
+        {
+            get => Volatile.Read(ref _lingFengContent);
+            set => Volatile.Write(ref _lingFengContent, value);
+        }
+
         public bool CanTame = true, CanPush = true, AutoRev = true, Undead = false;
 
         public bool HasSpawnScript;

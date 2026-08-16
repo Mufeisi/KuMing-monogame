@@ -1,4 +1,5 @@
 using System.Text;
+using Server.MirEnvir;
 
 namespace Server.Scripting
 {
@@ -37,6 +38,10 @@ namespace Server.Scripting
         private readonly IReadOnlyDictionary<string, TextFileDefinition> _definitions;
         private readonly TextFileDefinition[] _all;
 
+        internal IDropTableProvider MonsterDropProvider { get; }
+        internal LingFengMonsterContentProvider MonsterContentProvider { get; }
+        internal IReadOnlyList<string> DomainDiagnostics { get; }
+
         public PhysicalTextFileProvider(PhysicalTextFileProviderOptions options)
             : this(options, null)
         {
@@ -68,6 +73,10 @@ namespace Server.Scripting
                 });
 
             var definitions = new Dictionary<string, TextFileDefinition>(StringComparer.Ordinal);
+            var monsterDrops = new Dictionary<string, TextFileDefinition>(StringComparer.Ordinal);
+            var monsterUseItems = new List<TextFileDefinition>();
+            var smartMonsters = new List<TextFileDefinition>();
+            var domainDiagnostics = new List<string>();
             foreach (string file in files.OrderBy(path => path, StringComparer.OrdinalIgnoreCase))
             {
                 string fullFile = Path.GetFullPath(file);
@@ -84,7 +93,34 @@ namespace Server.Scripting
                     if (classification.Owner == LingFengEnvirFileOwner.Unassigned)
                         throw new InvalidDataException(
                             $"翎风 Envir 文件未归属：{relative}（规则：{classification.RuleId}）");
-                    if (!classification.MayPublishAsScript) continue;
+                    if (!classification.MayPublishAsScript)
+                    {
+                        if (classification.Owner == LingFengEnvirFileOwner.DomainConfiguration &&
+                            TryMapMonsterDropKey(relative, out string dropKey))
+                        {
+                            TextFileDefinition dropDefinition = ReadDefinition(
+                                dropKey, fullFile, options.MaxFileBytes);
+                            if (!monsterDrops.TryAdd(dropKey, dropDefinition))
+                            {
+                                TextFileDefinition existing = monsterDrops[dropKey];
+                                if (TryResolveWhitespaceAlias(monsterDrops, dropKey, existing, dropDefinition,
+                                        out string diagnostic))
+                                {
+                                    domainDiagnostics.Add(diagnostic);
+                                    continue;
+                                }
+                                throw new InvalidDataException(
+                                    $"重复的怪物掉落逻辑 Key：{dropKey}；来源：{existing.SourcePath}；{dropDefinition.SourcePath}");
+                            }
+                        }
+                        else if (classification.Owner == LingFengEnvirFileOwner.DomainConfiguration &&
+                                 TryMapMonsterContentKey(relative, "MonUseItems", out string useItemKey))
+                            monsterUseItems.Add(ReadDefinition(useItemKey, fullFile, options.MaxFileBytes));
+                        else if (classification.Owner == LingFengEnvirFileOwner.DomainConfiguration &&
+                                 TryMapMonsterContentKey(relative, "SmartMonster", out string smartKey))
+                            smartMonsters.Add(ReadDefinition(smartKey, fullFile, options.MaxFileBytes));
+                        continue;
+                    }
                     TextFileDefinition classifiedDefinition = ReadDefinition(
                         classification.LogicKey, fullFile, options.MaxFileBytes);
                     if (!definitions.TryAdd(classification.LogicKey, classifiedDefinition))
@@ -110,6 +146,72 @@ namespace Server.Scripting
 
             _definitions = definitions;
             _all = definitions.Values.ToArray();
+            DomainDiagnostics = domainDiagnostics.AsReadOnly();
+            if (options.Layout == TxtScriptLayout.LingFeng && monsterDrops.Count > 0)
+            {
+                if (!LingFengMonsterDropProvider.TryCreate(
+                        monsterDrops.Values,
+                        definitions,
+                        Envir.Main.GetItemInfo,
+                        out LingFengMonsterDropProvider dropProvider,
+                        out IReadOnlyList<string> errors))
+                    throw new InvalidDataException(string.Join(Environment.NewLine, errors));
+                MonsterDropProvider = dropProvider;
+            }
+            if (options.Layout == TxtScriptLayout.LingFeng && (monsterUseItems.Count > 0 || smartMonsters.Count > 0))
+            {
+                if (!LingFengMonsterContentProvider.TryCreate(monsterUseItems, smartMonsters,
+                        out LingFengMonsterContentProvider contentProvider, out IReadOnlyList<string> errors))
+                    throw new InvalidDataException(string.Join(Environment.NewLine, errors));
+                MonsterContentProvider = contentProvider;
+            }
+        }
+
+        private static bool TryMapMonsterDropKey(string relativePath, out string key)
+        {
+            key = null;
+            string normalized = (relativePath ?? string.Empty).Replace('\\', '/');
+            const string prefix = "MonItems/";
+            if (!normalized.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) ||
+                !normalized.EndsWith(".txt", StringComparison.OrdinalIgnoreCase))
+                return false;
+            string nested = normalized[prefix.Length..^4];
+            return LogicKey.TryNormalize("Drops/" + nested, out key);
+        }
+
+        private static bool TryResolveWhitespaceAlias(
+            IDictionary<string, TextFileDefinition> definitions,
+            string key,
+            TextFileDefinition existing,
+            TextFileDefinition candidate,
+            out string diagnostic)
+        {
+            diagnostic = null;
+            string existingStem = Path.GetFileNameWithoutExtension(existing.SourcePath);
+            string candidateStem = Path.GetFileNameWithoutExtension(candidate.SourcePath);
+            bool existingCanonical = existingStem.Equals(existingStem.Trim(), StringComparison.Ordinal);
+            bool candidateCanonical = candidateStem.Equals(candidateStem.Trim(), StringComparison.Ordinal);
+            if (existingCanonical == candidateCanonical ||
+                !existingStem.Trim().Equals(candidateStem.Trim(), StringComparison.OrdinalIgnoreCase))
+                return false;
+            TextFileDefinition selected = candidateCanonical ? candidate : existing;
+            TextFileDefinition shadowed = candidateCanonical ? existing : candidate;
+            definitions[key] = selected;
+            diagnostic = $"LFENV11-DROP-ALIAS：采用无首尾空白文件 {Path.GetFileName(selected.SourcePath)}，遮蔽 {Path.GetFileName(shadowed.SourcePath)}。";
+            return true;
+        }
+
+        private static bool TryMapMonsterContentKey(string relativePath, string directory, out string key)
+        {
+            key = null;
+            string normalized = (relativePath ?? string.Empty).Replace('\\', '/');
+            string prefix = directory + "/";
+            if (!normalized.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)) return false;
+            string extension = Path.GetExtension(normalized);
+            if (!(extension.Equals(".txt", StringComparison.OrdinalIgnoreCase) ||
+                  extension.Equals(".ini", StringComparison.OrdinalIgnoreCase))) return false;
+            return LogicKey.TryNormalize("MonsterContent/" + directory + "/" +
+                                         normalized[prefix.Length..^extension.Length], out key);
         }
 
         private static bool TryResolveQFunctionAlias(

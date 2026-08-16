@@ -123,6 +123,9 @@ namespace Server.MirEnvir
         private HashSet<string> _lastAppliedCSharpQuestKeys = new HashSet<string>(StringComparer.Ordinal);
 
         public IDropTableProvider DropTableProvider { get; private set; }
+        private IDropTableProvider _csharpDropTableProvider;
+        private IDropTableProvider _physicalDropTableProvider;
+        private LingFengMonsterContentProvider _physicalMonsterContentProvider;
 
         public IRecipeProvider RecipeProvider { get; private set; }
 
@@ -2738,15 +2741,11 @@ namespace Server.MirEnvir
         internal void ApplyCSharpDropTables(ScriptRegistry registry)
         {
             var scriptsRuntimeActive = Settings.CSharpScriptsEnabled && CSharpScripts.Enabled;
-
-            if (!scriptsRuntimeActive)
-            {
-                DropTableProvider = null;
-                return;
-            }
-
             var dropRegistry = registry?.Drops;
-            DropTableProvider = dropRegistry != null && dropRegistry.Count > 0 ? new CSharpDropTableProvider(dropRegistry.Definitions) : null;
+            _csharpDropTableProvider = scriptsRuntimeActive && dropRegistry != null && dropRegistry.Count > 0
+                ? new CSharpDropTableProvider(dropRegistry.Definitions)
+                : null;
+            RebuildDropTableProvider();
 
             // 启动阶段可能早于 DB/Item 加载：不在此时主动 ReloadDrops；后续 StartEnvir 会加载一次 Drops。
             if (!Running || MonsterInfoList.Count == 0 || ItemInfoList.Count == 0)
@@ -2938,27 +2937,26 @@ namespace Server.MirEnvir
             if (list == null) return;
 
             var scriptsRuntimeActive = Settings.CSharpScriptsEnabled && CSharpScripts.Enabled;
+            var txtRuntimeActive = Settings.TxtScriptsEnabled && _physicalDropTableProvider != null;
 
-            if (scriptsRuntimeActive && DropInfo.TryResolveDropTableKey(path, out var key))
+            if ((scriptsRuntimeActive || txtRuntimeActive) && DropInfo.TryResolveDropTableKey(path, out var key))
             {
-                var allowCSharp = ScriptDispatchPolicy.ShouldTryCSharp(key);
+                var allowCSharp = scriptsRuntimeActive && ScriptDispatchPolicy.ShouldTryCSharp(key);
+                var table = allowCSharp || !scriptsRuntimeActive
+                    ? DropTableProvider?.Get(key)
+                    : _physicalDropTableProvider?.Get(key);
 
-                if (allowCSharp)
+                if (table != null)
                 {
-                    var table = DropTableProvider?.Get(key);
-
-                    if (table != null)
-                    {
-                        DropInfo.AddFromCSharpTable(list, table, type);
-                        DropInfo.SortDrops(list);
-                        return;
-                    }
+                    DropInfo.AddFromCSharpTable(list, table, type);
+                    DropInfo.SortDrops(list);
+                    return;
                 }
 
                 if (Settings.TxtScriptsLogDispatch)
                 {
                     var csharpState = CSharpScripts.Enabled ? $"v{CSharpScripts.Version}, handlers={CSharpScripts.LastRegisteredHandlerCount}" : $"不可用: {CSharpScripts.LastError}";
-                    MessageQueue.Enqueue($"[Scripts][Load] Drops {name} -> 未提供 C# 定义（key={key}，allowCSharp={allowCSharp}，C#={csharpState}）");
+                    MessageQueue.Enqueue($"[Scripts][Load] Drops {name} -> 未提供可用定义（key={key}，allowCSharp={allowCSharp}，C#={csharpState}，TXT={txtRuntimeActive}）");
                 }
 
                 return;
@@ -3037,6 +3035,8 @@ namespace Server.MirEnvir
             PublishPhysicalTextFileProvider(candidateProvider, reloadNpcScripts: true);
             MessageQueue.Enqueue(
                 $"[TxtScripts] 已加载 {_physicalTextFileProvider.GetAll().Count} 个物理 TXT 文本（布局={Settings.TxtScriptsLayout}）");
+            foreach (string diagnostic in candidateProvider.DomainDiagnostics)
+                MessageQueue.Enqueue("[TxtScripts] " + diagnostic);
         }
 
         private bool PublishPhysicalTextFileProvider(
@@ -3044,6 +3044,8 @@ namespace Server.MirEnvir
             bool reloadNpcScripts)
         {
             ITextFileProvider previousProvider = _physicalTextFileProvider;
+            IDropTableProvider previousDropProvider = _physicalDropTableProvider;
+            LingFengMonsterContentProvider previousContentProvider = _physicalMonsterContentProvider;
             ScriptVariableCatalogReloadResult variableResult =
                 CSharpScripts.PublishTxtVariableDeclarations(candidateProvider);
             if (!variableResult.Success)
@@ -3052,8 +3054,14 @@ namespace Server.MirEnvir
             try
             {
                 _physicalTextFileProvider = candidateProvider;
+                _physicalDropTableProvider = (candidateProvider as PhysicalTextFileProvider)?.MonsterDropProvider;
+                _physicalMonsterContentProvider = (candidateProvider as PhysicalTextFileProvider)?.MonsterContentProvider;
                 RebuildTextFileProvider();
+                RebuildDropTableProvider();
                 ClearSetBuffsCache();
+                ApplyPhysicalMonsterContentWhenReady();
+                ValidatePhysicalDropDependenciesWhenReady();
+                ReloadPhysicalDropsWhenReady();
                 if (reloadNpcScripts)
                 {
                     ReloadNPCs();
@@ -3066,10 +3074,16 @@ namespace Server.MirEnvir
                 ScriptVariableCatalogReloadResult rollbackVariables =
                     CSharpScripts.PublishTxtVariableDeclarations(previousProvider);
                 _physicalTextFileProvider = previousProvider;
+                _physicalDropTableProvider = previousDropProvider;
+                _physicalMonsterContentProvider = previousContentProvider;
                 RebuildTextFileProvider();
+                RebuildDropTableProvider();
                 ClearSetBuffsCache();
                 if (reloadNpcScripts)
                     ReloadNPCs();
+                ApplyPhysicalMonsterContentWhenReady();
+                ValidatePhysicalDropDependenciesWhenReady();
+                ReloadPhysicalDropsWhenReady();
                 if (!rollbackVariables.Success)
                     throw new InvalidOperationException(
                         $"TXT 候选发布失败，且变量目录回滚失败：{rollbackVariables.Diagnostic}");
@@ -3167,6 +3181,48 @@ namespace Server.MirEnvir
                 MessageQueue.Enqueue(
                     $"[TxtScripts] 来源冲突 Key={conflict.Key}，优先级={conflict.Priority}，采用={conflict.SelectedSource}，遮蔽={conflict.ShadowedSource}");
             }
+        }
+
+        private void RebuildDropTableProvider()
+        {
+            bool csharpRuntimeActive = Settings.CSharpScriptsEnabled && CSharpScripts.Enabled;
+            if (_csharpDropTableProvider == null && _physicalDropTableProvider == null)
+            {
+                DropTableProvider = null;
+                return;
+            }
+            DropTableProvider = new CompositeDropTableProvider(
+                _csharpDropTableProvider,
+                _physicalDropTableProvider,
+                csharpRuntimeActive,
+                Settings.CSharpScriptsFallbackToTxt,
+                Settings.TxtScriptsSourcePriority);
+        }
+
+        private void ReloadPhysicalDropsWhenReady()
+        {
+            if (!Running || MonsterInfoList.Count == 0 || ItemInfoList.Count == 0) return;
+            ReloadDrops();
+        }
+
+        private void ApplyPhysicalMonsterContentWhenReady()
+        {
+            if (MonsterInfoList.Count == 0 || ItemInfoList.Count == 0) return;
+            if (_physicalMonsterContentProvider == null)
+            {
+                for (int index = 0; index < MonsterInfoList.Count; index++)
+                    MonsterInfoList[index].LingFengContent = null;
+                return;
+            }
+            IReadOnlyList<string> errors = _physicalMonsterContentProvider.Apply(MonsterInfoList, GetItemInfo);
+            if (errors.Count > 0) throw new InvalidDataException(string.Join(Environment.NewLine, errors));
+        }
+
+        private void ValidatePhysicalDropDependenciesWhenReady()
+        {
+            if (ItemInfoList.Count == 0 || _physicalDropTableProvider is not LingFengMonsterDropProvider provider) return;
+            IReadOnlyList<string> errors = provider.ValidateDependencies();
+            if (errors.Count > 0) throw new InvalidDataException(string.Join(Environment.NewLine, errors));
         }
 
         internal void EnsureCSharpActiveMapCoordsApplied()
@@ -4763,6 +4819,8 @@ namespace Server.MirEnvir
                 }
             }
 
+            ApplyPhysicalMonsterContentWhenReady();
+            ValidatePhysicalDropDependenciesWhenReady();
             ReloadDrops();
 
             LoadDisabledChars();
@@ -7231,7 +7289,7 @@ namespace Server.MirEnvir
 
                 MonsterInfoList[i].Drops.Clear();
 
-                DropInfo.Load(MonsterInfoList[i].Drops, MonsterInfoList[i].Name, path, 0);
+                LoadDropTable(MonsterInfoList[i].Drops, MonsterInfoList[i].Name, path, 0);
             }
 
             FishingDrops.Clear();
@@ -7240,17 +7298,17 @@ namespace Server.MirEnvir
                 var path = Path.Combine(Settings.DropPath, Settings.FishingDropFilename + ".txt");
                 path = path.Replace("00", i.ToString("D2"));
 
-                DropInfo.Load(FishingDrops, $"钓鱼功能 {i}", path, (byte)i);
+                LoadDropTable(FishingDrops, $"钓鱼功能 {i}", path, (byte)i);
             }
 
             AwakeningDrops.Clear();
-            DropInfo.Load(AwakeningDrops, "觉醒功能", Path.Combine(Settings.DropPath, Settings.AwakeningDropFilename + ".txt"));
+            LoadDropTable(AwakeningDrops, "觉醒功能", Path.Combine(Settings.DropPath, Settings.AwakeningDropFilename + ".txt"));
 
             StrongboxDrops.Clear();
-            DropInfo.Load(StrongboxDrops, "宝箱功能", Path.Combine(Settings.DropPath, Settings.StrongboxDropFilename + ".txt"));
+            LoadDropTable(StrongboxDrops, "宝箱功能", Path.Combine(Settings.DropPath, Settings.StrongboxDropFilename + ".txt"));
 
             BlackstoneDrops.Clear();
-            DropInfo.Load(BlackstoneDrops, "灵物石功能", Path.Combine(Settings.DropPath, Settings.BlackstoneDropFilename + ".txt"));
+            LoadDropTable(BlackstoneDrops, "灵物石功能", Path.Combine(Settings.DropPath, Settings.BlackstoneDropFilename + ".txt"));
 
             sw.Stop();
 

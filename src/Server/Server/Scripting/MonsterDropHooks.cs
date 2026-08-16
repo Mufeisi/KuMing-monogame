@@ -102,6 +102,7 @@ namespace Server.Scripting
                 GroupedDrop = null,
                 Type = src.Type,
                 QuestRequired = src.QuestRequired,
+                Condition = src.Condition,
             };
 
             if (src.GroupedDrop != null)

@@ -6,14 +6,26 @@ namespace Server.Scripting
     public sealed class CSharpDropTableProvider : IDropTableProvider
     {
         private readonly IReadOnlyDictionary<string, DropTableDefinition> _definitions;
+        private readonly Func<string, ItemInfo> _itemResolver;
+        private readonly bool _skipMissingItems;
 
         private readonly object _gate = new object();
         private readonly Dictionary<string, IReadOnlyList<DropInfo>> _cache = new Dictionary<string, IReadOnlyList<DropInfo>>(StringComparer.Ordinal);
         private readonly Dictionary<string, string> _errors = new Dictionary<string, string>(StringComparer.Ordinal);
 
         public CSharpDropTableProvider(IReadOnlyDictionary<string, DropTableDefinition> definitions)
+            : this(definitions, Envir.Main.GetItemInfo)
+        {
+        }
+
+        internal CSharpDropTableProvider(
+            IReadOnlyDictionary<string, DropTableDefinition> definitions,
+            Func<string, ItemInfo> itemResolver,
+            bool skipMissingItems = true)
         {
             _definitions = definitions ?? new Dictionary<string, DropTableDefinition>(StringComparer.Ordinal);
+            _itemResolver = itemResolver ?? throw new ArgumentNullException(nameof(itemResolver));
+            _skipMissingItems = skipMissingItems;
         }
 
         public IReadOnlyList<DropInfo> Get(string key)
@@ -32,7 +44,7 @@ namespace Server.Scripting
                 if (_errors.ContainsKey(normalizedKey))
                     return null;
 
-                if (!TryBuildDropList(definition, out var drops, out var error))
+                if (!TryBuildDropList(definition, _itemResolver, _skipMissingItems, out var drops, out var error))
                 {
                     _errors[normalizedKey] = error;
                     MessageQueue.Instance.Enqueue($"[Scripts] Drops 构建失败：{normalizedKey} {error}");
@@ -59,7 +71,7 @@ namespace Server.Scripting
             out IReadOnlyList<DropInfo> drops,
             out string error)
         {
-            if (!TryBuildDropList(table, itemResolver, out List<DropInfo> list, out error))
+            if (!TryBuildDropList(table, itemResolver, true, out List<DropInfo> list, out error))
             {
                 drops = Array.Empty<DropInfo>();
                 return false;
@@ -68,12 +80,19 @@ namespace Server.Scripting
             return true;
         }
 
+        internal static bool TryBuildStrict(
+            DropTableDefinition table,
+            Func<string, ItemInfo> itemResolver,
+            out string error) =>
+            TryBuildDropList(table, itemResolver, false, out _, out error);
+
         private static bool TryBuildDropList(DropTableDefinition table, out List<DropInfo> drops, out string error)
-            => TryBuildDropList(table, Envir.Main.GetItemInfo, out drops, out error);
+            => TryBuildDropList(table, Envir.Main.GetItemInfo, true, out drops, out error);
 
         private static bool TryBuildDropList(
             DropTableDefinition table,
             Func<string, ItemInfo> itemResolver,
+            bool skipMissingItems,
             out List<DropInfo> drops,
             out string error)
         {
@@ -99,9 +118,9 @@ namespace Server.Scripting
             {
                 for (var i = 0; i < table.Drops.Count; i++)
                 {
-                    if (!TryBuildDropEntry(table.Drops[i], itemResolver, out var entry, out var entryError))
+                    if (!TryBuildDropEntry(table.Drops[i], itemResolver, skipMissingItems, out var entry, out var entryError))
                     {
-                        if (IsMissingItemError(entryError))
+                        if (skipMissingItems && IsMissingItemError(entryError))
                         {
                             skippedMissingItemCount++;
                             continue;
@@ -140,6 +159,7 @@ namespace Server.Scripting
         private static bool TryBuildDropEntry(
             DropEntryDefinition definition,
             Func<string, ItemInfo> itemResolver,
+            bool skipMissingItems,
             out DropInfo drop,
             out string error)
         {
@@ -228,9 +248,9 @@ namespace Server.Scripting
 
             for (var i = 0; i < group.Drops.Count; i++)
             {
-                if (!TryBuildDropEntry(group.Drops[i], itemResolver, out var childDrop, out var childError))
+                if (!TryBuildDropEntry(group.Drops[i], itemResolver, skipMissingItems, out var childDrop, out var childError))
                 {
-                    if (IsMissingItemError(childError))
+                    if (skipMissingItems && IsMissingItemError(childError))
                         continue;
 
                     error = $"Group.Drops index={i}: {childError}";

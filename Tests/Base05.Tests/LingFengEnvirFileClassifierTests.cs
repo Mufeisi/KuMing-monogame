@@ -76,7 +76,7 @@ public sealed class LingFengEnvirFileClassifierTests
             Write(root, "QFunction-0.txt", "根级回退");
             Write(root, "Market_Def/QFunction-0.txt", "标准系统入口");
             Write(root, "UserData/运行数据.txt", "不可覆盖");
-            Write(root, "MonItems/稻草人.txt", "爆率配置");
+            Write(root, "MonItems/稻草人.txt", "1/1 金币 1");
             Write(root, "QuestDiary/旧脚本.bak", "备份");
 
             var provider = new PhysicalTextFileProvider(

@@ -89,8 +89,13 @@ TxtScriptsStrictCompatibility=true
 | `MapQuest_def/QManage.txt` | `SystemScripts/QManage` |
 | `Robot_def/ROBOTMANAGE.TXT` | `SystemScripts/RobotManage` |
 | `DeFines/公共/变量.txt` | `Defines/公共/变量` |
+| `MonItems/鸡.txt` | `Drops/鸡`（领域 Provider，不进入 NPC 解释器） |
+| `MonUseItems/装备怪.txt` | 同名怪物装备与技能配置 |
+| `SmartMonster/装备怪.ini` | 同名怪物可复用配置快照 |
 
-`Market_Def` 与 `Npc_def` 即使文件名相同也使用不同前缀，不会互相覆盖。`MonItems`、`Mapinfo.txt`、`Mongen.txt` 等领域配置不会交给 NPC 文本解析器。
+`Market_Def` 与 `Npc_def` 即使文件名相同也使用不同前缀，不会互相覆盖。`MonItems`、`MonUseItems`、`SmartMonster` 使用独立怪物领域 Provider；`Mapinfo.txt`、`Mongen.txt` 等其他领域配置仍不会交给 NPC 文本解析器。
+
+`MonItems` 当前支持普通物品、金币、随机/首个命中分组、`QuestDiary #CALL` 和统一变量条件；类型 7 条件命中后会调用既有 `QFunction-0` 页面，仍受系统页预算、重入和高风险命令门禁约束。`MonUseItems` 中配置的装备会叠加到真实怪物属性，并可按 `DropUseItemRate` 参与死亡掉落；活怪在下一次处理或掉落前切换到新快照。`SmartMonster` 只校验并保存配置快照；其中客户端动画、声音和寻路字段不会被当作服务端 AI 执行。任一领域文件语法错误、重复字段、引用缺失或装备依赖缺失时，整次候选不发布。
 
 ## 5. 验证与回退
 
