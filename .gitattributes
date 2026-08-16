@@ -73,4 +73,5 @@
 # 测试结果证据含脱敏后的机器输出，必须按原始字节稳定计算哈希。
 /Docs/Evidence/LFENV-01-02-20260816/*.trx binary
 /Docs/Evidence/LFENV-03-20260816/*.trx binary
+/Docs/Evidence/LFENV-04-20260816/*.trx binary
 #*.RTF   diff=astextplain

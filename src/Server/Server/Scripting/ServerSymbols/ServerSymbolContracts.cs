@@ -10,13 +10,13 @@ namespace Server.Scripting.ServerSymbols
 
     public enum ServerSymbolStatus
     {
+        Faulted,
         Resolved,
         ContextUnavailable,
         DependencyMissing,
         SensitiveDenied,
         Unsupported,
-        InvalidReference,
-        Faulted
+        InvalidReference
     }
 
     public enum ServerSymbolValueType
@@ -235,8 +235,32 @@ namespace Server.Scripting.ServerSymbols
             var values = new List<string>();
             int depth = 0;
             int start = 0;
+            bool quoted = false;
+            bool escaped = false;
             for (int i = 0; i < text.Length; i++)
             {
+                if (quoted)
+                {
+                    if (escaped)
+                    {
+                        escaped = false;
+                        continue;
+                    }
+                    if (text[i] == '\\')
+                    {
+                        escaped = true;
+                        continue;
+                    }
+                    if (text[i] == '"') quoted = false;
+                    continue;
+                }
+
+                if (text[i] == '"')
+                {
+                    quoted = true;
+                    continue;
+                }
+
                 switch (text[i])
                 {
                     case '(':
@@ -261,7 +285,7 @@ namespace Server.Scripting.ServerSymbols
                 }
             }
 
-            if (depth != 0 || !TryAddArgument(text.Substring(start), values))
+            if (depth != 0 || quoted || escaped || !TryAddArgument(text.Substring(start), values))
             {
                 arguments = Array.Empty<string>();
                 return false;

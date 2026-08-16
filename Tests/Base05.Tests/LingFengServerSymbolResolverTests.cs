@@ -7,6 +7,15 @@ namespace Base05.Tests;
 public sealed class LingFengServerSymbolResolverTests
 {
     [Fact]
+    public void DefaultResultNeverMasqueradesAsResolved()
+    {
+        ServerSymbolResult result = default;
+
+        Assert.Equal(ServerSymbolStatus.Faulted, result.Status);
+        Assert.False(result.Success);
+    }
+
+    [Fact]
     public void ResolverNormalizesWrapperAliasCaseWhitespaceAndParameters()
     {
         ServerSymbolDefinition definition = Definition(

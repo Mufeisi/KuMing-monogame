@@ -375,7 +375,7 @@ P0 每项必须确认别名，例如当前项目的 `CLASS/MAPNAME/X_COORD/Y_COO
 | 1 | LFENV-01 语料去重与版本画像 | 已验证 | 53 根摘要、家族聚类、代表样本清单 | 每个根有摘要、编码分布、文件类型、内容哈希和家族归属；5 项目录契约测试中的 2 项画像测试通过 |
 | 2 | LFENV-02 服务器常量目录 | 已验证 | `lingfeng-server-symbols.csv`、上下文/安全等级/旧实现映射 | 附件 281 个原始条目全部登记；限定 53 个 `Envir*` 根后，513 个在用符号族逐项重算一致；状态仅为 D/X，无 `?`；5 项目录契约测试全部通过 |
 | 3 | LFENV-03 常量解析深模块 | 已验证 | Resolver、Catalog、Context、结果类型 | 不修改领域对象即可解析 P0；异常不泄漏、不串号 |
-| 4 | LFENV-04 统一文本渲染 | 未开始 | Renderer、语法/限额/诊断测试 | 多占位符、函数、中文、按钮和嵌套全部通过 |
+| 4 | LFENV-04 统一文本渲染 | 已实施 | Renderer、语法/限额/诊断测试 | 多占位符、函数、中文、按钮和嵌套全部通过 |
 | 5 | LFENV-05 P0 人物/服务器常量 | 未开始 | Player/Server/Equipment Adapter | P0 清单自动化与真实 NPC 页面全部通过 |
 | 6 | LFENV-06 P1 事件常量 | 未开始 | Combat/Item/Trigger Adapter | 登录、击杀、拾取、使用、受击等真实链无上下文污染 |
 | 7 | LFENV-07 P2 英雄/宠物常量 | 未开始 | Hero/Pet Adapter 或 E 清单 | 有模型的逐项通过，无模型的依赖和迁移策略明确 |
@@ -402,6 +402,14 @@ P0 每项必须确认别名，例如当前项目的 `CLASS/MAPNAME/X_COORD/Y_COO
 - 参数、大小写、空白和 `<$...>` 包装由 `ServerSymbolReference` 统一归一化；别名在进入 Binding 前还原为规范名。
 - 安全类别分别记录隐私、服务器路径、机器标识、账户信息和凭据，并与允许策略分离；拒绝策略先于取值，Adapter 异常只返回不含异常正文的 `Faulted`；缺上下文和缺依赖分别返回 `ContextUnavailable`、`DependencyMissing`。
 - 本阶段不接管 `NPCSegment.ReplaceValue`，也不把目录中的 D 项升级为 B/C；统一文本接入属于 LFENV-04，人物/服务器真实 Adapter 与 P0 完整清单属于 LFENV-05。
+
+### 7.2 LFENV-04 实施边界
+
+- `IScriptTextRenderer` 是统一渲染 seam；每个 `<$...>` 只通过 `IServerSymbolResolver` 取值，普通按钮、颜色文本和客户端 `$$...` 绑定不进入服务端替换。
+- 扫描器支持同一行多个、相邻和嵌套占位符，并对引号内逗号、括号、比较符和反斜杠转义保持参数边界；闭合扫描使用显式栈，不在限额生效前递归遍历不可信输入。
+- 默认限制为输入 8,192 字符、64 个占位符、4 层嵌套和展开后 32,768 字符；调用方即使自定义限额也不能超过 1 MiB 输入、4,096 个占位符、16 层嵌套和 4 MiB 输出。
+- 语法或限额失败整行原子返回原文；单项缺上下文、缺依赖、敏感拒绝、未支持或 Adapter 故障保留该占位符，并返回不含领域异常正文的结构化诊断。
+- 本阶段尚不挂接旧 `NPCSegment.ReplaceValue`；LFENV-05 提供 P0 Player/Server/Equipment Adapter 后，NPC 对话、命令参数、系统触发和 `ScriptApi` 才能在同一真实调用链切换，避免先接入一个只能返回 `DependencyMissing` 的空运行时。
 
 ## 8. 测试设计
 
