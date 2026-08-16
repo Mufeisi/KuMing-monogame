@@ -9,6 +9,7 @@ using Timer = Server.MirEnvir.Timer;
 using Server.MirObjects.Monsters;
 using System.Threading;
 using Server.Operations;
+using Server.Scripting;
 
 namespace Server.MirObjects
 {
@@ -5558,6 +5559,10 @@ namespace Server.MirObjects
             uint npcid = (uint)data[0];
             int scriptid = (int)data[1];
             string page = (string)data[2];
+            LingFengItemTriggerEvent? triggerPayload =
+                data.Count == 4 && data[3] is LingFengItemTriggerEvent itemTrigger
+                    ? itemTrigger
+                    : null;
 
             if (data.Count == 5)
             {
@@ -5572,6 +5577,9 @@ namespace Server.MirObjects
             if (page.Length > 0)
             {
                 var script = NPCScript.Get(scriptid);
+                using IDisposable triggerScope = triggerPayload.HasValue
+                    ? LingFengTxtTriggerContext.Push(triggerPayload.Value)
+                    : null;
                 script.Call(this, npcid, page.ToUpper());
             }
         }
@@ -7311,7 +7319,7 @@ namespace Server.MirObjects
                     RefreshStats();
                     break;
                 case ItemType.特殊消耗品:
-                    CallDefaultNPC(DefaultNPCType.UseItem, item.Info.Shape);
+                    CallDefaultNPC(DefaultNPCType.UseItem, item.Info.Shape, item.FriendlyName, index);
                     break;
                 case ItemType.坐骑食物:
                     temp = Info.Equipment[(int)EquipmentSlot.坐骑];
@@ -9243,7 +9251,19 @@ namespace Server.MirObjects
                 MessageQueue.Enqueue($"[Scripts][Dispatch] DefaultNPC {type} -> TXT key={key}（C#={csharpState}）");
             }
 
-            DelayedAction action = new DelayedAction(DelayedType.NPC, Envir.Time, Envir.DefaultNPC.LoadedObjectID, Envir.DefaultNPC.ScriptID, key);
+            DelayedAction action = type == DefaultNPCType.UseItem && value.Length >= 3
+                ? new DelayedAction(
+                    DelayedType.NPC,
+                    Envir.Time,
+                    Envir.DefaultNPC.LoadedObjectID,
+                    Envir.DefaultNPC.ScriptID,
+                    key,
+                    new LingFengItemTriggerEvent(
+                        LingFengItemTriggerKind.Use,
+                        value[1]?.ToString() ?? string.Empty,
+                        Convert.ToInt32(value[2]),
+                        0))
+                : new DelayedAction(DelayedType.NPC, Envir.Time, Envir.DefaultNPC.LoadedObjectID, Envir.DefaultNPC.ScriptID, key);
             ActionList.Add(action);
 
             Enqueue(new S.NPCUpdate { NPCID = Envir.DefaultNPC.LoadedObjectID });

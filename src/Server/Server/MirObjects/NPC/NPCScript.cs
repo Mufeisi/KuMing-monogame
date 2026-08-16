@@ -1726,7 +1726,8 @@ namespace Server.MirObjects
         {
             player.NPCObjectID = objectID;
             player.NPCScriptID = ScriptID;
-            player.NPCSuccess.Add(segment, segment.Check(player));
+            using (Server.Scripting.LingFengTxtTriggerContext.PushScriptParameters(page.Args))
+                player.NPCSuccess.Add(segment, segment.Check(player));
             player.NPCPage = page;
         }
 

@@ -158,12 +158,12 @@ public sealed class LingFengTxtSpecialTriggerIntegrationTests
                 new UTF8Encoding(false));
             File.WriteAllText(Path.Combine(root, "SystemScripts", "QFunction-0.txt"),
                 "[@ATTACKDAMAGE]\n#ACT\nCHANGEDAMAGEVALUE 0 = 0\n" +
-                "[@ATTACK]\n#ACT\nGIVEGOLD 1\n" +
+                "[@ATTACK]\n#ACT\nLOCALMESSAGE \"攻击:<$CURRRTARGETNAME>|<$PKPOWER>|<$ATTACKMONSTER_NAME>|<$ATTACKMONSTER_X>|<$ATTACKMONSTER_Y>|<$ATTACKMONSTER_HP>|<$ATTACKMONSTER_MAXHP>|<$CURRRUSEMAGICID>\" System\nGIVEGOLD 1\n" +
                 "[@STRUCKDAMAGE]\n#ACT\nCHANGEDAMAGEVALUE 0 = 1\n" +
-                "[@STRUCK]\n#ACT\nGIVEGOLD 2\n" +
-                "[@PICKUPITEMEX]\n#ACT\nGIVEGOLD 4\n" +
-                "[@KILLMON]\n#ACT\nGIVEGOLD 8\n" +
-                "[@M2DROPITEM]\n#ACT\nGIVEGOLD 16\n" +
+                "[@STRUCK]\n#ACT\nLOCALMESSAGE \"受击:<$KILLER>|<$STRUCKHP>\" System\nGIVEGOLD 2\n" +
+                "[@PICKUPITEMEX]\n#ACT\nLOCALMESSAGE \"拾取:<$PICKDROPITEMNAME>|<$CURITEMNAME>\" System\nGIVEGOLD 4\n" +
+                "[@KILLMON]\n#ACT\nLOCALMESSAGE \"击杀:<$KILLMONNAME>|<$KILLMONX>|<$KILLMONY>|<$GETEXP>\" System\nGIVEGOLD 8\n" +
+                "[@M2DROPITEM]\n#ACT\nLOCALMESSAGE \"掉落:<$PICKDROPITEMNAME>|<$CURITEMNAME>\" System\nGIVEGOLD 16\n" +
                 "[@PLAYLEVELUP]\n#ACT\nGIVEGOLD 32\n" +
                 "[@LOOP]\n#SAY\n系统输出不得污染现有对话\n#ACT\nGIVEGOLD <$LEVEL>\nDELAYGOTO 0 @LOOP\nGOTO @LOOP\n",
                 new UTF8Encoding(false));
@@ -183,6 +183,9 @@ public sealed class LingFengTxtSpecialTriggerIntegrationTests
             Map map = TestMap();
             var attacker = Player("TXT11领域攻击者", map);
             var targetMonster = Monster(910, "TXT11受击怪", map);
+            targetMonster.CurrentLocation = new Point(1, 0);
+            targetMonster.Node = new LinkedListNode<MapObject>(targetMonster);
+            map.GetCell(targetMonster.CurrentLocation).Add(targetMonster);
 
             // 前置真实入口：取消后不会产生伤害和后置 @ATTACK。
             Assert.Equal(0, targetMonster.Attacked(attacker, 25, (DefenceType)byte.MaxValue, false));
@@ -190,12 +193,12 @@ public sealed class LingFengTxtSpecialTriggerIntegrationTests
 
             // 去掉前置标签后重新发布同一物理快照，真实伤害链应派发 @ATTACK。
             File.WriteAllText(Path.Combine(root, "SystemScripts", "QFunction-0.txt"),
-                "[@ATTACK]\n#ACT\nGIVEGOLD 1\n" +
+                "[@ATTACK]\n#ACT\nLOCALMESSAGE \"攻击:<$CURRRTARGETNAME>|<$PKPOWER>|<$ATTACKMONSTER_NAME>|<$ATTACKMONSTER_X>|<$ATTACKMONSTER_Y>|<$ATTACKMONSTER_HP>|<$ATTACKMONSTER_MAXHP>|<$CURRRUSEMAGICID>\" System\nGIVEGOLD 1\n" +
                 "[@STRUCKDAMAGE]\n#ACT\nCHANGEDAMAGEVALUE 0 = 1\n" +
-                "[@STRUCK]\n#ACT\nGIVEGOLD 2\n" +
-                "[@PICKUPITEMEX]\n#ACT\nGIVEGOLD 4\n" +
-                "[@KILLMON]\n#ACT\nGIVEGOLD 8\n" +
-                "[@M2DROPITEM]\n#ACT\nGIVEGOLD 16\n" +
+                "[@STRUCK]\n#ACT\nLOCALMESSAGE \"受击:<$KILLER>|<$STRUCKHP>\" System\nGIVEGOLD 2\n" +
+                "[@PICKUPITEMEX]\n#ACT\nLOCALMESSAGE \"拾取:<$PICKDROPITEMNAME>|<$CURITEMNAME>\" System\nGIVEGOLD 4\n" +
+                "[@KILLMON]\n#ACT\nLOCALMESSAGE \"击杀:<$KILLMONNAME>|<$KILLMONX>|<$KILLMONY>|<$GETEXP>\" System\nGIVEGOLD 8\n" +
+                "[@M2DROPITEM]\n#ACT\nLOCALMESSAGE \"掉落:<$PICKDROPITEMNAME>|<$CURITEMNAME>\" System\nGIVEGOLD 16\n" +
                 "[@PLAYLEVELUP]\n#ACT\nGIVEGOLD 32\n" +
                 "[@LOOP]\n#SAY\n系统输出不得污染现有对话\n#ACT\nGIVEGOLD <$LEVEL>\nDELAYGOTO 0 @LOOP\nGOTO @LOOP\n",
                 new UTF8Encoding(false));
@@ -213,24 +216,71 @@ public sealed class LingFengTxtSpecialTriggerIntegrationTests
 
             Assert.Equal(25, targetMonster.Attacked(attacker, 25, (DefenceType)byte.MaxValue, false));
             Assert.Equal(1u, attacker.Account.Gold);
+            Assert.Contains(attacker.Packets.OfType<ServerPackets.Chat>(), packet =>
+                packet.Message == $"攻击:{targetMonster.Name}|25|{targetMonster.Name}|1|0|75|100|0" &&
+                                  packet.Type == ChatType.System);
+
+            // 已学习但本次未触发的被动技能不得污染普通攻击 ID；实际生效技能必须沿延迟动作传递。
+            attacker.Stats[Stat.MinDC] = 5;
+            attacker.Stats[Stat.MaxDC] = 5;
+            attacker.Node = new LinkedListNode<MapObject>(attacker);
+            attacker.Info.Magics.Add(new UserMagic(Spell.MPEater)
+            {
+                Info = new MagicInfo { Spell = Spell.MPEater, MultiplierBase = 1F }
+            });
+            attacker.ActionTime = 0;
+            attacker.AttackTime = 0;
+            attacker.Attack(MirDirection.Right, Spell.None);
+            DelayedAction normalAttack = Assert.Single(attacker.ActionList,
+                action => action.Type == DelayedType.Damage);
+            attacker.ActionList.Remove(normalAttack);
+            attacker.Process(normalAttack);
+            Assert.Contains(attacker.Packets.OfType<ServerPackets.Chat>(), packet =>
+                packet.Message == $"攻击:{targetMonster.Name}|5|{targetMonster.Name}|1|0|70|100|0" &&
+                                  packet.Type == ChatType.System);
+
+            var flamingSword = new UserMagic(Spell.FlamingSword)
+            {
+                Info = new MagicInfo { Spell = Spell.FlamingSword, MultiplierBase = 1F }
+            };
+            attacker.Info.Magics.Add(flamingSword);
+            attacker.FlamingSword = true;
+            attacker.ActionTime = 0;
+            attacker.AttackTime = 0;
+            attacker.Attack(MirDirection.Right, Spell.FlamingSword);
+            DelayedAction skillAttack = Assert.Single(attacker.ActionList,
+                action => action.Type == DelayedType.Damage);
+            attacker.ActionList.Remove(skillAttack);
+            attacker.Process(skillAttack);
+            Assert.Contains(attacker.Packets.OfType<ServerPackets.Chat>(), packet =>
+                packet.Message == $"攻击:{targetMonster.Name}|5|{targetMonster.Name}|1|0|65|100|{(int)Spell.FlamingSword}" &&
+                                  packet.Type == ChatType.System);
 
             var struckPlayer = Player("TXT11领域受击者", map);
             var incomingMonster = Monster(911, "TXT11领域攻击怪", map);
             Assert.Equal(1, struckPlayer.Attacked(incomingMonster, 25, (DefenceType)byte.MaxValue));
             Assert.Equal(2u, struckPlayer.Account.Gold);
+            Assert.Contains(struckPlayer.Packets.OfType<ServerPackets.Chat>(), packet =>
+                packet.Message == $"受击:{incomingMonster.Name}|1" && packet.Type == ChatType.System);
 
             var gold = new ItemObject(attacker, 10);
             map.GetCell(attacker.CurrentLocation).Add(gold);
             gold.Spawned();
             attacker.PickUp();
-            Assert.Equal(15u, attacker.Account.Gold);
+            Assert.Equal(17u, attacker.Account.Gold);
             Assert.DoesNotContain(gold, map.GetCell(attacker.CurrentLocation).Objects ?? new List<MapObject>());
+            Assert.Contains(attacker.Packets.OfType<ServerPackets.Chat>(), packet =>
+                packet.Message == "拾取:金币|金币" && packet.Type == ChatType.System);
 
             var dyingMonster = Monster(912, "TXT11领域死亡怪", map);
+            dyingMonster.CurrentLocation = new Point(1, 0);
+            dyingMonster.Info.Experience = 321;
             dyingMonster.EXPOwner = attacker;
             dyingMonster.Master = Monster(913, "TXT11跳过掉落的主人", map);
             dyingMonster.Die();
-            Assert.Equal(23u, attacker.Account.Gold);
+            Assert.Equal(25u, attacker.Account.Gold);
+            Assert.Contains(attacker.Packets.OfType<ServerPackets.Chat>(), packet =>
+                packet.Message == "击杀:TXT11领域死亡怪|1|0|321" && packet.Type == ChatType.System);
 
             uint beforeCoexist = attacker.Account.Gold;
             var coexistMonster = Monster(915, "TXT11共存死亡怪", map);
@@ -243,10 +293,22 @@ public sealed class LingFengTxtSpecialTriggerIntegrationTests
 
             var droppingMonster = Monster(914, "TXT11领域掉落怪", map);
             droppingMonster.EXPOwner = attacker;
+            droppingMonster.Info.Drops.Add(new DropInfo
+            {
+                Chance = 1,
+                Item = new ItemInfo { Index = 9141, Name = "首件掉落", Type = ItemType.杂物 }
+            });
+            droppingMonster.Info.Drops.Add(new DropInfo
+            {
+                Chance = 1,
+                Item = new ItemInfo { Index = 9142, Name = "次件掉落", Type = ItemType.杂物 }
+            });
             droppingMonster.Info.Drops.Add(new DropInfo { Chance = 1, Gold = 2 });
             uint beforeDrop = attacker.Account.Gold;
             droppingMonster.InvokeDrop();
             Assert.InRange(attacker.Account.Gold - beforeDrop, 17u, 18u);
+            Assert.Contains(attacker.Packets.OfType<ServerPackets.Chat>(), packet =>
+                packet.Message == "掉落:首件掉落|首件掉落" && packet.Type == ChatType.System);
 
             uint beforeLifecycle = attacker.Account.Gold;
             attacker.CallDefaultNPC(DefaultNPCType.Login);
@@ -466,9 +528,9 @@ public sealed class LingFengTxtSpecialTriggerIntegrationTests
         Assert.Equal(ScriptHookDecision.Continue, request.Decision);
     }
 
-    private static PlayerObject Player(string name, Map map = null)
+    private static TestPlayer Player(string name, Map map = null)
     {
-        var player = new PlayerObject
+        var player = new TestPlayer
         {
             Info = new CharacterInfo { Name = name, HP = 100 },
             Account = new AccountInfo(),
@@ -479,6 +541,7 @@ public sealed class LingFengTxtSpecialTriggerIntegrationTests
             CurrentLocation = Point.Empty
         };
         player.Stats[Stat.HP] = 100;
+        player.Info.Mount = new MountInfo(player);
         return player;
     }
 
@@ -500,11 +563,12 @@ public sealed class LingFengTxtSpecialTriggerIntegrationTests
     {
         var map = new Map(new MapInfo { Index = 9911 })
         {
-            Width = 1,
+            Width = 2,
             Height = 1,
-            Cells = new Cell[1, 1]
+            Cells = new Cell[2, 1]
         };
         map.Cells[0, 0] = new Cell { Attribute = CellAttribute.Walk };
+        map.Cells[1, 0] = new Cell { Attribute = CellAttribute.Walk };
         return map;
     }
 
@@ -512,6 +576,14 @@ public sealed class LingFengTxtSpecialTriggerIntegrationTests
     {
         public TestMonster(MonsterInfo info) : base(info) { }
         public void InvokeDrop() => Drop();
+    }
+
+    private sealed class TestPlayer : PlayerObject
+    {
+        public List<Packet> Packets { get; } = new();
+
+        public override void Enqueue(Packet packet) => Packets.Add(packet);
+        public override void Broadcast(Packet packet) { }
     }
 
     private sealed class SingleProvider : ITextFileProvider

@@ -2853,6 +2853,7 @@ namespace Server.MirObjects
                 magic = GetMagic(Spell.FatalSword);
 
                 DefenceType defence = DefenceType.ACAgility;
+                UserMagic damageMagic = null;
 
                 if (magic != null)
                 {
@@ -2860,7 +2861,10 @@ namespace Server.MirObjects
                         FatalSword = true;
 
                     if (FatalSword)
+                    {
                         damageBase = magic.GetDamage(damageBase);
+                        damageMagic = magic;
+                    }
                 }
                 #endregion
 
@@ -2874,6 +2878,7 @@ namespace Server.MirObjects
                     MPEaterCount += Envir.Random.Next(baseCount, maxCount);
                     if (MPEater)
                     {
+                        damageMagic = magic;
                         LevelMagic(magic);
                         damageFinal = magic.GetDamage(damageBase);
                         defence = DefenceType.ACAgility;
@@ -2904,6 +2909,7 @@ namespace Server.MirObjects
                     HemorrhageAttackCount += Envir.Random.Next(1, 1 + magic.Level * 2);
                     if (Hemorrhage)
                     {
+                        damageMagic = magic;
                         damageFinal = magic.GetDamage(damageBase);
                         LevelMagic(magic);
                         S.ObjectEffect ef = new S.ObjectEffect { ObjectID = ob.ObjectID, Effect = SpellEffect.Hemorrhage };
@@ -2936,33 +2942,41 @@ namespace Server.MirObjects
                 {
                     case Spell.Slaying:
                         magic = GetMagic(Spell.Slaying);
+                        damageMagic = magic;
                         damageFinal = magic.GetDamage(damageBase);
                         LevelMagic(magic);
                         break;
                     case Spell.DoubleSlash:
                         magic = GetMagic(Spell.DoubleSlash);
+                        damageMagic = magic;
                         damageFinal = magic.GetDamage(damageBase);
 
                         if (defence == DefenceType.ACAgility) defence = DefenceType.MACAgility;
 
-                        action = new DelayedAction(DelayedType.Damage, Envir.Time + 400, ob, damageFinal, DefenceType.Agility, false);
+                        action = new DelayedAction(
+                            DelayedType.Damage, Envir.Time + 400,
+                            ob, damageFinal, DefenceType.Agility, false, magic, false);
                         ActionList.Add(action);
                         LevelMagic(magic);
                         break;
                     case Spell.Thrusting:
                         magic = GetMagic(Spell.Thrusting);
+                        damageMagic = magic;
                         LevelMagic(magic);
                         break;
                     case Spell.HalfMoon:
                         magic = GetMagic(Spell.HalfMoon);
+                        damageMagic = magic;
                         LevelMagic(magic);
                         break;
                     case Spell.CrossHalfMoon:
                         magic = GetMagic(Spell.CrossHalfMoon);
+                        damageMagic = magic;
                         LevelMagic(magic);
                         break;
                     case Spell.TwinDrakeBlade:
                         magic = GetMagic(Spell.TwinDrakeBlade);
+                        damageMagic = magic;
                         damageFinal = magic.GetDamage(damageBase);
                         TwinDrakeBlade = false;
                         action = new DelayedAction(DelayedType.Damage, Envir.Time + 400,
@@ -2977,6 +2991,7 @@ namespace Server.MirObjects
                         break;
                     case Spell.FlamingSword:
                         magic = GetMagic(Spell.FlamingSword);
+                        damageMagic = magic;
                         damageFinal = magic.GetDamage(damageBase);
                         FlamingSword = false;
                         defence = DefenceType.AC;
@@ -2987,7 +3002,8 @@ namespace Server.MirObjects
                 }
 
                 //if (ob.Attacked(this, damage, defence) <= 0) break;
-                action = new DelayedAction(DelayedType.Damage, Envir.Time + 300, ob, damageFinal, defence, true);
+                action = new DelayedAction(
+                    DelayedType.Damage, Envir.Time + 300, ob, damageFinal, defence, true, damageMagic, false);
                 ActionList.Add(action);
                 break;
             }
@@ -7083,7 +7099,11 @@ namespace Server.MirObjects
             if (FatalSword)
                 defence = DefenceType.Agility;
 
-            if (target.Attacked(this, damage, defence, damageWeapon) <= 0) return;
+            using (Server.Scripting.LingFengTxtTriggerContext.PushMagic(
+                       userMagic == null ? "0" : ((int)userMagic.Spell).ToString()))
+            {
+                if (target.Attacked(this, damage, defence, damageWeapon) <= 0) return;
+            }
             if (FatalSword)
             {
                 S.ObjectEffect p = new S.ObjectEffect { ObjectID = target.ObjectID, Effect = SpellEffect.FatalSword };

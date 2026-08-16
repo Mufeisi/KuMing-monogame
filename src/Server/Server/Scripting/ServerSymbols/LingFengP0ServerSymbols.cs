@@ -15,10 +15,21 @@ namespace Server.Scripting.ServerSymbols
             "FASHIONARMRINGL", "FASHIONARMRINGR", "FASHIONBELT", "FASHIONBOOTS",
             "FASHIONCHARM", "FASHIONRIGHTHAND"
         };
+        private static readonly string[] TeamNames =
+            Enumerable.Range(0, 10).Select(index => $"TEAM{index}").ToArray();
+        private static readonly string[] ScriptParameterNames =
+            Enumerable.Range(1, 9).Select(index => $"SCRIPTPARAM{index}").ToArray();
         private static readonly ServerSymbolCatalog Catalog = CreateCatalog();
         private static readonly IScriptTextRenderer Renderer = new ScriptTextRenderer(new ServerSymbolResolver(Catalog));
 
-        internal static IReadOnlyList<string> CanonicalNames => Catalog.Definitions.Select(x => x.CanonicalName).ToArray();
+        internal static IReadOnlyList<string> CanonicalNames => Catalog.Definitions
+            .Where(definition => definition.TestIds.Contains("LFENV05-P0", StringComparer.Ordinal))
+            .Select(definition => definition.CanonicalName)
+            .ToArray();
+        internal static IReadOnlyList<string> P1CanonicalNames => Catalog.Definitions
+            .Where(definition => definition.TestIds.Contains("LFENV06-P1", StringComparer.Ordinal))
+            .Select(definition => definition.CanonicalName)
+            .ToArray();
 
         internal static ScriptTextRenderResult Render(PlayerObject player, string text)
         {
@@ -94,6 +105,31 @@ namespace Server.Scripting.ServerSymbols
             AddString(bindings, "GUILDNAME", player.MyGuild?.Name ?? "未入行会");
             AddString(bindings, "RANKNAME", player.MyGuildRank?.Name);
             AddInteger(bindings, "GUILDMEMBERCOUNT", player.MyGuild?.Ranks?.Sum(rank => rank.Members?.Count ?? 0) ?? 0);
+            if (player.GroupMembers != null)
+            {
+                int teamCount = Math.Min(TeamNames.Length, player.GroupMembers.Count);
+                for (int index = 0; index < teamCount; index++)
+                    AddString(bindings, TeamNames[index], player.GroupMembers[index]?.Name);
+            }
+            AddInteger(bindings, "GROUPMEMBERCOUNT", player.GroupMembers?.Count ?? 0);
+            AddInteger(bindings, "RECALLREMAININGTIME", RecallRemainingSeconds(player));
+            AddInteger(bindings, "KILLMONEXPRATE", EffectiveWholeMultiplier(player, Stat.经验增长数率));
+            AddInteger(bindings, "KILLMONBURSTRATE", EffectiveWholeMultiplier(player, Stat.物品掉落数率));
+            AddInteger(bindings, "KILLMONEXPRATETIME", BuffRemainingSeconds(player, BuffType.获取经验提升));
+            AddInteger(bindings, "KILLMONBURSTRATETIME", BuffRemainingSeconds(player, BuffType.物品掉落提升));
+            AddCompatibilityInteger(bindings, "POWERRATE", 1);
+            AddCompatibilityInteger(bindings, "POWERRATETIME", 0);
+            AddCompatibilityInteger(bindings, "ATTACKMONPOWERRATE", 1);
+            AddCompatibilityInteger(bindings, "ATTACKMONPOWERRATETIME", 0);
+            IReadOnlyList<string> scriptParameters = LingFengTxtTriggerContext.Current?.ScriptParameters;
+            if (scriptParameters != null)
+            {
+                int parameterCount = Math.Min(ScriptParameterNames.Length, scriptParameters.Count);
+                ServerSymbolContextKind parameterContext =
+                    ServerSymbolContextKind.Player | ServerSymbolContextKind.TriggerResult;
+                for (int index = 0; index < parameterCount; index++)
+                    AddString(bindings, ScriptParameterNames[index], scriptParameters[index], parameterContext);
+            }
 
             long gold = account?.Gold ?? 0;
             long credit = account?.Credit ?? 0;
@@ -135,9 +171,69 @@ namespace Server.Scripting.ServerSymbols
             AddCompatibilityString(bindings, "SHIELD", "空");
             foreach (string fashion in FashionNames) AddCompatibilityString(bindings, fashion, "空");
 
-            return new ServerSymbolContext(
+            ServerSymbolContextKind availableContexts =
                 ServerSymbolContextKind.Player | ServerSymbolContextKind.Map |
-                ServerSymbolContextKind.Guild | ServerSymbolContextKind.Server,
+                ServerSymbolContextKind.Guild | ServerSymbolContextKind.Server;
+            if (scriptParameters != null)
+                availableContexts |= ServerSymbolContextKind.TriggerResult;
+            if (LingFengTxtTriggerContext.Current?.Payload is LingFengMonsterKillEvent killEvent)
+            {
+                ServerSymbolContextKind eventContext =
+                    ServerSymbolContextKind.Monster | ServerSymbolContextKind.TriggerResult;
+                AddString(bindings, "KILLMONNAME", killEvent.MonsterName, eventContext);
+                AddInteger(bindings, "KILLMONX", killEvent.X, eventContext);
+                AddInteger(bindings, "KILLMONY", killEvent.Y, eventContext);
+                AddInteger(bindings, "GETEXP", killEvent.Experience, eventContext);
+                availableContexts |= eventContext;
+            }
+            else if (LingFengTxtTriggerContext.Current?.Payload is LingFengItemTriggerEvent itemEvent)
+            {
+                ServerSymbolContextKind eventContext =
+                    ServerSymbolContextKind.Item | ServerSymbolContextKind.TriggerResult;
+                AddString(bindings, "CURITEMNAME", itemEvent.ItemName, eventContext);
+                if (itemEvent.Kind is LingFengItemTriggerKind.Pickup or LingFengItemTriggerKind.Drop)
+                    AddString(bindings, "PICKDROPITEMNAME", itemEvent.ItemName, eventContext);
+                else
+                    AddString(bindings, "USEITEMNAME", itemEvent.ItemName, eventContext);
+                if (itemEvent.Position.HasValue)
+                    AddInteger(bindings, "CURITEMPOS", itemEvent.Position.Value, eventContext);
+                availableContexts |= eventContext;
+            }
+            else if (LingFengTxtTriggerContext.Current?.Payload is LingFengDamageEvent damageEvent)
+            {
+                ServerSymbolContextKind eventContext =
+                    ServerSymbolContextKind.Attacker | ServerSymbolContextKind.Target |
+                    ServerSymbolContextKind.TriggerResult;
+                AddString(bindings, "KILLER", damageEvent.AttackerName, eventContext);
+                AddString(bindings, "CURRRTARGETNAME", damageEvent.CurrentTargetName, eventContext);
+                AddInteger(bindings, "DAMAGEVALUE", damageEvent.DamageValue, eventContext);
+                AddString(bindings, "CURRRUSEMAGICID", damageEvent.MagicId, eventContext);
+                if (damageEvent.Perspective == PlayerDamagePerspective.Outgoing)
+                    AddInteger(bindings, "PKPOWER", damageEvent.AppliedDamage, eventContext);
+                else
+                    AddInteger(bindings, "STRUCKHP", damageEvent.AppliedDamage, eventContext);
+                if (damageEvent.Perspective == PlayerDamagePerspective.Outgoing && damageEvent.TargetIsMonster)
+                {
+                    ServerSymbolContextKind monsterTargetContext =
+                        ServerSymbolContextKind.Monster | ServerSymbolContextKind.Target |
+                        ServerSymbolContextKind.TriggerResult;
+                    AddString(bindings, "ATTACKMONSTER_NAME", damageEvent.TargetName, monsterTargetContext);
+                    AddString(bindings, "ATTACKMONSTER_NAMEEX", damageEvent.CurrentTargetName, monsterTargetContext);
+                    AddString(bindings, "ATTACKMONSTER_X", damageEvent.TargetX.ToString(CultureInfo.InvariantCulture), monsterTargetContext);
+                    AddString(bindings, "ATTACKMONSTER_XEX", damageEvent.TargetX.ToString(CultureInfo.InvariantCulture), monsterTargetContext);
+                    AddString(bindings, "ATTACKMONSTER_Y", damageEvent.TargetY.ToString(CultureInfo.InvariantCulture), monsterTargetContext);
+                    AddString(bindings, "ATTACKMONSTER_YEX", damageEvent.TargetY.ToString(CultureInfo.InvariantCulture), monsterTargetContext);
+                    AddInteger(bindings, "ATTACKMONSTER_HP", damageEvent.TargetHp, monsterTargetContext);
+                    AddString(bindings, "ATTACKMONSTER_HPEX", damageEvent.TargetHp.ToString(CultureInfo.InvariantCulture), monsterTargetContext);
+                    AddInteger(bindings, "ATTACKMONSTER_MAXHP", damageEvent.TargetMaxHp, monsterTargetContext);
+                    AddInteger(bindings, "ATTACKMONSTER_MAXHPEX", damageEvent.TargetMaxHp, monsterTargetContext);
+                    availableContexts |= ServerSymbolContextKind.Monster;
+                }
+                availableContexts |= eventContext;
+            }
+
+            return new ServerSymbolContext(
+                availableContexts,
                 bindings.ToArray());
         }
 
@@ -158,6 +254,15 @@ namespace Server.Scripting.ServerSymbols
             definitions.Add(Definition("Y", ServerSymbolValueType.Integer, ServerSymbolContextKind.Player, new[] { "Y_COORD" }));
             definitions.Add(Definition("GOLDCOUNT", ServerSymbolValueType.Integer, ServerSymbolContextKind.Player, new[] { "GOLD" }));
             definitions.Add(Definition("CREDITPOINT", ServerSymbolValueType.Integer, ServerSymbolContextKind.Player, new[] { "CREDIT" }));
+            AddDefinitions(definitions, ServerSymbolValueType.String, ServerSymbolContextKind.Player,
+                TeamNames, "LFENV06-P1");
+            AddDefinitions(definitions, ServerSymbolValueType.Integer, ServerSymbolContextKind.Player,
+                new[] { "GROUPMEMBERCOUNT", "RECALLREMAININGTIME", "KILLMONEXPRATE", "KILLMONBURSTRATE",
+                    "KILLMONEXPRATETIME", "KILLMONBURSTRATETIME", "POWERRATE", "POWERRATETIME",
+                    "ATTACKMONPOWERRATE", "ATTACKMONPOWERRATETIME" }, "LFENV06-P1");
+            AddDefinitions(definitions, ServerSymbolValueType.String,
+                ServerSymbolContextKind.Player | ServerSymbolContextKind.TriggerResult,
+                ScriptParameterNames, "LFENV06-P1");
 
             AddDefinitions(definitions, ServerSymbolValueType.String, ServerSymbolContextKind.Server,
                 new[] { "DATE", "TIME", "DATETIME", "SERVERNAME" });
@@ -172,6 +277,42 @@ namespace Server.Scripting.ServerSymbols
             definitions.Add(Definition("CHARM", ServerSymbolValueType.String, ServerSymbolContextKind.Player, new[] { "STONE" }));
             definitions.Add(Definition("DRESS", ServerSymbolValueType.String, ServerSymbolContextKind.Player, new[] { "ARMOUR" }));
 
+            ServerSymbolContextKind killContext =
+                ServerSymbolContextKind.Monster | ServerSymbolContextKind.TriggerResult;
+            definitions.Add(Definition("KILLMONNAME", ServerSymbolValueType.String, killContext,
+                new[] { "KILLMONNAMEEX" }, "LFENV06-P1"));
+            AddDefinitions(definitions, ServerSymbolValueType.Integer, killContext,
+                new[] { "KILLMONX", "KILLMONY", "GETEXP" }, "LFENV06-P1");
+
+            ServerSymbolContextKind itemContext =
+                ServerSymbolContextKind.Item | ServerSymbolContextKind.TriggerResult;
+            AddDefinitions(definitions, ServerSymbolValueType.String, itemContext,
+                new[] { "PICKDROPITEMNAME", "CURITEMNAME", "USEITEMNAME" }, "LFENV06-P1");
+            definitions.Add(Definition("CURITEMPOS", ServerSymbolValueType.Integer, itemContext,
+                testId: "LFENV06-P1"));
+
+            ServerSymbolContextKind damageContext =
+                ServerSymbolContextKind.Attacker | ServerSymbolContextKind.Target |
+                ServerSymbolContextKind.TriggerResult;
+            definitions.Add(Definition("KILLER", ServerSymbolValueType.String, damageContext,
+                testId: "LFENV06-P1"));
+            definitions.Add(Definition("CURRRTARGETNAME", ServerSymbolValueType.String, damageContext,
+                new[] { "CURRRTARGETFULLNAME" }, "LFENV06-P1"));
+            AddDefinitions(definitions, ServerSymbolValueType.Integer, damageContext,
+                new[] { "DAMAGEVALUE", "PKPOWER", "STRUCKHP" }, "LFENV06-P1");
+            definitions.Add(Definition("CURRRUSEMAGICID", ServerSymbolValueType.String,
+                damageContext,
+                testId: "LFENV06-P1"));
+
+            ServerSymbolContextKind monsterTargetContext =
+                ServerSymbolContextKind.Monster | ServerSymbolContextKind.Target |
+                ServerSymbolContextKind.TriggerResult;
+            AddDefinitions(definitions, ServerSymbolValueType.String, monsterTargetContext,
+                new[] { "ATTACKMONSTER_NAME", "ATTACKMONSTER_NAMEEX", "ATTACKMONSTER_X", "ATTACKMONSTER_XEX",
+                    "ATTACKMONSTER_Y", "ATTACKMONSTER_YEX", "ATTACKMONSTER_HPEX" }, "LFENV06-P1");
+            AddDefinitions(definitions, ServerSymbolValueType.Integer, monsterTargetContext,
+                new[] { "ATTACKMONSTER_HP", "ATTACKMONSTER_MAXHP", "ATTACKMONSTER_MAXHPEX" }, "LFENV06-P1");
+
             if (!ServerSymbolCatalog.TryCreate(definitions, out ServerSymbolCatalog catalog, out string diagnostic))
                 throw new InvalidOperationException(diagnostic);
             return catalog;
@@ -181,25 +322,52 @@ namespace Server.Scripting.ServerSymbols
             ICollection<ServerSymbolDefinition> target,
             ServerSymbolValueType type,
             ServerSymbolContextKind context,
-            IEnumerable<string> names)
+            IEnumerable<string> names,
+            string testId = "LFENV05-P0")
         {
-            foreach (string name in names) target.Add(Definition(name, type, context));
+            foreach (string name in names) target.Add(Definition(name, type, context, testId: testId));
         }
 
         private static ServerSymbolDefinition Definition(
             string name,
             ServerSymbolValueType type,
             ServerSymbolContextKind context,
-            IEnumerable<string> aliases = null) =>
+            IEnumerable<string> aliases = null,
+            string testId = "LFENV05-P0") =>
             new ServerSymbolDefinition(
                 name, aliases ?? Array.Empty<string>(), string.Empty, type, context,
                 ServerSymbolNoContextBehavior.StructuredFailure,
                 ServerSymbolSecurityClassification.Public, ServerSymbolAccessPolicy.Allowed,
                 "翎风 P0 只读显示常量", "PlayerObject/Envir 只读快照",
                 "B", new[] { "NPC", "命令参数", "系统触发", "ScriptApi" }, "执行时",
-                new[] { "LFENV05-P0" }, Documentation, 1, new DateOnly(2026, 8, 16));
+                new[] { testId }, Documentation, 1, new DateOnly(2026, 8, 16));
 
         private static long StatValue(PlayerObject player, Stat stat) => player.Stats?[stat] ?? 0;
+
+        private static long EffectiveWholeMultiplier(PlayerObject player, Stat stat) =>
+            1 + Math.Max(0, StatValue(player, stat)) / 100;
+
+        private static long BuffRemainingSeconds(PlayerObject player, BuffType type)
+        {
+            long remaining = player.Buffs?
+                .Where(buff => buff != null && !buff.FlagForRemoval && buff.Info?.Type == type)
+                .Select(buff => Math.Max(0, buff.ExpireTime))
+                .DefaultIfEmpty(0)
+                .Max() ?? 0;
+            return (remaining + 999) / 1000;
+        }
+
+        private static long RecallRemainingSeconds(PlayerObject player)
+        {
+            long now = Envir.Main.Time;
+            long remaining = player.ActionList?
+                .Where(action => action != null && !action.FlaggedToRemove &&
+                                 action.Type == DelayedType.NPC && action.Params?.Length == 5 && action.Time > now)
+                .Select(action => action.Time - now)
+                .DefaultIfEmpty(0)
+                .Min() ?? 0;
+            return (remaining + 999) / 1000;
+        }
 
         private static void AddEquipment(
             ICollection<ServerSymbolBinding> bindings,

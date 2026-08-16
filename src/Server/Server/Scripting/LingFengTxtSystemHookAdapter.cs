@@ -55,9 +55,10 @@ namespace Server.Scripting
             string label = request?.Perspective == PlayerDamagePerspective.Outgoing
                 ? "[@ATTACKDAMAGE]"
                 : "[@STRUCKDAMAGE]";
-            return TryDispatchTarget(cSharpInvoked, provider, player, request,
+            LingFengDamageEvent payload = Snapshot(request);
+            return TryDispatchTarget(cSharpInvoked, provider, player, payload,
                 cSharpEligible,
-                new LingFengTxtHookTarget("SystemScripts/QFunction-0", label));
+                new LingFengTxtHookTarget("SystemScripts/QFunction-0", label), request);
         }
 
         public static bool TryDispatchPlayerDamageAfter(
@@ -70,7 +71,8 @@ namespace Server.Scripting
             string label = result?.Perspective == PlayerDamagePerspective.Outgoing
                 ? "[@ATTACK]"
                 : "[@STRUCK]";
-            return TryDispatchTarget(cSharpInvoked, provider, player, result,
+            LingFengDamageEvent payload = Snapshot(result);
+            return TryDispatchTarget(cSharpInvoked, provider, player, payload,
                 cSharpEligible,
                 new LingFengTxtHookTarget("SystemScripts/QFunction-0", label));
         }
@@ -80,9 +82,18 @@ namespace Server.Scripting
             ITextFileProvider provider,
             PlayerObject player,
             PlayerItemPickupResult result,
-            bool cSharpEligible = false) =>
-            TryDispatchTarget(cSharpInvoked, provider, player, result, cSharpEligible,
+            bool cSharpEligible = false)
+        {
+            string itemName = result?.Item?.FriendlyName;
+            if (string.IsNullOrEmpty(itemName) && result?.Gold > 0) itemName = "金币";
+            var payload = new LingFengItemTriggerEvent(
+                LingFengItemTriggerKind.Pickup,
+                itemName ?? string.Empty,
+                null,
+                result?.Gold ?? 0);
+            return TryDispatchTarget(cSharpInvoked, provider, player, payload, cSharpEligible,
                 new LingFengTxtHookTarget("SystemScripts/QFunction-0", "[@PICKUPITEMEX]"));
+        }
 
         public static bool TryDispatchMonsterDie(
             bool cSharpInvoked,
@@ -91,7 +102,14 @@ namespace Server.Scripting
             bool cSharpEligible = false)
         {
             PlayerObject player = ResolvePlayer(monster?.EXPOwner);
-            return TryDispatchTarget(cSharpInvoked, provider, player, monster,
+            var payload = monster == null
+                ? default
+                : new LingFengMonsterKillEvent(
+                    monster.Info?.Name ?? string.Empty,
+                    monster.CurrentLocation.X,
+                    monster.CurrentLocation.Y,
+                    monster.Experience);
+            return TryDispatchTarget(cSharpInvoked, provider, player, payload,
                 cSharpEligible,
                 new LingFengTxtHookTarget("SystemScripts/QFunction-0", "[@KILLMON]"));
         }
@@ -105,7 +123,14 @@ namespace Server.Scripting
             if (result == null || result.DroppedGold == 0 && result.DroppedItems.Count == 0)
                 return cSharpInvoked;
             PlayerObject player = ResolvePlayer(result?.ExpOwner) ?? ResolvePlayer(result?.DropOwner);
-            return TryDispatchTarget(cSharpInvoked, provider, player, result,
+            string itemName = result.DroppedItems.FirstOrDefault()?.FriendlyName;
+            if (string.IsNullOrEmpty(itemName) && result.DroppedGold > 0) itemName = "金币";
+            var payload = new LingFengItemTriggerEvent(
+                LingFengItemTriggerKind.Drop,
+                itemName ?? string.Empty,
+                null,
+                result.DroppedGold);
+            return TryDispatchTarget(cSharpInvoked, provider, player, payload,
                 cSharpEligible,
                 new LingFengTxtHookTarget("SystemScripts/QFunction-0", "[@M2DROPITEM]"));
         }
@@ -116,7 +141,8 @@ namespace Server.Scripting
             PlayerObject player,
             object payload,
             bool cSharpEligible,
-            LingFengTxtHookTarget target)
+            LingFengTxtHookTarget target,
+            PlayerDamageRequest damageRequest = null)
         {
             if (cSharpInvoked || player == null || !IsCompatibilityEnabled(provider)) return cSharpInvoked;
             if (!CanDispatchTxt(cSharpEligible, target.ScriptKey)) return false;
@@ -137,7 +163,9 @@ namespace Server.Scripting
 
                     try
                     {
-                        using (LingFengTxtTriggerContext.Push(payload))
+                        using (damageRequest == null
+                                   ? LingFengTxtTriggerContext.Push(payload)
+                                   : LingFengTxtTriggerContext.PushDamage((LingFengDamageEvent)payload, damageRequest))
                         {
                             NPCScript script = NPCScript.GetOrAdd(0, target.ScriptKey, NPCScriptType.Called);
                             return script.CallSystem(player, target.Label);
@@ -162,6 +190,45 @@ namespace Server.Scripting
             HeroObject hero => hero.Owner,
             _ => null
         };
+
+        private static LingFengDamageEvent Snapshot(PlayerDamageRequest request)
+        {
+            if (request == null) return default;
+            int applied = request.ComputeFinalDamage();
+            return new LingFengDamageEvent(
+                request.Perspective,
+                request.Attacker?.Name ?? string.Empty,
+                request.Target?.Name ?? string.Empty,
+                request.Target?.Name ?? string.Empty,
+                applied,
+                applied,
+                false,
+                request.Target is MonsterObject,
+                request.Target?.CurrentLocation.X ?? 0,
+                request.Target?.CurrentLocation.Y ?? 0,
+                (request.Target as MonsterObject)?.HP ?? 0,
+                request.Target?.Stats?[Stat.HP] ?? 0,
+                LingFengTxtTriggerContext.Current?.MagicId ?? "0");
+        }
+
+        private static LingFengDamageEvent Snapshot(PlayerDamageResult result)
+        {
+            if (result == null) return default;
+            return new LingFengDamageEvent(
+                result.Perspective,
+                result.Attacker?.Name ?? string.Empty,
+                result.Target?.Name ?? string.Empty,
+                result.Target?.Name ?? string.Empty,
+                Math.Max(0, result.Damage - result.Armour),
+                result.AppliedDamage,
+                true,
+                result.Target is MonsterObject,
+                result.Target?.CurrentLocation.X ?? 0,
+                result.Target?.CurrentLocation.Y ?? 0,
+                (result.Target as MonsterObject)?.HP ?? 0,
+                result.Target?.Stats?[Stat.HP] ?? 0,
+                LingFengTxtTriggerContext.Current?.MagicId ?? "0");
+        }
 
         public static bool TryDispatchAfterCSharp(
             bool cSharpHandled,
