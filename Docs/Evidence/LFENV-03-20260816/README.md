@@ -1,6 +1,6 @@
 # LFENV-03 验证证据
 
-- 状态：已实施
+- 状态：已验证
 - 负责人：项目所有者 / Codex
 - 验证日期：2026-08-16
 - 范围：服务器常量 Resolver、Catalog、Context、Reference、Value 与结构化结果类型
@@ -21,11 +21,11 @@ dotnet test Tests\Base05.Tests\Base05.Tests.csproj -c Release --no-restore --fil
 
 专项结果：7/7 通过，0 失败，0 跳过。TRX：`lfenv-03-targeted.trx`。
 
-随后执行 Base05 全量回归：710/710 通过，0 失败，0 跳过，用时 2 分 25 秒。TRX：`lfenv-03-full.trx`。提交版 TRX 已脱敏用户名、设备名和用户目录，不改变测试计数与结果。
+随后执行 Base05 全量回归：710/710 通过，0 失败，0 跳过，用时 2 分 15 秒。TRX：`lfenv-03-full.trx`。提交版 TRX 已脱敏用户名、设备名和用户目录，不改变测试计数与结果。
 
 ## SHA-256
 
-- `lfenv-03-targeted.trx`：`018483E2FB69E370FB097AA7538B7891BEE88E640BB3068A0735A26DD8BA2A7F`
-- `lfenv-03-full.trx`：`583757AE4CCA8EBE2BAF166BA76C93D6E605858C0166E64C7EA0D44A48F572E6`
+- `lfenv-03-targeted.trx`：`E8626D623957119BB577C41D319EF3B109544898923C8B1B49A6FFE4465F0B60`
+- `lfenv-03-full.trx`：`949B584955957A227C998D7E1B265C2991793EFFADC7EF0E253D275B59717023`
 
 哈希对应本阶段最终实现与测试工作树。后续阶段若修改本模块或专项测试，必须重跑并刷新证据。

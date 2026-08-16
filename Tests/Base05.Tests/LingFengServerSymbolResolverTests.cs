@@ -92,7 +92,11 @@ public sealed class LingFengServerSymbolResolverTests
             "PASSWORD",
             ServerSymbolValueType.String,
             ServerSymbolContextKind.Player,
-            sensitivity: ServerSymbolSensitivity.Denied));
+            securityClassification:
+                ServerSymbolSecurityClassification.Privacy |
+                ServerSymbolSecurityClassification.AccountInformation |
+                ServerSymbolSecurityClassification.Credential,
+            accessPolicy: ServerSymbolAccessPolicy.Denied));
         IServerSymbolResolver resolver = new ServerSymbolResolver(catalog);
 
         ServerSymbolResult sensitive = resolver.Resolve(
@@ -184,6 +188,26 @@ public sealed class LingFengServerSymbolResolverTests
             out _,
             out string contractDiagnostic));
         Assert.Contains("USERNAME", contractDiagnostic, StringComparison.Ordinal);
+
+        Assert.False(ServerSymbolCatalog.TryCreate(
+            new[]
+            {
+                Definition("LEVEL", ServerSymbolValueType.Integer, ServerSymbolContextKind.Player,
+                    testIds: Array.Empty<string>())
+            },
+            out _,
+            out string metadataDiagnostic));
+        Assert.Contains("LEVEL", metadataDiagnostic, StringComparison.Ordinal);
+
+        Assert.False(ServerSymbolCatalog.TryCreate(
+            new[]
+            {
+                Definition("PASSWORD", ServerSymbolValueType.String, ServerSymbolContextKind.Player,
+                    securityClassification: ServerSymbolSecurityClassification.Credential)
+            },
+            out _,
+            out string credentialDiagnostic));
+        Assert.Contains("PASSWORD", credentialDiagnostic, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -219,7 +243,9 @@ public sealed class LingFengServerSymbolResolverTests
         ServerSymbolContextKind requiredContext,
         IReadOnlyList<string>? aliases = null,
         string parameterForm = "",
-        ServerSymbolSensitivity sensitivity = ServerSymbolSensitivity.Public) =>
+        ServerSymbolSecurityClassification securityClassification = ServerSymbolSecurityClassification.Public,
+        ServerSymbolAccessPolicy accessPolicy = ServerSymbolAccessPolicy.Allowed,
+        IReadOnlyList<string>? testIds = null) =>
         new(
             canonicalName,
             aliases ?? Array.Empty<string>(),
@@ -227,13 +253,14 @@ public sealed class LingFengServerSymbolResolverTests
             valueType,
             requiredContext,
             ServerSymbolNoContextBehavior.StructuredFailure,
-            sensitivity,
+            securityClassification,
+            accessPolicy,
             "翎风服务器常量",
             "上下文快照",
             "D",
             new[] { "NPC", "命令参数", "系统触发", "ScriptApi" },
             "执行时",
-            new[] { "LFENV03-UNIT" },
+            testIds ?? new[] { "LFENV03-UNIT" },
             "翎风服务器常量与整服Envir直接运行实施规格.md",
             1,
             new DateOnly(2026, 8, 16));

@@ -2,7 +2,7 @@ using System.Collections.ObjectModel;
 
 namespace Server.Scripting.ServerSymbols
 {
-    public sealed class ServerSymbolDefinition
+    internal sealed class ServerSymbolDefinition
     {
         public ServerSymbolDefinition(
             string canonicalName,
@@ -11,7 +11,8 @@ namespace Server.Scripting.ServerSymbols
             ServerSymbolValueType valueType,
             ServerSymbolContextKind requiredContext,
             ServerSymbolNoContextBehavior noContextBehavior,
-            ServerSymbolSensitivity sensitivity,
+            ServerSymbolSecurityClassification securityClassification,
+            ServerSymbolAccessPolicy accessPolicy,
             string lingFengSemantics,
             string dataSource,
             string compatibilityLevel,
@@ -32,7 +33,8 @@ namespace Server.Scripting.ServerSymbols
             ValueType = valueType;
             RequiredContext = requiredContext;
             NoContextBehavior = noContextBehavior;
-            Sensitivity = sensitivity;
+            SecurityClassification = securityClassification;
+            AccessPolicy = accessPolicy;
             LingFengSemantics = lingFengSemantics?.Trim() ?? string.Empty;
             DataSource = dataSource?.Trim() ?? string.Empty;
             CompatibilityLevel = compatibilityLevel?.Trim() ?? string.Empty;
@@ -51,7 +53,8 @@ namespace Server.Scripting.ServerSymbols
         public ServerSymbolValueType ValueType { get; }
         public ServerSymbolContextKind RequiredContext { get; }
         public ServerSymbolNoContextBehavior NoContextBehavior { get; }
-        public ServerSymbolSensitivity Sensitivity { get; }
+        public ServerSymbolSecurityClassification SecurityClassification { get; }
+        public ServerSymbolAccessPolicy AccessPolicy { get; }
         public string LingFengSemantics { get; }
         public string DataSource { get; }
         public string CompatibilityLevel { get; }
@@ -91,7 +94,7 @@ namespace Server.Scripting.ServerSymbols
         }
     }
 
-    public sealed class ServerSymbolCatalog
+    internal sealed class ServerSymbolCatalog
     {
         private readonly IReadOnlyDictionary<string, ServerSymbolDefinition> _byName;
 
@@ -123,6 +126,12 @@ namespace Server.Scripting.ServerSymbols
                     return false;
                 }
 
+                if (!TryValidateMetadata(definition, out diagnostic))
+                {
+                    catalog = null;
+                    return false;
+                }
+
                 foreach (string name in new[] { definition.CanonicalName }.Concat(definition.Aliases))
                 {
                     if (byName.TryGetValue(name, out ServerSymbolDefinition existing))
@@ -137,6 +146,32 @@ namespace Server.Scripting.ServerSymbols
             }
 
             catalog = new ServerSymbolCatalog(byName, snapshot);
+            diagnostic = string.Empty;
+            return true;
+        }
+
+        private static bool TryValidateMetadata(ServerSymbolDefinition definition, out string diagnostic)
+        {
+            if ((definition.SecurityClassification & ServerSymbolSecurityClassification.Credential) != 0 &&
+                definition.AccessPolicy != ServerSymbolAccessPolicy.Denied)
+            {
+                diagnostic = $"凭据类服务器常量必须拒绝解析：{definition.CanonicalName}。";
+                return false;
+            }
+
+            if (string.IsNullOrWhiteSpace(definition.LingFengSemantics) ||
+                string.IsNullOrWhiteSpace(definition.DataSource) ||
+                string.IsNullOrWhiteSpace(definition.CompatibilityLevel) ||
+                definition.EntryPoints.Count == 0 || definition.EntryPoints.Any(string.IsNullOrWhiteSpace) ||
+                string.IsNullOrWhiteSpace(definition.Timing) ||
+                definition.TestIds.Count == 0 || definition.TestIds.Any(string.IsNullOrWhiteSpace) ||
+                string.IsNullOrWhiteSpace(definition.Documentation) ||
+                definition.LastReviewed == default)
+            {
+                diagnostic = $"服务器常量目录元数据不完整：{definition.CanonicalName}。";
+                return false;
+            }
+
             diagnostic = string.Empty;
             return true;
         }

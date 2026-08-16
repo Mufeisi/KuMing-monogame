@@ -2,7 +2,7 @@ using System.Collections.ObjectModel;
 
 namespace Server.Scripting.ServerSymbols
 {
-    public sealed class ServerSymbolBinding
+    internal sealed class ServerSymbolBinding
     {
         private readonly Func<ServerSymbolReference, ServerSymbolValue> _resolve;
 
@@ -41,7 +41,7 @@ namespace Server.Scripting.ServerSymbols
     {
         private readonly IReadOnlyDictionary<string, ServerSymbolBinding> _bindings;
 
-        public ServerSymbolContext(
+        internal ServerSymbolContext(
             ServerSymbolContextKind availableContexts,
             params ServerSymbolBinding[] bindings)
         {
@@ -66,7 +66,7 @@ namespace Server.Scripting.ServerSymbols
             _bindings.TryGetValue(canonicalName, out binding);
     }
 
-    public sealed class ServerSymbolResolver : IServerSymbolResolver
+    internal sealed class ServerSymbolResolver : IServerSymbolResolver
     {
         private readonly ServerSymbolCatalog _catalog;
 
@@ -93,7 +93,7 @@ namespace Server.Scripting.ServerSymbols
                     definition.CanonicalName,
                     "服务器常量参数数量无效。");
 
-            if (definition.Sensitivity == ServerSymbolSensitivity.Denied)
+            if (definition.AccessPolicy == ServerSymbolAccessPolicy.Denied)
                 return ServerSymbolResult.Fail(
                     ServerSymbolStatus.SensitiveDenied,
                     definition.CanonicalName,

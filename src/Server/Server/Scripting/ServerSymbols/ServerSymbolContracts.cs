@@ -49,13 +49,24 @@ namespace Server.Scripting.ServerSymbols
         Variable = 1 << 14
     }
 
-    public enum ServerSymbolSensitivity
+    [Flags]
+    internal enum ServerSymbolSecurityClassification
     {
-        Public,
+        Public = 0,
+        Privacy = 1 << 0,
+        ServerPath = 1 << 1,
+        MachineIdentifier = 1 << 2,
+        AccountInformation = 1 << 3,
+        Credential = 1 << 4
+    }
+
+    internal enum ServerSymbolAccessPolicy
+    {
+        Allowed,
         Denied
     }
 
-    public enum ServerSymbolNoContextBehavior
+    internal enum ServerSymbolNoContextBehavior
     {
         StructuredFailure,
         EmptyString,
@@ -85,19 +96,19 @@ namespace Server.Scripting.ServerSymbols
 
         public ServerSymbolValueType Type { get; }
 
-        public static ServerSymbolValue FromString(string value) =>
+        internal static ServerSymbolValue FromString(string value) =>
             new ServerSymbolValue(ServerSymbolValueType.String, value, default, default, default);
 
-        public static ServerSymbolValue FromInteger(long value) =>
+        internal static ServerSymbolValue FromInteger(long value) =>
             new ServerSymbolValue(ServerSymbolValueType.Integer, string.Empty, value, default, default);
 
-        public static ServerSymbolValue FromDecimal(decimal value) =>
+        internal static ServerSymbolValue FromDecimal(decimal value) =>
             new ServerSymbolValue(ServerSymbolValueType.Decimal, string.Empty, default, value, default);
 
-        public static ServerSymbolValue FromDateTime(DateTime value) =>
+        internal static ServerSymbolValue FromDateTime(DateTime value) =>
             new ServerSymbolValue(ServerSymbolValueType.DateTime, string.Empty, default, default, value);
 
-        public static ServerSymbolValue FromObjectSummary(string value) =>
+        internal static ServerSymbolValue FromObjectSummary(string value) =>
             new ServerSymbolValue(ServerSymbolValueType.ObjectSummary, value, default, default, default);
 
         public string Format()
