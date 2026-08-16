@@ -24,6 +24,12 @@ namespace Server.Scripting
         public long MaxFileBytes { get; init; } = 1024 * 1024;
     }
 
+    public sealed record LingFengEnvirPreflightSummary(
+        int Accepted,
+        int RuntimeData,
+        int ExternalDependency,
+        int Rejected);
+
     public sealed class PhysicalTextFileProvider : ITextFileProvider
     {
         private static readonly HashSet<string> LyoCrystalAllowedDirectories = new(StringComparer.OrdinalIgnoreCase)
@@ -45,6 +51,8 @@ namespace Server.Scripting
         internal LingFengRuleListContentProvider RuleListContentProvider { get; }
         internal IReadOnlyList<TextFileDefinition> CommerceSourceDefinitions { get; }
         internal IReadOnlyList<string> DomainDiagnostics { get; }
+        public LingFengExternalDependencyManifest ExternalDependencyManifest { get; }
+        public LingFengEnvirPreflightSummary PreflightSummary { get; }
 
         public PhysicalTextFileProvider(PhysicalTextFileProviderOptions options)
             : this(options, null)
@@ -88,6 +96,10 @@ namespace Server.Scripting
             TextFileDefinition makeItems = null;
             var ruleLists = new Dictionary<string, TextFileDefinition>(StringComparer.Ordinal);
             var domainDiagnostics = new List<string>();
+            var externalDependencies = new List<LingFengDependencyRequirement>();
+            int acceptedFiles = 0;
+            int runtimeDataFiles = 0;
+            int externalDependencyFiles = 0;
             foreach (string file in files.OrderBy(path => path, StringComparer.OrdinalIgnoreCase))
             {
                 string fullFile = Path.GetFullPath(file);
@@ -102,6 +114,7 @@ namespace Server.Scripting
                     if (TryMapCommerceSourceKey(relative, out string commerceKey,
                             out LingFengCommerceSourceKind commerceKind))
                     {
+                        acceptedFiles++;
                         TextFileDefinition commerceDefinition = ReadDefinition(
                             commerceKey, fullFile, options.MaxFileBytes);
                         if (commerceKind == LingFengCommerceSourceKind.ShopItems)
@@ -122,6 +135,7 @@ namespace Server.Scripting
                     }
                     if (TryMapWorldSourceKey(relative, out string worldKey))
                     {
+                        acceptedFiles++;
                         TextFileDefinition worldDefinition = ReadDefinition(worldKey, fullFile, options.MaxFileBytes);
                         switch (worldKey)
                         {
@@ -135,6 +149,7 @@ namespace Server.Scripting
                     }
                     if (TryMapMapQuestScriptKey(relative, out string mapQuestKey))
                     {
+                        acceptedFiles++;
                         TextFileDefinition page = ReadDefinition(mapQuestKey, fullFile, options.MaxFileBytes);
                         if (!mapQuestScripts.TryAdd(mapQuestKey, page))
                             throw new InvalidDataException($"重复的地图任务脚本逻辑 Key：{mapQuestKey}；来源：{fullFile}");
@@ -147,9 +162,11 @@ namespace Server.Scripting
                             $"翎风 Envir 文件未归属：{relative}（规则：{classification.RuleId}）");
                     if (!classification.MayPublishAsScript)
                     {
+                        bool mappedDomainConfiguration = false;
                         if (classification.Owner == LingFengEnvirFileOwner.DomainConfiguration &&
                             TryMapMonsterDropKey(relative, out string dropKey))
                         {
+                            mappedDomainConfiguration = true;
                             TextFileDefinition dropDefinition = ReadDefinition(
                                 dropKey, fullFile, options.MaxFileBytes);
                             if (!monsterDrops.TryAdd(dropKey, dropDefinition))
@@ -167,12 +184,39 @@ namespace Server.Scripting
                         }
                         else if (classification.Owner == LingFengEnvirFileOwner.DomainConfiguration &&
                                  TryMapMonsterContentKey(relative, "MonUseItems", out string useItemKey))
+                        {
+                            mappedDomainConfiguration = true;
                             monsterUseItems.Add(ReadDefinition(useItemKey, fullFile, options.MaxFileBytes));
+                        }
                         else if (classification.Owner == LingFengEnvirFileOwner.DomainConfiguration &&
                                  TryMapMonsterContentKey(relative, "SmartMonster", out string smartKey))
+                        {
+                            mappedDomainConfiguration = true;
                             smartMonsters.Add(ReadDefinition(smartKey, fullFile, options.MaxFileBytes));
+                        }
+                        string normalizedRelative = relative.Replace('\\', '/');
+                        if (classification.Owner == LingFengEnvirFileOwner.ClientContract)
+                        {
+                            externalDependencyFiles++;
+                            externalDependencies.Add(new LingFengDependencyRequirement(
+                                LingFengDependencyKind.ClientContract, normalizedRelative,
+                                LingFengDependencyLevel.E2, normalizedRelative));
+                        }
+                        else if ((classification.Owner == LingFengEnvirFileOwner.DomainConfiguration &&
+                                  !mappedDomainConfiguration) || IsExternalDomainDependency(normalizedRelative))
+                        {
+                            externalDependencyFiles++;
+                            externalDependencies.Add(new LingFengDependencyRequirement(
+                                LingFengDependencyKind.DomainAdapter, normalizedRelative,
+                                LingFengDependencyLevel.E2, normalizedRelative));
+                        }
+                        else if (mappedDomainConfiguration)
+                            acceptedFiles++;
+                        else
+                            runtimeDataFiles++;
                         continue;
                     }
+                    acceptedFiles++;
                     TextFileDefinition classifiedDefinition = ReadDefinition(
                         classification.LogicKey, fullFile, options.MaxFileBytes);
                     if (!definitions.TryAdd(classification.LogicKey, classifiedDefinition))
@@ -258,6 +302,19 @@ namespace Server.Scripting
                     .Concat(ruleLists.Values)
                     .OrderBy(value => value.Key, StringComparer.Ordinal)
                     .ToArray());
+            if (MonsterDropProvider is LingFengMonsterDropProvider lingFengDrops)
+                externalDependencies.AddRange(lingFengDrops.GetDependencyRequirements());
+            if (MonsterContentProvider != null)
+                externalDependencies.AddRange(MonsterContentProvider.GetDependencyRequirements());
+            if (WorldContentProvider != null)
+                externalDependencies.AddRange(WorldContentProvider.GetDependencyRequirements());
+            if (CommerceContentProvider != null)
+                externalDependencies.AddRange(CommerceContentProvider.GetDependencyRequirements());
+            if (options.Layout == TxtScriptLayout.LingFeng)
+                externalDependencies.AddRange(LingFengScriptDependencyExtractor.Extract(definitions.Values));
+            ExternalDependencyManifest = new LingFengExternalDependencyManifest(externalDependencies);
+            PreflightSummary = new LingFengEnvirPreflightSummary(
+                acceptedFiles, runtimeDataFiles, externalDependencyFiles, 0);
             _definitions = definitions;
             _all = definitions.Values.ToArray();
         }
@@ -268,6 +325,10 @@ namespace Server.Scripting
             MakeItems,
             RuleList
         }
+
+        private static bool IsExternalDomainDependency(string relativePath) =>
+            relativePath.StartsWith("Market_Prices/", StringComparison.OrdinalIgnoreCase) ||
+            relativePath.StartsWith("Market_Upg/", StringComparison.OrdinalIgnoreCase);
 
         private static bool TryMapCommerceSourceKey(
             string relativePath,

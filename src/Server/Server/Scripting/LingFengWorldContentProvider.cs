@@ -89,6 +89,25 @@ namespace Server.Scripting
         public IReadOnlyList<LingFengMapQuestRule> MapQuests { get; }
         public string Fingerprint { get; }
 
+        internal bool DefinesMapReference(string name) =>
+            !string.IsNullOrWhiteSpace(name) &&
+            (_maps.ContainsKey(name) || _maps.Values.Any(value =>
+                string.Equals(value.FileName, name, StringComparison.OrdinalIgnoreCase)));
+
+        internal IEnumerable<LingFengDependencyRequirement> GetDependencyRequirements()
+        {
+            foreach (MapDefinition map in _maps.Values)
+                yield return new LingFengDependencyRequirement(
+                    LingFengDependencyKind.Map, map.FileName, LingFengDependencyLevel.E1, "World/MapInfo");
+            foreach (RespawnDefinition respawn in _respawns)
+                yield return new LingFengDependencyRequirement(
+                    LingFengDependencyKind.Monster, respawn.MonsterName, LingFengDependencyLevel.E1, "World/Mongen");
+            foreach (LingFengMapQuestRule quest in MapQuests)
+                if (quest.MonsterName != "*")
+                    yield return new LingFengDependencyRequirement(
+                        LingFengDependencyKind.Monster, quest.MonsterName, LingFengDependencyLevel.E1, "World/MapQuest");
+        }
+
         public static bool TryCreate(
             TextFileDefinition mapInfo,
             TextFileDefinition mongen,

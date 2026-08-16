@@ -177,6 +177,9 @@ namespace Server
         public static bool TxtScriptsStrictCompatibility = true;
         public static bool TxtScriptsHighRiskCapabilitiesEnabled = false;
         public static string TxtScriptsAllowedHttpsHosts = string.Empty;
+        public static LingFengDependencyLevel TxtScriptsDependencyLevel = LingFengDependencyLevel.None;
+        public static string TxtScriptsClientContracts = string.Empty;
+        public static string TxtScriptsDomainAdapters = string.Empty;
 
         //Legacy Txt Scripts (加载/回落日志)
         public static bool TxtScriptsLogLoads = false;
@@ -638,6 +641,17 @@ namespace Server
                 "TxtScripts", "TxtScriptsHighRiskCapabilitiesEnabled", TxtScriptsHighRiskCapabilitiesEnabled);
             TxtScriptsAllowedHttpsHosts = Reader.ReadString(
                 "TxtScripts", "TxtScriptsAllowedHttpsHosts", TxtScriptsAllowedHttpsHosts).Trim();
+            string txtScriptsDependencyLevel = Reader.ReadString(
+                "TxtScripts", "TxtScriptsDependencyLevel", TxtScriptsDependencyLevel.ToString());
+            if (!Enum.TryParse(txtScriptsDependencyLevel, true,
+                    out LingFengDependencyLevel parsedTxtScriptsDependencyLevel) ||
+                !Enum.IsDefined(parsedTxtScriptsDependencyLevel))
+                parsedTxtScriptsDependencyLevel = LingFengDependencyLevel.None;
+            TxtScriptsDependencyLevel = parsedTxtScriptsDependencyLevel;
+            TxtScriptsClientContracts = Reader.ReadString(
+                "TxtScripts", "TxtScriptsClientContracts", TxtScriptsClientContracts).Trim();
+            TxtScriptsDomainAdapters = Reader.ReadString(
+                "TxtScripts", "TxtScriptsDomainAdapters", TxtScriptsDomainAdapters).Trim();
             TxtScriptsLogLoads = Reader.ReadBoolean("TxtScripts", "TxtScriptsLogLoads", TxtScriptsLogLoads);
             TxtScriptsLogDispatch = Reader.ReadBoolean("TxtScripts", "TxtScriptsLogDispatch", TxtScriptsLogDispatch);
             TxtScriptsEnableInsertInclude = Reader.ReadBoolean("TxtScripts", "TxtScriptsEnableInsertInclude", TxtScriptsEnableInsertInclude);
@@ -980,6 +994,9 @@ namespace Server
             Reader.Write("TxtScripts", "TxtScriptsStrictCompatibility", TxtScriptsStrictCompatibility);
             Reader.Write("TxtScripts", "TxtScriptsHighRiskCapabilitiesEnabled", TxtScriptsHighRiskCapabilitiesEnabled);
             Reader.Write("TxtScripts", "TxtScriptsAllowedHttpsHosts", TxtScriptsAllowedHttpsHosts);
+            Reader.Write("TxtScripts", "TxtScriptsDependencyLevel", TxtScriptsDependencyLevel.ToString());
+            Reader.Write("TxtScripts", "TxtScriptsClientContracts", TxtScriptsClientContracts);
+            Reader.Write("TxtScripts", "TxtScriptsDomainAdapters", TxtScriptsDomainAdapters);
             Reader.Write("TxtScripts", "TxtScriptsLogLoads", TxtScriptsLogLoads);
             Reader.Write("TxtScripts", "TxtScriptsLogDispatch", TxtScriptsLogDispatch);
             Reader.Write("TxtScripts", "TxtScriptsEnableInsertInclude", TxtScriptsEnableInsertInclude);

@@ -3056,6 +3056,15 @@ namespace Server.MirEnvir
             PublishPhysicalTextFileProvider(candidateProvider, reloadNpcScripts: true);
             MessageQueue.Enqueue(
                 $"[TxtScripts] 已加载 {_physicalTextFileProvider.GetAll().Count} 个物理 TXT 文本（布局={Settings.TxtScriptsLayout}）");
+            if (Settings.TxtScriptsLayout == TxtScriptLayout.LingFeng)
+            {
+                LingFengEnvirPreflightSummary summary = candidateProvider.PreflightSummary;
+                MessageQueue.Enqueue(
+                    $"[TxtScripts][Preflight] Accepted={summary.Accepted};RuntimeData={summary.RuntimeData};" +
+                    $"ExternalDependency={summary.ExternalDependency};Rejected={summary.Rejected};" +
+                    $"Manifest={candidateProvider.ExternalDependencyManifest.Requirements.Count};" +
+                    $"DependencyLevel={Settings.TxtScriptsDependencyLevel}");
+            }
             foreach (string diagnostic in candidateProvider.DomainDiagnostics)
                 MessageQueue.Enqueue("[TxtScripts] " + diagnostic);
         }
@@ -3081,6 +3090,7 @@ namespace Server.MirEnvir
                 (candidateProvider as PhysicalTextFileProvider)?.CommerceContentProvider;
             LingFengRuleListContentProvider candidateRuleListProvider =
                 (candidateProvider as PhysicalTextFileProvider)?.RuleListContentProvider;
+            ValidatePhysicalExternalDependenciesWhenReady(candidateProvider as PhysicalTextFileProvider);
             LingFengCommerceSnapshot candidateCommerceSnapshot =
                 BuildPhysicalCommerceSnapshotWhenReady(candidateCommerceProvider);
             if (Running && MapList.Count > 0 &&
@@ -3348,6 +3358,7 @@ namespace Server.MirEnvir
 
         internal void ApplyPhysicalWorldContentForColdStart()
         {
+            ValidatePhysicalExternalDependenciesWhenReady(_physicalTextFileProvider as PhysicalTextFileProvider);
             if (_physicalWorldContentProvider == null) return;
             if (string.Equals(_appliedPhysicalWorldFingerprint, _physicalWorldContentProvider.Fingerprint,
                     StringComparison.Ordinal))
@@ -3360,6 +3371,44 @@ namespace Server.MirEnvir
             plan.Commit();
             _appliedPhysicalWorldFingerprint = _physicalWorldContentProvider.Fingerprint;
         }
+
+        private void ValidatePhysicalExternalDependenciesWhenReady(PhysicalTextFileProvider provider)
+        {
+            LingFengDependencyLevel level = Settings.TxtScriptsDependencyLevel;
+            if (provider == null || level == LingFengDependencyLevel.None) return;
+            if (ItemInfoList.Count == 0 || MonsterInfoList.Count == 0 || MapInfoList.Count == 0) return;
+
+            HashSet<string> clientContracts = ParseDependencyInventory(Settings.TxtScriptsClientContracts);
+            HashSet<string> domainAdapters = ParseDependencyInventory(Settings.TxtScriptsDomainAdapters);
+            var probe = new LingFengDependencyProbe(
+                itemName => GetItemInfo(itemName) != null,
+                itemIndex => GetItemInfo(itemIndex) != null,
+                monsterName => MonsterInfoList.Any(value =>
+                    string.Equals(value.Name, monsterName, StringComparison.OrdinalIgnoreCase)),
+                mapName => provider.WorldContentProvider?.DefinesMapReference(mapName) == true ||
+                           MapInfoList.Any(value =>
+                               string.Equals(value.FileName, mapName, StringComparison.OrdinalIgnoreCase)),
+                key => clientContracts.Contains(key),
+                key => domainAdapters.Contains(key));
+            LingFengDependencyReport report = provider.ExternalDependencyManifest.Evaluate(level, probe);
+            if (report.Success) return;
+
+            const int maximumReportedDependencies = 200;
+            string details = string.Join(Environment.NewLine, report.Missing
+                .Take(maximumReportedDependencies)
+                .Select(value =>
+                    $"LFENV15-DEPENDENCY-MISSING：level={value.Level};kind={value.Kind};key={value.Key};source={value.SourceKey}"));
+            if (report.Missing.Count > maximumReportedDependencies)
+                details += Environment.NewLine +
+                           $"LFENV15-DEPENDENCY-SUMMARY：missing={report.Missing.Count};reported={maximumReportedDependencies}";
+            throw new InvalidDataException(details);
+        }
+
+        private static HashSet<string> ParseDependencyInventory(string value) =>
+            new((value ?? string.Empty)
+                    .Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                    .Select(entry => entry.Replace('\\', '/')),
+                StringComparer.OrdinalIgnoreCase);
 
         private void ValidatePhysicalDropDependenciesWhenReady()
         {

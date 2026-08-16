@@ -35,6 +35,24 @@ namespace Server.Scripting
             return errors.AsReadOnly();
         }
 
+        internal IEnumerable<LingFengDependencyRequirement> GetDependencyRequirements()
+        {
+            foreach ((string key, DropTableDefinition table) in _definitions)
+                foreach (string itemName in EnumerateItems(table.Drops))
+                    yield return new LingFengDependencyRequirement(
+                        LingFengDependencyKind.ItemName, itemName, LingFengDependencyLevel.E1, key);
+        }
+
+        private static IEnumerable<string> EnumerateItems(IEnumerable<DropEntryDefinition> entries)
+        {
+            foreach (DropEntryDefinition entry in entries ?? Array.Empty<DropEntryDefinition>())
+            {
+                if (!string.IsNullOrWhiteSpace(entry.ItemName)) yield return entry.ItemName;
+                if (entry.Group != null)
+                    foreach (string nested in EnumerateItems(entry.Group.Drops)) yield return nested;
+            }
+        }
+
         public static bool TryCreate(
             IEnumerable<TextFileDefinition> dropFiles,
             IReadOnlyDictionary<string, TextFileDefinition> scriptFiles,

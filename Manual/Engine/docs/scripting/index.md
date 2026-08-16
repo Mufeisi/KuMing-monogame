@@ -12,6 +12,7 @@
 - [地图、怪物与宝宝命令](world-commands.md)
 - [行会、任务与经济命令](social-quest-commands.md)
 - [翎风商店、配方与规则名单](commerce-content.md)
+- [翎风 Envir 外部依赖预检](external-dependencies.md)
 - [TXT 系统入口与基础触发](txt-system-hooks.md)
 - [NPC 对话、按钮与客户端](npc-dialog-ui.md)
 - [高风险外部能力](high-risk-capabilities.md)

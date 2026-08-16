@@ -78,6 +78,25 @@ namespace Server.Scripting
         internal bool HasRecipeSource => _hasRecipeSource;
         internal IReadOnlyList<string> CompatibilityDiagnostics => _compatibilityDiagnostics;
 
+        internal IEnumerable<LingFengDependencyRequirement> GetDependencyRequirements()
+        {
+            foreach (LingFengRecipeDefinition recipe in _recipes)
+            {
+                yield return new LingFengDependencyRequirement(
+                    LingFengDependencyKind.ItemName, recipe.OutputItemName, LingFengDependencyLevel.E1,
+                    "Commerce/MakeItem");
+                foreach (LingFengRecipeIngredient ingredient in recipe.Ingredients)
+                    yield return new LingFengDependencyRequirement(
+                        LingFengDependencyKind.ItemName, ingredient.ItemName, LingFengDependencyLevel.E1,
+                        "Commerce/MakeItem");
+            }
+            foreach (LingFengShopProductDefinition product in _shopProducts)
+                if (product.ItemIndex > 0)
+                    yield return new LingFengDependencyRequirement(
+                        LingFengDependencyKind.ItemIndex, product.ItemIndex.ToString(), LingFengDependencyLevel.E1,
+                        "Commerce/ShopItemList");
+        }
+
         internal static bool TryCreate(
             TextFileDefinition shopItems,
             TextFileDefinition makeItems,

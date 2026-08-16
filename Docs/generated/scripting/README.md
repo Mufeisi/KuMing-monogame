@@ -57,3 +57,10 @@ dotnet test Tests\Base05.Tests\Base05.Tests.csproj -c Release --no-restore --fil
 - `QFunction-0.txt` 同时存在于根目录和 `Market_Def` 时，按翎风标准目录优先使用 `Market_Def`；只有根级文件时作为兼容回退，禁止发布为普通 NPC 页。
 - `Robot_def/AUTORUNROBOT.TXT` 与 `Robot_def/ROBOTMANAGE.TXT` 分别发布为调度定义和 Robot 页面；前者不作为普通脚本页解析。
 - 代表 Envir 的每个非隐藏、非系统、非重解析点文件必须唯一归属；任何 `LFENV09-INVALID-*` 或 `LFENV09-UNASSIGNED` 都拒绝候选快照。
+
+## LFENV-15 外部依赖
+
+- 运行时 `PhysicalTextFileProvider.ExternalDependencyManifest` 是候选绑定的可重算事实源，不在本目录维护一份会漂移的手填副本。
+- E1 从统一脚本 Tokenizer 和已经严格解析的爆率、怪物内容、世界配置、商城、配方模型抽取静态物品、怪物与物理地图依赖；同一依赖的不同来源分别保留。
+- E2 追加动态脚本引用、`MonIcons/NpcIcons` 客户端契约、未接管领域配置及 `Market_Prices/Market_Upg` 二进制领域契约。只有部署确认清单逐项匹配后才可满足，不生成假对象。
+- 候选同时输出 `Accepted/RuntimeData/ExternalDependency/Rejected` 文件计数；代表 Envir 自动化要求四类总和等于实际候选文件数且 `Rejected=0`。

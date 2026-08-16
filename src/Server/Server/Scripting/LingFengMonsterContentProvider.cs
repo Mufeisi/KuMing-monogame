@@ -64,6 +64,20 @@ namespace Server.Scripting
         private LingFengMonsterContentProvider(IReadOnlyDictionary<string, Parsed> definitions) =>
             _definitions = definitions;
 
+        internal IEnumerable<LingFengDependencyRequirement> GetDependencyRequirements()
+        {
+            foreach ((string name, Parsed definition) in _definitions)
+            {
+                yield return new LingFengDependencyRequirement(
+                    LingFengDependencyKind.Monster, name, LingFengDependencyLevel.E1,
+                    $"MonsterContent/{name}");
+                foreach (string itemName in definition.Equipment)
+                    yield return new LingFengDependencyRequirement(
+                        LingFengDependencyKind.ItemName, itemName, LingFengDependencyLevel.E1,
+                        $"MonsterContent/{name}");
+            }
+        }
+
         public static bool TryCreate(
             IEnumerable<TextFileDefinition> useItemFiles,
             IEnumerable<TextFileDefinition> smartFiles,
