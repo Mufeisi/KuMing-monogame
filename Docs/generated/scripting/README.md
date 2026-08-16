@@ -1,15 +1,17 @@
 # 翎风 TXT 兼容审计清单
 
-- 状态：生成基线，持续复核
+- 状态：已实施
 - 负责人：项目所有者
-- 最后复核日期：2026-08-15
+- 最后复核日期：2026-08-16
 - 事实源：翎风说明书快照、当前源码、指定真实脚本快照和自动化测试
 
-本目录保存 `TXT-00` 的可筛选审计工件，不作为运行时配置输入：
+本目录保存 `TXT-00` 与 `LFENV-01/02` 的可筛选审计工件，不作为运行时配置输入：
 
 - `lingfeng-txt-topics.csv`：CHM 的 1,012 个目录主题；用于保留分类和来源路径。
 - `lingfeng-txt-compatibility.csv`：从命令、检测和触发正文中抽取并逐条人工复核的去重兼容清单。
 - `lingfeng-txt-corpus-usage.csv`：指定真实脚本快照的原始 DSL、结构化 C#、迁移注释和占位符用法基线。
+- `lingfeng-envir-roots.csv`：`D:\ChuanQi\服务端` 下 53 个 Envir 根的版本家族、角色、文件统计和内容哈希画像。
+- `lingfeng-server-symbols.csv`：用户附件与真实 Envir 语料合并后的服务器只读常量目录；服务器常量与 `#DEFINE` 自定义常量严格分开。
 
 ## 当前快照
 
@@ -32,3 +34,17 @@ dotnet test Tests\Base05.Tests\Base05.Tests.csproj -c Release --filter FullyQual
 ```
 
 该命令验证主题分类基线、唯一键、状态集合和已支持条目的证据链。它不代替逐页正文复核、原引擎差分或真实运行测试。
+
+## LFENV-01/02 快照
+
+- 画像日期：2026-08-16。
+- Envir 根：53 个，合计 68,140 个文件、580,922,342 字节，归入 24 个版本家族；文本编码画像为 UTF-8 27,399、UTF-8 BOM 922、CP936 候选 38,940、含 NUL 异常文本 2。
+- 服务器常量目录：905 行；其中 281 个附件原始表达式逐条保留，限定 53 个 `Envir*` 根后有 513 个归一化符号族实际出现、共 627,292 次；不计部署目录、`.history` 和 Hidden/System/ReparsePoint 文件。
+- 当前目录阶段只允许 D（已登记、待实现验证）和 X（安全拒绝）；“旧替换分支存在”不会冒充完整兼容。
+- 定向验证：`LingFengEnvirCorpusCatalogTests` 5/5 通过（含本机真实语料重算）；Base05 全量回归 703/703 通过；证据见 `Docs/Evidence/LFENV-01-02-20260816/`。
+
+验证命令：
+
+```powershell
+dotnet test Tests\Base05.Tests\Base05.Tests.csproj -c Release --no-restore --filter FullyQualifiedName~LingFengEnvirCorpusCatalogTests
+```

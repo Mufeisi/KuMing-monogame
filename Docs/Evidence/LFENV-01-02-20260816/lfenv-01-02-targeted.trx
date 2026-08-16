@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="81f2760e-9a1c-4264-834f-2f695ca6c40d" name="redacted-user@redacted-host 2026-08-16 11:16:05" runUser="redacted-host\redacted-user" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-08-16T11:16:05.0600436+08:00" queuing="2026-08-16T11:16:05.0600440+08:00" start="2026-08-16T11:16:02.9772937+08:00" finish="2026-08-16T11:16:19.8106765+08:00" />
+  <TestSettings name="default" id="665def41-818d-4d57-af19-f99ed5748902">
+    <Deployment runDeploymentRoot="redacted-user_redacted-host_2026-08-16_11_16_05" />
+  </TestSettings>
+  <Results>
+    <UnitTestResult executionId="e4ff9f55-77fb-4519-bec5-c644d8de12be" testId="838fb08f-4f62-ba0e-a7c3-56d7cd9d7cda" testName="Base05.Tests.LingFengEnvirCorpusCatalogTests.Envir画像每个家族恰有一个代表样本且精确重复组可追踪" computerName="redacted-host" duration="00:00:00.0066870" startTime="2026-08-16T11:16:19.6538469+08:00" endTime="2026-08-16T11:16:19.6603631+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="e4ff9f55-77fb-4519-bec5-c644d8de12be" />
+    <UnitTestResult executionId="3a1ba27c-37a9-4721-acc1-7802af4c640e" testId="024caf5d-7c9d-a1ae-7be9-2f74eb738088" testName="Base05.Tests.LingFengEnvirCorpusCatalogTests.敏感服务器常量默认拒绝且当前实现映射不会冒充完整兼容" computerName="redacted-host" duration="00:00:00.0781225" startTime="2026-08-16T11:16:19.6606718+08:00" endTime="2026-08-16T11:16:19.7386887+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="3a1ba27c-37a9-4721-acc1-7802af4c640e" />
+    <UnitTestResult executionId="af789be3-372d-4b5e-8ee9-1f062f721ebd" testId="4ca5f685-a8c3-2eb4-0958-393adb483242" testName="Base05.Tests.LingFengEnvirCorpusCatalogTests.Envir画像覆盖全部五十三个根并具备可复核摘要" computerName="redacted-host" duration="00:00:00.0220104" startTime="2026-08-16T11:16:03.8565496+08:00" endTime="2026-08-16T11:16:03.8950691+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="af789be3-372d-4b5e-8ee9-1f062f721ebd" />
+    <UnitTestResult executionId="b2ba6e7f-0d68-40af-946d-ee82c8b37986" testId="2ab57b59-5ea6-3d25-eb6b-181da31b6e81" testName="Base05.Tests.LingFengEnvirCorpusCatalogTests.服务器常量目录覆盖附件和真实语料且没有未知状态" computerName="redacted-host" duration="00:00:00.0746973" startTime="2026-08-16T11:16:19.5822451+08:00" endTime="2026-08-16T11:16:19.6535780+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="b2ba6e7f-0d68-40af-946d-ee82c8b37986" />
+    <UnitTestResult executionId="a22fb7df-7613-4243-bfd2-750757e57ad0" testId="4a0ed493-d3ae-65a0-2d5e-fbbdc088203b" testName="Base05.Tests.LingFengEnvirCorpusCatalogTests.本机权威语料存在时重新计算并拒绝生成目录漂移" computerName="redacted-host" duration="00:00:15.6831629" startTime="2026-08-16T11:16:03.9094967+08:00" endTime="2026-08-16T11:16:19.5787754+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="a22fb7df-7613-4243-bfd2-750757e57ad0" />
+  </Results>
+  <TestDefinitions>
+    <UnitTest name="Base05.Tests.LingFengEnvirCorpusCatalogTests.Envir画像覆盖全部五十三个根并具备可复核摘要" storage="d:\chuanqi\kmyq\lyocrystal-main\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="4ca5f685-a8c3-2eb4-0958-393adb483242">
+      <Execution id="af789be3-372d-4b5e-8ee9-1f062f721ebd" />
+      <TestMethod codeBase="D:\ChuanQi\Kmyq\LyoCrystal-main\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.LingFengEnvirCorpusCatalogTests" name="Envir画像覆盖全部五十三个根并具备可复核摘要" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.LingFengEnvirCorpusCatalogTests.Envir画像每个家族恰有一个代表样本且精确重复组可追踪" storage="d:\chuanqi\kmyq\lyocrystal-main\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="838fb08f-4f62-ba0e-a7c3-56d7cd9d7cda">
+      <Execution id="e4ff9f55-77fb-4519-bec5-c644d8de12be" />
+      <TestMethod codeBase="D:\ChuanQi\Kmyq\LyoCrystal-main\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.LingFengEnvirCorpusCatalogTests" name="Envir画像每个家族恰有一个代表样本且精确重复组可追踪" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.LingFengEnvirCorpusCatalogTests.服务器常量目录覆盖附件和真实语料且没有未知状态" storage="d:\chuanqi\kmyq\lyocrystal-main\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="2ab57b59-5ea6-3d25-eb6b-181da31b6e81">
+      <Execution id="b2ba6e7f-0d68-40af-946d-ee82c8b37986" />
+      <TestMethod codeBase="D:\ChuanQi\Kmyq\LyoCrystal-main\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.LingFengEnvirCorpusCatalogTests" name="服务器常量目录覆盖附件和真实语料且没有未知状态" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.LingFengEnvirCorpusCatalogTests.敏感服务器常量默认拒绝且当前实现映射不会冒充完整兼容" storage="d:\chuanqi\kmyq\lyocrystal-main\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="024caf5d-7c9d-a1ae-7be9-2f74eb738088">
+      <Execution id="3a1ba27c-37a9-4721-acc1-7802af4c640e" />
+      <TestMethod codeBase="D:\ChuanQi\Kmyq\LyoCrystal-main\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.LingFengEnvirCorpusCatalogTests" name="敏感服务器常量默认拒绝且当前实现映射不会冒充完整兼容" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.LingFengEnvirCorpusCatalogTests.本机权威语料存在时重新计算并拒绝生成目录漂移" storage="d:\chuanqi\kmyq\lyocrystal-main\tests\base05.tests\bin\release\net10.0\base05.tests.dll" id="4a0ed493-d3ae-65a0-2d5e-fbbdc088203b">
+      <Execution id="a22fb7df-7613-4243-bfd2-750757e57ad0" />
+      <TestMethod codeBase="D:\ChuanQi\Kmyq\LyoCrystal-main\Tests\Base05.Tests\bin\Release\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.LingFengEnvirCorpusCatalogTests" name="本机权威语料存在时重新计算并拒绝生成目录漂移" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestEntries>
+    <TestEntry testId="838fb08f-4f62-ba0e-a7c3-56d7cd9d7cda" executionId="e4ff9f55-77fb-4519-bec5-c644d8de12be" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="024caf5d-7c9d-a1ae-7be9-2f74eb738088" executionId="3a1ba27c-37a9-4721-acc1-7802af4c640e" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="4ca5f685-a8c3-2eb4-0958-393adb483242" executionId="af789be3-372d-4b5e-8ee9-1f062f721ebd" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="2ab57b59-5ea6-3d25-eb6b-181da31b6e81" executionId="b2ba6e7f-0d68-40af-946d-ee82c8b37986" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="4a0ed493-d3ae-65a0-2d5e-fbbdc088203b" executionId="a22fb7df-7613-4243-bfd2-750757e57ad0" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+  </TestEntries>
+  <TestLists>
+    <TestList name="列表中未列出的结果" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="所有已加载的结果" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Completed">
+    <Counters total="5" executed="5" passed="5" failed="0" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <Output>
+      <StdOut>[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.0.2+dd36e86129 (64-bit .NET 10.0.4)&#xD;
+[xUnit.net 00:00:00.12]   Discovering: Base05.Tests&#xD;
+[xUnit.net 00:00:00.25]   Discovered:  Base05.Tests&#xD;
+[xUnit.net 00:00:00.27]   Starting:    Base05.Tests&#xD;
+[xUnit.net 00:00:16.20]   Finished:    Base05.Tests&#xD;
+</StdOut>
+    </Output>
+  </ResultSummary>
+</TestRun>
