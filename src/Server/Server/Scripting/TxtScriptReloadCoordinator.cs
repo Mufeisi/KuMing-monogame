@@ -94,7 +94,7 @@ namespace Server.Scripting
                 IReadOnlyList<string> errors = _validator(provider) ?? Array.Empty<string>();
                 if (errors.Count > 0) return Complete(false, Current, errors);
 
-                string[] keys = provider.GetAll().Select(item => item.Key)
+                string[] keys = IndexContent(provider).Keys
                     .OrderBy(key => key, StringComparer.Ordinal).ToArray();
                 string digest = ComputeDigest(provider);
                 string[] changed = FindChangedKeys(Current?.Provider, provider);
@@ -166,11 +166,10 @@ namespace Server.Scripting
         private static string ComputeDigest(ITextFileProvider provider)
         {
             using var sha = SHA256.Create();
-            foreach (TextFileDefinition definition in provider.GetAll().OrderBy(item => item.Key, StringComparer.Ordinal))
+            foreach ((string key, string content) in IndexContent(provider)
+                         .OrderBy(item => item.Key, StringComparer.Ordinal))
             {
-                byte[] bytes = Encoding.UTF8.GetBytes(
-                    definition.Key + "\n" + definition.SourceEncoding + "\n" +
-                    definition.SourceNewLine + "\n" + string.Join("\n", definition.Lines) + "\n");
+                byte[] bytes = Encoding.UTF8.GetBytes(key + "\n" + content + "\n");
                 sha.TransformBlock(bytes, 0, bytes.Length, null, 0);
             }
             sha.TransformFinalBlock(Array.Empty<byte>(), 0, 0);
@@ -194,6 +193,12 @@ namespace Server.Scripting
             foreach (TextFileDefinition definition in provider.GetAll())
                 result[definition.Key] = definition.SourceEncoding + "\n" +
                                          definition.SourceNewLine + "\n" + string.Join("\n", definition.Lines);
+            if (provider is PhysicalTextFileProvider physical)
+            {
+                foreach (TextFileDefinition definition in physical.CommerceSourceDefinitions)
+                    result[definition.Key] = definition.SourceEncoding + "\n" +
+                                             definition.SourceNewLine + "\n" + string.Join("\n", definition.Lines);
+            }
             return result;
         }
 

@@ -127,15 +127,24 @@ namespace Server.MirEnvir
         private IDropTableProvider _physicalDropTableProvider;
         private LingFengMonsterContentProvider _physicalMonsterContentProvider;
         private LingFengWorldContentProvider _physicalWorldContentProvider;
+        private LingFengCommerceContentProvider _physicalCommerceContentProvider;
+        private LingFengRuleListContentProvider _physicalRuleListContentProvider;
+        private LingFengCommerceSnapshot _physicalCommerceSnapshot;
+        internal LingFengCommerceContentProvider PhysicalCommerceContentProvider =>
+            _physicalCommerceContentProvider;
         private string _appliedPhysicalWorldFingerprint;
         internal LingFengWorldContentProvider PhysicalWorldContentProvider => _physicalWorldContentProvider;
 
         public IRecipeProvider RecipeProvider { get; private set; }
+        private IRecipeProvider _csharpRecipeProvider;
+        private IRecipeProvider _physicalRecipeProvider;
 
         public IValueProvider ValueProvider { get; private set; }
         private readonly JsonValueStore _valueStore = new JsonValueStore();
 
         public INameListProvider NameListProvider { get; private set; }
+        private INameListProvider _csharpNameListProvider;
+        private INameListProvider _physicalNameListProvider;
         private readonly JsonNameListStore _nameListStore = new JsonNameListStore();
 
         public IRouteProvider RouteProvider { get; private set; }
@@ -496,6 +505,10 @@ namespace Server.MirEnvir
         public DragonInfo DragonInfo = new DragonInfo();
         public List<QuestInfo> QuestInfoList = new List<QuestInfo>();
         public List<GameShopItem> GameShopList = new List<GameShopItem>();
+        private IReadOnlyList<GameShopItem> _physicalGameShopItems = Array.Empty<GameShopItem>();
+        private bool _physicalGameShopOverrides;
+        internal IReadOnlyList<GameShopItem> ActiveGameShopList =>
+            _physicalGameShopOverrides ? _physicalGameShopItems : GameShopList;
         private readonly Dictionary<int, ulong> _recipeUniqueIdByItemIndex = new Dictionary<int, ulong>();
         private RecipeInfo[] _recipeInfoList = Array.Empty<RecipeInfo>();
         public IReadOnlyList<RecipeInfo> RecipeInfoList => Volatile.Read(ref _recipeInfoList);
@@ -2770,9 +2783,10 @@ namespace Server.MirEnvir
             var scriptsRuntimeActive = Settings.CSharpScriptsEnabled && CSharpScripts.Enabled;
 
             var recipeRegistry = registry?.Recipes;
-            var provider = recipeRegistry != null && recipeRegistry.Count > 0 ? new CSharpRecipeProvider(recipeRegistry.Definitions) : null;
-
-            RecipeProvider = scriptsRuntimeActive ? provider : null;
+            _csharpRecipeProvider = scriptsRuntimeActive && recipeRegistry != null && recipeRegistry.Count > 0
+                ? new CSharpRecipeProvider(recipeRegistry.Definitions)
+                : null;
+            RebuildRecipeProvider();
 
             // 启动阶段可能早于 DB/Item 加载：不在此时主动 ReloadRecipes；后续 StartEnvir 会加载一次 Recipes。
             if (!Running || ItemInfoList.Count == 0)
@@ -2814,12 +2828,16 @@ namespace Server.MirEnvir
 
             if (!scriptsRuntimeActive)
             {
-                NameListProvider = null;
+                _csharpNameListProvider = null;
+                RebuildNameListProvider();
                 return;
             }
 
             var nameListRegistry = registry?.NameLists;
-            NameListProvider = nameListRegistry != null && nameListRegistry.Count > 0 ? new CSharpNameListProvider(nameListRegistry.Definitions) : null;
+            _csharpNameListProvider = nameListRegistry != null && nameListRegistry.Count > 0
+                ? new CSharpNameListProvider(nameListRegistry.Definitions)
+                : null;
+            RebuildNameListProvider();
 
             if (NameListProvider != null)
             {
@@ -3050,8 +3068,21 @@ namespace Server.MirEnvir
             IDropTableProvider previousDropProvider = _physicalDropTableProvider;
             LingFengMonsterContentProvider previousContentProvider = _physicalMonsterContentProvider;
             LingFengWorldContentProvider previousWorldProvider = _physicalWorldContentProvider;
+            LingFengCommerceContentProvider previousCommerceProvider = _physicalCommerceContentProvider;
+            LingFengRuleListContentProvider previousRuleListProvider = _physicalRuleListContentProvider;
+            LingFengCommerceSnapshot previousCommerceSnapshot = _physicalCommerceSnapshot;
+            IRecipeProvider previousPhysicalRecipeProvider = _physicalRecipeProvider;
+            INameListProvider previousPhysicalNameListProvider = _physicalNameListProvider;
+            IReadOnlyList<GameShopItem> previousPhysicalGameShopItems = _physicalGameShopItems;
+            bool previousPhysicalGameShopOverrides = _physicalGameShopOverrides;
             LingFengWorldContentProvider candidateWorldProvider =
                 (candidateProvider as PhysicalTextFileProvider)?.WorldContentProvider;
+            LingFengCommerceContentProvider candidateCommerceProvider =
+                (candidateProvider as PhysicalTextFileProvider)?.CommerceContentProvider;
+            LingFengRuleListContentProvider candidateRuleListProvider =
+                (candidateProvider as PhysicalTextFileProvider)?.RuleListContentProvider;
+            LingFengCommerceSnapshot candidateCommerceSnapshot =
+                BuildPhysicalCommerceSnapshotWhenReady(candidateCommerceProvider);
             if (Running && MapList.Count > 0 &&
                 !string.Equals(previousWorldProvider?.Fingerprint, candidateWorldProvider?.Fingerprint,
                     StringComparison.Ordinal))
@@ -3068,6 +3099,11 @@ namespace Server.MirEnvir
                 _physicalDropTableProvider = (candidateProvider as PhysicalTextFileProvider)?.MonsterDropProvider;
                 _physicalMonsterContentProvider = (candidateProvider as PhysicalTextFileProvider)?.MonsterContentProvider;
                 _physicalWorldContentProvider = candidateWorldProvider;
+                _physicalCommerceContentProvider = candidateCommerceProvider;
+                _physicalRuleListContentProvider = candidateRuleListProvider;
+                ApplyPhysicalCommerceSnapshot(
+                    candidateCommerceProvider, candidateCommerceSnapshot,
+                    candidateRuleListProvider?.BuildProvider());
                 RebuildTextFileProvider();
                 RebuildDropTableProvider();
                 ClearSetBuffsCache();
@@ -3089,8 +3125,19 @@ namespace Server.MirEnvir
                 _physicalDropTableProvider = previousDropProvider;
                 _physicalMonsterContentProvider = previousContentProvider;
                 _physicalWorldContentProvider = previousWorldProvider;
+                _physicalCommerceContentProvider = previousCommerceProvider;
+                _physicalRuleListContentProvider = previousRuleListProvider;
+                _physicalCommerceSnapshot = previousCommerceSnapshot;
+                _physicalRecipeProvider = previousPhysicalRecipeProvider;
+                _physicalNameListProvider = previousPhysicalNameListProvider;
+                _physicalGameShopItems = previousPhysicalGameShopItems;
+                _physicalGameShopOverrides = previousPhysicalGameShopOverrides;
                 RebuildTextFileProvider();
                 RebuildDropTableProvider();
+                RebuildRecipeProvider();
+                RebuildNameListProvider();
+                if (ItemInfoList.Count > 0)
+                    ReloadRecipes(out _, out _, out _, out _, out _);
                 ClearSetBuffsCache();
                 if (reloadNpcScripts)
                     ReloadNPCs();
@@ -3210,6 +3257,74 @@ namespace Server.MirEnvir
                 csharpRuntimeActive,
                 Settings.CSharpScriptsFallbackToTxt,
                 Settings.TxtScriptsSourcePriority);
+        }
+
+        private void RebuildRecipeProvider()
+        {
+            bool csharpRuntimeActive = Settings.CSharpScriptsEnabled && CSharpScripts.Enabled;
+            if (_csharpRecipeProvider == null && _physicalRecipeProvider == null)
+            {
+                RecipeProvider = null;
+                return;
+            }
+            RecipeProvider = new CompositeRecipeProvider(
+                _csharpRecipeProvider, _physicalRecipeProvider,
+                csharpRuntimeActive, Settings.CSharpScriptsFallbackToTxt,
+                Settings.TxtScriptsSourcePriority);
+        }
+
+        private void RebuildNameListProvider()
+        {
+            bool csharpRuntimeActive = Settings.CSharpScriptsEnabled && CSharpScripts.Enabled;
+            if (_csharpNameListProvider == null && _physicalNameListProvider == null)
+            {
+                NameListProvider = null;
+                return;
+            }
+            NameListProvider = new CompositeNameListProvider(
+                _csharpNameListProvider, _physicalNameListProvider,
+                csharpRuntimeActive, Settings.CSharpScriptsFallbackToTxt,
+                Settings.TxtScriptsSourcePriority);
+        }
+
+        private LingFengCommerceSnapshot BuildPhysicalCommerceSnapshotWhenReady(
+            LingFengCommerceContentProvider provider)
+        {
+            if (provider == null || ItemInfoList.Count == 0) return null;
+            if (!provider.TryBuildSnapshot(GetItemInfo, GetItemInfo,
+                    out LingFengCommerceSnapshot snapshot, out IReadOnlyList<string> errors))
+                throw new InvalidDataException(string.Join(Environment.NewLine, errors));
+            return snapshot;
+        }
+
+        private void ApplyPhysicalCommerceSnapshot(
+            LingFengCommerceContentProvider provider,
+            LingFengCommerceSnapshot snapshot,
+            INameListProvider ruleListProvider)
+        {
+            _physicalCommerceSnapshot = snapshot;
+            _physicalRecipeProvider = provider?.HasRecipeSource == true ? snapshot?.RecipeProvider : null;
+            _physicalNameListProvider = ruleListProvider;
+            _physicalGameShopOverrides = provider?.HasShopSource == true;
+            _physicalGameShopItems = snapshot?.GameShopItems ?? Array.Empty<GameShopItem>();
+            if (_physicalGameShopItems.Count > 0)
+            {
+                int nextIndex = GameShopList.Count == 0 ? 1 : GameShopList.Max(value => value.GIndex) + 1;
+                foreach (GameShopItem item in _physicalGameShopItems) item.GIndex = nextIndex++;
+            }
+            RebuildRecipeProvider();
+            RebuildNameListProvider();
+            if (ItemInfoList.Count > 0)
+                ReloadRecipes(out _, out _, out _, out _, out _);
+        }
+
+        private void ApplyPhysicalCommerceContentForColdStart()
+        {
+            LingFengCommerceSnapshot snapshot =
+                BuildPhysicalCommerceSnapshotWhenReady(_physicalCommerceContentProvider);
+            ApplyPhysicalCommerceSnapshot(
+                _physicalCommerceContentProvider, snapshot,
+                _physicalRuleListContentProvider?.BuildProvider());
         }
 
         private void ReloadPhysicalDropsWhenReady()
@@ -3784,6 +3899,10 @@ namespace Server.MirEnvir
                 var rawKey = $"NameLists/{listPath}";
                 if (!LogicKey.TryNormalize(rawKey, out var normalizedKey))
                     return false;
+
+                if (Settings.TxtScriptsEnabled &&
+                    NameListProvider?.GetByKey(rawKey) is NameListDefinition physicalDefinition)
+                    return physicalDefinition.Contains(value);
 
                 if (!TryGetNameListFullPath(listPath, out var fullPath))
                     return false;
@@ -4743,7 +4862,6 @@ namespace Server.MirEnvir
             skipped = 0;
             errorCount = 0;
 
-            var scriptsRuntimeActive = Settings.CSharpScriptsEnabled && CSharpScripts.Enabled;
             var provider = RecipeProvider;
 
             var list = new List<RecipeInfo>();
@@ -4762,14 +4880,9 @@ namespace Server.MirEnvir
                     if (!normalizedKey.StartsWith("recipe/", StringComparison.Ordinal))
                         continue;
 
-                    var allowCSharp = scriptsRuntimeActive && ScriptDispatchPolicy.ShouldTryCSharp(normalizedKey);
-                    if (!allowCSharp)
-                    {
-                        skipped++;
-                        continue;
-                    }
-
-                    var recipeName = normalizedKey.Substring("recipe/".Length);
+                    var recipeName = string.IsNullOrWhiteSpace(definition.OutputItemName)
+                        ? normalizedKey.Substring("recipe/".Length)
+                        : definition.OutputItemName.Trim();
 
                     if (string.IsNullOrWhiteSpace(recipeName) || recipeName.Contains('/'))
                     {
@@ -4823,6 +4936,7 @@ namespace Server.MirEnvir
             LoadDB();
 
             ApplyPhysicalWorldContentForColdStart();
+            ApplyPhysicalCommerceContentForColdStart();
 
             BuffInfoList.Clear();
             foreach (var buff in BuffInfo.Load())

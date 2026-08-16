@@ -41,6 +41,9 @@ namespace Server.Scripting
         internal IDropTableProvider MonsterDropProvider { get; }
         internal LingFengMonsterContentProvider MonsterContentProvider { get; }
         internal LingFengWorldContentProvider WorldContentProvider { get; }
+        internal LingFengCommerceContentProvider CommerceContentProvider { get; }
+        internal LingFengRuleListContentProvider RuleListContentProvider { get; }
+        internal IReadOnlyList<TextFileDefinition> CommerceSourceDefinitions { get; }
         internal IReadOnlyList<string> DomainDiagnostics { get; }
 
         public PhysicalTextFileProvider(PhysicalTextFileProviderOptions options)
@@ -81,6 +84,9 @@ namespace Server.Scripting
             TextFileDefinition mongen = null;
             TextFileDefinition mapQuest = null;
             var mapQuestScripts = new Dictionary<string, TextFileDefinition>(StringComparer.Ordinal);
+            TextFileDefinition shopItems = null;
+            TextFileDefinition makeItems = null;
+            var ruleLists = new Dictionary<string, TextFileDefinition>(StringComparer.Ordinal);
             var domainDiagnostics = new List<string>();
             foreach (string file in files.OrderBy(path => path, StringComparer.OrdinalIgnoreCase))
             {
@@ -93,6 +99,27 @@ namespace Server.Scripting
                 string relative = Path.GetRelativePath(root, fullFile);
                 if (options.Layout == TxtScriptLayout.LingFeng)
                 {
+                    if (TryMapCommerceSourceKey(relative, out string commerceKey,
+                            out LingFengCommerceSourceKind commerceKind))
+                    {
+                        TextFileDefinition commerceDefinition = ReadDefinition(
+                            commerceKey, fullFile, options.MaxFileBytes);
+                        if (commerceKind == LingFengCommerceSourceKind.ShopItems)
+                        {
+                            if (shopItems != null)
+                                throw new InvalidDataException($"重复的翎风商城配置：{fullFile}");
+                            shopItems = commerceDefinition;
+                        }
+                        else if (commerceKind == LingFengCommerceSourceKind.MakeItems)
+                        {
+                            if (makeItems != null)
+                                throw new InvalidDataException($"重复的翎风配方配置：{fullFile}");
+                            makeItems = commerceDefinition;
+                        }
+                        else if (!ruleLists.TryAdd(commerceKey, commerceDefinition))
+                            throw new InvalidDataException($"重复的翎风规则名单：{commerceKey}；来源：{fullFile}");
+                        continue;
+                    }
                     if (TryMapWorldSourceKey(relative, out string worldKey))
                     {
                         TextFileDefinition worldDefinition = ReadDefinition(worldKey, fullFile, options.MaxFileBytes);
@@ -206,8 +233,82 @@ namespace Server.Scripting
                         throw new InvalidDataException($"地图任务脚本与已有脚本逻辑 Key 冲突：{scriptKey}；来源：{page.SourcePath}");
                 }
             }
+            if (options.Layout == TxtScriptLayout.LingFeng &&
+                (shopItems != null || makeItems != null))
+            {
+                if (!LingFengCommerceContentProvider.TryCreate(
+                        shopItems, makeItems,
+                        out LingFengCommerceContentProvider commerceProvider,
+                        out IReadOnlyList<string> commerceErrors))
+                    throw new InvalidDataException(string.Join(Environment.NewLine, commerceErrors));
+                CommerceContentProvider = commerceProvider;
+                domainDiagnostics.AddRange(commerceProvider.CompatibilityDiagnostics);
+            }
+            if (options.Layout == TxtScriptLayout.LingFeng && ruleLists.Count > 0)
+            {
+                if (!LingFengRuleListContentProvider.TryCreate(
+                        ruleLists.Values, out LingFengRuleListContentProvider ruleProvider,
+                        out IReadOnlyList<string> ruleErrors))
+                    throw new InvalidDataException(string.Join(Environment.NewLine, ruleErrors));
+                RuleListContentProvider = ruleProvider;
+            }
+            CommerceSourceDefinitions = Array.AsReadOnly(
+                new[] { shopItems, makeItems }
+                    .Where(value => value != null)
+                    .Concat(ruleLists.Values)
+                    .OrderBy(value => value.Key, StringComparer.Ordinal)
+                    .ToArray());
             _definitions = definitions;
             _all = definitions.Values.ToArray();
+        }
+
+        private enum LingFengCommerceSourceKind
+        {
+            ShopItems,
+            MakeItems,
+            RuleList
+        }
+
+        private static bool TryMapCommerceSourceKey(
+            string relativePath,
+            out string key,
+            out LingFengCommerceSourceKind kind)
+        {
+            key = null;
+            kind = default;
+            string normalized = (relativePath ?? string.Empty).Replace('\\', '/');
+            if (normalized.IndexOf('/') >= 0 ||
+                !normalized.EndsWith(".txt", StringComparison.OrdinalIgnoreCase))
+                return false;
+            string stem = Path.GetFileNameWithoutExtension(normalized);
+            if (stem.Equals("Shopitemlist", StringComparison.OrdinalIgnoreCase))
+            {
+                key = "commerce/shopitems";
+                kind = LingFengCommerceSourceKind.ShopItems;
+                return true;
+            }
+            if (stem.Equals("Makeitem", StringComparison.OrdinalIgnoreCase))
+            {
+                key = "commerce/makeitem";
+                kind = LingFengCommerceSourceKind.MakeItems;
+                return true;
+            }
+            if (stem.Equals("Myshopitems", StringComparison.OrdinalIgnoreCase))
+            {
+                key = "rulelists/myshopitems";
+                kind = LingFengCommerceSourceKind.RuleList;
+                return true;
+            }
+            if (!stem.EndsWith("list", StringComparison.OrdinalIgnoreCase) &&
+                !stem.StartsWith("allow", StringComparison.OrdinalIgnoreCase) &&
+                !stem.StartsWith("deny", StringComparison.OrdinalIgnoreCase) &&
+                !stem.StartsWith("disable", StringComparison.OrdinalIgnoreCase) &&
+                !stem.StartsWith("enable", StringComparison.OrdinalIgnoreCase) &&
+                !stem.StartsWith("filter", StringComparison.OrdinalIgnoreCase))
+                return false;
+            if (!LogicKey.TryNormalize("RuleLists/" + stem, out key)) return false;
+            kind = LingFengCommerceSourceKind.RuleList;
+            return true;
         }
 
         private static bool TryMapWorldSourceKey(string relativePath, out string key)

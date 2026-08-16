@@ -9,6 +9,11 @@ namespace Server.Scripting
         public string Key { get; }
 
         /// <summary>
+        /// 保留产出物品的原始大小写与显示名称。为空时继续从 Key 推导，兼容既有 C# 定义。
+        /// </summary>
+        public string OutputItemName { get; set; }
+
+        /// <summary>
         /// 合成产出数量（对齐 txt 的 [Recipe] Amount）。
         /// </summary>
         public ushort Amount { get; set; } = 1;

@@ -15172,7 +15172,7 @@ namespace Server.MirObjects
 
             if (Quantity < 1 || Quantity > 99) return;
 
-            List<GameShopItem> shopList = Envir.GameShopList;
+            IReadOnlyList<GameShopItem> shopList = Envir.ActiveGameShopList;
             GameShopItem Product = null;
 
             int purchased;
@@ -15236,20 +15236,20 @@ namespace Server.MirObjects
 
                 if (PType == 0)
                 {
-                    var cost = Product.CreditPrice * Quantity;
+                    ulong cost = (ulong)Product.CreditPrice * Quantity;
                     if (Product.CanBuyCredit && cost <= Account.Credit)
                     {
                         canAfford = true;
-                        CreditCost = cost;
+                        CreditCost = (uint)cost;
                     }
                 }
                 else if (PType == 1)
                 {
-                    var goldcost = Product.GoldPrice * Quantity;
+                    ulong goldcost = (ulong)Product.GoldPrice * Quantity;
                     if (Product.CanBuyGold && goldcost <= Account.Gold)
                     {
                         canAfford = true;
-                        GoldCost = goldcost;
+                        GoldCost = (uint)goldcost;
                     }
                 }
                 else
@@ -15264,63 +15264,19 @@ namespace Server.MirObjects
                 return;
             }
 
-            if (canAfford)
-            {
-                MessageQueue.EnqueueDebugging(Info.Name + " 正在尝试购买 " + Product.Info.FriendlyName + " x " + Quantity + " - 货币充足");
-                if (PType == 0)
-                {
-                    Account.Credit -= CreditCost;
-                    Report.CreditChanged(CreditCost, true, Product.Info.FriendlyName);
-                    if (CreditCost != 0) Enqueue(new S.LoseCredit { Credit = CreditCost });
-
-                }
-                if (PType == 1)
-                {
-                    Account.Gold -= GoldCost;
-                    Report.GoldChanged(GoldCost, true, Product.Info.FriendlyName);
-                    if (GoldCost != 0) Enqueue(new S.LoseGold { Gold = GoldCost });
-                }
-
-                if (Product.iStock && Product.Stock != 0)
-                {
-                    Info.GSpurchases.TryGetValue(Product.Info.Index, out purchased);
-                    if (purchased == 0)
-                    {
-                        Info.GSpurchases[Product.GIndex] = Quantity;
-                    }
-                    else
-                    {
-                        Info.GSpurchases[Product.GIndex] += Quantity;
-                    }
-                }
-
-                Envir.GameshopLog.TryGetValue(Product.Info.Index, out purchased);
-                if (purchased == 0)
-                {
-                    Envir.GameshopLog[Product.GIndex] = Quantity;
-                }
-                else
-                {
-                    Envir.GameshopLog[Product.GIndex] += Quantity;
-                }
-
-                if (Product.Stock != 0) GameShopStock(Product);
-            }
-            else
+            if (!canAfford)
             {
                 return;
             }
 
-            Report.ItemGSBought(Product, Quantity, CreditCost, GoldCost);
-
-            ushort quantity = (ushort)(Quantity * Product.Count);
+            int quantity = Quantity * Product.Count;
 
             if (Product.Info.StackSize <= 1 || quantity == 1)
             {
-                for (int i = 0; i < Quantity; i++)
+                for (int i = 0; i < quantity; i++)
                 {
                     UserItem mailItem = Envir.CreateFreshItem(Envir.GetItemInfo(Product.Info.Index));
-
+                    if (mailItem == null) return;
                     mailItems.Add(mailItem);
                 }
             }
@@ -15329,6 +15285,7 @@ namespace Server.MirObjects
                 while (quantity > 0)
                 {
                     UserItem mailItem = Envir.CreateFreshItem(Envir.GetItemInfo(Product.Info.Index));
+                    if (mailItem == null) return;
                     mailItem.Count = 0;
                     for (int i = 0; i < mailItem.Info.StackSize; i++)
                     {
@@ -15345,12 +15302,39 @@ namespace Server.MirObjects
 
             MailInfo mail = new MailInfo(Info.Index)
             {
-                MailID = ++Envir.NextMailID,
                 Sender = "游戏商城",
                 Message = "感谢您从游戏商店购物，随函附上所购买的商品",
                 Items = mailItems,
+                RecipientInfo = Info,
             };
+
+            MessageQueue.EnqueueDebugging(Info.Name + " 正在尝试购买 " + Product.Info.FriendlyName + " x " + Quantity + " - 货币充足");
+            if (PType == 0)
+            {
+                Account.Credit -= CreditCost;
+                if (CreditCost != 0) Enqueue(new S.LoseCredit { Credit = CreditCost });
+            }
+            if (PType == 1)
+            {
+                Account.Gold -= GoldCost;
+                if (GoldCost != 0) Enqueue(new S.LoseGold { Gold = GoldCost });
+            }
+
+            if (Product.iStock && Product.Stock != 0)
+            {
+                Info.GSpurchases.TryGetValue(Product.Info.Index, out purchased);
+                Info.GSpurchases[Product.Info.Index] = purchased + Quantity;
+            }
+
+            Envir.GameshopLog.TryGetValue(Product.Info.Index, out purchased);
+            Envir.GameshopLog[Product.Info.Index] = purchased + Quantity;
+
+            if (Product.Stock != 0) GameShopStock(Product);
+
             mail.Send();
+            if (CreditCost != 0) Report.CreditChanged(CreditCost, true, Product.Info.FriendlyName);
+            if (GoldCost != 0) Report.GoldChanged(GoldCost, true, Product.Info.FriendlyName);
+            Report.ItemGSBought(Product, Quantity, CreditCost, GoldCost);
 
             MessageQueue.EnqueueDebugging(Info.Name + " 正在尝试购买 " + Product.Info.FriendlyName + " x " + Quantity + " - 购买已发送");
             ReceiveChat("购买的商品已发送到您的邮箱", ChatType.Hint);
@@ -15364,9 +15348,10 @@ namespace Server.MirObjects
             int purchased;
             int stockLevel;
 
-            for (int i = 0; i < Envir.GameShopList.Count; i++)
+            IReadOnlyList<GameShopItem> shopItems = Envir.ActiveGameShopList;
+            for (int i = 0; i < shopItems.Count; i++)
             {
-                var item = Envir.GameShopList[i];
+                var item = shopItems[i];
 
                 if (item.Stock != 0)
                 {

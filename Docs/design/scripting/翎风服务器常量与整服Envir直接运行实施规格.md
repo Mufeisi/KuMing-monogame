@@ -384,7 +384,7 @@ P0 每项必须确认别名，例如当前项目的 `CLASS/MAPNAME/X_COORD/Y_COO
 | 10 | LFENV-10 系统/机器人调度 | 已验证 | QManage/QFunction/Robot 调度 | 启动、周期、固定时刻、停服和重入预算通过 |
 | 11 | LFENV-11 爆率与怪物内容 | 已验证 | MonItems/MonUseItems/SmartMonster Provider | 真实怪物掉落、装备和配置差分通过；多版本坏行继续由 LFENV-15/18 阻断清单收口 |
 | 12 | LFENV-12 地图与刷怪 | 已验证 | MapInfo/Mongen/MapQuest Provider | 冷启动、刷怪、区域和地图切换通过 |
-| 13 | LFENV-13 商店/配方/列表 | 未开始 | Commerce/RuleList Provider | 事务原子、权限、库存和列表加载通过 |
+| 13 | LFENV-13 商店/配方/列表 | 已验证 | Commerce/RuleList Provider | 事务原子、权限、库存和列表加载通过 |
 | 14 | LFENV-14 命令与触发长尾 | 未开始 | 按语料频率成组的 Adapter | 所选样本未知命令/触发为 0，真实链每项至少一测 |
 | 15 | LFENV-15 外部依赖清单 | 未开始 | 物品/怪物/地图/客户端资源 manifest | 缺失依赖在启动前阻断，E1/E2 不混淆 |
 | 16 | LFENV-16 单版本完整切片 | 未开始 | `01酷明` 与 `封神法宝` 迁移证据 | 原样 Envir E1 通过；一个完整玩法 E2 通过 |
@@ -480,6 +480,15 @@ P0 每项必须确认别名，例如当前项目的 `CLASS/MAPNAME/X_COORD/Y_COO
 - 世界配置只在冷启动、数据库加载完成后且创建地图前提交。服务器已有活动地图时，新增、删除或修改 `MapInfo/Mongen/MapQuest` 会改变世界指纹，整次热更失败关闭并保留上一文本、变量、掉落、怪物内容和世界候选；仅页面正文变化可按普通 TXT 快照安全热更。
 - 地图属性、传送和刷怪以运行时覆盖层生效；覆盖前保存只读持久化基线。Legacy 二进制保存与 SQL 世界关系快照都只写回原始数据库视图，不把物理 Envir 的标题、属性、传送或刷怪混入数据库，关闭兼容源并重启后可恢复原配置。
 - 本阶段保存全部已识别地图属性的只读事实快照，并把现有等价字段接入 `NORECONNECT/NORECALL/NORANDOMMOVE/NODRUG/NOPOSITIONMOVE/NOTHROWITEM/FIGHT/SAFE/DARK/DAY`。需要新增领域状态机的限时地图、击杀函数、经验倍率和物品白名单属性不在本阶段伪装为已执行语义，继续由 LFENV-14/15 的命令与依赖门禁收口；因此 LFENV-12 通过不等于单版本 E1/E2 已通过。
+
+### 7.11 LFENV-13 实施边界
+
+- 根目录 `Shopitemlist.txt` 与 `Makeitem.txt` 由独立 `LingFengCommerceContentProvider` 构建商店和配方候选；根级 `*List.txt` 以及 `Allow/Deny/Disable/Enable/Filter*`、`Myshopitems.txt` 由独立 `LingFengRuleListContentProvider` 构建名单候选。二者复用现有 `GameShopItem/IRecipeProvider/INameListProvider`，不进入 NPC 命令解释器，也不合并成万能 Envir Provider。
+- 配方节、材料、数量、商城十列结构、货币类型和物品依赖在发布前一次性验证；重复配方、重复材料、重复名单逻辑 Key、零数量、未知货币或缺失物品会拒绝整个候选并保留上一完整文本、配方、商城和名单快照。规则名单按原行保存，忽略空行和整行注释，重复内容按首次出现稳定去重。
+- 物理商城只激活当前项目能够等价表达的点券类型 `0` 与元宝类型 `1`。停用记录不发布；`ItemIndex=0` 服务型商品和货币类型 `4` 保留为只读事实并输出稳定兼容诊断，不伪装成可购买商品。购买继续走既有主线程、停服开关、购买权限、个人/全服库存、邮箱和审计链；物品全部创建成功后才扣款和记库存，余额不足、库存不足或物品创建失败均不产生部分货币、库存或邮件变化。
+- 合成继续走既有 NPC `[RECIPE]`、背包槽位和 `NPCScript.Craft` 事务；非法槽位在读取背包前拒绝，材料验证完成后才消耗并生成成品。配方产出名保存原始大小写，旧 C# 定义未提供该字段时继续从逻辑 Key 推导，默认配置行为不变。
+- C# 与物理配方/名单遵循 `CSharpFirst/TxtFirst` 和 `CSharpScriptsFallbackToTxt`。商业领域源参与热更摘要、逻辑 Key 和变更集；仅修改商店、配方或名单也必须产生新摘要。物理商城是运行时覆盖层，既有数据库 `GameShopList` 和 SQL 保存视图不被写回污染，关闭兼容源并重启后恢复原数据库配置。
+- `Market_Saved/Market_Storage/Market_SellOff` 与 `.prc/.sav/.dat/.sell/.gold/.db` 仍是运行数据，只保留不覆盖；`Market_Prices/*.prc` 和 `Market_Upg/*.upg` 属翎风二进制运行/领域数据，没有已证明的安全文本 Schema，本阶段不猜测解析。其真实版本依赖和阻断结论继续由 LFENV-15/18 收口，因此 LFENV-13 通过不等于单版本 E1/E2 已通过。
 
 ## 8. 测试设计
 

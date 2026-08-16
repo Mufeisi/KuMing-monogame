@@ -2159,7 +2159,7 @@ namespace Server.MirObjects
 
                     if (usedSlots.Contains(slot)) continue;
 
-                    if (slot < 0 || slot > player.Info.Inventory.Length) continue;
+                    if (slot < 0 || slot >= player.Info.Inventory.Length) continue;
 
                     UserItem item = player.Info.Inventory[slot];
 
@@ -2197,7 +2197,7 @@ namespace Server.MirObjects
 
                     if (usedSlots.Contains(slot)) continue;
 
-                    if (slot < 0 || slot > player.Info.Inventory.Length) continue;
+                    if (slot < 0 || slot >= player.Info.Inventory.Length) continue;
 
                     UserItem item = player.Info.Inventory[slot];
 
@@ -2260,7 +2260,7 @@ namespace Server.MirObjects
 
                     if (usedSlots2.Contains(slot)) continue;
 
-                    if (slot < 0 || slot > player.Info.Inventory.Length) continue;
+                    if (slot < 0 || slot >= player.Info.Inventory.Length) continue;
 
                     UserItem item = player.Info.Inventory[slot];
 
@@ -2285,7 +2285,7 @@ namespace Server.MirObjects
 
                     if (usedSlots2.Contains(slot)) continue;
 
-                    if (slot < 0 || slot > player.Info.Inventory.Length) continue;
+                    if (slot < 0 || slot >= player.Info.Inventory.Length) continue;
 
                     UserItem item = player.Info.Inventory[slot];
 
