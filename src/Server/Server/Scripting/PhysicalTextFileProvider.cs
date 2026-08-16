@@ -58,7 +58,7 @@ namespace Server.Scripting
 
             IEnumerable<string> files = candidateFiles ?? Directory.EnumerateFiles(
                 root,
-                "*.txt",
+                options.Layout == TxtScriptLayout.LingFeng ? "*" : "*.txt",
                 new EnumerationOptions
                 {
                     RecurseSubdirectories = true,
@@ -77,6 +77,27 @@ namespace Server.Scripting
                     throw new InvalidDataException($"TXT 文件不允许使用符号链接或重解析点：{fullFile}");
 
                 string relative = Path.GetRelativePath(root, fullFile);
+                if (options.Layout == TxtScriptLayout.LingFeng)
+                {
+                    LingFengEnvirFileClassification classification =
+                        LingFengEnvirFileClassifier.Classify(relative);
+                    if (classification.Owner == LingFengEnvirFileOwner.Unassigned)
+                        throw new InvalidDataException(
+                            $"翎风 Envir 文件未归属：{relative}（规则：{classification.RuleId}）");
+                    if (!classification.MayPublishAsScript) continue;
+                    TextFileDefinition classifiedDefinition = ReadDefinition(
+                        classification.LogicKey, fullFile, options.MaxFileBytes);
+                    if (!definitions.TryAdd(classification.LogicKey, classifiedDefinition))
+                    {
+                        TextFileDefinition existing = definitions[classification.LogicKey];
+                        if (TryResolveQFunctionAlias(
+                                root, definitions, classification.LogicKey, existing, classifiedDefinition))
+                            continue;
+                        throw new InvalidDataException(
+                            $"重复的物理 TXT 逻辑 Key：{classification.LogicKey}；来源：{existing.SourcePath}；{classifiedDefinition.SourcePath}");
+                    }
+                    continue;
+                }
                 if (!TryMapLogicKey(options.Layout, relative, out string key)) continue;
                 TextFileDefinition definition = ReadDefinition(key, fullFile, options.MaxFileBytes);
                 if (!definitions.TryAdd(key, definition))
@@ -89,6 +110,27 @@ namespace Server.Scripting
 
             _definitions = definitions;
             _all = definitions.Values.ToArray();
+        }
+
+        private static bool TryResolveQFunctionAlias(
+            string root,
+            IDictionary<string, TextFileDefinition> definitions,
+            string logicKey,
+            TextFileDefinition existing,
+            TextFileDefinition candidate)
+        {
+            if (!logicKey.Equals("systemscripts/qfunction-0", StringComparison.Ordinal)) return false;
+            string existingRelative = Path.GetRelativePath(root, existing.SourcePath).Replace('\\', '/');
+            string candidateRelative = Path.GetRelativePath(root, candidate.SourcePath).Replace('\\', '/');
+            bool existingMarket = existingRelative.Equals(
+                "Market_Def/QFunction-0.txt", StringComparison.OrdinalIgnoreCase);
+            bool candidateMarket = candidateRelative.Equals(
+                "Market_Def/QFunction-0.txt", StringComparison.OrdinalIgnoreCase);
+            bool existingRoot = existingRelative.Equals("QFunction-0.txt", StringComparison.OrdinalIgnoreCase);
+            bool candidateRoot = candidateRelative.Equals("QFunction-0.txt", StringComparison.OrdinalIgnoreCase);
+            if (!((existingMarket && candidateRoot) || (existingRoot && candidateMarket))) return false;
+            if (candidateMarket) definitions[logicKey] = candidate;
+            return true;
         }
 
         private static bool IsWithinRoot(string root, string file)

@@ -11,6 +11,7 @@
 - `lingfeng-txt-compatibility.csv`：从命令、检测和触发正文中抽取并逐条人工复核的去重兼容清单。
 - `lingfeng-txt-corpus-usage.csv`：指定真实脚本快照的原始 DSL、结构化 C#、迁移注释和占位符用法基线。
 - `lingfeng-envir-roots.csv`：`D:\ChuanQi\服务端` 下 53 个 Envir 根的版本家族、角色、文件统计和内容哈希画像。
+- `lingfeng-envir-file-ownership.csv`：LFENV-09 Envir 文件唯一归属规则、脚本发布权限和未匹配阻断策略。
 - `lingfeng-server-symbols.csv`：用户附件与真实 Envir 语料合并后的服务器只读常量目录；服务器常量与 `#DEFINE` 自定义常量严格分开。
 
 ## 当前快照
@@ -48,3 +49,10 @@ dotnet test Tests\Base05.Tests\Base05.Tests.csproj -c Release --filter FullyQual
 ```powershell
 dotnet test Tests\Base05.Tests\Base05.Tests.csproj -c Release --no-restore --filter FullyQualifiedName~LingFengEnvirCorpusCatalogTests
 ```
+
+## LFENV-09 文件所有权
+
+- 分类顺序固定为路径安全、备份归档、运行数据、可执行工件、文档附件、客户端契约、脚本、领域配置和未归属阻断。
+- 只有 `LFENV09-SCRIPT` 可进入 `PhysicalTextFileProvider`；运行数据、客户端资源、备份、文档和领域配置均不会被脚本热更新覆盖。
+- `QFunction-0.txt` 同时存在于根目录和 `Market_Def` 时，按翎风标准目录优先使用 `Market_Def`；只有根级文件时作为兼容回退，禁止发布为普通 NPC 页。
+- 代表 Envir 的每个非隐藏、非系统、非重解析点文件必须唯一归属；任何 `LFENV09-INVALID-*` 或 `LFENV09-UNASSIGNED` 都拒绝候选快照。
