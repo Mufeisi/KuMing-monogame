@@ -1076,6 +1076,11 @@ namespace Server.MirObjects
                 Envir.MonsterNPC.Call(monster: this, key: key);
             }
 
+            Server.Scripting.LingFengTxtSystemHookAdapter.DispatchMapQuests(
+                Envir.PhysicalWorldContentProvider,
+                Envir.TextFileProvider,
+                this);
+
             LingFengLastDamageActorKind = Server.Scripting.LingFengCombatActorKind.Unknown;
             LingFengLastDamageOwnerName = null;
 

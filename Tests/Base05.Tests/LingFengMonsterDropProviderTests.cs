@@ -399,6 +399,7 @@ public sealed class LingFengMonsterDropProviderTests
 
         Assert.NotNull(provider.MonsterDropProvider);
         Assert.NotNull(provider.MonsterContentProvider);
+        Assert.NotNull(provider.WorldContentProvider);
     }
 
     [Fact]

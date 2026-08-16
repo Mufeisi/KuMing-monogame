@@ -17,6 +17,11 @@ namespace Server.MirDatabase
 
         public int Index;
         public string FileName = string.Empty, Title = string.Empty;
+        public string LingFengAlias = string.Empty;
+        public IReadOnlyDictionary<string, string> LingFengOptions =
+            new System.Collections.ObjectModel.ReadOnlyDictionary<string, string>(
+                new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase));
+        private MapInfo _lingFengPersistenceBaseline;
         public ushort MiniMap, BigMap, Music;
         public LightSetting Light;
         public byte MapDarkLight = 0, MineIndex = 0;
@@ -104,6 +109,12 @@ namespace Server.MirDatabase
 
         public void Save(BinaryWriter writer)
         {
+            MapInfo persistence = GetPersistenceView();
+            if (!ReferenceEquals(persistence, this))
+            {
+                persistence.Save(writer);
+                return;
+            }
             writer.Write(Index);
             writer.Write(FileName);
             writer.Write(Title);
@@ -158,6 +169,18 @@ namespace Server.MirDatabase
             writer.Write((UInt16)WeatherParticles);
 
         }
+
+        internal void CaptureLingFengPersistenceBaseline()
+        {
+            if (_lingFengPersistenceBaseline != null) return;
+            var baseline = (MapInfo)MemberwiseClone();
+            baseline._lingFengPersistenceBaseline = null;
+            baseline.Movements = new List<MovementInfo>(Movements);
+            baseline.Respawns = new List<RespawnInfo>(Respawns);
+            _lingFengPersistenceBaseline = baseline;
+        }
+
+        internal MapInfo GetPersistenceView() => _lingFengPersistenceBaseline ?? this;
 
 
         public void CreateMap()

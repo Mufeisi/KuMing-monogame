@@ -40,6 +40,7 @@ namespace Server.Scripting
 
         internal IDropTableProvider MonsterDropProvider { get; }
         internal LingFengMonsterContentProvider MonsterContentProvider { get; }
+        internal LingFengWorldContentProvider WorldContentProvider { get; }
         internal IReadOnlyList<string> DomainDiagnostics { get; }
 
         public PhysicalTextFileProvider(PhysicalTextFileProviderOptions options)
@@ -76,6 +77,10 @@ namespace Server.Scripting
             var monsterDrops = new Dictionary<string, TextFileDefinition>(StringComparer.Ordinal);
             var monsterUseItems = new List<TextFileDefinition>();
             var smartMonsters = new List<TextFileDefinition>();
+            TextFileDefinition mapInfo = null;
+            TextFileDefinition mongen = null;
+            TextFileDefinition mapQuest = null;
+            var mapQuestScripts = new Dictionary<string, TextFileDefinition>(StringComparer.Ordinal);
             var domainDiagnostics = new List<string>();
             foreach (string file in files.OrderBy(path => path, StringComparer.OrdinalIgnoreCase))
             {
@@ -88,6 +93,26 @@ namespace Server.Scripting
                 string relative = Path.GetRelativePath(root, fullFile);
                 if (options.Layout == TxtScriptLayout.LingFeng)
                 {
+                    if (TryMapWorldSourceKey(relative, out string worldKey))
+                    {
+                        TextFileDefinition worldDefinition = ReadDefinition(worldKey, fullFile, options.MaxFileBytes);
+                        switch (worldKey)
+                        {
+                            case "world/mapinfo" when mapInfo == null: mapInfo = worldDefinition; break;
+                            case "world/mongen" when mongen == null: mongen = worldDefinition; break;
+                            case "world/mapquest" when mapQuest == null: mapQuest = worldDefinition; break;
+                            default:
+                                throw new InvalidDataException($"重复的翎风世界配置：{worldKey}；来源：{fullFile}");
+                        }
+                        continue;
+                    }
+                    if (TryMapMapQuestScriptKey(relative, out string mapQuestKey))
+                    {
+                        TextFileDefinition page = ReadDefinition(mapQuestKey, fullFile, options.MaxFileBytes);
+                        if (!mapQuestScripts.TryAdd(mapQuestKey, page))
+                            throw new InvalidDataException($"重复的地图任务脚本逻辑 Key：{mapQuestKey}；来源：{fullFile}");
+                        continue;
+                    }
                     LingFengEnvirFileClassification classification =
                         LingFengEnvirFileClassifier.Classify(relative);
                     if (classification.Owner == LingFengEnvirFileOwner.Unassigned)
@@ -144,8 +169,6 @@ namespace Server.Scripting
                 }
             }
 
-            _definitions = definitions;
-            _all = definitions.Values.ToArray();
             DomainDiagnostics = domainDiagnostics.AsReadOnly();
             if (options.Layout == TxtScriptLayout.LingFeng && monsterDrops.Count > 0)
             {
@@ -165,6 +188,56 @@ namespace Server.Scripting
                     throw new InvalidDataException(string.Join(Environment.NewLine, errors));
                 MonsterContentProvider = contentProvider;
             }
+            if (options.Layout == TxtScriptLayout.LingFeng &&
+                (mapInfo != null || mongen != null || mapQuest != null))
+            {
+                if (mapInfo == null || mongen == null)
+                    throw new InvalidDataException("LFENV12-WORLD-001：世界候选必须同时包含根目录 MapInfo.txt 与 Mongen.txt。");
+                if (!LingFengWorldContentProvider.TryCreate(
+                        mapInfo, mongen, mapQuest, mapQuestScripts,
+                        out LingFengWorldContentProvider worldProvider,
+                        out IReadOnlyList<string> worldErrors))
+                    throw new InvalidDataException(string.Join(Environment.NewLine, worldErrors));
+                WorldContentProvider = worldProvider;
+                foreach (string scriptKey in worldProvider.MapQuests.Select(rule => rule.ScriptKey).Distinct(StringComparer.Ordinal))
+                {
+                    TextFileDefinition page = mapQuestScripts[scriptKey];
+                    if (!definitions.TryAdd(scriptKey, page))
+                        throw new InvalidDataException($"地图任务脚本与已有脚本逻辑 Key 冲突：{scriptKey}；来源：{page.SourcePath}");
+                }
+            }
+            _definitions = definitions;
+            _all = definitions.Values.ToArray();
+        }
+
+        private static bool TryMapWorldSourceKey(string relativePath, out string key)
+        {
+            string normalized = (relativePath ?? string.Empty).Replace('\\', '/');
+            if (normalized.Equals("MapInfo.txt", StringComparison.OrdinalIgnoreCase))
+                key = "world/mapinfo";
+            else if (normalized.Equals("Mongen.txt", StringComparison.OrdinalIgnoreCase))
+                key = "world/mongen";
+            else if (normalized.Equals("MapQuest.txt", StringComparison.OrdinalIgnoreCase))
+                key = "world/mapquest";
+            else
+            {
+                key = null;
+                return false;
+            }
+            return true;
+        }
+
+        private static bool TryMapMapQuestScriptKey(string relativePath, out string key)
+        {
+            key = null;
+            string normalized = (relativePath ?? string.Empty).Replace('\\', '/');
+            const string prefix = "MapQuest_def/";
+            if (!normalized.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) ||
+                !normalized.EndsWith(".txt", StringComparison.OrdinalIgnoreCase))
+                return false;
+            string nested = normalized[prefix.Length..^4];
+            if (nested.Equals("QManage", StringComparison.OrdinalIgnoreCase)) return false;
+            return LogicKey.TryNormalize("MapQuests/" + nested, out key);
         }
 
         private static bool TryMapMonsterDropKey(string relativePath, out string key)

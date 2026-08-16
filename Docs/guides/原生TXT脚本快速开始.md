@@ -92,10 +92,14 @@ TxtScriptsStrictCompatibility=true
 | `MonItems/鸡.txt` | `Drops/鸡`（领域 Provider，不进入 NPC 解释器） |
 | `MonUseItems/装备怪.txt` | 同名怪物装备与技能配置 |
 | `SmartMonster/装备怪.ini` | 同名怪物可复用配置快照 |
+| `MapInfo.txt` + `Mongen.txt` | 地图别名、属性、传送和真实刷怪计划 |
+| `MapQuest.txt` + `MapQuest_def/*.txt` | 怪物死亡时按地图、人物 Flag 和怪物派发 `[@MAIN]` |
 
-`Market_Def` 与 `Npc_def` 即使文件名相同也使用不同前缀，不会互相覆盖。`MonItems`、`MonUseItems`、`SmartMonster` 使用独立怪物领域 Provider；`Mapinfo.txt`、`Mongen.txt` 等其他领域配置仍不会交给 NPC 文本解析器。
+`Market_Def` 与 `Npc_def` 即使文件名相同也使用不同前缀，不会互相覆盖。`MonItems`、`MonUseItems`、`SmartMonster` 使用独立怪物领域 Provider；`MapInfo.txt`、`Mongen.txt`、`MapQuest.txt` 使用世界内容 Provider，仍不会交给 NPC 文本解析器。
 
 `MonItems` 当前支持普通物品、金币、随机/首个命中分组、`QuestDiary #CALL` 和统一变量条件；类型 7 条件命中后会调用既有 `QFunction-0` 页面，仍受系统页预算、重入和高风险命令门禁约束。`MonUseItems` 中配置的装备会叠加到真实怪物属性，并可按 `DropUseItemRate` 参与死亡掉落；活怪在下一次处理或掉落前切换到新快照。`SmartMonster` 只校验并保存配置快照；其中客户端动画、声音和寻路字段不会被当作服务端 AI 执行。任一领域文件语法错误、重复字段、引用缺失或装备依赖缺失时，整次候选不发布。
+
+世界配置在冷启动数据库加载后、地图创建前一次性校验并提交；物理地图或怪物依赖缺失会阻止启动，不会留下半套传送或刷怪。服务运行后若 `MapInfo/Mongen/MapQuest` 的结构发生变化，热更会明确要求重启并保留上一成功快照；普通地图任务页面正文仍可热更。地图覆盖层不会写入 Legacy 或 SQL 世界数据库，关闭兼容源并重启后恢复原地图配置。当前直接映射现有地图字段的属性包括重连、召回、随机移动、药品、定位移动、丢弃、战斗和明暗；限时地图、击杀函数、经验倍率与禁用物品列表仍会保存在只读属性快照中，但必须等对应领域能力阶段完成后才可声明完整行为兼容。
 
 ## 5. 验证与回退
 

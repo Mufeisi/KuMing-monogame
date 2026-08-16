@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="8fc81152-578a-498d-b961-99314de63c58" name="test-user@TEST-HOST 2026-08-16 17:50:42" runUser="TEST-HOST\test-user" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-08-16T17:50:42.7387222+08:00" queuing="2026-08-16T17:50:42.7387225+08:00" start="2026-08-16T17:50:39.1776328+08:00" finish="2026-08-16T17:50:42.8368590+08:00" />
+  <TestSettings name="default" id="8a53ed6d-4e91-4ec6-9b71-e2723028a2e2">
+    <Deployment runDeploymentRoot="test-user_TEST-HOST_2026-08-16_17_50_42" />
+  </TestSettings>
+  <Results>
+    <UnitTestResult executionId="24f293a4-c3c3-4b27-8529-14a4e21e2f17" testId="40e8aa07-6d8c-05e2-c484-102697c6c21e" testName="Base05.Tests.LingFengWorldContentProviderTests.LingFengAliasParticipatesInRealMapLookupAndRespawnCreatesMonster" computerName="TEST-HOST" duration="00:00:00.0278447" startTime="2026-08-16T17:50:42.7152851+08:00" endTime="2026-08-16T17:50:42.7411883+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="24f293a4-c3c3-4b27-8529-14a4e21e2f17" />
+    <UnitTestResult executionId="2240eef9-940c-45e2-91ed-f212c2587ab4" testId="3e75a627-62e4-0dca-0609-8ad6d2522cd2" testName="Base05.Tests.LingFengWorldContentProviderTests.SemanticDuplicateMapQuestRulesAreRejectedCaseInsensitively" computerName="TEST-HOST" duration="00:00:00.0005284" startTime="2026-08-16T17:50:42.7143857+08:00" endTime="2026-08-16T17:50:42.7145874+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="2240eef9-940c-45e2-91ed-f212c2587ab4" />
+    <UnitTestResult executionId="829b7e79-bddb-4ea8-ae66-46620e8ff3a9" testId="0b454528-b3b4-e9ae-55b3-ba91f3ca72fe" testName="Base05.Tests.LingFengWorldContentProviderTests.InvalidCoordinatesAndFlagIndicesFailCandidate(mongenLine: &quot;逻辑一 -1 2 测试怪 0 1 60 0 0&quot;, mapQuestLine: &quot;&quot;, expectedCode: &quot;LFENV12-MONGEN-SYNTAX&quot;)" computerName="TEST-HOST" duration="00:00:00.0002388" startTime="2026-08-16T17:50:42.3675951+08:00" endTime="2026-08-16T17:50:42.3676619+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="829b7e79-bddb-4ea8-ae66-46620e8ff3a9" />
+    <UnitTestResult executionId="32785a6a-1c8e-493d-ae05-b47e9f010815" testId="68ac71f3-df12-9249-c816-c780961942d6" testName="Base05.Tests.LingFengWorldContentProviderTests.InvalidWorldReloadRetainsPreviousCompleteProvider" computerName="TEST-HOST" duration="00:00:00.0086082" startTime="2026-08-16T17:50:42.7141550+08:00" endTime="2026-08-16T17:50:42.7142211+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="32785a6a-1c8e-493d-ae05-b47e9f010815" />
+    <UnitTestResult executionId="9c4a178e-40fb-42d8-af2b-36fd6941ded4" testId="1b39f011-503b-f605-3f6b-1fbeb5d6258b" testName="Base05.Tests.LingFengWorldContentProviderTests.MonsterDeathDispatchesMatchingMapQuestPageOnceThroughPhysicalRuntime" computerName="TEST-HOST" duration="00:00:00.2273671" startTime="2026-08-16T17:50:42.4731940+08:00" endTime="2026-08-16T17:50:42.7004203+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="9c4a178e-40fb-42d8-af2b-36fd6941ded4" />
+    <UnitTestResult executionId="6b46549d-45c5-42e2-a970-e8464129c066" testId="2c80a059-1a81-34cf-aa5e-86e816a963df" testName="Base05.Tests.LingFengWorldContentProviderTests.MissingMonsterAndMapQuestPageRejectPlanWithoutPartialMutation" computerName="TEST-HOST" duration="00:00:00.0005599" startTime="2026-08-16T17:50:42.4672464+08:00" endTime="2026-08-16T17:50:42.4675951+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="6b46549d-45c5-42e2-a970-e8464129c066" />
+    <UnitTestResult executionId="16656aad-7df8-428c-979c-c3bdaea90850" testId="d513b383-1e60-486e-1b1f-c29dc7651ebf" testName="Base05.Tests.LingFengWorldContentProviderTests.ColdStartProductionSeamAtomicallyAppliesWorldPlanBeforeMapCreation" computerName="TEST-HOST" duration="00:00:00.0991284" startTime="2026-08-16T17:50:42.3678227+08:00" endTime="2026-08-16T17:50:42.4669585+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="16656aad-7df8-428c-979c-c3bdaea90850" />
+    <UnitTestResult executionId="20c9ef49-76dc-41e9-88a1-3649aa532486" testId="6a98752f-8d7d-9d8d-2ad2-2d445a9ceab0" testName="Base05.Tests.LingFengWorldContentProviderTests.CandidateBuildsMapAliasesMovementsRespawnsAndMapQuestReferences" computerName="TEST-HOST" duration="00:00:00.0288302" startTime="2026-08-16T17:50:42.2833906+08:00" endTime="2026-08-16T17:50:42.3008120+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="20c9ef49-76dc-41e9-88a1-3649aa532486" />
+    <UnitTestResult executionId="56caa964-78cd-4784-bdd4-08a9b6928f2a" testId="27362ee2-d823-c5b2-88c8-93a039a71d3c" testName="Base05.Tests.LingFengMonsterDropProviderTests.RepresentativeEnvir_StrictlyBuildsMonsterDomainCandidate(root: &quot;D:\\ChuanQi\\服务端\\01酷明传奇\\MirServer_01\\Mir200\\En&quot;···, rootId: &quot;LFENV-ROOT-0002&quot;)" computerName="TEST-HOST" duration="00:00:02.1019948" startTime="2026-08-16T17:50:40.1579645+08:00" endTime="2026-08-16T17:50:42.2702225+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="56caa964-78cd-4784-bdd4-08a9b6928f2a" />
+    <UnitTestResult executionId="cc836fb4-9363-49f0-a22b-313a89952fca" testId="0757e693-5786-019c-5fd1-dc5f1d923bee" testName="Base05.Tests.LingFengWorldContentProviderTests.DanglingReconnectAndInsufficientPhysicalInstancesFailPlan" computerName="TEST-HOST" duration="00:00:00.0020972" startTime="2026-08-16T17:50:42.7138377+08:00" endTime="2026-08-16T17:50:42.7139351+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="cc836fb4-9363-49f0-a22b-313a89952fca" />
+    <UnitTestResult executionId="cb719e62-22d4-4d09-9fb0-c477dfee749b" testId="4523bb44-2952-88c1-8b13-51995819a6f3" testName="Base05.Tests.LingFengWorldContentProviderTests.PhysicalProviderPublishesWorldCandidateAndOnlyReferencedMapQuestPages" computerName="TEST-HOST" duration="00:00:00.0650705" startTime="2026-08-16T17:50:42.3016900+08:00" endTime="2026-08-16T17:50:42.3659759+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="cb719e62-22d4-4d09-9fb0-c477dfee749b" />
+    <UnitTestResult executionId="4a2aebd5-ba29-44c8-ac0c-c8616db36aa8" testId="3f3076e6-ae16-1041-16e4-9e8ef0ec65e6" testName="Base05.Tests.LingFengWorldContentProviderTests.InvalidMapCandidateFailsClosed(mapLine: &quot;[逻辑一|M101 第一地图] UNKNOWNOPTION&quot;, expectedCode: &quot;LFENV12-MAP-OPTION&quot;)" computerName="TEST-HOST" duration="00:00:00.0006100" startTime="2026-08-16T17:50:42.7148629+08:00" endTime="2026-08-16T17:50:42.7149257+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="4a2aebd5-ba29-44c8-ac0c-c8616db36aa8" />
+    <UnitTestResult executionId="1708ed62-e9d4-4366-8060-894c7965b82e" testId="32c15dfc-ccb0-37a7-d5aa-aa2c8a5df59b" testName="Base05.Tests.LingFengWorldContentProviderTests.InvalidMapCandidateFailsClosed(mapLine: &quot;逻辑一 10,11 -&gt; 缺失地图 20,21&quot;, expectedCode: &quot;LFENV12-MAP-DEPENDENCY&quot;)" computerName="TEST-HOST" duration="00:00:00.0005496" startTime="2026-08-16T17:50:42.7150482+08:00" endTime="2026-08-16T17:50:42.7151198+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="1708ed62-e9d4-4366-8060-894c7965b82e" />
+    <UnitTestResult executionId="288a2bbe-6b87-4687-b231-a73a12b485ad" testId="ca8479b1-5e36-9490-1ffd-1be65d95ee20" testName="Base05.Tests.LingFengWorldContentProviderTests.MapQuestMatchesMapFlagAndMonsterDeterministically" computerName="TEST-HOST" duration="00:00:00.0051706" startTime="2026-08-16T17:50:42.4677777+08:00" endTime="2026-08-16T17:50:42.4728601+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="288a2bbe-6b87-4687-b231-a73a12b485ad" />
+    <UnitTestResult executionId="c2242a35-e98a-4ad7-adfa-edf42c529fb6" testId="2a1c51e3-0e43-cd4f-fc9d-752d09e5078a" testName="Base05.Tests.LingFengWorldContentProviderTests.InvalidCoordinatesAndFlagIndicesFailCandidate(mongenLine: &quot;&quot;, mapQuestLine: &quot;逻辑一 [1999] 1 测试怪 * 击杀任务&quot;, expectedCode: &quot;LFENV12-MAPQUEST-SYNTAX&quot;)" computerName="TEST-HOST" duration="00:00:00.0013889" startTime="2026-08-16T17:50:42.3662267+08:00" endTime="2026-08-16T17:50:42.3674259+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="c2242a35-e98a-4ad7-adfa-edf42c529fb6" />
+  </Results>
+  <TestDefinitions>
+    <UnitTest name="Base05.Tests.LingFengWorldContentProviderTests.ColdStartProductionSeamAtomicallyAppliesWorldPlanBeforeMapCreation" storage="WORKSPACE_ROOT\tests\base05.tests\bin\debug\net10.0\base05.tests.dll" id="d513b383-1e60-486e-1b1f-c29dc7651ebf">
+      <Execution id="16656aad-7df8-428c-979c-c3bdaea90850" />
+      <TestMethod codeBase="WORKSPACE_ROOT\Tests\Base05.Tests\bin\Debug\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.LingFengWorldContentProviderTests" name="ColdStartProductionSeamAtomicallyAppliesWorldPlanBeforeMapCreation" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.LingFengWorldContentProviderTests.CandidateBuildsMapAliasesMovementsRespawnsAndMapQuestReferences" storage="WORKSPACE_ROOT\tests\base05.tests\bin\debug\net10.0\base05.tests.dll" id="6a98752f-8d7d-9d8d-2ad2-2d445a9ceab0">
+      <Execution id="20c9ef49-76dc-41e9-88a1-3649aa532486" />
+      <TestMethod codeBase="WORKSPACE_ROOT\Tests\Base05.Tests\bin\Debug\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.LingFengWorldContentProviderTests" name="CandidateBuildsMapAliasesMovementsRespawnsAndMapQuestReferences" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.LingFengMonsterDropProviderTests.RepresentativeEnvir_StrictlyBuildsMonsterDomainCandidate(root: &quot;D:\\ChuanQi\\服务端\\01酷明传奇\\MirServer_01\\Mir200\\En&quot;···, rootId: &quot;LFENV-ROOT-0002&quot;)" storage="WORKSPACE_ROOT\tests\base05.tests\bin\debug\net10.0\base05.tests.dll" id="27362ee2-d823-c5b2-88c8-93a039a71d3c">
+      <Execution id="56caa964-78cd-4784-bdd4-08a9b6928f2a" />
+      <TestMethod codeBase="WORKSPACE_ROOT\Tests\Base05.Tests\bin\Debug\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.LingFengMonsterDropProviderTests" name="RepresentativeEnvir_StrictlyBuildsMonsterDomainCandidate" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.LingFengWorldContentProviderTests.InvalidMapCandidateFailsClosed(mapLine: &quot;逻辑一 10,11 -&gt; 缺失地图 20,21&quot;, expectedCode: &quot;LFENV12-MAP-DEPENDENCY&quot;)" storage="WORKSPACE_ROOT\tests\base05.tests\bin\debug\net10.0\base05.tests.dll" id="32c15dfc-ccb0-37a7-d5aa-aa2c8a5df59b">
+      <Execution id="1708ed62-e9d4-4366-8060-894c7965b82e" />
+      <TestMethod codeBase="WORKSPACE_ROOT\Tests\Base05.Tests\bin\Debug\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.LingFengWorldContentProviderTests" name="InvalidMapCandidateFailsClosed" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.LingFengWorldContentProviderTests.PhysicalProviderPublishesWorldCandidateAndOnlyReferencedMapQuestPages" storage="WORKSPACE_ROOT\tests\base05.tests\bin\debug\net10.0\base05.tests.dll" id="4523bb44-2952-88c1-8b13-51995819a6f3">
+      <Execution id="cb719e62-22d4-4d09-9fb0-c477dfee749b" />
+      <TestMethod codeBase="WORKSPACE_ROOT\Tests\Base05.Tests\bin\Debug\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.LingFengWorldContentProviderTests" name="PhysicalProviderPublishesWorldCandidateAndOnlyReferencedMapQuestPages" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.LingFengWorldContentProviderTests.LingFengAliasParticipatesInRealMapLookupAndRespawnCreatesMonster" storage="WORKSPACE_ROOT\tests\base05.tests\bin\debug\net10.0\base05.tests.dll" id="40e8aa07-6d8c-05e2-c484-102697c6c21e">
+      <Execution id="24f293a4-c3c3-4b27-8529-14a4e21e2f17" />
+      <TestMethod codeBase="WORKSPACE_ROOT\Tests\Base05.Tests\bin\Debug\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.LingFengWorldContentProviderTests" name="LingFengAliasParticipatesInRealMapLookupAndRespawnCreatesMonster" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.LingFengWorldContentProviderTests.InvalidCoordinatesAndFlagIndicesFailCandidate(mongenLine: &quot;&quot;, mapQuestLine: &quot;逻辑一 [1999] 1 测试怪 * 击杀任务&quot;, expectedCode: &quot;LFENV12-MAPQUEST-SYNTAX&quot;)" storage="WORKSPACE_ROOT\tests\base05.tests\bin\debug\net10.0\base05.tests.dll" id="2a1c51e3-0e43-cd4f-fc9d-752d09e5078a">
+      <Execution id="c2242a35-e98a-4ad7-adfa-edf42c529fb6" />
+      <TestMethod codeBase="WORKSPACE_ROOT\Tests\Base05.Tests\bin\Debug\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.LingFengWorldContentProviderTests" name="InvalidCoordinatesAndFlagIndicesFailCandidate" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.LingFengWorldContentProviderTests.InvalidMapCandidateFailsClosed(mapLine: &quot;[逻辑一|M101 第一地图] UNKNOWNOPTION&quot;, expectedCode: &quot;LFENV12-MAP-OPTION&quot;)" storage="WORKSPACE_ROOT\tests\base05.tests\bin\debug\net10.0\base05.tests.dll" id="3f3076e6-ae16-1041-16e4-9e8ef0ec65e6">
+      <Execution id="4a2aebd5-ba29-44c8-ac0c-c8616db36aa8" />
+      <TestMethod codeBase="WORKSPACE_ROOT\Tests\Base05.Tests\bin\Debug\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.LingFengWorldContentProviderTests" name="InvalidMapCandidateFailsClosed" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.LingFengWorldContentProviderTests.MissingMonsterAndMapQuestPageRejectPlanWithoutPartialMutation" storage="WORKSPACE_ROOT\tests\base05.tests\bin\debug\net10.0\base05.tests.dll" id="2c80a059-1a81-34cf-aa5e-86e816a963df">
+      <Execution id="6b46549d-45c5-42e2-a970-e8464129c066" />
+      <TestMethod codeBase="WORKSPACE_ROOT\Tests\Base05.Tests\bin\Debug\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.LingFengWorldContentProviderTests" name="MissingMonsterAndMapQuestPageRejectPlanWithoutPartialMutation" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.LingFengWorldContentProviderTests.InvalidCoordinatesAndFlagIndicesFailCandidate(mongenLine: &quot;逻辑一 -1 2 测试怪 0 1 60 0 0&quot;, mapQuestLine: &quot;&quot;, expectedCode: &quot;LFENV12-MONGEN-SYNTAX&quot;)" storage="WORKSPACE_ROOT\tests\base05.tests\bin\debug\net10.0\base05.tests.dll" id="0b454528-b3b4-e9ae-55b3-ba91f3ca72fe">
+      <Execution id="829b7e79-bddb-4ea8-ae66-46620e8ff3a9" />
+      <TestMethod codeBase="WORKSPACE_ROOT\Tests\Base05.Tests\bin\Debug\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.LingFengWorldContentProviderTests" name="InvalidCoordinatesAndFlagIndicesFailCandidate" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.LingFengWorldContentProviderTests.SemanticDuplicateMapQuestRulesAreRejectedCaseInsensitively" storage="WORKSPACE_ROOT\tests\base05.tests\bin\debug\net10.0\base05.tests.dll" id="3e75a627-62e4-0dca-0609-8ad6d2522cd2">
+      <Execution id="2240eef9-940c-45e2-91ed-f212c2587ab4" />
+      <TestMethod codeBase="WORKSPACE_ROOT\Tests\Base05.Tests\bin\Debug\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.LingFengWorldContentProviderTests" name="SemanticDuplicateMapQuestRulesAreRejectedCaseInsensitively" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.LingFengWorldContentProviderTests.MapQuestMatchesMapFlagAndMonsterDeterministically" storage="WORKSPACE_ROOT\tests\base05.tests\bin\debug\net10.0\base05.tests.dll" id="ca8479b1-5e36-9490-1ffd-1be65d95ee20">
+      <Execution id="288a2bbe-6b87-4687-b231-a73a12b485ad" />
+      <TestMethod codeBase="WORKSPACE_ROOT\Tests\Base05.Tests\bin\Debug\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.LingFengWorldContentProviderTests" name="MapQuestMatchesMapFlagAndMonsterDeterministically" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.LingFengWorldContentProviderTests.MonsterDeathDispatchesMatchingMapQuestPageOnceThroughPhysicalRuntime" storage="WORKSPACE_ROOT\tests\base05.tests\bin\debug\net10.0\base05.tests.dll" id="1b39f011-503b-f605-3f6b-1fbeb5d6258b">
+      <Execution id="9c4a178e-40fb-42d8-af2b-36fd6941ded4" />
+      <TestMethod codeBase="WORKSPACE_ROOT\Tests\Base05.Tests\bin\Debug\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.LingFengWorldContentProviderTests" name="MonsterDeathDispatchesMatchingMapQuestPageOnceThroughPhysicalRuntime" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.LingFengWorldContentProviderTests.DanglingReconnectAndInsufficientPhysicalInstancesFailPlan" storage="WORKSPACE_ROOT\tests\base05.tests\bin\debug\net10.0\base05.tests.dll" id="0757e693-5786-019c-5fd1-dc5f1d923bee">
+      <Execution id="cc836fb4-9363-49f0-a22b-313a89952fca" />
+      <TestMethod codeBase="WORKSPACE_ROOT\Tests\Base05.Tests\bin\Debug\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.LingFengWorldContentProviderTests" name="DanglingReconnectAndInsufficientPhysicalInstancesFailPlan" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.LingFengWorldContentProviderTests.InvalidWorldReloadRetainsPreviousCompleteProvider" storage="WORKSPACE_ROOT\tests\base05.tests\bin\debug\net10.0\base05.tests.dll" id="68ac71f3-df12-9249-c816-c780961942d6">
+      <Execution id="32785a6a-1c8e-493d-ae05-b47e9f010815" />
+      <TestMethod codeBase="WORKSPACE_ROOT\Tests\Base05.Tests\bin\Debug\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.LingFengWorldContentProviderTests" name="InvalidWorldReloadRetainsPreviousCompleteProvider" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestEntries>
+    <TestEntry testId="40e8aa07-6d8c-05e2-c484-102697c6c21e" executionId="24f293a4-c3c3-4b27-8529-14a4e21e2f17" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="3e75a627-62e4-0dca-0609-8ad6d2522cd2" executionId="2240eef9-940c-45e2-91ed-f212c2587ab4" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="0b454528-b3b4-e9ae-55b3-ba91f3ca72fe" executionId="829b7e79-bddb-4ea8-ae66-46620e8ff3a9" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="68ac71f3-df12-9249-c816-c780961942d6" executionId="32785a6a-1c8e-493d-ae05-b47e9f010815" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="1b39f011-503b-f605-3f6b-1fbeb5d6258b" executionId="9c4a178e-40fb-42d8-af2b-36fd6941ded4" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="2c80a059-1a81-34cf-aa5e-86e816a963df" executionId="6b46549d-45c5-42e2-a970-e8464129c066" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="d513b383-1e60-486e-1b1f-c29dc7651ebf" executionId="16656aad-7df8-428c-979c-c3bdaea90850" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="6a98752f-8d7d-9d8d-2ad2-2d445a9ceab0" executionId="20c9ef49-76dc-41e9-88a1-3649aa532486" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="27362ee2-d823-c5b2-88c8-93a039a71d3c" executionId="56caa964-78cd-4784-bdd4-08a9b6928f2a" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="0757e693-5786-019c-5fd1-dc5f1d923bee" executionId="cc836fb4-9363-49f0-a22b-313a89952fca" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="4523bb44-2952-88c1-8b13-51995819a6f3" executionId="cb719e62-22d4-4d09-9fb0-c477dfee749b" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="3f3076e6-ae16-1041-16e4-9e8ef0ec65e6" executionId="4a2aebd5-ba29-44c8-ac0c-c8616db36aa8" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="32c15dfc-ccb0-37a7-d5aa-aa2c8a5df59b" executionId="1708ed62-e9d4-4366-8060-894c7965b82e" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="ca8479b1-5e36-9490-1ffd-1be65d95ee20" executionId="288a2bbe-6b87-4687-b231-a73a12b485ad" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="2a1c51e3-0e43-cd4f-fc9d-752d09e5078a" executionId="c2242a35-e98a-4ad7-adfa-edf42c529fb6" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+  </TestEntries>
+  <TestLists>
+    <TestList name="列表中未列出的结果" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="所有已加载的结果" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Completed">
+    <Counters total="15" executed="15" passed="15" failed="0" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <Output>
+      <StdOut>[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.0.2+dd36e86129 (64-bit .NET 10.0.4)&#xD;
+[xUnit.net 00:00:00.15]   Discovering: Base05.Tests&#xD;
+[xUnit.net 00:00:00.31]   Discovered:  Base05.Tests&#xD;
+[xUnit.net 00:00:00.34]   Starting:    Base05.Tests&#xD;
+[xUnit.net 00:00:02.96]   Finished:    Base05.Tests&#xD;
+</StdOut>
+    </Output>
+  </ResultSummary>
+</TestRun>

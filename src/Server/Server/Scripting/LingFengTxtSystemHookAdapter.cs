@@ -117,6 +117,44 @@ namespace Server.Scripting
                 new LingFengTxtHookTarget("SystemScripts/QFunction-0", "[@KILLMON]"));
         }
 
+        internal static int DispatchMapQuests(
+            LingFengWorldContentProvider provider,
+            ITextFileProvider textProvider,
+            MonsterObject monster)
+        {
+            if (provider == null || monster == null) return 0;
+            try
+            {
+                return Envir.Main.InvokeOnMainThread(() =>
+                {
+                    PlayerObject player = monster.LingFengLastDamageActorKind == LingFengCombatActorKind.Unknown
+                        ? ResolvePlayer(monster.EXPOwner)
+                        : Envir.Main.GetPlayer(monster.LingFengLastDamageOwnerName);
+                    if (player == null) return 0;
+                    var payload = new LingFengMonsterKillEvent(
+                        monster.Info?.Name ?? string.Empty,
+                        monster.CurrentLocation.X,
+                        monster.CurrentLocation.Y,
+                        monster.Experience,
+                        monster.LingFengLastDamageActorKind);
+                    int dispatched = 0;
+                    foreach (LingFengMapQuestRule rule in provider.MatchMapQuests(monster, player))
+                    {
+                        if (TryDispatchTarget(false, textProvider, player, payload,
+                                cSharpEligible: false,
+                                new LingFengTxtHookTarget(rule.ScriptKey, "[@MAIN]")))
+                            dispatched++;
+                    }
+                    return dispatched;
+                });
+            }
+            catch (Exception ex)
+            {
+                MessageQueue.Instance.Enqueue($"[TxtScripts] 地图任务派发失败：{ex.GetType().Name}");
+                return 0;
+            }
+        }
+
         public static bool TryDispatchMonsterDropAfter(
             bool cSharpInvoked,
             ITextFileProvider provider,

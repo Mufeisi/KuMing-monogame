@@ -126,6 +126,9 @@ namespace Server.MirEnvir
         private IDropTableProvider _csharpDropTableProvider;
         private IDropTableProvider _physicalDropTableProvider;
         private LingFengMonsterContentProvider _physicalMonsterContentProvider;
+        private LingFengWorldContentProvider _physicalWorldContentProvider;
+        private string _appliedPhysicalWorldFingerprint;
+        internal LingFengWorldContentProvider PhysicalWorldContentProvider => _physicalWorldContentProvider;
 
         public IRecipeProvider RecipeProvider { get; private set; }
 
@@ -3046,6 +3049,14 @@ namespace Server.MirEnvir
             ITextFileProvider previousProvider = _physicalTextFileProvider;
             IDropTableProvider previousDropProvider = _physicalDropTableProvider;
             LingFengMonsterContentProvider previousContentProvider = _physicalMonsterContentProvider;
+            LingFengWorldContentProvider previousWorldProvider = _physicalWorldContentProvider;
+            LingFengWorldContentProvider candidateWorldProvider =
+                (candidateProvider as PhysicalTextFileProvider)?.WorldContentProvider;
+            if (Running && MapList.Count > 0 &&
+                !string.Equals(previousWorldProvider?.Fingerprint, candidateWorldProvider?.Fingerprint,
+                    StringComparison.Ordinal))
+                throw new InvalidOperationException(
+                    "LFENV12-WORLD-RESTART：在线世界配置 MapInfo/Mongen/MapQuest 已变化，整批拒绝；请重启服务器后发布。");
             ScriptVariableCatalogReloadResult variableResult =
                 CSharpScripts.PublishTxtVariableDeclarations(candidateProvider);
             if (!variableResult.Success)
@@ -3056,6 +3067,7 @@ namespace Server.MirEnvir
                 _physicalTextFileProvider = candidateProvider;
                 _physicalDropTableProvider = (candidateProvider as PhysicalTextFileProvider)?.MonsterDropProvider;
                 _physicalMonsterContentProvider = (candidateProvider as PhysicalTextFileProvider)?.MonsterContentProvider;
+                _physicalWorldContentProvider = candidateWorldProvider;
                 RebuildTextFileProvider();
                 RebuildDropTableProvider();
                 ClearSetBuffsCache();
@@ -3076,6 +3088,7 @@ namespace Server.MirEnvir
                 _physicalTextFileProvider = previousProvider;
                 _physicalDropTableProvider = previousDropProvider;
                 _physicalMonsterContentProvider = previousContentProvider;
+                _physicalWorldContentProvider = previousWorldProvider;
                 RebuildTextFileProvider();
                 RebuildDropTableProvider();
                 ClearSetBuffsCache();
@@ -3216,6 +3229,21 @@ namespace Server.MirEnvir
             }
             IReadOnlyList<string> errors = _physicalMonsterContentProvider.Apply(MonsterInfoList, GetItemInfo);
             if (errors.Count > 0) throw new InvalidDataException(string.Join(Environment.NewLine, errors));
+        }
+
+        internal void ApplyPhysicalWorldContentForColdStart()
+        {
+            if (_physicalWorldContentProvider == null) return;
+            if (string.Equals(_appliedPhysicalWorldFingerprint, _physicalWorldContentProvider.Fingerprint,
+                    StringComparison.Ordinal))
+                return;
+            if (!_physicalWorldContentProvider.TryBuildPlan(
+                    MapInfoList, MonsterInfoList,
+                    out LingFengWorldContentPlan plan,
+                    out IReadOnlyList<string> errors))
+                throw new InvalidDataException(string.Join(Environment.NewLine, errors));
+            plan.Commit();
+            _appliedPhysicalWorldFingerprint = _physicalWorldContentProvider.Fingerprint;
         }
 
         private void ValidatePhysicalDropDependenciesWhenReady()
@@ -4790,8 +4818,11 @@ namespace Server.MirEnvir
             CustomCommands.Clear();
             Heroes.Clear();
             MonsterCount = 0;
+            _appliedPhysicalWorldFingerprint = null;
 
             LoadDB();
+
+            ApplyPhysicalWorldContentForColdStart();
 
             BuffInfoList.Clear();
             foreach (var buff in BuffInfo.Load())
@@ -6361,7 +6392,9 @@ namespace Server.MirEnvir
             if (instanceValue < 0) instanceValue = 0;
             if (instanceValue > 0) instanceValue--;
 
-            var instanceMapList = MapList.Where(t => string.Equals(t.Info.FileName, name, StringComparison.CurrentCultureIgnoreCase)).ToList();
+            var instanceMapList = MapList.Where(t =>
+                string.Equals(t.Info.FileName, name, StringComparison.CurrentCultureIgnoreCase) ||
+                string.Equals(t.Info.LingFengAlias, name, StringComparison.CurrentCultureIgnoreCase)).ToList();
             return instanceValue < instanceMapList.Count() ? instanceMapList[instanceValue] : null;
         }
 

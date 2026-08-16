@@ -639,7 +639,7 @@ namespace Server.Persistence.Sql
 
             for (var i = 0; i < envir.MapInfoList.Count; i++)
             {
-                var map = envir.MapInfoList[i];
+                var map = envir.MapInfoList[i]?.GetPersistenceView();
                 if (map == null) continue;
 
                 snapshot.MapInfos.Add(new WorldMapInfoRow

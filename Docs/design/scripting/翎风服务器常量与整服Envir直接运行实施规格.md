@@ -383,7 +383,7 @@ P0 每项必须确认别名，例如当前项目的 `CLASS/MAPNAME/X_COORD/Y_COO
 | 9 | LFENV-09 Envir 文件分类 | 已验证 | Classifier 与所有权清单 | 代表样本未归属文件为 0，运行数据不会被覆盖 |
 | 10 | LFENV-10 系统/机器人调度 | 已验证 | QManage/QFunction/Robot 调度 | 启动、周期、固定时刻、停服和重入预算通过 |
 | 11 | LFENV-11 爆率与怪物内容 | 已验证 | MonItems/MonUseItems/SmartMonster Provider | 真实怪物掉落、装备和配置差分通过；多版本坏行继续由 LFENV-15/18 阻断清单收口 |
-| 12 | LFENV-12 地图与刷怪 | 未开始 | MapInfo/Mongen/MapQuest Provider | 冷启动、刷怪、区域和地图切换通过 |
+| 12 | LFENV-12 地图与刷怪 | 已验证 | MapInfo/Mongen/MapQuest Provider | 冷启动、刷怪、区域和地图切换通过 |
 | 13 | LFENV-13 商店/配方/列表 | 未开始 | Commerce/RuleList Provider | 事务原子、权限、库存和列表加载通过 |
 | 14 | LFENV-14 命令与触发长尾 | 未开始 | 按语料频率成组的 Adapter | 所选样本未知命令/触发为 0，真实链每项至少一测 |
 | 15 | LFENV-15 外部依赖清单 | 未开始 | 物品/怪物/地图/客户端资源 manifest | 缺失依赖在启动前阻断，E1/E2 不混淆 |
@@ -470,6 +470,16 @@ P0 每项必须确认别名，例如当前项目的 `CLASS/MAPNAME/X_COORD/Y_COO
 - `SmartMonster/*.ini` 以节和键的不可变快照附着到同名怪物配置，重复节、重复键和无节键值拒绝候选。当前文件主要描述客户端动作和声音，本阶段不把 `PlayTime/ActionFile` 伪装成服务端 AI，也不恢复已排除的 NPC A*；快照为后续协议/资源依赖差分提供事实源。
 - C# 与物理掉落继续使用 `CSharpFirst/TxtFirst` 和 `CSharpScriptsFallbackToTxt`。C# 禁用时物理掉落是主实现；C# 优先且禁止回落时，不因缺表自动启用 TXT。物理热更失败后，文本、变量、怪物内容和掉落必须一起回到上一候选。
 - `LFENV-ROOT-0002` 代表 Envir 已通过严格领域候选构建。其他代表版本中的原始坏行（例如空概率分母、缺括号）不在本阶段静默忽略或猜测修复，留给 LFENV-15 外部依赖/语义预检与 LFENV-18 多版本差分形成逐文件阻断结论；因此本阶段通过不等于 GATE-ALL 已通过。
+
+### 7.10 LFENV-12 实施边界
+
+- 根目录 `MapInfo.txt`、`Mongen.txt` 和可选 `MapQuest.txt` 由同一个 `LingFengWorldContentProvider` 构建不可变候选，不进入 NPC 命令解释器。存在世界配置时 `MapInfo.txt` 与 `Mongen.txt` 必须成对出现；未知地图属性、无效坐标、重复地图别名、缺失页面和重复地图任务均拒绝整个候选。
+- `MapInfo` 支持 `逻辑别名|物理地图文件`、中文标题、翎风逗号/冒号/空格坐标和传送目标。重复标志位幂等；重复有参属性按原文件最后一项生效。已存在的 LyoCrystal 地图对象仍以物理文件名为身份，运行时额外保存别名和只读属性快照；地图查找同时接受物理名与翎风别名。
+- `Mongen` 接受 8 至 10 列刷怪记录，统一映射到既有 `RespawnInfo/MapRespawn/MonsterObject.Spawn` 链。地图和怪物依赖在创建地图前一次性验证，完整计划成功后才提交；缺少任一地图或怪物时不产生部分别名、传送或刷怪记录。
+- `MapQuest.txt` 的地图、人物 Flag、怪物和 `MapQuest_def` 页面引用在候选期验证。只发布被规则引用且含 `[@MAIN]` 的页面；真实怪物死亡时按最终经验归属人物匹配规则，并经既有主线程、事件快照、重入预算、异常隔离和高风险命令门禁执行一次。
+- 世界配置只在冷启动、数据库加载完成后且创建地图前提交。服务器已有活动地图时，新增、删除或修改 `MapInfo/Mongen/MapQuest` 会改变世界指纹，整次热更失败关闭并保留上一文本、变量、掉落、怪物内容和世界候选；仅页面正文变化可按普通 TXT 快照安全热更。
+- 地图属性、传送和刷怪以运行时覆盖层生效；覆盖前保存只读持久化基线。Legacy 二进制保存与 SQL 世界关系快照都只写回原始数据库视图，不把物理 Envir 的标题、属性、传送或刷怪混入数据库，关闭兼容源并重启后可恢复原配置。
+- 本阶段保存全部已识别地图属性的只读事实快照，并把现有等价字段接入 `NORECONNECT/NORECALL/NORANDOMMOVE/NODRUG/NOPOSITIONMOVE/NOTHROWITEM/FIGHT/SAFE/DARK/DAY`。需要新增领域状态机的限时地图、击杀函数、经验倍率和物品白名单属性不在本阶段伪装为已执行语义，继续由 LFENV-14/15 的命令与依赖门禁收口；因此 LFENV-12 通过不等于单版本 E1/E2 已通过。
 
 ## 8. 测试设计
 
