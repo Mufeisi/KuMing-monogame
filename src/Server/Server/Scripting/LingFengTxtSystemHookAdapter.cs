@@ -72,9 +72,18 @@ namespace Server.Scripting
                 ? "[@ATTACK]"
                 : "[@STRUCK]";
             LingFengDamageEvent payload = Snapshot(result);
-            return TryDispatchTarget(cSharpInvoked, provider, player, payload,
+            bool handled = TryDispatchTarget(cSharpInvoked, provider, player, payload,
                 cSharpEligible,
                 new LingFengTxtHookTarget("SystemScripts/QFunction-0", label));
+            if (cSharpInvoked || payload.MagicId == "0") return handled;
+
+            string magicLabel = result?.Perspective == PlayerDamagePerspective.Outgoing
+                ? "[@MAGICATTACK]"
+                : "[@MAGICSTRUCK]";
+            bool magicHandled = TryDispatchTarget(false, provider, player, payload,
+                cSharpEligible,
+                new LingFengTxtHookTarget("SystemScripts/QFunction-0", magicLabel));
+            return handled || magicHandled;
         }
 
         public static bool TryDispatchPlayerItemPickupAfter(
@@ -115,6 +124,43 @@ namespace Server.Scripting
             return TryDispatchTarget(cSharpInvoked, provider, player, payload,
                 cSharpEligible,
                 new LingFengTxtHookTarget("SystemScripts/QFunction-0", "[@KILLMON]"));
+        }
+
+        public static bool TryDispatchPlayerDeath(
+            bool cSharpInvoked,
+            ITextFileProvider provider,
+            PlayerObject victim,
+            MapObject killer,
+            bool cSharpEligible = false)
+        {
+            if (victim == null) return cSharpInvoked;
+            var payload = new LingFengDamageEvent(
+                PlayerDamagePerspective.Incoming,
+                killer?.Name ?? string.Empty,
+                victim.Name ?? string.Empty,
+                victim.Name ?? string.Empty,
+                0,
+                0,
+                true,
+                false,
+                victim.CurrentLocation.X,
+                victim.CurrentLocation.Y,
+                0,
+                victim.Stats?[Stat.HP] ?? 0,
+                "0",
+                ClassifyActor(killer));
+
+            bool victimHandled = TryDispatchTarget(cSharpInvoked, provider, victim, payload,
+                cSharpEligible,
+                new LingFengTxtHookTarget("SystemScripts/QFunction-0", "[@PLAYDIE]"));
+            if (cSharpInvoked) return victimHandled;
+
+            PlayerObject killerOwner = ResolveOwningPlayer(killer);
+            if (ReferenceEquals(killerOwner, victim)) return victimHandled;
+            bool killerHandled = TryDispatchTarget(false, provider, killerOwner, payload,
+                cSharpEligible,
+                new LingFengTxtHookTarget("SystemScripts/QFunction-0", "[@KILLPLAY]"));
+            return victimHandled || killerHandled;
         }
 
         internal static int DispatchMapQuests(
@@ -229,6 +275,15 @@ namespace Server.Scripting
         {
             PlayerObject player => player,
             HeroObject hero => hero.Owner,
+            _ => null
+        };
+
+        private static PlayerObject ResolveOwningPlayer(MapObject mapObject) => mapObject switch
+        {
+            PlayerObject player => player,
+            HeroObject hero => hero.Owner,
+            MonsterObject monster when monster.Master is PlayerObject player => player,
+            MonsterObject monster when monster.Master is HeroObject hero => hero.Owner,
             _ => null
         };
 

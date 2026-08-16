@@ -8,8 +8,8 @@ namespace Base05.Tests;
 public sealed class LingFengUnsupportedTriggerGuardTests
 {
     [Theory]
-    [InlineData("[@MAGICATTACK]")]
-    [InlineData("[@PLAYDIE]")]
+    [InlineData("[@KILLSLAVE]")]
+    [InlineData("[@GROUPKILLMON]")]
     public void 已知缺失上下文的触发在严格快照阶段失败关闭(string label)
     {
         string oldVersion = Settings.TxtScriptsCompatibilityVersion;
@@ -41,6 +41,10 @@ public sealed class LingFengUnsupportedTriggerGuardTests
     [InlineData("[@KILLMON]")]
     [InlineData("[@M2DROPITEM]")]
     [InlineData("[@PICKUPITEMEX]")]
+    [InlineData("[@MAGICATTACK]")]
+    [InlineData("[@MAGICSTRUCK]")]
+    [InlineData("[@KILLPLAY]")]
+    [InlineData("[@PLAYDIE]")]
     public void 已接入特殊事件的标签不再被严格护栏拒绝(string label)
     {
         string oldVersion = Settings.TxtScriptsCompatibilityVersion;

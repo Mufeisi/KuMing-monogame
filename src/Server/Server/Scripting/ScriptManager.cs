@@ -651,8 +651,20 @@ namespace Server.Scripting
                 handled, Envir.Main.TextFileProvider, ScriptHookKeys.OnPlayerLevelUp, player, cSharpEligible);
         }
 
-        public bool TryHandlePlayerDie(PlayerObject player) =>
-            TryInvoke<OnPlayerDieHook>(ScriptHookKeys.OnPlayerDie, h => h(_context, player));
+        public bool TryHandlePlayerDie(PlayerObject player)
+        {
+            bool cSharpEligible = Settings.CSharpScriptsEnabled && Enabled;
+            bool handlerExists = cSharpEligible && HasHandler<OnPlayerDieHook>(ScriptHookKeys.OnPlayerDie);
+            bool handled = handlerExists && TryInvoke<OnPlayerDieHook>(
+                ScriptHookKeys.OnPlayerDie, h => h(_context, player));
+            LingFengTxtSystemHookAdapter.TryDispatchPlayerDeath(
+                handlerExists,
+                Envir.Main.TextFileProvider,
+                player,
+                player?.LastHitter,
+                cSharpEligible);
+            return handled;
+        }
 
         public bool TryHandlePlayerUseItem(PlayerObject player, int itemShape)
         {

@@ -3,6 +3,7 @@
     public class NPCChecks
     {
         public CheckType Type;
+        public bool Negated;
         public List<string> Params = new List<string>();
 
         public NPCChecks(CheckType check, params string[] p)
@@ -72,6 +73,7 @@
         CheckHeroItem,
         CheckBuff,
         CheckTransform,
-        IsGuildLeader
+        IsGuildLeader,
+        LingFengCompare
     }
 }

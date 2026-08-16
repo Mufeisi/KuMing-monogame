@@ -9044,7 +9044,7 @@ namespace Server.MirObjects
             }
 
             var scriptsRuntimeActive = Settings.CSharpScriptsEnabled && Envir.CSharpScripts.Enabled;
-            var txtLifecycleActive = (type == DefaultNPCType.Login || type == DefaultNPCType.LevelUp) &&
+            var txtLifecycleActive = (type == DefaultNPCType.Login || type == DefaultNPCType.LevelUp || type == DefaultNPCType.Die) &&
                                      Server.Scripting.LingFengTxtSystemHookAdapter.IsCompatibilityEnabled(Envir.TextFileProvider);
 
             if (scriptsRuntimeActive || txtLifecycleActive)

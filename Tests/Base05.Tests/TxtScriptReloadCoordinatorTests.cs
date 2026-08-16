@@ -1,4 +1,5 @@
 using System.Text;
+using Server;
 using Server.Scripting;
 using Xunit;
 
@@ -7,6 +8,31 @@ namespace Base05.Tests;
 [Collection(nameof(PhysicalTextFileProviderCollection))]
 public sealed class TxtScriptReloadCoordinatorTests
 {
+    [Fact]
+    public void 严格预检在数据段边界停止把商品正文识别为动作命令()
+    {
+        bool oldStrict = Settings.TxtScriptsStrictCompatibility;
+        string oldVersion = Settings.TxtScriptsCompatibilityVersion;
+        try
+        {
+            Settings.TxtScriptsStrictCompatibility = true;
+            Settings.TxtScriptsCompatibilityVersion = "LFM2-2026-08-15-snapshot";
+            var definition = new TextFileDefinition("NPCs/商人", "商人.txt", "CP936", "CRLF")
+                .AddLines([
+                    "[@MAIN]", "#ACT", "GIVEGOLD 1", "[GOODS]", "古铜戒指", "[TRADE]", "轻型盔甲(男)"
+                ]);
+
+            Assert.DoesNotContain(TxtScriptSnapshotValidator.Validate(new CSharpTextFileProvider(
+                    new Dictionary<string, TextFileDefinition> { [definition.Key] = definition })),
+                value => value.StartsWith("TXT-SNAPSHOT-014", StringComparison.Ordinal));
+        }
+        finally
+        {
+            Settings.TxtScriptsStrictCompatibility = oldStrict;
+            Settings.TxtScriptsCompatibilityVersion = oldVersion;
+        }
+    }
+
     [Fact]
     public void 成功重载原子发布新快照并保留旧定义对象供既有对话使用()
     {

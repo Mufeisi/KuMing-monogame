@@ -1,0 +1,322 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="2040f230-de4e-4ab1-8ffe-be3a2093106d" name="runner@sanitized-host 2026-08-16 19:31:50" runUser="sanitized-host\runner" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-08-16T19:31:50.9284829+08:00" queuing="2026-08-16T19:31:50.9284832+08:00" start="2026-08-16T19:31:48.7576307+08:00" finish="2026-08-16T19:31:53.9112812+08:00" />
+  <TestSettings name="default" id="3e59b1da-29d7-48ae-ab35-8451f88e14bd">
+    <Deployment runDeploymentRoot="runner_sanitized-host_2026-08-16_19_31_50" />
+  </TestSettings>
+  <Results>
+    <UnitTestResult executionId="7db46643-9a8f-426f-b8e8-82cd9c3f62b8" testId="8ec45f3b-4bb3-414c-ef34-250ade3e7475" testName="Base05.Tests.TxtScriptReloadCoordinatorTests.生产快照验证器拒绝缺失Include文件和标签并保留旧快照" computerName="sanitized-host" duration="00:00:00.0073955" startTime="2026-08-16T19:31:53.8032569+08:00" endTime="2026-08-16T19:31:53.8106137+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="7db46643-9a8f-426f-b8e8-82cd9c3f62b8" />
+    <UnitTestResult executionId="282da0d4-00a2-4e78-ab38-7eab42637982" testId="b8a1f046-36fb-26fa-d92e-b7d627b5034f" testName="Base05.Tests.LingFengTxtSpecialTriggerIntegrationTests.精确CSharp未处理时保持调用通用处理器且不回落Txt" computerName="sanitized-host" duration="00:00:00.0019814" startTime="2026-08-16T19:31:53.2527478+08:00" endTime="2026-08-16T19:31:53.2545896+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="282da0d4-00a2-4e78-ab38-7eab42637982" />
+    <UnitTestResult executionId="b4663b4e-9ad6-4e38-9389-fd4f838895f1" testId="decab584-b574-bd5d-1fef-c91e146608c2" testName="Base05.Tests.LingFengUnsupportedTriggerGuardTests.已接入特殊事件的标签不再被严格护栏拒绝(label: &quot;[@PICKUPITEMEX]&quot;)" computerName="sanitized-host" duration="00:00:00.0000206" startTime="2026-08-16T19:31:53.2597096+08:00" endTime="2026-08-16T19:31:53.2597830+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="b4663b4e-9ad6-4e38-9389-fd4f838895f1" />
+    <UnitTestResult executionId="bcce588f-fc14-4b50-82a7-6983a15ad6c5" testId="14399572-be52-b8f1-064c-7ea641e15ce1" testName="Base05.Tests.LingFengPlayerCommandTests.翎风物品参数只在显式兼容版本下路由且不伪造缺失模型" computerName="sanitized-host" duration="00:00:00.1840745" startTime="2026-08-16T19:31:52.7078892+08:00" endTime="2026-08-16T19:31:52.8912122+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="bcce588f-fc14-4b50-82a7-6983a15ad6c5" />
+    <UnitTestResult executionId="2126f659-a60e-4a4b-9895-d6c9a7318797" testId="0eb57ca1-213b-9215-85fa-cc037ec40a0c" testName="Base05.Tests.TxtScriptReloadCoordinatorTests.严格预检在数据段边界停止把商品正文识别为动作命令" computerName="sanitized-host" duration="00:00:00.0010581" startTime="2026-08-16T19:31:53.8022088+08:00" endTime="2026-08-16T19:31:53.8031253+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="2126f659-a60e-4a4b-9895-d6c9a7318797" />
+    <UnitTestResult executionId="5edb09aa-d095-42ba-ba96-3e4d6446c003" testId="0b9e3a9a-6ed5-d893-6185-a26fdc598cfb" testName="Base05.Tests.LingFengPlayerCommandTests.真实语料高频金币和基础物品命令保持既有路由" computerName="sanitized-host" duration="00:00:00.0067020" startTime="2026-08-16T19:31:52.9144873+08:00" endTime="2026-08-16T19:31:52.9211326+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="5edb09aa-d095-42ba-ba96-3e4d6446c003" />
+    <UnitTestResult executionId="fc99e3f6-5ce6-402f-9d9a-cfdd414a70bc" testId="59f4d0fd-176f-641f-00e8-db4162dcfa07" testName="Base05.Tests.LingFengUnsupportedTriggerGuardTests.已接入特殊事件的标签不再被严格护栏拒绝(label: &quot;[@ATTACKDAMAGE]&quot;)" computerName="sanitized-host" duration="00:00:00.0000215" startTime="2026-08-16T19:31:53.2628842+08:00" endTime="2026-08-16T19:31:53.2631440+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="fc99e3f6-5ce6-402f-9d9a-cfdd414a70bc" />
+    <UnitTestResult executionId="61d6eac1-09aa-46dc-8b41-36db98a23cb0" testId="c968fc1f-2866-269c-4775-5cd952afe274" testName="Base05.Tests.LingFengUnsupportedTriggerGuardTests.已知缺失上下文的触发在严格快照阶段失败关闭(label: &quot;[@GROUPKILLMON]&quot;)" computerName="sanitized-host" duration="00:00:00.0001541" startTime="2026-08-16T19:31:53.2641132+08:00" endTime="2026-08-16T19:31:53.2643072+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="61d6eac1-09aa-46dc-8b41-36db98a23cb0" />
+    <UnitTestResult executionId="adacfa32-8229-4b14-b193-b7b919c74b9b" testId="3324e684-2fc8-a296-ff05-8bb52239c7e9" testName="Base05.Tests.LingFengTxtCompatibilityCatalogTests.动作类全部二百四十九项已完成正文核对且语义卡完整" computerName="sanitized-host" duration="00:00:00.0218626" startTime="2026-08-16T19:31:49.9518488+08:00" endTime="2026-08-16T19:31:49.9736505+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="adacfa32-8229-4b14-b193-b7b919c74b9b" />
+    <UnitTestResult executionId="0a0f702d-da26-40d3-8352-943465ff3c31" testId="e3d75ecd-e909-2a4f-d44a-7a33cd9a5d69" testName="Base05.Tests.LingFengUnsupportedTriggerGuardTests.已接入特殊事件的标签不再被严格护栏拒绝(label: &quot;[@STRUCKDAMAGE]&quot;)" computerName="sanitized-host" duration="00:00:00.0000382" startTime="2026-08-16T19:31:53.2588717+08:00" endTime="2026-08-16T19:31:53.2589269+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="0a0f702d-da26-40d3-8352-943465ff3c31" />
+    <UnitTestResult executionId="625119d7-a4c2-4ad8-bd49-b17e175bd7da" testId="3638fbc3-c16e-bf44-e37e-4d0f3c8d93d1" testName="Base05.Tests.TxtScriptReloadCoordinatorTests.生产快照验证器拒绝Include循环并保留旧快照" computerName="sanitized-host" duration="00:00:00.0077249" startTime="2026-08-16T19:31:53.2810505+08:00" endTime="2026-08-16T19:31:53.2886467+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="625119d7-a4c2-4ad8-bd49-b17e175bd7da" />
+    <UnitTestResult executionId="986a1796-ff66-40c1-ae00-59d1fea423a1" testId="a39d41d4-e53e-e8f7-32be-b74de46d0208" testName="Base05.Tests.LingFengUnsupportedTriggerGuardTests.已接入特殊事件的标签不再被严格护栏拒绝(label: &quot;[@MAGICSTRUCK]&quot;)" computerName="sanitized-host" duration="00:00:00.0000186" startTime="2026-08-16T19:31:53.2593643+08:00" endTime="2026-08-16T19:31:53.2594195+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="986a1796-ff66-40c1-ae00-59d1fea423a1" />
+    <UnitTestResult executionId="4a795f22-b560-49b9-a32d-02e87b3d7eb6" testId="3a4f6e01-d0aa-8b76-37e1-039de145b527" testName="Base05.Tests.LingFengPlayerCommandTests.严格翎风版本在发布前拒绝未知检测和动作命令" computerName="sanitized-host" duration="00:00:00.0013628" startTime="2026-08-16T19:31:52.9130707+08:00" endTime="2026-08-16T19:31:52.9142746+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="4a795f22-b560-49b9-a32d-02e87b3d7eb6" />
+    <UnitTestResult executionId="bddc4f5e-74aa-4bcb-845e-d53de274b126" testId="28bb3ac6-6863-b794-b446-af82e1e83668" testName="Base05.Tests.LingFengUnsupportedTriggerGuardTests.已接入特殊事件的标签不再被严格护栏拒绝(label: &quot;[@STRUCK]&quot;)" computerName="sanitized-host" duration="00:00:00.0000266" startTime="2026-08-16T19:31:53.2585380+08:00" endTime="2026-08-16T19:31:53.2585966+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="bddc4f5e-74aa-4bcb-845e-d53de274b126" />
+    <UnitTestResult executionId="dbf7593b-b702-4d91-869a-d3d6275c0da9" testId="f0581f3b-b318-cae9-9a03-54d810ccbbd8" testName="Base05.Tests.TxtScriptReloadCoordinatorTests.Include引用深度十六层可发布而十七层被拒绝" computerName="sanitized-host" duration="00:00:00.0436349" startTime="2026-08-16T19:31:53.7526590+08:00" endTime="2026-08-16T19:31:53.7962202+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="dbf7593b-b702-4d91-869a-d3d6275c0da9" />
+    <UnitTestResult executionId="dd18aba9-a70a-4fab-b929-b844c5ef9400" testId="a6739383-1856-9e6f-4b01-f35baebddf5f" testName="Base05.Tests.LingFengUnsupportedTriggerGuardTests.已知缺失上下文的触发在严格快照阶段失败关闭(label: &quot;[@KILLSLAVE]&quot;)" computerName="sanitized-host" duration="00:00:00.0004284" startTime="2026-08-16T19:31:53.2636081+08:00" endTime="2026-08-16T19:31:53.2637733+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="dd18aba9-a70a-4fab-b929-b844c5ef9400" />
+    <UnitTestResult executionId="8519704d-34ac-43a6-a800-88a6484276c3" testId="a2efd36f-a8dd-0800-9157-f4194b8dd81e" testName="Base05.Tests.LingFengTxtCompatibilityCatalogTests.触发类候选已完成正文核对且语义卡完整" computerName="sanitized-host" duration="00:00:00.0231154" startTime="2026-08-16T19:31:49.9294203+08:00" endTime="2026-08-16T19:31:49.9516662+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="8519704d-34ac-43a6-a800-88a6484276c3" />
+    <UnitTestResult executionId="3ffb84e3-051d-4cef-977c-a5c1e7f4ca34" testId="23f03e36-0710-70ae-d60f-fe97b2647644" testName="Base05.Tests.TxtScriptReloadCoordinatorTests.停止并释放后保存不会再次发布且手动重载明确拒绝" computerName="sanitized-host" duration="00:00:00.1636496" startTime="2026-08-16T19:31:53.2888648+08:00" endTime="2026-08-16T19:31:53.4523954+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="3ffb84e3-051d-4cef-977c-a5c1e7f4ca34" />
+    <UnitTestResult executionId="2fc811b0-56df-458f-b94f-4ecb8adbcd1f" testId="502457ec-de7a-95ec-21c5-37fdba184131" testName="Base05.Tests.TxtScriptReloadCoordinatorTests.生产快照验证器拒绝无效变量声明并报告原始行号" computerName="sanitized-host" duration="00:00:00.0226137" startTime="2026-08-16T19:31:53.4617157+08:00" endTime="2026-08-16T19:31:53.4831608+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="2fc811b0-56df-458f-b94f-4ecb8adbcd1f" />
+    <UnitTestResult executionId="1c37f535-73ad-4e3f-9a4e-19b71a0ad51c" testId="3cd2f515-3ec5-db2d-7250-0fcedf5972b5" testName="Base05.Tests.LingFengTxtSpecialTriggerIntegrationTests.战斗物品怪物触发经真实脚本管理接缝单次派发且前置可取消" computerName="sanitized-host" duration="00:00:00.0123968" startTime="2026-08-16T19:31:53.2299066+08:00" endTime="2026-08-16T19:31:53.2422054+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="1c37f535-73ad-4e3f-9a4e-19b71a0ad51c" />
+    <UnitTestResult executionId="598ecefc-a3ad-46d8-b2d0-41cf8e28f51a" testId="90e97213-f3a7-3fd8-6598-708673833898" testName="Base05.Tests.LingFengUnsupportedTriggerGuardTests.已接入特殊事件的标签不再被严格护栏拒绝(label: &quot;[@MAGICATTACK]&quot;)" computerName="sanitized-host" duration="00:00:00.0000184" startTime="2026-08-16T19:31:53.2595239+08:00" endTime="2026-08-16T19:31:53.2595795+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="598ecefc-a3ad-46d8-b2d0-41cf8e28f51a" />
+    <UnitTestResult executionId="f1e719ca-fac0-4ef8-980b-85cdb1124173" testId="bbf73150-d31c-75cd-1075-370918b89b97" testName="Base05.Tests.LingFengUnsupportedTriggerGuardTests.已支持的人物升级标签不被护栏误伤" computerName="sanitized-host" duration="00:00:00.0008528" startTime="2026-08-16T19:31:53.2558505+08:00" endTime="2026-08-16T19:31:53.2566381+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="f1e719ca-fac0-4ef8-980b-85cdb1124173" />
+    <UnitTestResult executionId="a45ee2fd-53a3-46d9-8c96-52beb41b6e27" testId="d42e0ff0-9e74-0270-9b6f-f95c769fb588" testName="Base05.Tests.LingFengUnsupportedTriggerGuardTests.已接入特殊事件的标签不再被严格护栏拒绝(label: &quot;[@ATTACK]&quot;)" computerName="sanitized-host" duration="00:00:00.0002272" startTime="2026-08-16T19:31:53.2583428+08:00" endTime="2026-08-16T19:31:53.2584142+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="a45ee2fd-53a3-46d9-8c96-52beb41b6e27" />
+    <UnitTestResult executionId="799bb240-b4ff-478d-815e-9c6febd698cc" testId="a8622d47-76ff-6640-bdd1-9a404599b87d" testName="Base05.Tests.TxtScriptReloadCoordinatorTests.成功重载原子发布新快照并保留旧定义对象供既有对话使用" computerName="sanitized-host" duration="00:00:00.0079135" startTime="2026-08-16T19:31:53.4527393+08:00" endTime="2026-08-16T19:31:53.4604025+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="799bb240-b4ff-478d-815e-9c6febd698cc" />
+    <UnitTestResult executionId="0e0eacd2-d273-4628-a359-bab80d806a98" testId="8c448b55-c283-7555-adec-0a59cf1ce196" testName="Base05.Tests.LingFengPlayerCommandTests.金币调整越界失败且Pk减少不会低于零" computerName="sanitized-host" duration="00:00:00.0029001" startTime="2026-08-16T19:31:52.8929396+08:00" endTime="2026-08-16T19:31:52.8957111+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="0e0eacd2-d273-4628-a359-bab80d806a98" />
+    <UnitTestResult executionId="55e3f17a-87d0-4e10-a3fe-a427cc395933" testId="279851e2-ace2-3ed7-60ee-c0dd6e8aa238" testName="Base05.Tests.TxtScriptReloadCoordinatorTests.连续保存经过防抖只发布一次最终内容" computerName="sanitized-host" duration="00:00:00.2691894" startTime="2026-08-16T19:31:53.4836588+08:00" endTime="2026-08-16T19:31:53.7524639+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="55e3f17a-87d0-4e10-a3fe-a427cc395933" />
+    <UnitTestResult executionId="ddb0cb14-fb28-4f02-b003-fcb84bdf796d" testId="eea83c24-b60b-78a2-d8b4-76a245cdada5" testName="Base05.Tests.LingFengTxtSpecialTriggerIntegrationTests.CSharp处理器异常时禁止Txt重复执行且返回未处理" computerName="sanitized-host" duration="00:00:00.0101723" startTime="2026-08-16T19:31:53.2424387+08:00" endTime="2026-08-16T19:31:53.2525057+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="ddb0cb14-fb28-4f02-b003-fcb84bdf796d" />
+    <UnitTestResult executionId="efac274d-3ffb-4156-9864-0bbc3699f467" testId="dbefcc2d-5023-f19a-82ae-7e729e6c2b4a" testName="Base05.Tests.LingFengPlayerCommandTests.物品名称与持久过滤具有稳定边界" computerName="sanitized-host" duration="00:00:00.0003374" startTime="2026-08-16T19:31:52.9218881+08:00" endTime="2026-08-16T19:31:52.9221067+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="efac274d-3ffb-4156-9864-0bbc3699f467" />
+    <UnitTestResult executionId="8d9c3dc3-929e-47b4-a2e9-9552ebcd57c0" testId="b3b9d877-9c2e-c494-dbfa-97cb1da61254" testName="Base05.Tests.LingFengLongTailCompatibilityTests.代表Envir所选高频长尾命令与触发严格预检为零" computerName="sanitized-host" duration="00:00:02.6701410" startTime="2026-08-16T19:31:50.0351813+08:00" endTime="2026-08-16T19:31:52.7056524+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="8d9c3dc3-929e-47b4-a2e9-9552ebcd57c0" />
+    <UnitTestResult executionId="687a6244-db3c-4bda-b0fd-ffdf9af4c921" testId="ec179e29-02fc-5ca2-43ac-c8881dc28564" testName="Base05.Tests.LingFengPlayerCommandTests.高频人物物品金币闭环快照严格预检无未知命令" computerName="sanitized-host" duration="00:00:00.0005176" startTime="2026-08-16T19:31:52.9213630+08:00" endTime="2026-08-16T19:31:52.9217039+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="687a6244-db3c-4bda-b0fd-ffdf9af4c921" />
+    <UnitTestResult executionId="a4448172-93cc-4710-bac1-dc7c1174090b" testId="4eefcebc-801c-a7d6-ba06-9676aaebbf1b" testName="Base05.Tests.LingFengTxtCompatibilityCatalogTests.翎风主题清单覆盖CHM目录并保持分类基线" computerName="sanitized-host" duration="00:00:00.0323644" startTime="2026-08-16T19:31:49.9994799+08:00" endTime="2026-08-16T19:31:50.0317654+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="a4448172-93cc-4710-bac1-dc7c1174090b" />
+    <UnitTestResult executionId="81a93bed-ad6e-4b01-8ca2-32aa9c1a106e" testId="63536f73-0690-cb74-c5ec-3aafe3f0132a" testName="Base05.Tests.LingFengTxtCompatibilityCatalogTests.翎风兼容清单状态唯一且已支持条目具备完整证据链" computerName="sanitized-host" duration="00:00:00.0243525" startTime="2026-08-16T19:31:49.9196477+08:00" endTime="2026-08-16T19:31:49.9285474+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="81a93bed-ad6e-4b01-8ca2-32aa9c1a106e" />
+    <UnitTestResult executionId="8d241e12-cb19-48d4-922b-545aea37c5dc" testId="77b20728-f7e1-11fb-09f5-cdcab8686b08" testName="Base05.Tests.TxtScriptReloadCoordinatorTests.编码失败时不发布且旧快照继续服务" computerName="sanitized-host" duration="00:00:00.0122345" startTime="2026-08-16T19:31:53.2647943+08:00" endTime="2026-08-16T19:31:53.2710387+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="8d241e12-cb19-48d4-922b-545aea37c5dc" />
+    <UnitTestResult executionId="40b51d4a-8399-4968-a7d0-95154a145e47" testId="7c002c7f-421d-ecfb-1035-d8acd38c2159" testName="Base05.Tests.LingFengUnsupportedTriggerGuardTests.已接入特殊事件的标签不再被严格护栏拒绝(label: &quot;[@KILLMON]&quot;)" computerName="sanitized-host" duration="00:00:00.0003798" startTime="2026-08-16T19:31:53.2568474+08:00" endTime="2026-08-16T19:31:53.2571192+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="40b51d4a-8399-4968-a7d0-95154a145e47" />
+    <UnitTestResult executionId="5cd6ad3e-55e9-41e0-9463-392cf7b27004" testId="4d5f0b7f-7a47-a961-5a79-d4ef95799546" testName="Base05.Tests.LingFengTxtSpecialTriggerIntegrationTests.CSharp已接管时同一特殊触发不回落Txt" computerName="sanitized-host" duration="00:00:00.0003980" startTime="2026-08-16T19:31:53.2551810+08:00" endTime="2026-08-16T19:31:53.2554197+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="5cd6ad3e-55e9-41e0-9463-392cf7b27004" />
+    <UnitTestResult executionId="4aa0521f-126b-447e-a196-c3949e442f79" testId="fd1651d2-28e5-850e-d20f-b6beaf44a902" testName="Base05.Tests.LingFengTxtCompatibilityCatalogTests.检测类全部九十五项已完成正文核对且语义卡完整" computerName="sanitized-host" duration="00:00:00.0643882" startTime="2026-08-16T19:31:49.8286499+08:00" endTime="2026-08-16T19:31:49.9035897+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="4aa0521f-126b-447e-a196-c3949e442f79" />
+    <UnitTestResult executionId="1f84c309-a491-4d7c-ba07-c02bdd5e1398" testId="8c6e57dd-fc8c-156f-3338-51e127fa6645" testName="Base05.Tests.LingFengPlayerCommandTests.不可映射的扩展物品参数在候选快照发布前拒绝" computerName="sanitized-host" duration="00:00:00.0012510" startTime="2026-08-16T19:31:52.7075300+08:00" endTime="2026-08-16T19:31:52.7076709+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="1f84c309-a491-4d7c-ba07-c02bdd5e1398" />
+    <UnitTestResult executionId="c73f776c-417f-403f-941c-62636b7cfd4f" testId="93d5a534-5c32-02f0-8875-0a6e95cbde94" testName="Base05.Tests.LingFengPlayerCommandTests.高频比较与取反通过真实NPC检测链执行" computerName="sanitized-host" duration="00:00:00.0439118" startTime="2026-08-16T19:31:52.9237642+08:00" endTime="2026-08-16T19:31:52.9661256+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="c73f776c-417f-403f-941c-62636b7cfd4f" />
+    <UnitTestResult executionId="a95ff561-e1ec-416e-a83d-d073d01a6412" testId="6364a4d9-2ae2-218b-6bc1-cc42d4b003a4" testName="Base05.Tests.LingFengPlayerCommandTests.人物数值检测支持别名与双边界并拒绝非法参数" computerName="sanitized-host" duration="00:00:00.0170130" startTime="2026-08-16T19:31:52.8958973+08:00" endTime="2026-08-16T19:31:52.9128379+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="a95ff561-e1ec-416e-a83d-d073d01a6412" />
+    <UnitTestResult executionId="864936cf-d005-4439-8920-f329d1d0d615" testId="9b051de6-c16d-5e75-2d8a-18e9bc64bc00" testName="Base05.Tests.LingFengTxtSpecialTriggerIntegrationTests.每个已支持特殊触发均从真实领域入口派发" computerName="sanitized-host" duration="00:00:00.2445911" startTime="2026-08-16T19:31:52.9852163+08:00" endTime="2026-08-16T19:31:53.2296506+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="864936cf-d005-4439-8920-f329d1d0d615" />
+    <UnitTestResult executionId="e742b0a6-eb70-4b80-b8c7-bded061b9d76" testId="59a67e1c-ed50-92bd-aadd-0d846f5a0d1b" testName="Base05.Tests.TxtScriptReloadCoordinatorTests.生产快照验证器拒绝重复标签并报告源文件行号" computerName="sanitized-host" duration="00:00:00.0049656" startTime="2026-08-16T19:31:53.2713352+08:00" endTime="2026-08-16T19:31:53.2760752+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="e742b0a6-eb70-4b80-b8c7-bded061b9d76" />
+    <UnitTestResult executionId="9c00f81e-c0da-4a80-b423-f9b73439e0b8" testId="b9bda093-d61c-fec7-6243-b061da09a84a" testName="Base05.Tests.LingFengUnsupportedTriggerGuardTests.已接入特殊事件的标签不再被严格护栏拒绝(label: &quot;[@M2DROPITEM]&quot;)" computerName="sanitized-host" duration="00:00:00.0000183" startTime="2026-08-16T19:31:53.2590313+08:00" endTime="2026-08-16T19:31:53.2590906+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="9c00f81e-c0da-4a80-b423-f9b73439e0b8" />
+    <UnitTestResult executionId="904cf687-31fe-4a32-a069-7efa4565f7fb" testId="d05aa937-ce00-3f8e-a3ce-6f3812ee8d66" testName="Base05.Tests.LingFengTxtSpecialTriggerIntegrationTests.精确CSharp后置处理器异常时继续通用处理器且不回落Txt" computerName="sanitized-host" duration="00:00:00.0186221" startTime="2026-08-16T19:31:52.9664047+08:00" endTime="2026-08-16T19:31:52.9849721+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="904cf687-31fe-4a32-a069-7efa4565f7fb" />
+    <UnitTestResult executionId="5fc6d3d6-a8a0-4ea5-a3ca-b93aec234c1c" testId="76c33a91-2539-9db0-2790-a9238a3a1daf" testName="Base05.Tests.LingFengTxtCompatibilityCatalogTests.生产候选兼容状态分布与版本声明一致" computerName="sanitized-host" duration="00:00:00.0255604" startTime="2026-08-16T19:31:49.9738392+08:00" endTime="2026-08-16T19:31:49.9992797+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="5fc6d3d6-a8a0-4ea5-a3ca-b93aec234c1c" />
+    <UnitTestResult executionId="a58008b4-8467-4c15-8d80-3661e515dd2f" testId="7c3d1bee-bc76-4a04-fd33-075761277343" testName="Base05.Tests.TxtScriptReloadCoordinatorTests.声明或引用验证失败时整批回滚" computerName="sanitized-host" duration="00:00:00.0056524" startTime="2026-08-16T19:31:53.7964005+08:00" endTime="2026-08-16T19:31:53.8019587+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="a58008b4-8467-4c15-8d80-3661e515dd2f" />
+    <UnitTestResult executionId="ac87796d-49d9-40d3-a559-d0b661ed2d7b" testId="3101aebe-c371-8ca5-6094-44efb56100c5" testName="Base05.Tests.LingFengUnsupportedTriggerGuardTests.已接入特殊事件的标签不再被严格护栏拒绝(label: &quot;[@PLAYDIE]&quot;)" computerName="sanitized-host" duration="00:00:00.0000196" startTime="2026-08-16T19:31:53.2591983+08:00" endTime="2026-08-16T19:31:53.2592569+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="ac87796d-49d9-40d3-a559-d0b661ed2d7b" />
+    <UnitTestResult executionId="e7ceaf2d-093d-4da3-b29d-02905176bf84" testId="8ffe2172-5b08-a0bc-5e29-f18fcc7dca11" testName="Base05.Tests.LingFengUnsupportedTriggerGuardTests.已接入特殊事件的标签不再被严格护栏拒绝(label: &quot;[@KILLPLAY]&quot;)" computerName="sanitized-host" duration="00:00:00.0000215" startTime="2026-08-16T19:31:53.2587058+08:00" endTime="2026-08-16T19:31:53.2587639+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="e7ceaf2d-093d-4da3-b29d-02905176bf84" />
+    <UnitTestResult executionId="2da43802-552c-497b-b9ef-148ec2c8eb5e" testId="8be12efb-752a-cd93-6c69-be8f2758b650" testName="Base05.Tests.TxtScriptReloadCoordinatorTests.生产快照验证器拒绝缺失的本地跳转标签和跨目录Call" computerName="sanitized-host" duration="00:00:00.0046550" startTime="2026-08-16T19:31:53.2765846+08:00" endTime="2026-08-16T19:31:53.2808370+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="2da43802-552c-497b-b9ef-148ec2c8eb5e" />
+    <UnitTestResult executionId="87fb4433-8489-41aa-8de0-565659848bcb" testId="cdfde3ef-3f09-5d90-0905-19ca7d5b955c" testName="Base05.Tests.LingFengPlayerCommandTests.GoldCount和ChangePkPoint形成类型化动作" computerName="sanitized-host" duration="00:00:00.0014665" startTime="2026-08-16T19:31:52.8914790+08:00" endTime="2026-08-16T19:31:52.8927451+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="87fb4433-8489-41aa-8de0-565659848bcb" />
+  </Results>
+  <TestDefinitions>
+    <UnitTest name="Base05.Tests.LingFengUnsupportedTriggerGuardTests.已接入特殊事件的标签不再被严格护栏拒绝(label: &quot;[@STRUCK]&quot;)" storage="D:\workspace\tests\base05.tests\bin\debug\net10.0\base05.tests.dll" id="28bb3ac6-6863-b794-b446-af82e1e83668">
+      <Execution id="bddc4f5e-74aa-4bcb-845e-d53de274b126" />
+      <TestMethod codeBase="D:\workspace\Tests\Base05.Tests\bin\Debug\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.LingFengUnsupportedTriggerGuardTests" name="已接入特殊事件的标签不再被严格护栏拒绝" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.LingFengTxtSpecialTriggerIntegrationTests.CSharp处理器异常时禁止Txt重复执行且返回未处理" storage="D:\workspace\tests\base05.tests\bin\debug\net10.0\base05.tests.dll" id="eea83c24-b60b-78a2-d8b4-76a245cdada5">
+      <Execution id="ddb0cb14-fb28-4f02-b003-fcb84bdf796d" />
+      <TestMethod codeBase="D:\workspace\Tests\Base05.Tests\bin\Debug\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.LingFengTxtSpecialTriggerIntegrationTests" name="CSharp处理器异常时禁止Txt重复执行且返回未处理" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.LingFengTxtSpecialTriggerIntegrationTests.精确CSharp未处理时保持调用通用处理器且不回落Txt" storage="D:\workspace\tests\base05.tests\bin\debug\net10.0\base05.tests.dll" id="b8a1f046-36fb-26fa-d92e-b7d627b5034f">
+      <Execution id="282da0d4-00a2-4e78-ab38-7eab42637982" />
+      <TestMethod codeBase="D:\workspace\Tests\Base05.Tests\bin\Debug\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.LingFengTxtSpecialTriggerIntegrationTests" name="精确CSharp未处理时保持调用通用处理器且不回落Txt" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.LingFengPlayerCommandTests.严格翎风版本在发布前拒绝未知检测和动作命令" storage="D:\workspace\tests\base05.tests\bin\debug\net10.0\base05.tests.dll" id="3a4f6e01-d0aa-8b76-37e1-039de145b527">
+      <Execution id="4a795f22-b560-49b9-a32d-02e87b3d7eb6" />
+      <TestMethod codeBase="D:\workspace\Tests\Base05.Tests\bin\Debug\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.LingFengPlayerCommandTests" name="严格翎风版本在发布前拒绝未知检测和动作命令" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.TxtScriptReloadCoordinatorTests.生产快照验证器拒绝缺失Include文件和标签并保留旧快照" storage="D:\workspace\tests\base05.tests\bin\debug\net10.0\base05.tests.dll" id="8ec45f3b-4bb3-414c-ef34-250ade3e7475">
+      <Execution id="7db46643-9a8f-426f-b8e8-82cd9c3f62b8" />
+      <TestMethod codeBase="D:\workspace\Tests\Base05.Tests\bin\Debug\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.TxtScriptReloadCoordinatorTests" name="生产快照验证器拒绝缺失Include文件和标签并保留旧快照" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.LingFengLongTailCompatibilityTests.代表Envir所选高频长尾命令与触发严格预检为零" storage="D:\workspace\tests\base05.tests\bin\debug\net10.0\base05.tests.dll" id="b3b9d877-9c2e-c494-dbfa-97cb1da61254">
+      <Execution id="8d9c3dc3-929e-47b4-a2e9-9552ebcd57c0" />
+      <TestMethod codeBase="D:\workspace\Tests\Base05.Tests\bin\Debug\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.LingFengLongTailCompatibilityTests" name="代表Envir所选高频长尾命令与触发严格预检为零" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.LingFengUnsupportedTriggerGuardTests.已接入特殊事件的标签不再被严格护栏拒绝(label: &quot;[@PLAYDIE]&quot;)" storage="D:\workspace\tests\base05.tests\bin\debug\net10.0\base05.tests.dll" id="3101aebe-c371-8ca5-6094-44efb56100c5">
+      <Execution id="ac87796d-49d9-40d3-a559-d0b661ed2d7b" />
+      <TestMethod codeBase="D:\workspace\Tests\Base05.Tests\bin\Debug\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.LingFengUnsupportedTriggerGuardTests" name="已接入特殊事件的标签不再被严格护栏拒绝" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.LingFengTxtSpecialTriggerIntegrationTests.CSharp已接管时同一特殊触发不回落Txt" storage="D:\workspace\tests\base05.tests\bin\debug\net10.0\base05.tests.dll" id="4d5f0b7f-7a47-a961-5a79-d4ef95799546">
+      <Execution id="5cd6ad3e-55e9-41e0-9463-392cf7b27004" />
+      <TestMethod codeBase="D:\workspace\Tests\Base05.Tests\bin\Debug\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.LingFengTxtSpecialTriggerIntegrationTests" name="CSharp已接管时同一特殊触发不回落Txt" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.LingFengPlayerCommandTests.真实语料高频金币和基础物品命令保持既有路由" storage="D:\workspace\tests\base05.tests\bin\debug\net10.0\base05.tests.dll" id="0b9e3a9a-6ed5-d893-6185-a26fdc598cfb">
+      <Execution id="5edb09aa-d095-42ba-ba96-3e4d6446c003" />
+      <TestMethod codeBase="D:\workspace\Tests\Base05.Tests\bin\Debug\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.LingFengPlayerCommandTests" name="真实语料高频金币和基础物品命令保持既有路由" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.LingFengPlayerCommandTests.物品名称与持久过滤具有稳定边界" storage="D:\workspace\tests\base05.tests\bin\debug\net10.0\base05.tests.dll" id="dbefcc2d-5023-f19a-82ae-7e729e6c2b4a">
+      <Execution id="efac274d-3ffb-4156-9864-0bbc3699f467" />
+      <TestMethod codeBase="D:\workspace\Tests\Base05.Tests\bin\Debug\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.LingFengPlayerCommandTests" name="物品名称与持久过滤具有稳定边界" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.LingFengUnsupportedTriggerGuardTests.已接入特殊事件的标签不再被严格护栏拒绝(label: &quot;[@STRUCKDAMAGE]&quot;)" storage="D:\workspace\tests\base05.tests\bin\debug\net10.0\base05.tests.dll" id="e3d75ecd-e909-2a4f-d44a-7a33cd9a5d69">
+      <Execution id="0a0f702d-da26-40d3-8352-943465ff3c31" />
+      <TestMethod codeBase="D:\workspace\Tests\Base05.Tests\bin\Debug\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.LingFengUnsupportedTriggerGuardTests" name="已接入特殊事件的标签不再被严格护栏拒绝" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.TxtScriptReloadCoordinatorTests.生产快照验证器拒绝无效变量声明并报告原始行号" storage="D:\workspace\tests\base05.tests\bin\debug\net10.0\base05.tests.dll" id="502457ec-de7a-95ec-21c5-37fdba184131">
+      <Execution id="2fc811b0-56df-458f-b94f-4ecb8adbcd1f" />
+      <TestMethod codeBase="D:\workspace\Tests\Base05.Tests\bin\Debug\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.TxtScriptReloadCoordinatorTests" name="生产快照验证器拒绝无效变量声明并报告原始行号" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.TxtScriptReloadCoordinatorTests.声明或引用验证失败时整批回滚" storage="D:\workspace\tests\base05.tests\bin\debug\net10.0\base05.tests.dll" id="7c3d1bee-bc76-4a04-fd33-075761277343">
+      <Execution id="a58008b4-8467-4c15-8d80-3661e515dd2f" />
+      <TestMethod codeBase="D:\workspace\Tests\Base05.Tests\bin\Debug\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.TxtScriptReloadCoordinatorTests" name="声明或引用验证失败时整批回滚" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.TxtScriptReloadCoordinatorTests.连续保存经过防抖只发布一次最终内容" storage="D:\workspace\tests\base05.tests\bin\debug\net10.0\base05.tests.dll" id="279851e2-ace2-3ed7-60ee-c0dd6e8aa238">
+      <Execution id="55e3f17a-87d0-4e10-a3fe-a427cc395933" />
+      <TestMethod codeBase="D:\workspace\Tests\Base05.Tests\bin\Debug\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.TxtScriptReloadCoordinatorTests" name="连续保存经过防抖只发布一次最终内容" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.LingFengUnsupportedTriggerGuardTests.已接入特殊事件的标签不再被严格护栏拒绝(label: &quot;[@MAGICATTACK]&quot;)" storage="D:\workspace\tests\base05.tests\bin\debug\net10.0\base05.tests.dll" id="90e97213-f3a7-3fd8-6598-708673833898">
+      <Execution id="598ecefc-a3ad-46d8-b2d0-41cf8e28f51a" />
+      <TestMethod codeBase="D:\workspace\Tests\Base05.Tests\bin\Debug\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.LingFengUnsupportedTriggerGuardTests" name="已接入特殊事件的标签不再被严格护栏拒绝" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.LingFengUnsupportedTriggerGuardTests.已接入特殊事件的标签不再被严格护栏拒绝(label: &quot;[@KILLPLAY]&quot;)" storage="D:\workspace\tests\base05.tests\bin\debug\net10.0\base05.tests.dll" id="8ffe2172-5b08-a0bc-5e29-f18fcc7dca11">
+      <Execution id="e7ceaf2d-093d-4da3-b29d-02905176bf84" />
+      <TestMethod codeBase="D:\workspace\Tests\Base05.Tests\bin\Debug\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.LingFengUnsupportedTriggerGuardTests" name="已接入特殊事件的标签不再被严格护栏拒绝" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.LingFengUnsupportedTriggerGuardTests.已接入特殊事件的标签不再被严格护栏拒绝(label: &quot;[@KILLMON]&quot;)" storage="D:\workspace\tests\base05.tests\bin\debug\net10.0\base05.tests.dll" id="7c002c7f-421d-ecfb-1035-d8acd38c2159">
+      <Execution id="40b51d4a-8399-4968-a7d0-95154a145e47" />
+      <TestMethod codeBase="D:\workspace\Tests\Base05.Tests\bin\Debug\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.LingFengUnsupportedTriggerGuardTests" name="已接入特殊事件的标签不再被严格护栏拒绝" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.LingFengPlayerCommandTests.高频人物物品金币闭环快照严格预检无未知命令" storage="D:\workspace\tests\base05.tests\bin\debug\net10.0\base05.tests.dll" id="ec179e29-02fc-5ca2-43ac-c8881dc28564">
+      <Execution id="687a6244-db3c-4bda-b0fd-ffdf9af4c921" />
+      <TestMethod codeBase="D:\workspace\Tests\Base05.Tests\bin\Debug\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.LingFengPlayerCommandTests" name="高频人物物品金币闭环快照严格预检无未知命令" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.TxtScriptReloadCoordinatorTests.Include引用深度十六层可发布而十七层被拒绝" storage="D:\workspace\tests\base05.tests\bin\debug\net10.0\base05.tests.dll" id="f0581f3b-b318-cae9-9a03-54d810ccbbd8">
+      <Execution id="dbf7593b-b702-4d91-869a-d3d6275c0da9" />
+      <TestMethod codeBase="D:\workspace\Tests\Base05.Tests\bin\Debug\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.TxtScriptReloadCoordinatorTests" name="Include引用深度十六层可发布而十七层被拒绝" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.LingFengTxtCompatibilityCatalogTests.翎风兼容清单状态唯一且已支持条目具备完整证据链" storage="D:\workspace\tests\base05.tests\bin\debug\net10.0\base05.tests.dll" id="63536f73-0690-cb74-c5ec-3aafe3f0132a">
+      <Execution id="81a93bed-ad6e-4b01-8ca2-32aa9c1a106e" />
+      <TestMethod codeBase="D:\workspace\Tests\Base05.Tests\bin\Debug\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.LingFengTxtCompatibilityCatalogTests" name="翎风兼容清单状态唯一且已支持条目具备完整证据链" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.LingFengTxtSpecialTriggerIntegrationTests.精确CSharp后置处理器异常时继续通用处理器且不回落Txt" storage="D:\workspace\tests\base05.tests\bin\debug\net10.0\base05.tests.dll" id="d05aa937-ce00-3f8e-a3ce-6f3812ee8d66">
+      <Execution id="904cf687-31fe-4a32-a069-7efa4565f7fb" />
+      <TestMethod codeBase="D:\workspace\Tests\Base05.Tests\bin\Debug\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.LingFengTxtSpecialTriggerIntegrationTests" name="精确CSharp后置处理器异常时继续通用处理器且不回落Txt" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.LingFengTxtCompatibilityCatalogTests.生产候选兼容状态分布与版本声明一致" storage="D:\workspace\tests\base05.tests\bin\debug\net10.0\base05.tests.dll" id="76c33a91-2539-9db0-2790-a9238a3a1daf">
+      <Execution id="5fc6d3d6-a8a0-4ea5-a3ca-b93aec234c1c" />
+      <TestMethod codeBase="D:\workspace\Tests\Base05.Tests\bin\Debug\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.LingFengTxtCompatibilityCatalogTests" name="生产候选兼容状态分布与版本声明一致" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.LingFengUnsupportedTriggerGuardTests.已接入特殊事件的标签不再被严格护栏拒绝(label: &quot;[@M2DROPITEM]&quot;)" storage="D:\workspace\tests\base05.tests\bin\debug\net10.0\base05.tests.dll" id="b9bda093-d61c-fec7-6243-b061da09a84a">
+      <Execution id="9c00f81e-c0da-4a80-b423-f9b73439e0b8" />
+      <TestMethod codeBase="D:\workspace\Tests\Base05.Tests\bin\Debug\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.LingFengUnsupportedTriggerGuardTests" name="已接入特殊事件的标签不再被严格护栏拒绝" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.LingFengPlayerCommandTests.不可映射的扩展物品参数在候选快照发布前拒绝" storage="D:\workspace\tests\base05.tests\bin\debug\net10.0\base05.tests.dll" id="8c6e57dd-fc8c-156f-3338-51e127fa6645">
+      <Execution id="1f84c309-a491-4d7c-ba07-c02bdd5e1398" />
+      <TestMethod codeBase="D:\workspace\Tests\Base05.Tests\bin\Debug\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.LingFengPlayerCommandTests" name="不可映射的扩展物品参数在候选快照发布前拒绝" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.LingFengUnsupportedTriggerGuardTests.已知缺失上下文的触发在严格快照阶段失败关闭(label: &quot;[@GROUPKILLMON]&quot;)" storage="D:\workspace\tests\base05.tests\bin\debug\net10.0\base05.tests.dll" id="c968fc1f-2866-269c-4775-5cd952afe274">
+      <Execution id="61d6eac1-09aa-46dc-8b41-36db98a23cb0" />
+      <TestMethod codeBase="D:\workspace\Tests\Base05.Tests\bin\Debug\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.LingFengUnsupportedTriggerGuardTests" name="已知缺失上下文的触发在严格快照阶段失败关闭" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.LingFengTxtCompatibilityCatalogTests.检测类全部九十五项已完成正文核对且语义卡完整" storage="D:\workspace\tests\base05.tests\bin\debug\net10.0\base05.tests.dll" id="fd1651d2-28e5-850e-d20f-b6beaf44a902">
+      <Execution id="4aa0521f-126b-447e-a196-c3949e442f79" />
+      <TestMethod codeBase="D:\workspace\Tests\Base05.Tests\bin\Debug\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.LingFengTxtCompatibilityCatalogTests" name="检测类全部九十五项已完成正文核对且语义卡完整" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.TxtScriptReloadCoordinatorTests.停止并释放后保存不会再次发布且手动重载明确拒绝" storage="D:\workspace\tests\base05.tests\bin\debug\net10.0\base05.tests.dll" id="23f03e36-0710-70ae-d60f-fe97b2647644">
+      <Execution id="3ffb84e3-051d-4cef-977c-a5c1e7f4ca34" />
+      <TestMethod codeBase="D:\workspace\Tests\Base05.Tests\bin\Debug\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.TxtScriptReloadCoordinatorTests" name="停止并释放后保存不会再次发布且手动重载明确拒绝" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.TxtScriptReloadCoordinatorTests.成功重载原子发布新快照并保留旧定义对象供既有对话使用" storage="D:\workspace\tests\base05.tests\bin\debug\net10.0\base05.tests.dll" id="a8622d47-76ff-6640-bdd1-9a404599b87d">
+      <Execution id="799bb240-b4ff-478d-815e-9c6febd698cc" />
+      <TestMethod codeBase="D:\workspace\Tests\Base05.Tests\bin\Debug\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.TxtScriptReloadCoordinatorTests" name="成功重载原子发布新快照并保留旧定义对象供既有对话使用" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.TxtScriptReloadCoordinatorTests.生产快照验证器拒绝重复标签并报告源文件行号" storage="D:\workspace\tests\base05.tests\bin\debug\net10.0\base05.tests.dll" id="59a67e1c-ed50-92bd-aadd-0d846f5a0d1b">
+      <Execution id="e742b0a6-eb70-4b80-b8c7-bded061b9d76" />
+      <TestMethod codeBase="D:\workspace\Tests\Base05.Tests\bin\Debug\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.TxtScriptReloadCoordinatorTests" name="生产快照验证器拒绝重复标签并报告源文件行号" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.LingFengTxtCompatibilityCatalogTests.动作类全部二百四十九项已完成正文核对且语义卡完整" storage="D:\workspace\tests\base05.tests\bin\debug\net10.0\base05.tests.dll" id="3324e684-2fc8-a296-ff05-8bb52239c7e9">
+      <Execution id="adacfa32-8229-4b14-b193-b7b919c74b9b" />
+      <TestMethod codeBase="D:\workspace\Tests\Base05.Tests\bin\Debug\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.LingFengTxtCompatibilityCatalogTests" name="动作类全部二百四十九项已完成正文核对且语义卡完整" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.LingFengUnsupportedTriggerGuardTests.已支持的人物升级标签不被护栏误伤" storage="D:\workspace\tests\base05.tests\bin\debug\net10.0\base05.tests.dll" id="bbf73150-d31c-75cd-1075-370918b89b97">
+      <Execution id="f1e719ca-fac0-4ef8-980b-85cdb1124173" />
+      <TestMethod codeBase="D:\workspace\Tests\Base05.Tests\bin\Debug\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.LingFengUnsupportedTriggerGuardTests" name="已支持的人物升级标签不被护栏误伤" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.LingFengTxtSpecialTriggerIntegrationTests.每个已支持特殊触发均从真实领域入口派发" storage="D:\workspace\tests\base05.tests\bin\debug\net10.0\base05.tests.dll" id="9b051de6-c16d-5e75-2d8a-18e9bc64bc00">
+      <Execution id="864936cf-d005-4439-8920-f329d1d0d615" />
+      <TestMethod codeBase="D:\workspace\Tests\Base05.Tests\bin\Debug\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.LingFengTxtSpecialTriggerIntegrationTests" name="每个已支持特殊触发均从真实领域入口派发" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.LingFengPlayerCommandTests.金币调整越界失败且Pk减少不会低于零" storage="D:\workspace\tests\base05.tests\bin\debug\net10.0\base05.tests.dll" id="8c448b55-c283-7555-adec-0a59cf1ce196">
+      <Execution id="0e0eacd2-d273-4628-a359-bab80d806a98" />
+      <TestMethod codeBase="D:\workspace\Tests\Base05.Tests\bin\Debug\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.LingFengPlayerCommandTests" name="金币调整越界失败且Pk减少不会低于零" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.LingFengTxtCompatibilityCatalogTests.触发类候选已完成正文核对且语义卡完整" storage="D:\workspace\tests\base05.tests\bin\debug\net10.0\base05.tests.dll" id="a2efd36f-a8dd-0800-9157-f4194b8dd81e">
+      <Execution id="8519704d-34ac-43a6-a800-88a6484276c3" />
+      <TestMethod codeBase="D:\workspace\Tests\Base05.Tests\bin\Debug\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.LingFengTxtCompatibilityCatalogTests" name="触发类候选已完成正文核对且语义卡完整" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.LingFengPlayerCommandTests.GoldCount和ChangePkPoint形成类型化动作" storage="D:\workspace\tests\base05.tests\bin\debug\net10.0\base05.tests.dll" id="cdfde3ef-3f09-5d90-0905-19ca7d5b955c">
+      <Execution id="87fb4433-8489-41aa-8de0-565659848bcb" />
+      <TestMethod codeBase="D:\workspace\Tests\Base05.Tests\bin\Debug\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.LingFengPlayerCommandTests" name="GoldCount和ChangePkPoint形成类型化动作" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.TxtScriptReloadCoordinatorTests.生产快照验证器拒绝Include循环并保留旧快照" storage="D:\workspace\tests\base05.tests\bin\debug\net10.0\base05.tests.dll" id="3638fbc3-c16e-bf44-e37e-4d0f3c8d93d1">
+      <Execution id="625119d7-a4c2-4ad8-bd49-b17e175bd7da" />
+      <TestMethod codeBase="D:\workspace\Tests\Base05.Tests\bin\Debug\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.TxtScriptReloadCoordinatorTests" name="生产快照验证器拒绝Include循环并保留旧快照" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.LingFengPlayerCommandTests.翎风物品参数只在显式兼容版本下路由且不伪造缺失模型" storage="D:\workspace\tests\base05.tests\bin\debug\net10.0\base05.tests.dll" id="14399572-be52-b8f1-064c-7ea641e15ce1">
+      <Execution id="bcce588f-fc14-4b50-82a7-6983a15ad6c5" />
+      <TestMethod codeBase="D:\workspace\Tests\Base05.Tests\bin\Debug\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.LingFengPlayerCommandTests" name="翎风物品参数只在显式兼容版本下路由且不伪造缺失模型" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.LingFengUnsupportedTriggerGuardTests.已接入特殊事件的标签不再被严格护栏拒绝(label: &quot;[@ATTACK]&quot;)" storage="D:\workspace\tests\base05.tests\bin\debug\net10.0\base05.tests.dll" id="d42e0ff0-9e74-0270-9b6f-f95c769fb588">
+      <Execution id="a45ee2fd-53a3-46d9-8c96-52beb41b6e27" />
+      <TestMethod codeBase="D:\workspace\Tests\Base05.Tests\bin\Debug\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.LingFengUnsupportedTriggerGuardTests" name="已接入特殊事件的标签不再被严格护栏拒绝" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.LingFengUnsupportedTriggerGuardTests.已接入特殊事件的标签不再被严格护栏拒绝(label: &quot;[@PICKUPITEMEX]&quot;)" storage="D:\workspace\tests\base05.tests\bin\debug\net10.0\base05.tests.dll" id="decab584-b574-bd5d-1fef-c91e146608c2">
+      <Execution id="b4663b4e-9ad6-4e38-9389-fd4f838895f1" />
+      <TestMethod codeBase="D:\workspace\Tests\Base05.Tests\bin\Debug\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.LingFengUnsupportedTriggerGuardTests" name="已接入特殊事件的标签不再被严格护栏拒绝" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.LingFengTxtCompatibilityCatalogTests.翎风主题清单覆盖CHM目录并保持分类基线" storage="D:\workspace\tests\base05.tests\bin\debug\net10.0\base05.tests.dll" id="4eefcebc-801c-a7d6-ba06-9676aaebbf1b">
+      <Execution id="a4448172-93cc-4710-bac1-dc7c1174090b" />
+      <TestMethod codeBase="D:\workspace\Tests\Base05.Tests\bin\Debug\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.LingFengTxtCompatibilityCatalogTests" name="翎风主题清单覆盖CHM目录并保持分类基线" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.TxtScriptReloadCoordinatorTests.编码失败时不发布且旧快照继续服务" storage="D:\workspace\tests\base05.tests\bin\debug\net10.0\base05.tests.dll" id="77b20728-f7e1-11fb-09f5-cdcab8686b08">
+      <Execution id="8d241e12-cb19-48d4-922b-545aea37c5dc" />
+      <TestMethod codeBase="D:\workspace\Tests\Base05.Tests\bin\Debug\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.TxtScriptReloadCoordinatorTests" name="编码失败时不发布且旧快照继续服务" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.TxtScriptReloadCoordinatorTests.生产快照验证器拒绝缺失的本地跳转标签和跨目录Call" storage="D:\workspace\tests\base05.tests\bin\debug\net10.0\base05.tests.dll" id="8be12efb-752a-cd93-6c69-be8f2758b650">
+      <Execution id="2da43802-552c-497b-b9ef-148ec2c8eb5e" />
+      <TestMethod codeBase="D:\workspace\Tests\Base05.Tests\bin\Debug\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.TxtScriptReloadCoordinatorTests" name="生产快照验证器拒绝缺失的本地跳转标签和跨目录Call" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.LingFengUnsupportedTriggerGuardTests.已接入特殊事件的标签不再被严格护栏拒绝(label: &quot;[@MAGICSTRUCK]&quot;)" storage="D:\workspace\tests\base05.tests\bin\debug\net10.0\base05.tests.dll" id="a39d41d4-e53e-e8f7-32be-b74de46d0208">
+      <Execution id="986a1796-ff66-40c1-ae00-59d1fea423a1" />
+      <TestMethod codeBase="D:\workspace\Tests\Base05.Tests\bin\Debug\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.LingFengUnsupportedTriggerGuardTests" name="已接入特殊事件的标签不再被严格护栏拒绝" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.TxtScriptReloadCoordinatorTests.严格预检在数据段边界停止把商品正文识别为动作命令" storage="D:\workspace\tests\base05.tests\bin\debug\net10.0\base05.tests.dll" id="0eb57ca1-213b-9215-85fa-cc037ec40a0c">
+      <Execution id="2126f659-a60e-4a4b-9895-d6c9a7318797" />
+      <TestMethod codeBase="D:\workspace\Tests\Base05.Tests\bin\Debug\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.TxtScriptReloadCoordinatorTests" name="严格预检在数据段边界停止把商品正文识别为动作命令" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.LingFengUnsupportedTriggerGuardTests.已知缺失上下文的触发在严格快照阶段失败关闭(label: &quot;[@KILLSLAVE]&quot;)" storage="D:\workspace\tests\base05.tests\bin\debug\net10.0\base05.tests.dll" id="a6739383-1856-9e6f-4b01-f35baebddf5f">
+      <Execution id="dd18aba9-a70a-4fab-b929-b844c5ef9400" />
+      <TestMethod codeBase="D:\workspace\Tests\Base05.Tests\bin\Debug\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.LingFengUnsupportedTriggerGuardTests" name="已知缺失上下文的触发在严格快照阶段失败关闭" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.LingFengPlayerCommandTests.人物数值检测支持别名与双边界并拒绝非法参数" storage="D:\workspace\tests\base05.tests\bin\debug\net10.0\base05.tests.dll" id="6364a4d9-2ae2-218b-6bc1-cc42d4b003a4">
+      <Execution id="a95ff561-e1ec-416e-a83d-d073d01a6412" />
+      <TestMethod codeBase="D:\workspace\Tests\Base05.Tests\bin\Debug\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.LingFengPlayerCommandTests" name="人物数值检测支持别名与双边界并拒绝非法参数" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.LingFengUnsupportedTriggerGuardTests.已接入特殊事件的标签不再被严格护栏拒绝(label: &quot;[@ATTACKDAMAGE]&quot;)" storage="D:\workspace\tests\base05.tests\bin\debug\net10.0\base05.tests.dll" id="59f4d0fd-176f-641f-00e8-db4162dcfa07">
+      <Execution id="fc99e3f6-5ce6-402f-9d9a-cfdd414a70bc" />
+      <TestMethod codeBase="D:\workspace\Tests\Base05.Tests\bin\Debug\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.LingFengUnsupportedTriggerGuardTests" name="已接入特殊事件的标签不再被严格护栏拒绝" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.LingFengPlayerCommandTests.高频比较与取反通过真实NPC检测链执行" storage="D:\workspace\tests\base05.tests\bin\debug\net10.0\base05.tests.dll" id="93d5a534-5c32-02f0-8875-0a6e95cbde94">
+      <Execution id="c73f776c-417f-403f-941c-62636b7cfd4f" />
+      <TestMethod codeBase="D:\workspace\Tests\Base05.Tests\bin\Debug\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.LingFengPlayerCommandTests" name="高频比较与取反通过真实NPC检测链执行" />
+    </UnitTest>
+    <UnitTest name="Base05.Tests.LingFengTxtSpecialTriggerIntegrationTests.战斗物品怪物触发经真实脚本管理接缝单次派发且前置可取消" storage="D:\workspace\tests\base05.tests\bin\debug\net10.0\base05.tests.dll" id="3cd2f515-3ec5-db2d-7250-0fcedf5972b5">
+      <Execution id="1c37f535-73ad-4e3f-9a4e-19b71a0ad51c" />
+      <TestMethod codeBase="D:\workspace\Tests\Base05.Tests\bin\Debug\net10.0\Base05.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Base05.Tests.LingFengTxtSpecialTriggerIntegrationTests" name="战斗物品怪物触发经真实脚本管理接缝单次派发且前置可取消" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestEntries>
+    <TestEntry testId="8ec45f3b-4bb3-414c-ef34-250ade3e7475" executionId="7db46643-9a8f-426f-b8e8-82cd9c3f62b8" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="b8a1f046-36fb-26fa-d92e-b7d627b5034f" executionId="282da0d4-00a2-4e78-ab38-7eab42637982" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="decab584-b574-bd5d-1fef-c91e146608c2" executionId="b4663b4e-9ad6-4e38-9389-fd4f838895f1" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="14399572-be52-b8f1-064c-7ea641e15ce1" executionId="bcce588f-fc14-4b50-82a7-6983a15ad6c5" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="0eb57ca1-213b-9215-85fa-cc037ec40a0c" executionId="2126f659-a60e-4a4b-9895-d6c9a7318797" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="0b9e3a9a-6ed5-d893-6185-a26fdc598cfb" executionId="5edb09aa-d095-42ba-ba96-3e4d6446c003" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="59f4d0fd-176f-641f-00e8-db4162dcfa07" executionId="fc99e3f6-5ce6-402f-9d9a-cfdd414a70bc" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="c968fc1f-2866-269c-4775-5cd952afe274" executionId="61d6eac1-09aa-46dc-8b41-36db98a23cb0" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="3324e684-2fc8-a296-ff05-8bb52239c7e9" executionId="adacfa32-8229-4b14-b193-b7b919c74b9b" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="e3d75ecd-e909-2a4f-d44a-7a33cd9a5d69" executionId="0a0f702d-da26-40d3-8352-943465ff3c31" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="3638fbc3-c16e-bf44-e37e-4d0f3c8d93d1" executionId="625119d7-a4c2-4ad8-bd49-b17e175bd7da" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="a39d41d4-e53e-e8f7-32be-b74de46d0208" executionId="986a1796-ff66-40c1-ae00-59d1fea423a1" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="3a4f6e01-d0aa-8b76-37e1-039de145b527" executionId="4a795f22-b560-49b9-a32d-02e87b3d7eb6" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="28bb3ac6-6863-b794-b446-af82e1e83668" executionId="bddc4f5e-74aa-4bcb-845e-d53de274b126" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="f0581f3b-b318-cae9-9a03-54d810ccbbd8" executionId="dbf7593b-b702-4d91-869a-d3d6275c0da9" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="a6739383-1856-9e6f-4b01-f35baebddf5f" executionId="dd18aba9-a70a-4fab-b929-b844c5ef9400" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="a2efd36f-a8dd-0800-9157-f4194b8dd81e" executionId="8519704d-34ac-43a6-a800-88a6484276c3" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="23f03e36-0710-70ae-d60f-fe97b2647644" executionId="3ffb84e3-051d-4cef-977c-a5c1e7f4ca34" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="502457ec-de7a-95ec-21c5-37fdba184131" executionId="2fc811b0-56df-458f-b94f-4ecb8adbcd1f" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="3cd2f515-3ec5-db2d-7250-0fcedf5972b5" executionId="1c37f535-73ad-4e3f-9a4e-19b71a0ad51c" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="90e97213-f3a7-3fd8-6598-708673833898" executionId="598ecefc-a3ad-46d8-b2d0-41cf8e28f51a" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="bbf73150-d31c-75cd-1075-370918b89b97" executionId="f1e719ca-fac0-4ef8-980b-85cdb1124173" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="d42e0ff0-9e74-0270-9b6f-f95c769fb588" executionId="a45ee2fd-53a3-46d9-8c96-52beb41b6e27" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="a8622d47-76ff-6640-bdd1-9a404599b87d" executionId="799bb240-b4ff-478d-815e-9c6febd698cc" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="8c448b55-c283-7555-adec-0a59cf1ce196" executionId="0e0eacd2-d273-4628-a359-bab80d806a98" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="279851e2-ace2-3ed7-60ee-c0dd6e8aa238" executionId="55e3f17a-87d0-4e10-a3fe-a427cc395933" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="eea83c24-b60b-78a2-d8b4-76a245cdada5" executionId="ddb0cb14-fb28-4f02-b003-fcb84bdf796d" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="dbefcc2d-5023-f19a-82ae-7e729e6c2b4a" executionId="efac274d-3ffb-4156-9864-0bbc3699f467" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="b3b9d877-9c2e-c494-dbfa-97cb1da61254" executionId="8d9c3dc3-929e-47b4-a2e9-9552ebcd57c0" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="ec179e29-02fc-5ca2-43ac-c8881dc28564" executionId="687a6244-db3c-4bda-b0fd-ffdf9af4c921" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="4eefcebc-801c-a7d6-ba06-9676aaebbf1b" executionId="a4448172-93cc-4710-bac1-dc7c1174090b" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="63536f73-0690-cb74-c5ec-3aafe3f0132a" executionId="81a93bed-ad6e-4b01-8ca2-32aa9c1a106e" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="77b20728-f7e1-11fb-09f5-cdcab8686b08" executionId="8d241e12-cb19-48d4-922b-545aea37c5dc" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="7c002c7f-421d-ecfb-1035-d8acd38c2159" executionId="40b51d4a-8399-4968-a7d0-95154a145e47" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="4d5f0b7f-7a47-a961-5a79-d4ef95799546" executionId="5cd6ad3e-55e9-41e0-9463-392cf7b27004" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="fd1651d2-28e5-850e-d20f-b6beaf44a902" executionId="4aa0521f-126b-447e-a196-c3949e442f79" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="8c6e57dd-fc8c-156f-3338-51e127fa6645" executionId="1f84c309-a491-4d7c-ba07-c02bdd5e1398" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="93d5a534-5c32-02f0-8875-0a6e95cbde94" executionId="c73f776c-417f-403f-941c-62636b7cfd4f" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="6364a4d9-2ae2-218b-6bc1-cc42d4b003a4" executionId="a95ff561-e1ec-416e-a83d-d073d01a6412" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="9b051de6-c16d-5e75-2d8a-18e9bc64bc00" executionId="864936cf-d005-4439-8920-f329d1d0d615" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="59a67e1c-ed50-92bd-aadd-0d846f5a0d1b" executionId="e742b0a6-eb70-4b80-b8c7-bded061b9d76" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="b9bda093-d61c-fec7-6243-b061da09a84a" executionId="9c00f81e-c0da-4a80-b423-f9b73439e0b8" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="d05aa937-ce00-3f8e-a3ce-6f3812ee8d66" executionId="904cf687-31fe-4a32-a069-7efa4565f7fb" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="76c33a91-2539-9db0-2790-a9238a3a1daf" executionId="5fc6d3d6-a8a0-4ea5-a3ca-b93aec234c1c" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="7c3d1bee-bc76-4a04-fd33-075761277343" executionId="a58008b4-8467-4c15-8d80-3661e515dd2f" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="3101aebe-c371-8ca5-6094-44efb56100c5" executionId="ac87796d-49d9-40d3-a559-d0b661ed2d7b" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="8ffe2172-5b08-a0bc-5e29-f18fcc7dca11" executionId="e7ceaf2d-093d-4da3-b29d-02905176bf84" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="8be12efb-752a-cd93-6c69-be8f2758b650" executionId="2da43802-552c-497b-b9ef-148ec2c8eb5e" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="cdfde3ef-3f09-5d90-0905-19ca7d5b955c" executionId="87fb4433-8489-41aa-8de0-565659848bcb" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+  </TestEntries>
+  <TestLists>
+    <TestList name="列表中未列出的结果" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="所有已加载的结果" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Completed">
+    <Counters total="49" executed="49" passed="49" failed="0" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <Output>
+      <StdOut>[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.0.2+dd36e86129 (64-bit .NET 10.0.4)&#xD;
+[xUnit.net 00:00:00.15]   Discovering: Base05.Tests&#xD;
+[xUnit.net 00:00:00.32]   Discovered:  Base05.Tests&#xD;
+[xUnit.net 00:00:00.36]   Starting:    Base05.Tests&#xD;
+[xUnit.net 00:00:04.38]   Finished:    Base05.Tests&#xD;
+</StdOut>
+    </Output>
+  </ResultSummary>
+</TestRun>

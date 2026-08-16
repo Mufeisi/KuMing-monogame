@@ -247,15 +247,41 @@ namespace Server.MirObjects
 
             if (parts.Length == 0) return;
 
+            bool negated = false;
+            if (IsLingFengCompatibility &&
+                (parts[0].Equals("NOT", StringComparison.OrdinalIgnoreCase) || parts[0] == "!"))
+            {
+                if (parts.Length < 2)
+                    throw new InvalidDataException("NOT/! 后必须提供完整检测命令。");
+                negated = true;
+                parts = parts.Skip(1).ToArray();
+            }
+            else if (IsLingFengCompatibility && parts[0].StartsWith('!') && parts[0].Length > 1)
+            {
+                negated = true;
+                parts[0] = parts[0].Substring(1);
+            }
+
             string tempString, tempString2;
 
             var regexFlag = new Regex(@"\[(.*?)\]");
             var regexQuote = new Regex("\"([^\"]*)\"");
 
             Match quoteMatch;
+            int originalCheckCount = CheckList.Count;
 
             switch (parts[0].ToUpper())
             {
+                case "EQUAL" when IsLingFengCompatibility:
+                case "LARGE" when IsLingFengCompatibility:
+                case "SMALL" when IsLingFengCompatibility:
+                    if (parts.Length != 3)
+                        throw new InvalidDataException($"{parts[0].ToUpperInvariant()} 需要两个比较参数。");
+                    CheckList.Add(new NPCChecks(
+                        CheckType.LingFengCompare,
+                        parts[0].ToUpperInvariant(), parts[1], parts[2]));
+                    break;
+
                 case "LEVEL":
                 case "CHECKLEVEL":
                     if (parts.Length < 3) return;
@@ -617,6 +643,9 @@ namespace Server.MirObjects
                     CheckList.Add(new NPCChecks(CheckType.IsGuildLeader));
                     break;
             }
+
+            if (negated && CheckList.Count == originalCheckCount + 1)
+                CheckList[^1].Negated = true;
 
         }
         public void ParseAct(List<NPCActions> acts, string line)
@@ -2870,6 +2899,33 @@ namespace Server.MirObjects
                                 MessageQueue.Enqueue($"[Variables][TXT] {param[0]} 失败：{result.ErrorCode} {result.Diagnostic}，页码：{Key}");
                         }
                         break;
+                    case CheckType.LingFengCompare:
+                        {
+                            string command = param[0];
+                            string leftValue = param[1];
+                            string rightValue = param[2];
+                            bool matched;
+                            if (command.Equals("EQUAL", StringComparison.OrdinalIgnoreCase))
+                            {
+                                matched = string.Equals(leftValue, rightValue, StringComparison.OrdinalIgnoreCase);
+                            }
+                            else if (decimal.TryParse(leftValue, NumberStyles.Number, CultureInfo.InvariantCulture, out decimal leftNumber) &&
+                                     decimal.TryParse(rightValue, NumberStyles.Number, CultureInfo.InvariantCulture, out decimal rightNumber))
+                            {
+                                matched = command.Equals("LARGE", StringComparison.OrdinalIgnoreCase)
+                                    ? leftNumber > rightNumber
+                                    : leftNumber < rightNumber;
+                            }
+                            else
+                            {
+                                MessageQueue.Enqueue($"[TxtScripts] {command} 需要有效数值，页码：{Key}");
+                                Failed(player);
+                                return false;
+                            }
+
+                            failed = !matched;
+                        }
+                        break;
                     case CheckType.InGuild:
                         if (param[0].Length > 0)
                         {
@@ -3309,6 +3365,7 @@ namespace Server.MirObjects
 
                 }
 
+                if (check.Negated) failed = !failed;
                 if (!failed) continue;
 
                 Failed(player);

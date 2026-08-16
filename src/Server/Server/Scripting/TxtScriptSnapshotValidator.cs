@@ -7,6 +7,9 @@ namespace Server.Scripting
         private static readonly Regex PageRegex = new(
             @"^\s*(\[@[^\]]+\])\s*$",
             RegexOptions.Compiled | RegexOptions.CultureInvariant);
+        private static readonly Regex SectionRegex = new(
+            @"^\s*\[[^\]]+\]\s*$",
+            RegexOptions.Compiled | RegexOptions.CultureInvariant);
         private const int MaximumReferenceDepth = 16;
         private static readonly Regex DirectiveRegex = new(
             @"^\s*#([A-Za-z]+)\b",
@@ -28,7 +31,7 @@ namespace Server.Scripting
             "CHECKWEDDINGRING", "CONQUESTAVAILABLE", "CONQUESTOWNER", "DAYOFWEEK",
             "GROUPCHECKNEARBY", "GROUPCOUNT", "GROUPLEADER", "HASBAGSPACE", "HEROLEVEL", "HOUR",
             "INGUILD", "ISADMIN", "ISGUILDLEADER", "ISNEWHUMAN", "ISQUESTACTIVE", "ISQUESTCOMPLETED", "LEVEL", "MIN", "PETCOUNT",
-            "PETLEVEL", "RANDOM"
+            "PETLEVEL", "RANDOM", "EQUAL", "LARGE", "SMALL", "NOT", "!"
         };
         private static readonly HashSet<string> SupportedActionCommands = new(StringComparer.OrdinalIgnoreCase)
         {
@@ -56,10 +59,9 @@ namespace Server.Scripting
         };
         private static readonly HashSet<string> KnownUnsupportedSystemTriggerLabels = new(StringComparer.OrdinalIgnoreCase)
         {
-            "[@MAGICATTACK]", "[@MAGICSTRUCK]",
-            "[@KILLPLAY]", "[@KILLSLAVE]", "[@GROUPKILLMON]",
+            "[@KILLSLAVE]", "[@GROUPKILLMON]",
             "[@PICKUPITEM]", "[@DROPITEM]",
-            "[@HUMDROPITEM]", "[@ITEMEXPIRED]", "[@PLAYDIE]"
+            "[@HUMDROPITEM]", "[@ITEMEXPIRED]"
         };
 
         public static IReadOnlyList<string> Validate(ITextFileProvider provider)
@@ -129,6 +131,11 @@ namespace Server.Scripting
                 string activeSection = string.Empty;
                 for (int index = 0; index < definition.Lines.Count; index++)
                 {
+                    if (SectionRegex.IsMatch(definition.Lines[index]))
+                    {
+                        activeSection = string.Empty;
+                        continue;
+                    }
                     if (!TxtScriptTokenizer.TryTokenize(
                             definition.Lines[index].TrimStart(), out string[] tokens, out _) || tokens.Length == 0)
                         continue;
@@ -213,6 +220,22 @@ namespace Server.Scripting
             string sourceLocation,
             ICollection<string> errors)
         {
+            if (section.Equals("IF", StringComparison.Ordinal) &&
+                (command.Equals("NOT", StringComparison.OrdinalIgnoreCase) || command == "!"))
+            {
+                if (tokens.Count < 2)
+                {
+                    errors.Add($"TXT-SNAPSHOT-014：NOT/! 后缺少检测命令（{sourceLocation}）。");
+                    return;
+                }
+                command = tokens[1];
+            }
+            else if (section.Equals("IF", StringComparison.Ordinal) &&
+                     command.StartsWith('!') && command.Length > 1)
+            {
+                command = command.Substring(1);
+            }
+
             if (Settings.TxtScriptsStrictCompatibility &&
                 command is not ("{" or "}") &&
                 !command.StartsWith(';') && !command.StartsWith("//", StringComparison.Ordinal) &&

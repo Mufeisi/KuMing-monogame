@@ -145,6 +145,7 @@ public sealed class LingFengTxtSpecialTriggerIntegrationTests
         NPCScript loadedManage = null;
         NPCScript loadedMonster = null;
         NPCScript oldMonsterNpc = Envir.Main.MonsterNPC;
+        NPCScript oldDefaultNpc = Envir.Main.DefaultNPC;
 
         try
         {
@@ -159,6 +160,10 @@ public sealed class LingFengTxtSpecialTriggerIntegrationTests
             File.WriteAllText(Path.Combine(root, "SystemScripts", "QFunction-0.txt"),
                 "[@ATTACKDAMAGE]\n#ACT\nCHANGEDAMAGEVALUE 0 = 0\n" +
                 "[@ATTACK]\n#ACT\nLOCALMESSAGE \"攻击:<$CURRRTARGETNAME>|<$PKPOWER>|<$ATTACKMONSTER_NAME>|<$ATTACKMONSTER_X>|<$ATTACKMONSTER_Y>|<$ATTACKMONSTER_HP>|<$ATTACKMONSTER_MAXHP>|<$CURRRUSEMAGICID>\" System\nGIVEGOLD 1\n" +
+                "[@MAGICATTACK]\n#ACT\nLOCALMESSAGE \"魔法攻击:<$CURRRTARGETNAME>|<$CURRRUSEMAGICID>\" System\n" +
+                "[@MAGICSTRUCK]\n#ACT\nLOCALMESSAGE \"魔法受击:<$KILLER>|<$CURRRUSEMAGICID>\" System\n" +
+                "[@PLAYDIE]\n#ACT\nGIVEGOLD 128\n" +
+                "[@KILLPLAY]\n#ACT\nGIVEGOLD 256\n" +
                 "[@STRUCKDAMAGE]\n#ACT\nCHANGEDAMAGEVALUE 0 = 1\n" +
                 "[@STRUCK]\n#ACT\nLOCALMESSAGE \"受击:<$KILLER>|<$STRUCKHP>\" System\nGIVEGOLD 2\n" +
                 "[@PICKUPITEMEX]\n#ACT\nLOCALMESSAGE \"拾取:<$PICKDROPITEMNAME>|<$CURITEMNAME>\" System\nGIVEGOLD 4\n" +
@@ -179,6 +184,7 @@ public sealed class LingFengTxtSpecialTriggerIntegrationTests
             loadedManage = NPCScript.GetOrAdd(0, "SystemScripts/QManage", NPCScriptType.Called);
             loadedMonster = NPCScript.GetOrAdd(3999991, "00Monster", NPCScriptType.AutoMonster);
             Envir.Main.MonsterNPC = loadedMonster;
+            Envir.Main.DefaultNPC = loadedScript;
 
             Map map = TestMap();
             var attacker = Player("TXT11领域攻击者", map);
@@ -194,6 +200,10 @@ public sealed class LingFengTxtSpecialTriggerIntegrationTests
             // 去掉前置标签后重新发布同一物理快照，真实伤害链应派发 @ATTACK。
             File.WriteAllText(Path.Combine(root, "SystemScripts", "QFunction-0.txt"),
                 "[@ATTACK]\n#ACT\nLOCALMESSAGE \"攻击:<$CURRRTARGETNAME>|<$PKPOWER>|<$ATTACKMONSTER_NAME>|<$ATTACKMONSTER_X>|<$ATTACKMONSTER_Y>|<$ATTACKMONSTER_HP>|<$ATTACKMONSTER_MAXHP>|<$CURRRUSEMAGICID>\" System\nGIVEGOLD 1\n" +
+                "[@MAGICATTACK]\n#ACT\nLOCALMESSAGE \"魔法攻击:<$CURRRTARGETNAME>|<$CURRRUSEMAGICID>\" System\n" +
+                "[@MAGICSTRUCK]\n#ACT\nLOCALMESSAGE \"魔法受击:<$KILLER>|<$CURRRUSEMAGICID>\" System\n" +
+                "[@PLAYDIE]\n#ACT\nGIVEGOLD 128\n" +
+                "[@KILLPLAY]\n#ACT\nGIVEGOLD 256\n" +
                 "[@STRUCKDAMAGE]\n#ACT\nCHANGEDAMAGEVALUE 0 = 1\n" +
                 "[@STRUCK]\n#ACT\nLOCALMESSAGE \"受击:<$KILLER>|<$STRUCKHP>\" System\nGIVEGOLD 2\n" +
                 "[@PICKUPITEMEX]\n#ACT\nLOCALMESSAGE \"拾取:<$PICKDROPITEMNAME>|<$CURITEMNAME>\" System\nGIVEGOLD 4\n" +
@@ -255,6 +265,28 @@ public sealed class LingFengTxtSpecialTriggerIntegrationTests
             Assert.Contains(attacker.Packets.OfType<ServerPackets.Chat>(), packet =>
                 packet.Message == $"攻击:{targetMonster.Name}|5|{targetMonster.Name}|1|0|65|100|{(int)Spell.FlamingSword}" &&
                                   packet.Type == ChatType.System);
+            Assert.Contains(attacker.Packets.OfType<ServerPackets.Chat>(), packet =>
+                packet.Message == $"魔法攻击:{targetMonster.Name}|{(int)Spell.FlamingSword}" &&
+                                  packet.Type == ChatType.System);
+
+            // 已由上面的真实技能延迟攻击证明技能作用域；受击入口复用同一作用域并派发受击方标签。
+            var magicAttacker = Player("TXT14魔法攻击者", map);
+            var magicTarget = Player("TXT14魔法受击者", map);
+            using (LingFengTxtTriggerContext.PushMagic(((int)Spell.FlamingSword).ToString()))
+                Assert.Equal(1, magicTarget.Attacked(
+                    magicAttacker, 5, (DefenceType)byte.MaxValue, false));
+            Assert.Contains(magicTarget.Packets.OfType<ServerPackets.Chat>(), packet =>
+                packet.Message == $"魔法受击:{magicAttacker.Name}|{(int)Spell.FlamingSword}");
+
+            var deathKiller = Player("TXT14击杀者", map);
+            var deathVictim = Player("TXT14死亡者", map);
+            deathVictim.HP = 1;
+            Assert.Equal(1, deathVictim.Attacked(
+                deathKiller, 5, (DefenceType)byte.MaxValue, false));
+            Assert.True(deathVictim.Dead);
+            Assert.Equal(130u, deathVictim.Account.Gold); // @STRUCK 2 + @PLAYDIE 128
+            Assert.Equal(257u, deathKiller.Account.Gold); // @ATTACK 1 + @KILLPLAY 256
+            Assert.Contains(deathVictim.ActionList, action => action.Type == DelayedType.NPC);
 
             var struckPlayer = Player("TXT11领域受击者", map);
             var incomingMonster = Monster(911, "TXT11领域攻击怪", map);
@@ -339,6 +371,7 @@ public sealed class LingFengTxtSpecialTriggerIntegrationTests
             if (loadedManage != null) Envir.Main.Scripts.Remove(loadedManage.ScriptID);
             if (loadedMonster != null) Envir.Main.Scripts.Remove(loadedMonster.ScriptID);
             Envir.Main.MonsterNPC = oldMonsterNpc;
+            Envir.Main.DefaultNPC = oldDefaultNpc;
             Settings.TxtScriptsEnabled = false;
             Envir.Main.ApplyPhysicalTextFileDefinitions();
             Settings.DropGold = oldDropGold;
@@ -542,6 +575,7 @@ public sealed class LingFengTxtSpecialTriggerIntegrationTests
         };
         player.Stats[Stat.HP] = 100;
         player.Info.Mount = new MountInfo(player);
+        player.Report = new Reporting(player);
         return player;
     }
 

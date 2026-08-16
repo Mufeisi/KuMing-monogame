@@ -9,6 +9,46 @@ namespace Base05.Tests;
 public sealed class LingFengPlayerCommandTests
 {
     [Fact]
+    public void 高频比较与取反通过真实NPC检测链执行()
+    {
+        Assert.Equal(56, (int)CheckType.IsGuildLeader);
+        Assert.Equal(57, (int)CheckType.LingFengCompare);
+        bool oldEnabled = Settings.TxtScriptsEnabled;
+        string oldVersion = Settings.TxtScriptsCompatibilityVersion;
+        try
+        {
+            Settings.TxtScriptsEnabled = true;
+            Settings.TxtScriptsCompatibilityVersion = "LFM2-2026-08-15-snapshot";
+            var player = new PlayerObject();
+
+            var matching = Segment();
+            matching.ParseCheck("EQUAL 奖励甲 奖励甲");
+            matching.ParseCheck("LARGE 30 29");
+            matching.ParseCheck("SMALL 29 30");
+            matching.ParseCheck("NOT EQUAL 玩家甲 玩家乙");
+            matching.ParseCheck("!SMALL 30 30");
+
+            Assert.True(matching.Check(player));
+            Assert.Equal(5, matching.CheckList.Count);
+            Assert.True(matching.CheckList[3].Negated);
+            Assert.True(matching.CheckList[4].Negated);
+
+            var existingCheck = Segment();
+            existingCheck.ParseCheck("NOT CHECKLEVEL > 100");
+            Assert.True(existingCheck.CheckList.Single().Negated);
+
+            var failing = Segment();
+            failing.ParseCheck("LARGE 非数字 1");
+            Assert.False(failing.Check(player));
+        }
+        finally
+        {
+            Settings.TxtScriptsEnabled = oldEnabled;
+            Settings.TxtScriptsCompatibilityVersion = oldVersion;
+        }
+    }
+
+    [Fact]
     public void 人物数值检测支持别名与双边界并拒绝非法参数()
     {
         var segment = Segment();
@@ -177,7 +217,8 @@ public sealed class LingFengPlayerCommandTests
             var definition = new TextFileDefinition("NPCs/未知命令")
                 .AddLines(new[]
                 {
-                    "[@MAIN]", "#IF", "NOT_A_CHECK 1", "#ACT", "NOT_AN_ACTION 2"
+                    "[@MAIN]", "#IF", "NOT_A_CHECK 1", "NOT UNKNOWN_CHECK 1",
+                    "#ACT", "NOT_AN_ACTION 2"
                 });
             var provider = new SingleProvider(definition);
 
@@ -188,8 +229,9 @@ public sealed class LingFengPlayerCommandTests
 
             Settings.TxtScriptsCompatibilityVersion = "LFM2-2026-08-15-snapshot";
             IReadOnlyList<string> errors = TxtScriptSnapshotValidator.Validate(provider);
-            Assert.Equal(2, errors.Count(error => error.Contains("TXT-SNAPSHOT-014", StringComparison.Ordinal)));
+            Assert.Equal(3, errors.Count(error => error.Contains("TXT-SNAPSHOT-014", StringComparison.Ordinal)));
             Assert.Contains(errors, error => error.Contains("NOT_A_CHECK", StringComparison.Ordinal));
+            Assert.Contains(errors, error => error.Contains("UNKNOWN_CHECK", StringComparison.Ordinal));
             Assert.Contains(errors, error => error.Contains("NOT_AN_ACTION", StringComparison.Ordinal));
         }
         finally

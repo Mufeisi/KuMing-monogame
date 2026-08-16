@@ -76,13 +76,19 @@ CHANGEDAMAGEVALUE 0 = 0
 
 系统触发只允许同一系统脚本内的即时 `GOTO`，且每次触发共用一个有限预算。`DELAYGOTO`、`GOTOLABEL`、`CALL`、`TIMERECALL`、`TIMERECALLGROUP`、`BREAKTIMERECALL` 和 `GROUPGOTO` 在系统触发上下文中会以 `TXT-RUNTIME-002` 阻断，避免把导航逃逸到后续 tick、其他脚本或其他玩家。系统页的 `#SAY` 使用独立丢弃缓冲，不会污染玩家正在进行的 NPC 对话。
 
+## LFENV-14 魔法与人物死亡触发
+
+- `@MAGICATTACK` 与 `@MAGICSTRUCK` 在真实伤害后置时点执行，只有本次实际生效技能 ID 非零才触发；普通攻击仍只执行 `@ATTACK/@STRUCK`。
+- `@PLAYDIE` 以死亡人物为脚本人物，`<$KILLER>` 来自最终 `LastHitter` 快照；`@KILLPLAY` 以可归属的击杀人物为脚本人物。英雄及人物/英雄宝宝归属到主人，没有人物归属时不执行 `@KILLPLAY`。
+- C# 人物死亡 Handler 已注册时抑制同一 QFunction TXT 触发，即使 Handler 返回未处理也不重复发奖。QFunction `@PLAYDIE/@KILLPLAY` 不替代旧 DefaultNPC `[@_Die]`，两套页面按各自语义执行。
+- 高频检测支持 `EQUAL 左值 右值`、`LARGE 左值 右值`、`SMALL 左值 右值`，以及放在任一单检测前的 `NOT` 或 `!`。大于/小于只接受十进制数，错误参数失败关闭。
+
 ## 明确未开放
 
-- `@PLAYDIE` 仍为 D：当前玩家死亡 Hook 没有翎风文档要求的完整击杀来源和人物/英雄/分身/宝宝分类，不能用只含死亡玩家的上下文冒充。
 - 英雄专用、地图区域、计时器和社会系统触发只有在事件时点、取消能力、上下文、异常、重入和耗时预算全部验证后才能升级状态。
 - 不允许同时由 C# 与 TXT 执行同一个升级奖励；迁移期间以 C# Handler 的“已处理”结果作为去重边界。
 
-严格模式仍会以 `TXT-SNAPSHOT-016` 阻止上下文不完整的标签，包括 `@MAGICATTACK`、`@MAGICSTRUCK`、`@KILLPLAY`、`@KILLSLAVE`、`@GROUPKILLMON`、`@PICKUPITEM`、`@DROPITEM`、`@HUMDROPITEM`、`@ITEMEXPIRED` 和 `@PLAYDIE`。不能用相近事件冒充这些标签。
+严格模式仍会以 `TXT-SNAPSHOT-016` 阻止上下文不完整的标签，包括 `@KILLSLAVE`、`@GROUPKILLMON`、`@PICKUPITEM`、`@DROPITEM`、`@HUMDROPITEM` 和 `@ITEMEXPIRED`。不能用相近事件冒充这些标签。
 
 ## 排错
 

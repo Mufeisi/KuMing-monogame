@@ -69,8 +69,8 @@ public sealed class LingFengTxtCompatibilityCatalogTests
 
         Assert.Equal(496, rows.Count);
         Assert.Equal(51, statuses["B"]);
-        Assert.Equal(10, statuses["C"]);
-        Assert.Equal(327, statuses["D"]);
+        Assert.Equal(15, statuses["C"]);
+        Assert.Equal(322, statuses["D"]);
         Assert.Equal(83, statuses["E"]);
         Assert.Equal(25, statuses["X"]);
         Assert.False(statuses.ContainsKey("?"));
