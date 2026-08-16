@@ -1492,13 +1492,17 @@ namespace Server.MirObjects
             }
         }
 
-        public List<string> ParseSay(PlayerObject player, List<string> speech)
+        public List<string> ParseSay(
+            PlayerObject player,
+            List<string> speech,
+            uint? invocationNpcObjectId = null)
         {
             for (var i = 0; i < speech.Count; i++)
             {
                 if (IsLingFengCompatibility && speech[i].Contains("<$", StringComparison.Ordinal))
                 {
-                    ScriptTextRenderResult rendered = LingFengP0ServerSymbols.Render(player, speech[i]);
+                    ScriptTextRenderResult rendered = LingFengP0ServerSymbols.Render(
+                        player, speech[i], invocationNpcObjectId);
                     ReportServerSymbolDiagnostics(rendered);
                     speech[i] = rendered.Text;
                     if (!CanUseLegacyServerSymbolFallback(rendered))
@@ -1517,11 +1521,15 @@ namespace Server.MirObjects
             return speech;
         }
 
-        public string ReplaceValue(PlayerObject player, string param)
+        public string ReplaceValue(
+            PlayerObject player,
+            string param,
+            uint? invocationNpcObjectId = null)
         {
             if (IsLingFengCompatibility && param.Contains("<$", StringComparison.Ordinal))
             {
-                ScriptTextRenderResult rendered = LingFengP0ServerSymbols.Render(player, param);
+                ScriptTextRenderResult rendered = LingFengP0ServerSymbols.Render(
+                    player, param, invocationNpcObjectId);
                 ReportServerSymbolDiagnostics(rendered);
                 if (!string.Equals(rendered.Text, param, StringComparison.Ordinal))
                     param = rendered.Text;

@@ -379,7 +379,7 @@ P0 每项必须确认别名，例如当前项目的 `CLASS/MAPNAME/X_COORD/Y_COO
 | 5 | LFENV-05 P0 人物/服务器常量 | 已验证 | Player/Server/Equipment Adapter | P0 清单自动化与真实 NPC 页面全部通过 |
 | 6 | LFENV-06 P1 事件常量 | 已验证 | Combat/Item/Trigger Adapter | 53 个 P1 规范名已接入；专项 88/88、Base05 全量 780/780，通过双轴审查且真实链无上下文污染 |
 | 7 | LFENV-07 P2 英雄/宠物常量 | 已验证 | Hero/Pet Adapter 或 E 清单 | 有模型的逐项通过，无模型的依赖和迁移策略明确 |
-| 8 | LFENV-08 P3/P4 与实时常量 | 未开始 | 行会/攻城/高级系统/客户端契约 | 服务端与客户端值来源一致；敏感项失败关闭 |
+| 8 | LFENV-08 P3/P4 与实时常量 | 已验证 | 行会/攻城/高级系统/客户端契约 | 服务端与客户端值来源一致；敏感项失败关闭 |
 | 9 | LFENV-09 Envir 文件分类 | 未开始 | Classifier 与所有权清单 | 代表样本未归属文件为 0，运行数据不会被覆盖 |
 | 10 | LFENV-10 系统/机器人调度 | 未开始 | QManage/QFunction/Robot 调度 | 启动、周期、固定时刻、停服和重入预算通过 |
 | 11 | LFENV-11 爆率与怪物内容 | 未开始 | MonItems/MonUseItems/SmartMonster Provider | 真实怪物掉落、装备和配置差分通过 |
@@ -436,6 +436,14 @@ P0 每项必须确认别名，例如当前项目的 `CLASS/MAPNAME/X_COORD/Y_COO
 - 宝宝从 `PlayerObject.Pets` 当前存活集合按现有集合顺序选择首个对象；`SLAVECOUNT` 统计存活对象，多宝宝选择确定且跳过死亡对象。`PET.CURTARGETFULLNAME` 使用怪物配置全名，`PET.CURTARGETNAME` 使用游戏显示名；无存活宝宝或无存活目标时，对象常量保留原占位符。
 - 当前项目没有英雄转生、忠诚、怒气、内功、独立攻人/攻怪倍率、战斗力、加星、吸收伤害字段，也没有宠物 MP 或宠物逐次伤害事件快照；对应项保持 E，依赖分别为新的英雄成长领域模型或宠物伤害事件 seam。宠物击杀名称已通过真实最终伤害来源接入。英雄当前物品、过期物品、改名和目标主人也缺少可证明的事件上下文，保持 E。P4 时装、生肖盒、首饰盒由 LFENV-08 继续判定，本阶段不提前伪造。
 - LFENV-07 目录更新后，“直接”服务器常量真实语料的 B/C 覆盖为 `88,896 / 108,296 = 82.09%`，首次达到 GATE-C0 的 80% 覆盖门槛；E/X 调用不计入兼容覆盖，也不以空值吞掉。
+
+### 7.6 LFENV-08 实施边界
+
+- P3 运行时目录首批只登记当前项目有等价只读来源的 9 个规范名：`CASTLENAME/CASTLEGOLD/OWNERGUILD/CASTLEWARDATE/LISTOFWAR/GUILDMASTER1/GUILDMASTER2/GUILDWARFEE/REQUESTBUILDGUILDITEM`。城堡上下文优先取当前 NPC 绑定的 `ConquestObject`，其次取人物所属行会城堡，最后按城堡索引稳定选择服务器默认城堡；不得因来访人物不属于城主行会而隐藏全局城堡拥有者。
+- `GUILDMASTER1/2` 只读取当前人物行会的会长职级成员，未入行会时保留占位符；`GUILDWARFEE` 和创建行会所需物品只读取公开服务器配置。费用和物品常量不得读取账户、背包或秘密配置，也不得执行扣费。
+- `CASTLEWARDATE` 当前只能返回本进程已知的最近战争开始时间，项目没有持久化翎风攻城申请日期与上次占领日期；`LISTOFWAR` 只能按城堡索引列出已申请或进行中的城堡名称，缺少翎风原生排版和逐次申请日期。两项均以 C 和 `CompatibilitySubstitute` 返回，不冒充完整兼容。
+- `CASTLEGETDAYS/CASTLECHANGEDATE/CASTLEWARLASTDATE/REQUESTCASTLEWARDAY/BUILDGUILDFEE/CASTLEDOORSTATE` 缺少等价持久字段或已确认显示契约，保持 E。官网、论坛、客户端下载地址和币种显示名没有明确公开运营配置，高等级/PK/攻击/魔法/道术摘要没有等价的持久排行榜字段，也保持 E；银行账号、电话、QQ、机器路径等敏感项继续 X，禁止从环境变量、注册表或秘密存储推导。
+- LFENV-08 首批目录更新后，“直接”服务器常量真实语料的 B/C 覆盖为 `89,169 / 108,296 = 82.34%`。覆盖门槛已满足，但后续整服验收仍以未知常量、未知命令和真实玩法探针为零为准，不能用覆盖率替代逐项兼容。
 
 ## 8. 测试设计
 

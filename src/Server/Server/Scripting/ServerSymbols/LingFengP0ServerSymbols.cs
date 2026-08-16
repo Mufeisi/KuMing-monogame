@@ -34,14 +34,21 @@ namespace Server.Scripting.ServerSymbols
             .Where(definition => definition.TestIds.Contains("LFENV07-P2", StringComparer.Ordinal))
             .Select(definition => definition.CanonicalName)
             .ToArray();
+        internal static IReadOnlyList<string> P3CanonicalNames => Catalog.Definitions
+            .Where(definition => definition.TestIds.Contains("LFENV08-P3", StringComparer.Ordinal))
+            .Select(definition => definition.CanonicalName)
+            .ToArray();
 
-        internal static ScriptTextRenderResult Render(PlayerObject player, string text)
+        internal static ScriptTextRenderResult Render(
+            PlayerObject player,
+            string text,
+            uint? invocationNpcObjectId = null)
         {
             if (player == null) throw new ArgumentNullException(nameof(player));
             string source = text ?? string.Empty;
             try
             {
-                return Renderer.Render(CreateContext(player), source);
+                return Renderer.Render(CreateContext(player, invocationNpcObjectId), source);
             }
             catch
             {
@@ -62,7 +69,9 @@ namespace Server.Scripting.ServerSymbols
             }
         }
 
-        internal static ServerSymbolContext CreateContext(PlayerObject player)
+        internal static ServerSymbolContext CreateContext(
+            PlayerObject player,
+            uint? invocationNpcObjectId = null)
         {
             if (player == null) throw new ArgumentNullException(nameof(player));
 
@@ -238,6 +247,8 @@ namespace Server.Scripting.ServerSymbols
 
             availableContexts |= HeroSymbolAdapter.AppendBindings(player, bindings);
             availableContexts |= PetSymbolAdapter.AppendBindings(player, bindings);
+            availableContexts |= GuildConquestSymbolAdapter.AppendBindings(
+                player, bindings, invocationNpcObjectId);
 
             return new ServerSymbolContext(
                 availableContexts,
@@ -322,6 +333,7 @@ namespace Server.Scripting.ServerSymbols
 
             HeroSymbolAdapter.AppendDefinitions(definitions);
             PetSymbolAdapter.AppendDefinitions(definitions);
+            GuildConquestSymbolAdapter.AppendDefinitions(definitions);
 
             if (!ServerSymbolCatalog.TryCreate(definitions, out ServerSymbolCatalog catalog, out string diagnostic))
                 throw new InvalidOperationException(diagnostic);

@@ -3399,7 +3399,8 @@ namespace Server.Scripting
                 {
                     var parserPage = new NPCPage("[@_CSharpResolve]");
                     var parserSegment = new NPCSegment(parserPage, new List<string>(), new List<string>(), new List<string>(), new List<string>(), new List<string>());
-                    value = parserSegment.ReplaceValue(player, value);
+                    value = parserSegment.ReplaceValue(
+                        player, value, call?.NpcObjectID);
                 }
 
                 return value;

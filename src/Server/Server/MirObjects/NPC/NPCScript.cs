@@ -1485,7 +1485,8 @@ namespace Server.MirObjects
                         {
                             var parserPage = new NPCPage(key);
                             var parserSegment = new NPCSegment(parserPage, new List<string>(), new List<string>(), new List<string>(), new List<string>(), new List<string>());
-                            speech = parserSegment.ParseSay(player, speech);
+                            speech = parserSegment.ParseSay(
+                                player, speech, objectID);
                         }
 
                         player.NPCSpeech = speech;

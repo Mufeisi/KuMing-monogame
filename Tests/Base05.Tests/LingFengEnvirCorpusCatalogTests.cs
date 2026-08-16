@@ -115,6 +115,27 @@ public sealed class LingFengEnvirCorpusCatalogTests
                 Assert.Contains("依赖缺失", row["当前实现"], StringComparison.Ordinal);
                 Assert.Contains("不得", row["已知差异或实施结论"], StringComparison.Ordinal);
             }
+            else if (row["测试编号"] == "LFENV08-P3")
+            {
+                Assert.Contains(row["兼容状态"], new[] { "B", "C" });
+                Assert.Contains("GuildConquestSymbolAdapter", row["当前实现"], StringComparison.Ordinal);
+                Assert.Contains("LFENV-08", row["已知差异或实施结论"], StringComparison.Ordinal);
+                if (row["兼容状态"] == "C")
+                    Assert.Contains("兼容", row["已知差异或实施结论"], StringComparison.Ordinal);
+            }
+            else if (row["测试编号"] == "LFENV08-E")
+            {
+                Assert.Equal("E", row["兼容状态"]);
+                Assert.Contains("依赖缺失", row["当前实现"], StringComparison.Ordinal);
+                Assert.Contains("不得", row["已知差异或实施结论"], StringComparison.Ordinal);
+            }
+            else if (row["测试编号"] == "LFENV08-X")
+            {
+                Assert.Equal("X", row["兼容状态"]);
+                Assert.Equal("敏感", row["安全等级"]);
+                Assert.Contains("安全策略拒绝", row["当前实现"], StringComparison.Ordinal);
+                Assert.Contains("禁止", row["已知差异或实施结论"], StringComparison.Ordinal);
+            }
             else
             {
                 Assert.Equal("LFENV-CATALOG-001", row["测试编号"]);
@@ -128,9 +149,38 @@ public sealed class LingFengEnvirCorpusCatalogTests
         AssertSymbol(rows, "索引", "BOXITEM[].NAME", "物品事件", "5360");
         Assert.Equal(109, rows.Count(row => row["测试编号"] == "LFENV07-P2"));
         Assert.Equal(48, rows.Count(row => row["测试编号"] == "LFENV07-E"));
+        Assert.Equal(17, rows.Count(row => row["测试编号"] == "LFENV08-P3"));
+        Assert.Equal(28, rows.Count(row => row["测试编号"] == "LFENV08-E"));
+        Assert.Equal(24, rows.Count(row => row["测试编号"] == "LFENV08-X"));
         Assert.Equal(
             LingFengP0ServerSymbols.P2CanonicalNames.OrderBy(name => name, StringComparer.Ordinal),
             rows.Where(row => row["测试编号"] == "LFENV07-P2")
+                .Select(row => row["规范名称"])
+                .Distinct(StringComparer.Ordinal)
+                .OrderBy(name => name, StringComparer.Ordinal));
+        Assert.Equal(
+            new[]
+            {
+                "BBSSITE", "BUILDGUILDFEE", "CASTLECHANGEDATE", "CASTLEDOORSTATE",
+                "CASTLEGETDAYS", "CASTLEWARLASTDATE", "CLIENTDOWNLOAD", "GAMEGOLDNAME",
+                "HIGHDCINFO", "HIGHLEVELINFO", "HIGHMCINFO", "HIGHPKINFO", "HIGHSCINFO",
+                "REQUESTCASTLEWARDAY", "WEBSITE"
+            },
+            rows.Where(row => row["测试编号"] == "LFENV08-E")
+                .Select(row => row["规范名称"])
+                .Distinct(StringComparer.Ordinal)
+                .OrderBy(name => name, StringComparer.Ordinal));
+        Assert.Equal(
+            Enumerable.Range(0, 10).Select(index => $"BANKACCOUNT{index}")
+                .Concat(new[] { "PHONE", "QQ" })
+                .OrderBy(name => name, StringComparer.Ordinal),
+            rows.Where(row => row["测试编号"] == "LFENV08-X")
+                .Select(row => row["规范名称"])
+                .Distinct(StringComparer.Ordinal)
+                .OrderBy(name => name, StringComparer.Ordinal));
+        Assert.Equal(
+            LingFengP0ServerSymbols.P3CanonicalNames.OrderBy(name => name, StringComparer.Ordinal),
+            rows.Where(row => row["测试编号"] == "LFENV08-P3")
                 .Select(row => row["规范名称"])
                 .Distinct(StringComparer.Ordinal)
                 .OrderBy(name => name, StringComparer.Ordinal));
