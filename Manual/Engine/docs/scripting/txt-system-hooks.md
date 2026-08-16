@@ -36,6 +36,22 @@ MOV P0 1
 
 翎风布局的 `MapQuest_def/QManage.txt` 与 `Robot_def/ROBOTMANAGE.TXT` 已分别映射到 `SystemScripts/QManage` 和 `SystemScripts/RobotManage`；`QFunction-0` 使用 `SystemScripts/QFunction-0`。这些文件仍属于统一候选快照，编码、引用、严格命令、变量声明或标签验证失败时整批回滚。
 
+## 定时机器人
+
+`Robot_def/AUTORUNROBOT.TXT` 映射到 `SystemScripts/AutoRunRobot`，示例：
+
+```text
+#AutoRun NPC SEC 5 @五秒任务
+#AutoRun NPC MIN 10 @十分钟任务
+#AutoRun NPC HOUR 2 @两小时任务
+#AutoRun NPC RUNONDAY 20:30 @每日任务
+#AutoRun NPC RUNONWEEK 5:19:55 @每周五任务
+```
+
+对应页面必须写在 `Robot_def/ROBOTMANAGE.TXT` 中，例如 `[@五秒任务]`。标签大小写不敏感，但名称必须完整一致；不会把 `Mir2_`、数字前缀或 `RM` 后缀做模糊纠正。缺少 RobotManage 或目标标签会拒绝整个候选并保留上一成功版本。`RUNONDAY` 接受 `HH:mm` 或 `HH:mm:ss`，`RUNONWEEK` 使用 `0=星期日` 至 `6=星期六` 的 `日:时:分[:秒]` 格式。
+
+周期任务在发布成功后开始计时，固定时刻任务按服务器本地时间运行。单次主循环最多执行 128 个到期页，递归进入会被拒绝；一个页面异常不阻断同 tick 的其他页面。任何候选语法或编码错误都会拒绝整次热更新并继续使用上一成功版本；服务停止后全部调度立即清空。
+
 ## 战斗前置与取消
 
 `@ATTACKDAMAGE` 在玩家造成物理伤害的计算前执行，`@STRUCKDAMAGE` 在玩家受到物理伤害的计算前执行。二者共享当前 `PlayerDamageRequest`，仅允许通过 `CHANGEDAMAGEVALUE` 修改伤害字段（0）或防御字段（1）：

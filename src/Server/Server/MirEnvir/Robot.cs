@@ -1,5 +1,6 @@
 ﻿using Server.MirObjects;
 using System.Text.RegularExpressions;
+using Server.Scripting;
 
 namespace Server.MirEnvir
 {
@@ -21,6 +22,7 @@ namespace Server.MirEnvir
         private static bool CheckMinute;
         private static DateTime NextCheck;
         private static readonly List<Robot> Robots = new List<Robot>();
+        private static readonly LingFengRobotScheduler LingFengScheduler = new();
 
         private static void SetNextCheck()
         {
@@ -46,7 +48,15 @@ namespace Server.MirEnvir
         public static void Clear()
         {
             Robots.Clear();
+            CheckHour = false;
+            CheckMinute = false;
+            NextCheck = default;
+            LingFengScheduler.Stop();
         }
+
+        public static void PublishLingFengSchedules(
+            LingFengRobotScheduleSnapshot snapshot,
+            DateTime now) => LingFengScheduler.Publish(snapshot, now);
 
         private bool IsMatch(DateTime date)
         {
@@ -69,13 +79,19 @@ namespace Server.MirEnvir
         }
 
         public static void Process(NPCScript script)
+            => ProcessAt(script, Envir.Now);
+
+        internal static void ProcessAt(NPCScript script, DateTime now)
         {
-            if (NextCheck > Envir.Now)
+            if (script == null) return;
+            LingFengScheduler.Process(now, script.Call, (page, error) =>
+                MessageQueue.Instance.Enqueue($"[TxtScripts][LFENV10-ROBOT-006] Robot 页面执行失败：{page}，{error.GetType().Name}。"));
+            if (NextCheck > now)
             {
                 return;
             }
 
-            var matches = Robots.Where(x => x.IsMatch(Envir.Now));
+            var matches = Robots.Where(x => x.IsMatch(now));
 
             foreach (var match in matches)
             {

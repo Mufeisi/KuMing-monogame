@@ -181,6 +181,9 @@ namespace Server.Scripting
             else if (directory.Equals("Robot_def", StringComparison.OrdinalIgnoreCase)
                      && nestedPath.Equals("ROBOTMANAGE.txt", StringComparison.OrdinalIgnoreCase))
                 mappedPath = "SystemScripts/RobotManage";
+            else if (directory.Equals("Robot_def", StringComparison.OrdinalIgnoreCase)
+                     && nestedPath.Equals("AUTORUNROBOT.txt", StringComparison.OrdinalIgnoreCase))
+                mappedPath = "SystemScripts/AutoRunRobot";
             else
                 return false;
 

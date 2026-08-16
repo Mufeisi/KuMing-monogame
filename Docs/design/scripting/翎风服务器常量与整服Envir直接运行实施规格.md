@@ -381,7 +381,7 @@ P0 每项必须确认别名，例如当前项目的 `CLASS/MAPNAME/X_COORD/Y_COO
 | 7 | LFENV-07 P2 英雄/宠物常量 | 已验证 | Hero/Pet Adapter 或 E 清单 | 有模型的逐项通过，无模型的依赖和迁移策略明确 |
 | 8 | LFENV-08 P3/P4 与实时常量 | 已验证 | 行会/攻城/高级系统/客户端契约 | 服务端与客户端值来源一致；敏感项失败关闭 |
 | 9 | LFENV-09 Envir 文件分类 | 已验证 | Classifier 与所有权清单 | 代表样本未归属文件为 0，运行数据不会被覆盖 |
-| 10 | LFENV-10 系统/机器人调度 | 未开始 | QManage/QFunction/Robot 调度 | 启动、周期、固定时刻、停服和重入预算通过 |
+| 10 | LFENV-10 系统/机器人调度 | 已验证 | QManage/QFunction/Robot 调度 | 启动、周期、固定时刻、停服和重入预算通过 |
 | 11 | LFENV-11 爆率与怪物内容 | 未开始 | MonItems/MonUseItems/SmartMonster Provider | 真实怪物掉落、装备和配置差分通过 |
 | 12 | LFENV-12 地图与刷怪 | 未开始 | MapInfo/Mongen/MapQuest Provider | 冷启动、刷怪、区域和地图切换通过 |
 | 13 | LFENV-13 商店/配方/列表 | 未开始 | Commerce/RuleList Provider | 事务原子、权限、库存和列表加载通过 |
@@ -449,9 +449,18 @@ P0 每项必须确认别名，例如当前项目的 `CLASS/MAPNAME/X_COORD/Y_COO
 
 - `LingFengEnvirFileClassifier` 是翎风 Envir 文件唯一归属 seam；分类优先级固定为路径安全、备份归档、运行数据、可执行工件、文档附件、客户端契约、脚本、领域配置和未归属阻断，同一文件只返回一个所有者与规则 ID。
 - 只有所有者为 `Script` 的文件可以进入 `PhysicalTextFileProvider`。`UserData/Market_Saved/Market_Storage/Market_SellOff` 和 `prc/sav/dat/sell/gold/db` 等运行数据始终只保留、不覆盖；备份、文档、客户端契约与领域配置等待各自阶段处理，不得被 TXT 热更新接管。
-- `Market_Def/Npc_def/QuestDiary/DeFines` 的合法 TXT、根级或 `Market_Def` 下的 `QFunction-0`，以及 `QManage/RobotManage` 系统入口映射为脚本逻辑 Key；脚本命名空间内不能形成合法 Key 的文件和未知扩展名均拒绝整个候选，不静默降级为普通配置。
+- `Market_Def/Npc_def/QuestDiary/DeFines` 的合法 TXT、根级或 `Market_Def` 下的 `QFunction-0`，以及 `QManage/RobotManage/AutoRunRobot` 系统入口映射为脚本逻辑 Key；脚本命名空间内不能形成合法 Key 的文件和未知扩展名均拒绝整个候选，不静默降级为普通配置。
 - `QFunction-0` 同时存在于根目录和 `Market_Def` 时属于已知目录别名冲突，确定性选择 `Market_Def` 标准入口；仅存在根级文件时作为同一系统入口回退。其他重复逻辑 Key 继续拒绝候选，不扩大通用覆盖规则。
 - 规则事实清单为 `Docs/generated/scripting/lingfeng-envir-file-ownership.csv`。24 个版本家族代表样本逐文件扫描时，隐藏、系统和重解析点沿用画像排除边界；其余文件必须全部唯一归属，未归属为零。
+
+### 7.8 LFENV-10 实施边界
+
+- `Robot_def/AUTORUNROBOT.TXT` 映射为 `SystemScripts/AutoRunRobot`，只接受 `#AutoRun NPC SEC/MIN/HOUR/RUNONDAY/RUNONWEEK`。间隔必须为正整数且不超过 365 天；每日和每周时点使用服务器本地时间，每周编号固定为 `0=星期日` 至 `6=星期六`。
+- `Robot_def/ROBOTMANAGE.TXT` 映射为 `SystemScripts/RobotManage`。翎风模式加载全部 `[@标签]`，调度只按大小写不敏感的完整标签调用，不对残缺或错配的参考服内容做前后缀猜测；AutoRun 存在时缺少 RobotManage 或任一目标标签都会拒绝整个候选。
+- 调度快照只在物理 TXT 候选验证成功后替换。语法、编码或其他候选验证失败时继续使用上一成功快照；重载不保留旧任务的下一到期时间，避免新旧版本混合执行。
+- 调度运行在现有服务器主循环；每个 tick 默认最多执行 128 个到期页，硬上限 4,096。递归进入同一调度器时拒绝本次重入；单页异常只记录固定错误类别并继续其他到期页，不把脚本文本或宿主路径写入诊断。
+- 周期任务从发布时点开始计算首次到期；每日或每周任务若恰好在发布当秒则允许执行。服务停止、Robot 重载清理或禁用物理 TXT 时必须清除候选与旧式 Robot 状态，后续 tick 不再派发。
+- `QManage` 的登录页与 `QFunction-0` 的生命周期、战斗、拾取、击杀和掉落页继续复用既有系统 Hook、主线程、异常隔离和即时跳转预算。本阶段不新增事件语义，也不进入爆率、地图或刷怪 Provider。
 
 ## 8. 测试设计
 

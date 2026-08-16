@@ -40,6 +40,7 @@ public sealed class LingFengEnvirFileClassifierTests
     [InlineData("QuestDiary/主线/第一章.txt", LingFengEnvirFileOwner.Script, true, "questdiary/主线/第一章")]
     [InlineData("MapQuest_def/QManage.txt", LingFengEnvirFileOwner.Script, true, "systemscripts/qmanage")]
     [InlineData("Robot_def/ROBOTMANAGE.TXT", LingFengEnvirFileOwner.Script, true, "systemscripts/robotmanage")]
+    [InlineData("Robot_def/AUTORUNROBOT.TXT", LingFengEnvirFileOwner.Script, true, "systemscripts/autorunrobot")]
     [InlineData("DeFines/公共/变量.txt", LingFengEnvirFileOwner.Script, true, "defines/公共/变量")]
     [InlineData("UserData/UserData.dat", LingFengEnvirFileOwner.RuntimeData, false, null)]
     [InlineData("Market_Saved/摆摊记录.txt", LingFengEnvirFileOwner.RuntimeData, false, null)]

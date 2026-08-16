@@ -567,7 +567,7 @@ namespace Server.MirEnvir
         public static long LastRunTime = 0;
         public int MonsterCount;
 
-        private long warTime, guildTime, conquestTime, rentalItemsTime, auctionTime, spawnTime, robotTime, timerTime;
+        private long warTime, guildTime, conquestTime, rentalItemsTime, auctionTime, spawnTime, timerTime;
         private int dailyTime = DateTime.Now.Day;
         private long dailyVariablePeriod;
 
@@ -1514,11 +1514,7 @@ namespace Server.MirEnvir
                 Main.RespawnTick.Process();
             }
 
-            if (Time >= robotTime)
-            {
-                robotTime = Time + Settings.Minute;
-                Robot.Process(RobotNPC);
-            }
+            Robot.Process(RobotNPC);
 
             if (Time >= timerTime)
             {
@@ -4124,6 +4120,7 @@ namespace Server.MirEnvir
 
             _txtScriptReloadCoordinator?.Dispose();
             _txtScriptReloadCoordinator = null;
+            Robot.Clear();
             FreezeAndCancelPendingMainThreadWork();
 
             try

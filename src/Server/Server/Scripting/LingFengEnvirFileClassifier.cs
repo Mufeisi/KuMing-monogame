@@ -112,6 +112,11 @@ namespace Server.Scripting
                 logicKey = LogicKey.NormalizeOrThrow("SystemScripts/QFunction-0");
                 return true;
             }
+            if (normalized.Equals("Robot_def/AUTORUNROBOT.txt", StringComparison.OrdinalIgnoreCase))
+            {
+                logicKey = LogicKey.NormalizeOrThrow("SystemScripts/AutoRunRobot");
+                return true;
+            }
             int separator = normalized.IndexOf('/');
             if (separator <= 0) return false;
             string directory = normalized[..separator];

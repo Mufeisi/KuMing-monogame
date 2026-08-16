@@ -333,7 +333,11 @@ namespace Server.MirObjects
             }
 
             string npcFileKey;
-            if (Type == NPCScriptType.Called &&
+            if (Type == NPCScriptType.Robot &&
+                physicalTxtActive &&
+                Settings.TxtScriptsCompatibilityVersion.StartsWith("LFM2-", StringComparison.OrdinalIgnoreCase))
+                npcFileKey = "SystemScripts/RobotManage";
+            else if (Type == NPCScriptType.Called &&
                 (FileName.Contains('/') || FileName.Contains('\\')) &&
                 LogicKey.TryNormalize(FileName, out string calledKey))
                 npcFileKey = calledKey;
@@ -445,10 +449,37 @@ namespace Server.MirObjects
                     break;
                 case NPCScriptType.AutoPlayer:
                 case NPCScriptType.AutoMonster:
-                case NPCScriptType.Robot:
                     ParseDefault(lines);
                     break;
+                case NPCScriptType.Robot:
+                    if (physicalTxtActive &&
+                        Settings.TxtScriptsCompatibilityVersion.StartsWith("LFM2-", StringComparison.OrdinalIgnoreCase))
+                        ParseLingFengRobot(lines);
+                    else
+                        ParseDefault(lines);
+                    break;
             }
+        }
+
+        private void ParseLingFengRobot(List<string> lines)
+        {
+            foreach (string label in lines
+                         .Select(line => line?.Trim())
+                         .Where(line => !string.IsNullOrEmpty(line) &&
+                                        line.StartsWith("[@", StringComparison.Ordinal) &&
+                                        line.EndsWith(']'))
+                         .Distinct(StringComparer.OrdinalIgnoreCase))
+                NPCPages.Add(ParsePage(lines, label));
+            if (Envir.TextFileProvider?.GetByKey("SystemScripts/AutoRunRobot") is not TextFileDefinition definition)
+            {
+                Robot.PublishLingFengSchedules(
+                    new LingFengRobotScheduleSnapshot(Array.Empty<LingFengRobotScheduleEntry>()), Envir.Now);
+                return;
+            }
+            if (!LingFengRobotScheduleProvider.TryCreate(
+                    definition, out LingFengRobotScheduleSnapshot snapshot, out IReadOnlyList<string> errors))
+                throw new InvalidDataException(string.Join(";", errors));
+            Robot.PublishLingFengSchedules(snapshot, Envir.Now);
         }
 
         private bool TryApplyCSharpShopDefinition()

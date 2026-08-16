@@ -69,8 +69,17 @@ namespace Server.Scripting
             var errors = new List<string>();
             var pagesByKey = new Dictionary<string, HashSet<string>>(StringComparer.Ordinal);
             var includeGraph = new Dictionary<string, HashSet<string>>(StringComparer.Ordinal);
+            LingFengRobotScheduleSnapshot robotSchedules = null;
             foreach (TextFileDefinition definition in provider.GetAll())
             {
+                if (definition.Key.Equals("systemscripts/autorunrobot", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (!LingFengRobotScheduleProvider.TryCreate(
+                            definition, out robotSchedules, out IReadOnlyList<string> scheduleErrors))
+                        errors.AddRange(scheduleErrors);
+                    pagesByKey[definition.Key] = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                    continue;
+                }
                 var pages = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                 for (int index = 0; index < definition.Lines.Count; index++)
                 {
@@ -96,8 +105,27 @@ namespace Server.Scripting
                 pagesByKey[definition.Key] = pages;
             }
 
+            if (robotSchedules != null)
+            {
+                if (!pagesByKey.TryGetValue(
+                        LogicKey.NormalizeOrThrow("SystemScripts/RobotManage"), out HashSet<string> robotPages))
+                {
+                    errors.Add("LFENV10-ROBOT-008：存在 AutoRunRobot 调度定义，但缺少 SystemScripts/RobotManage 页面脚本。");
+                }
+                else
+                {
+                    foreach (LingFengRobotScheduleEntry schedule in robotSchedules.Entries)
+                    {
+                        if (!robotPages.Contains(schedule.Page))
+                            errors.Add($"LFENV10-ROBOT-009：Robot 调度标签不存在 {schedule.Page}（AutoRunRobot:{schedule.SourceLine}）。");
+                    }
+                }
+            }
+
             foreach (TextFileDefinition definition in provider.GetAll())
             {
+                if (definition.Key.Equals("systemscripts/autorunrobot", StringComparison.OrdinalIgnoreCase))
+                    continue;
                 string activeSection = string.Empty;
                 for (int index = 0; index < definition.Lines.Count; index++)
                 {
