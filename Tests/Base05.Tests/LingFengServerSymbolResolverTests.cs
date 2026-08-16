@@ -45,6 +45,31 @@ public sealed class LingFengServerSymbolResolverTests
     }
 
     [Fact]
+    public void ResolverUsesIndexedCatalogIdentityAndPassesDynamicIndexAsArgument()
+    {
+        ServerSymbolCatalog catalog = Catalog(Definition(
+            "BOXITEM[].NAME",
+            ServerSymbolValueType.String,
+            ServerSymbolContextKind.Item,
+            parameterForm: "BOXITEM[index].NAME"));
+        ServerSymbolContext context = new ServerSymbolContext(
+            ServerSymbolContextKind.Item,
+            ServerSymbolBinding.Dynamic(
+                ServerSymbolContextKind.Item,
+                "BOXITEM[].NAME",
+                reference => ServerSymbolValue.FromString(reference.Arguments.Single())));
+        IServerSymbolResolver resolver = new ServerSymbolResolver(catalog);
+
+        ServerSymbolResult result = resolver.Resolve(
+            context,
+            ServerSymbolReference.Parse("<$ boxitem[ STR(N0) ].name >"));
+
+        Assert.Equal(ServerSymbolStatus.Resolved, result.Status);
+        Assert.Equal("BOXITEM[].NAME", result.CanonicalName);
+        Assert.Equal("STR(N0)", result.Value.Format());
+    }
+
+    [Fact]
     public void ResolverFormatsNumericValuesWithoutDependingOnCurrentCulture()
     {
         ServerSymbolCatalog catalog = Catalog(Definition(

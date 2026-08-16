@@ -135,7 +135,7 @@ namespace Server.Scripting.ServerSymbols
                 return AtomicFailure(text, state);
             }
 
-            string rendered = RenderFragment(context, text, 0, 0, state);
+            string rendered = RenderFragment(context, text, 0, 0, false, state);
             if (state.FatalStatus.HasValue) return AtomicFailure(text, state);
 
             ScriptTextRenderStatus status = state.Diagnostics.Count > 0
@@ -151,13 +151,14 @@ namespace Server.Scripting.ServerSymbols
             string fragment,
             int nestingDepth,
             int sourceOffset,
+            bool skipQuotedPlaceholders,
             RenderState state)
         {
             var output = new StringBuilder(Math.Min(fragment.Length, state.Limits.MaximumOutputLength));
             int cursor = 0;
             while (cursor < fragment.Length)
             {
-                int start = fragment.IndexOf("<$", cursor, StringComparison.Ordinal);
+                int start = FindNextPlaceholderStart(fragment, cursor, skipQuotedPlaceholders);
                 if (start < 0)
                 {
                     output.Append(fragment, cursor, fragment.Length - cursor);
@@ -193,9 +194,13 @@ namespace Server.Scripting.ServerSymbols
                 string originalToken = fragment.Substring(start, end - start + 1);
                 string inner = fragment.Substring(start + 2, end - start - 2);
                 int diagnosticsBeforeNested = state.Diagnostics.Count;
-                string renderedInner = inner.Contains("<$", StringComparison.Ordinal)
-                    ? RenderFragment(context, inner, currentDepth, sourceOffset + start + 2, state)
-                    : inner;
+                string renderedInner = RenderFragment(
+                    context,
+                    inner,
+                    currentDepth,
+                    sourceOffset + start + 2,
+                    true,
+                    state);
                 if (state.FatalStatus.HasValue) return fragment;
 
                 if (state.Diagnostics.Count > diagnosticsBeforeNested)
@@ -208,16 +213,11 @@ namespace Server.Scripting.ServerSymbols
                 ServerSymbolReference reference = ServerSymbolReference.Parse("<$" + renderedInner + ">");
                 if (!reference.IsValid)
                 {
-                    state.Diagnostics.Add(new ScriptTextDiagnostic(
-                        ScriptTextDiagnosticCode.InvalidSyntax,
-                        ServerSymbolStatus.InvalidReference,
-                        string.Empty,
+                    state.FailSyntax(
                         sourceOffset + start,
                         originalToken.Length,
-                        "服务器常量引用语法无效。"));
-                    output.Append(originalToken);
-                    cursor = end + 1;
-                    continue;
+                        "服务器常量引用语法无效。");
+                    return fragment;
                 }
 
                 ServerSymbolResult result;
@@ -233,6 +233,14 @@ namespace Server.Scripting.ServerSymbols
                         "服务器常量解析失败。");
                 }
 
+                if (result.Status == ServerSymbolStatus.InvalidReference)
+                {
+                    state.FailSyntax(
+                        sourceOffset + start,
+                        originalToken.Length,
+                        "服务器常量引用参数或索引无效。");
+                    return fragment;
+                }
                 if (result.Success)
                     output.Append(result.Value.Format());
                 else
@@ -270,18 +278,6 @@ namespace Server.Scripting.ServerSymbols
             var frames = new List<PlaceholderScanFrame> { default };
             for (int index = start + 2; index < text.Length; index++)
             {
-                if (index + 1 < text.Length && text[index] == '<' && text[index + 1] == '$')
-                {
-                    if (frames.Count >= maximumDepth)
-                    {
-                        nestingLimitExceeded = true;
-                        return -1;
-                    }
-                    frames.Add(default);
-                    index++;
-                    continue;
-                }
-
                 int frameIndex = frames.Count - 1;
                 PlaceholderScanFrame frame = frames[frameIndex];
                 if (frame.Quoted)
@@ -293,6 +289,18 @@ namespace Server.Scripting.ServerSymbols
                     else if (text[index] == '"')
                         frame.Quoted = false;
                     frames[frameIndex] = frame;
+                    continue;
+                }
+
+                if (index + 1 < text.Length && text[index] == '<' && text[index + 1] == '$')
+                {
+                    if (frames.Count >= maximumDepth)
+                    {
+                        nestingLimitExceeded = true;
+                        return -1;
+                    }
+                    frames.Add(default);
+                    index++;
                     continue;
                 }
 
@@ -317,6 +325,35 @@ namespace Server.Scripting.ServerSymbols
                     continue;
                 }
                 frames[frameIndex] = frame;
+            }
+            return -1;
+        }
+
+        private static int FindNextPlaceholderStart(string text, int start, bool skipQuotedPlaceholders)
+        {
+            if (!skipQuotedPlaceholders)
+                return text.IndexOf("<$", start, StringComparison.Ordinal);
+
+            bool quoted = false;
+            bool escaped = false;
+            for (int index = start; index + 1 < text.Length; index++)
+            {
+                if (quoted)
+                {
+                    if (escaped)
+                        escaped = false;
+                    else if (text[index] == '\\')
+                        escaped = true;
+                    else if (text[index] == '"')
+                        quoted = false;
+                    continue;
+                }
+                if (text[index] == '"')
+                {
+                    quoted = true;
+                    continue;
+                }
+                if (text[index] == '<' && text[index + 1] == '$') return index;
             }
             return -1;
         }
@@ -355,7 +392,7 @@ namespace Server.Scripting.ServerSymbols
             public ScriptTextRenderStatus? FatalStatus { get; private set; }
             public List<ScriptTextDiagnostic> Diagnostics { get; } = new List<ScriptTextDiagnostic>();
 
-            public void FailSyntax(int position, int length)
+            public void FailSyntax(int position, int length, string message = "服务器常量占位符未闭合或括号不匹配。")
             {
                 if (FatalStatus.HasValue) return;
                 FatalStatus = ScriptTextRenderStatus.InvalidSyntax;
@@ -365,7 +402,7 @@ namespace Server.Scripting.ServerSymbols
                     string.Empty,
                     position,
                     length,
-                    "服务器常量占位符未闭合或括号不匹配。"));
+                    message));
             }
 
             public void FailLimit(int position, int length, string message)

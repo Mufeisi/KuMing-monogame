@@ -85,6 +85,16 @@ namespace Server.Scripting.ServerSymbols
         private static int CountParameters(string parameterForm)
         {
             if (string.IsNullOrWhiteSpace(parameterForm)) return 0;
+            if (parameterForm.Contains('[', StringComparison.Ordinal))
+            {
+                int openBracket = parameterForm.IndexOf('[');
+                int closeBracket = parameterForm.IndexOf(']', openBracket + 1);
+                if (openBracket <= 0 || closeBracket <= openBracket + 1 ||
+                    parameterForm.IndexOf('[', openBracket + 1) >= 0 ||
+                    parameterForm.IndexOf(']', closeBracket + 1) >= 0)
+                    throw new ArgumentException("服务器常量索引参数形式无效。", nameof(parameterForm));
+                return 1;
+            }
             int open = parameterForm.IndexOf('(');
             if (open <= 0 || !parameterForm.EndsWith(")", StringComparison.Ordinal))
                 throw new ArgumentException("服务器常量参数形式无效。", nameof(parameterForm));

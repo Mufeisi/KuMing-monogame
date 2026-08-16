@@ -51,6 +51,104 @@ public sealed class LingFengScriptTextRendererTests
     }
 
     [Fact]
+    public void RendererTreatsPlaceholderTextInsideQuotedFunctionArgumentAsLiteral()
+    {
+        IScriptTextRenderer renderer = new ScriptTextRenderer(new FixtureResolver());
+
+        ScriptTextRenderResult result = renderer.Render(
+            ServerSymbolContext.Empty,
+            "<$STR(\"<$USERNAME>\")>");
+
+        Assert.Equal(ScriptTextRenderStatus.Rendered, result.Status);
+        Assert.Equal("[\"<$USERNAME>\"]", result.Text);
+        Assert.Equal(1, result.PlaceholderCount);
+    }
+
+    [Fact]
+    public void RendererNormalizesDynamicIndexAndMemberBeforeCallingResolver()
+    {
+        IScriptTextRenderer renderer = new ScriptTextRenderer(new FixtureResolver());
+
+        ScriptTextRenderResult result = renderer.Render(
+            ServerSymbolContext.Empty,
+            "物品=<$ item[ 0 ].name >");
+
+        Assert.Equal(ScriptTextRenderStatus.Rendered, result.Status);
+        Assert.Equal("物品=青铜剑", result.Text);
+        Assert.Empty(result.Diagnostics);
+    }
+
+    [Fact]
+    public void RendererKeepsIndexedExpressionInsideFunctionArgument()
+    {
+        IScriptTextRenderer renderer = new ScriptTextRenderer(new FixtureResolver());
+
+        ScriptTextRenderResult result = renderer.Render(
+            ServerSymbolContext.Empty,
+            "<$STR(ITEM[0])>");
+
+        Assert.Equal(ScriptTextRenderStatus.Rendered, result.Status);
+        Assert.Equal("[ITEM[0]]", result.Text);
+    }
+
+    [Fact]
+    public void RendererTreatsUnknownIndexedMemberAsUnsupportedWithoutHidingDiagnostic()
+    {
+        IScriptTextRenderer renderer = new ScriptTextRenderer(new FixtureResolver());
+        const string source = "<$USERNAME><$ITEM[0].NOTREAL>";
+
+        ScriptTextRenderResult result = renderer.Render(ServerSymbolContext.Empty, source);
+
+        Assert.Equal(ScriptTextRenderStatus.CompletedWithDiagnostics, result.Status);
+        Assert.Equal("阿明<$ITEM[0].NOTREAL>", result.Text);
+        Assert.Single(result.Diagnostics);
+        Assert.Equal(ServerSymbolStatus.Unsupported, result.Diagnostics[0].SymbolStatus);
+        Assert.Equal("ITEM[].NOTREAL", result.Diagnostics[0].CanonicalName);
+    }
+
+    [Fact]
+    public void RendererDoesNotMisclassifySquareBracketInsideQuotedFunctionArgument()
+    {
+        IScriptTextRenderer renderer = new ScriptTextRenderer(new FixtureResolver());
+
+        ScriptTextRenderResult result = renderer.Render(
+            ServerSymbolContext.Empty,
+            "<$STR(\"a[b]\")>");
+
+        Assert.Equal(ScriptTextRenderStatus.Rendered, result.Status);
+        Assert.Equal("[\"a[b]\"]", result.Text);
+    }
+
+    [Theory]
+    [InlineData("<$USERNAME><$1BAD>")]
+    [InlineData("<$USERNAME><$BADARGS>")]
+    [InlineData("<$USERNAME><$ITEM[-1].NAME>")]
+    public void RendererRollsBackWholeLineWhenAnyReferenceSyntaxIsInvalid(string source)
+    {
+        IScriptTextRenderer renderer = new ScriptTextRenderer(new FixtureResolver());
+
+        ScriptTextRenderResult result = renderer.Render(ServerSymbolContext.Empty, source);
+
+        Assert.Equal(ScriptTextRenderStatus.InvalidSyntax, result.Status);
+        Assert.Equal(source, result.Text);
+        Assert.Single(result.Diagnostics);
+        Assert.Equal(ScriptTextDiagnosticCode.InvalidSyntax, result.Diagnostics[0].Code);
+    }
+
+    [Fact]
+    public void RendererPreservesBackslashLineBreakAndColorMarkup()
+    {
+        IScriptTextRenderer renderer = new ScriptTextRenderer(new FixtureResolver());
+
+        ScriptTextRenderResult result = renderer.Render(
+            ServerSymbolContext.Empty,
+            "{FCOLOR/10}第一行\\\r\n第二行<$USERNAME>{FCOLOR/0}");
+
+        Assert.Equal(ScriptTextRenderStatus.Rendered, result.Status);
+        Assert.Equal("{FCOLOR/10}第一行\\\r\n第二行阿明{FCOLOR/0}", result.Text);
+    }
+
+    [Fact]
     public void RendererRejectsUnclosedPlaceholderWithoutReturningPartialOutput()
     {
         IScriptTextRenderer renderer = new ScriptTextRenderer(new FixtureResolver());
@@ -100,6 +198,16 @@ public sealed class LingFengScriptTextRendererTests
                 "LEVEL" => ServerSymbolResult.Resolved("LEVEL", ServerSymbolValue.FromInteger(42)),
                 "STR" when reference.Arguments.Count == 1 =>
                     ServerSymbolResult.Resolved("STR", ServerSymbolValue.FromString($"[{reference.Arguments[0]}]")),
+                "ITEM[].NAME" when reference.Arguments.SequenceEqual(new[] { "0" }) =>
+                    ServerSymbolResult.Resolved("ITEM[].NAME", ServerSymbolValue.FromString("青铜剑")),
+                "ITEM[].NAME" => ServerSymbolResult.Fail(
+                    ServerSymbolStatus.InvalidReference,
+                    "ITEM[].NAME",
+                    "索引越界。"),
+                "BADARGS" => ServerSymbolResult.Fail(
+                    ServerSymbolStatus.InvalidReference,
+                    "BADARGS",
+                    "参数非法。"),
                 "NEEDSPLAYER" => ServerSymbolResult.Fail(
                     ServerSymbolStatus.ContextUnavailable,
                     "NEEDSPLAYER",

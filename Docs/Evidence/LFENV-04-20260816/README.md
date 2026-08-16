@@ -1,6 +1,6 @@
 # LFENV-04 验证证据
 
-- 状态：已实施
+- 状态：已验证
 - 负责人：项目所有者 / Codex
 - 验证日期：2026-08-16
 - 范围：统一服务器常量文本渲染、嵌套扫描、结构化诊断与资源限额
@@ -20,13 +20,13 @@
 dotnet test Tests\Base05.Tests\Base05.Tests.csproj -c Release --no-restore --filter "FullyQualifiedName~LingFengScriptTextRendererTests|FullyQualifiedName~LingFengServerSymbolResolverTests" --logger "trx;LogFileName=lfenv-04-targeted.trx"
 ```
 
-专项结果：16/16 通过，0 失败，0 跳过。TRX：`lfenv-04-targeted.trx`。
+专项结果：26/26 通过，0 失败，0 跳过。TRX：`lfenv-04-targeted.trx`。
 
-随后执行 Base05 全量回归：719/719 通过，0 失败，0 跳过，用时 2 分 15 秒。TRX：`lfenv-04-full.trx`。提交版 TRX 已脱敏用户名、设备名和用户目录，不改变测试计数与结果。
+随后执行 Base05 全量回归：729/729 通过，0 失败，0 跳过，用时 2 分 19 秒。TRX：`lfenv-04-full.trx`。提交版 TRX 已脱敏用户名、设备名和用户目录，不改变测试计数与结果。
 
 ## SHA-256
 
-- `lfenv-04-targeted.trx`：`87ECF79B2EAB70C98970B94C5BD55CE68D59C0447D0667CB29E39E14464BC2E8`
-- `lfenv-04-full.trx`：`5ABFA9BAD5DC7886AB3941EAAC2BD5B68D2F23C2B6A9AB2FA762DED2AD57D3BF`
+- `lfenv-04-targeted.trx`：`B19346180F8BF4B5D8410235D79CDA3EFD2AD1F98EDC90EA6AB2818DC7C04C80`
+- `lfenv-04-full.trx`：`F5880EFBB4CB4FB1468437AC20049271DC57A29F4209FD3E6CD865E451020B0E`
 
-哈希对应双轴审查前的完整实现与测试工作树；审查若要求修改源码或测试，必须重跑并刷新证据。
+哈希对应双轴审查修复后的最终实现与测试工作树；后续阶段若修改本模块或专项测试，必须重跑并刷新证据。

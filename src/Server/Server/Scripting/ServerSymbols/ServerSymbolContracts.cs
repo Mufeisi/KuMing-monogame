@@ -198,6 +198,17 @@ namespace Server.Scripting.ServerSymbols
                 return Invalid();
 
             int open = body.IndexOf('(');
+            int bracket = body.IndexOf('[');
+            if (bracket >= 0 && (open < 0 || bracket < open))
+            {
+                if (!TryParseIndexed(body, out string indexedName, out string indexArgument))
+                    return Invalid();
+                return new ServerSymbolReference(
+                    true,
+                    indexedName,
+                    new ReadOnlyCollection<string>(new List<string> { indexArgument }),
+                    string.Empty);
+            }
             string name = open < 0 ? body : body.Substring(0, open).Trim();
             if (!TryNormalizeName(name, out string normalizedName)) return Invalid();
 
@@ -218,7 +229,31 @@ namespace Server.Scripting.ServerSymbols
             if (string.IsNullOrWhiteSpace(name)) return false;
 
             string candidate = name.Trim();
-            if (candidate.Length > 96 || !char.IsLetter(candidate[0])) return false;
+            int indexedMarker = candidate.IndexOf("[]", StringComparison.Ordinal);
+            if (indexedMarker >= 0)
+            {
+                if (candidate.IndexOf("[]", indexedMarker + 2, StringComparison.Ordinal) >= 0) return false;
+                string baseName = candidate.Substring(0, indexedMarker);
+                string suffix = candidate.Substring(indexedMarker + 2);
+                if (!TryNormalizePlainName(baseName, out string normalizedBase)) return false;
+                if (suffix.Length == 0)
+                {
+                    normalized = normalizedBase + "[]";
+                    return true;
+                }
+                if (!suffix.StartsWith(".", StringComparison.Ordinal) ||
+                    !TryNormalizePlainName(suffix.Substring(1), out string normalizedSuffix)) return false;
+                normalized = normalizedBase + "[]." + normalizedSuffix;
+                return true;
+            }
+
+            return TryNormalizePlainName(candidate, out normalized);
+        }
+
+        private static bool TryNormalizePlainName(string candidate, out string normalized)
+        {
+            normalized = string.Empty;
+            if (candidate.Length == 0 || candidate.Length > 96 || !char.IsLetter(candidate[0])) return false;
             for (int i = 1; i < candidate.Length; i++)
             {
                 char current = candidate[i];
@@ -227,6 +262,25 @@ namespace Server.Scripting.ServerSymbols
             }
 
             normalized = candidate.ToUpperInvariant();
+            return true;
+        }
+
+        private static bool TryParseIndexed(string body, out string normalizedName, out string argument)
+        {
+            normalizedName = string.Empty;
+            argument = string.Empty;
+            int open = body.IndexOf('[');
+            int close = body.IndexOf(']', open + 1);
+            if (open <= 0 || close < 0 || body.IndexOf('[', open + 1) >= 0 || body.IndexOf(']', close + 1) >= 0)
+                return false;
+
+            string index = body.Substring(open + 1, close - open - 1).Trim();
+            if (index.Length == 0 || index.Length > 256) return false;
+
+            string suffix = body.Substring(close + 1).Trim();
+            string catalogName = body.Substring(0, open).Trim() + "[]" + suffix;
+            if (!TryNormalizeName(catalogName, out normalizedName)) return false;
+            argument = index;
             return true;
         }
 
