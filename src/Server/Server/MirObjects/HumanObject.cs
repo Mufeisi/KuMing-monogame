@@ -7405,6 +7405,7 @@ namespace Server.MirObjects
         public override Packet GetInfo() { return null; }
         public override int Attacked(HumanObject attacker, int damage, DefenceType type = DefenceType.ACAgility, bool damageWeapon = true)
         {
+            MapObject damageActor = attacker;
             if (attacker.Race == ObjectType.Hero)
             {
                 HeroObject heroAttacker = (HeroObject)attacker;
@@ -7465,7 +7466,8 @@ namespace Server.MirObjects
                         damage,
                         armour,
                         type,
-                        damageWeaponFlag);
+                        damageWeaponFlag,
+                        damageActor);
 
                     Envir.CSharpScripts.TryHandlePlayerDamageBefore(attackerPlayer, req, tryCSharpBefore);
 
@@ -7490,7 +7492,8 @@ namespace Server.MirObjects
                         damage,
                         armour,
                         type,
-                        damageWeaponFlag);
+                        damageWeaponFlag,
+                        damageActor);
 
                     Envir.CSharpScripts.TryHandlePlayerDamageBefore(targetPlayer, req, tryCSharpBefore);
 
@@ -7654,7 +7657,8 @@ namespace Server.MirObjects
                             damageWeaponFlag,
                             critical,
                             appliedDamage,
-                            scriptDecision), tryCSharpAfter);
+                            scriptDecision,
+                            damageActor), tryCSharpAfter);
                 }
 
                 if (targetPlayer != null && !ReferenceEquals(targetPlayer, attackerPlayer))
@@ -7671,7 +7675,8 @@ namespace Server.MirObjects
                             damageWeaponFlag,
                             critical,
                             appliedDamage,
-                            scriptDecision), tryCSharpAfter);
+                            scriptDecision,
+                            damageActor), tryCSharpAfter);
                 }
             }
 

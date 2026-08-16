@@ -83,7 +83,7 @@ namespace Server.MirObjects.Monsters
 
             Broadcast(new S.ObjectStruck { ObjectID = ObjectID, AttackerID = attacker.ObjectID, Direction = Direction, Location = CurrentLocation });
 
-            ChangeHP(armour - damage);
+            ChangeHPFrom(armour - damage, attacker);
             return 1;
         }
         public override int Attacked(HumanObject attacker, int damage, DefenceType type = DefenceType.ACAgility, bool damageWeapon = true)
@@ -139,7 +139,7 @@ namespace Server.MirObjects.Monsters
             Broadcast(new S.ObjectStruck { ObjectID = ObjectID, AttackerID = attacker.ObjectID, Direction = Direction, Location = CurrentLocation });
             attacker.GatherElement();
 
-            ChangeHP(armour - damage);
+            ChangeHPFrom(armour - damage, attacker);
             return 1;
         }
 

@@ -30,6 +30,10 @@ namespace Server.Scripting.ServerSymbols
             .Where(definition => definition.TestIds.Contains("LFENV06-P1", StringComparer.Ordinal))
             .Select(definition => definition.CanonicalName)
             .ToArray();
+        internal static IReadOnlyList<string> P2CanonicalNames => Catalog.Definitions
+            .Where(definition => definition.TestIds.Contains("LFENV07-P2", StringComparer.Ordinal))
+            .Select(definition => definition.CanonicalName)
+            .ToArray();
 
         internal static ScriptTextRenderResult Render(PlayerObject player, string text)
         {
@@ -232,6 +236,9 @@ namespace Server.Scripting.ServerSymbols
                 availableContexts |= eventContext;
             }
 
+            availableContexts |= HeroSymbolAdapter.AppendBindings(player, bindings);
+            availableContexts |= PetSymbolAdapter.AppendBindings(player, bindings);
+
             return new ServerSymbolContext(
                 availableContexts,
                 bindings.ToArray());
@@ -312,6 +319,9 @@ namespace Server.Scripting.ServerSymbols
                     "ATTACKMONSTER_Y", "ATTACKMONSTER_YEX", "ATTACKMONSTER_HPEX" }, "LFENV06-P1");
             AddDefinitions(definitions, ServerSymbolValueType.Integer, monsterTargetContext,
                 new[] { "ATTACKMONSTER_HP", "ATTACKMONSTER_MAXHP", "ATTACKMONSTER_MAXHPEX" }, "LFENV06-P1");
+
+            HeroSymbolAdapter.AppendDefinitions(definitions);
+            PetSymbolAdapter.AppendDefinitions(definitions);
 
             if (!ServerSymbolCatalog.TryCreate(definitions, out ServerSymbolCatalog catalog, out string diagnostic))
                 throw new InvalidOperationException(diagnostic);

@@ -689,6 +689,10 @@ namespace Server.MirObjects
         public long TameTime;
         public bool DieNextTurn;
 
+        // 仅保留本次伤害来源类别，不持有领域对象引用，也不改变经验归属。
+        internal Server.Scripting.LingFengCombatActorKind LingFengLastDamageActorKind;
+        internal string LingFengLastDamageOwnerName;
+
         public int RoutePoint;
         public bool Waiting;
         public bool GMMade;
@@ -969,10 +973,17 @@ namespace Server.MirObjects
             BroadcastHealthChange();
         }
 
+        protected void ChangeHPFrom(int amount, MapObject attacker)
+        {
+            if (amount < 0)
+                RecordLingFengDamageActor(attacker);
+            ChangeHP(amount);
+        }
+
         //use this so you can have mobs take no/reduced poison damage
         public virtual void PoisonDamage(int amount, MapObject Attacker)
         {
-            ChangeHP(amount);
+            ChangeHPFrom(amount, Attacker);
         }
 
 
@@ -1052,6 +1063,9 @@ namespace Server.MirObjects
                 Envir.MonsterNPC.Call(monster: this, key: key);
             }
 
+            LingFengLastDamageActorKind = Server.Scripting.LingFengCombatActorKind.Unknown;
+            LingFengLastDamageOwnerName = null;
+
             if (EXPOwner != null && EXPOwner.Node != null && Master == null && (EXPOwner.Race == ObjectType.Player || EXPOwner.Race == ObjectType.Hero))
             {
                 EXPOwner.WinExp(Experience, Level);
@@ -1094,6 +1108,8 @@ namespace Server.MirObjects
             SetHP(hp);
 
             Dead = false;
+            LingFengLastDamageActorKind = Server.Scripting.LingFengCombatActorKind.Unknown;
+            LingFengLastDamageOwnerName = null;
             ActionTime = Envir.Time + RevivalDelay;
 
             Broadcast(new S.ObjectRevived { ObjectID = ObjectID, Effect = effect });
@@ -2974,7 +2990,7 @@ namespace Server.MirObjects
 
             var appliedDamage = damage - armour;
 
-            ChangeHP(armour - damage);
+            ChangeHPFrom(armour - damage, attacker);
 
             if (allowCSharpAfter && attackerPlayer != null)
             {
@@ -3056,8 +3072,35 @@ namespace Server.MirObjects
 
             BroadcastDamageIndicator(DamageType.Hit, armour - damage);
 
-            ChangeHP(armour - damage);
+            ChangeHPFrom(armour - damage, attacker);
             return damage - armour;
+        }
+
+        private void RecordLingFengDamageActor(MapObject actor)
+        {
+            switch (actor)
+            {
+                case HeroObject hero:
+                    LingFengLastDamageActorKind = Server.Scripting.LingFengCombatActorKind.Hero;
+                    LingFengLastDamageOwnerName = hero.Owner?.Name;
+                    break;
+                case MonsterObject monster when monster.Master is PlayerObject owner:
+                    LingFengLastDamageActorKind = Server.Scripting.LingFengCombatActorKind.Pet;
+                    LingFengLastDamageOwnerName = owner.Name;
+                    break;
+                case MonsterObject monster when monster.Master is HeroObject heroOwner:
+                    LingFengLastDamageActorKind = Server.Scripting.LingFengCombatActorKind.Pet;
+                    LingFengLastDamageOwnerName = heroOwner.Owner?.Name;
+                    break;
+                case PlayerObject player:
+                    LingFengLastDamageActorKind = Server.Scripting.LingFengCombatActorKind.Player;
+                    LingFengLastDamageOwnerName = player.Name;
+                    break;
+                default:
+                    LingFengLastDamageActorKind = Server.Scripting.LingFengCombatActorKind.Unknown;
+                    LingFengLastDamageOwnerName = null;
+                    break;
+            }
         }
 
         public override int Struck(int damage, DefenceType type = DefenceType.ACAgility)
@@ -3088,6 +3131,7 @@ namespace Server.MirObjects
             if (armour >= damage) return 0;
             Broadcast(new S.ObjectStruck { ObjectID = ObjectID, AttackerID = 0, Direction = Direction, Location = CurrentLocation });
 
+            RecordLingFengDamageActor(null);
             ChangeHP(armour - damage);
             return damage - armour;
         }

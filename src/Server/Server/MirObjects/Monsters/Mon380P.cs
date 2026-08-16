@@ -65,7 +65,7 @@ namespace Server.MirObjects.Monsters
             ShockTime = 0;
 
             int actualDamage = Math.Max(0, damage - armour);
-            ChangeHP(-actualDamage);
+            ChangeHPFrom(-actualDamage, attacker);
 
             return actualDamage;
         }

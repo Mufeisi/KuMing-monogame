@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Text.RegularExpressions;
 using Microsoft.VisualBasic.FileIO;
+using Server.Scripting.ServerSymbols;
 using Xunit;
 
 namespace Base05.Tests;
@@ -71,14 +72,14 @@ public sealed class LingFengEnvirCorpusCatalogTests
         IReadOnlyList<IReadOnlyDictionary<string, string>> rows =
             ReadCsv("lingfeng-server-symbols.csv");
 
-        Assert.Equal(905, rows.Count);
+        Assert.Equal(906, rows.Count);
         Assert.Equal(rows.Count, rows.Select(row => row["ID"]).Distinct(StringComparer.Ordinal).Count());
         Assert.Equal(rows.Count, rows
             .Select(row => $"{row["符号种类"]}|{row["规范名称"]}")
             .Distinct(StringComparer.OrdinalIgnoreCase).Count());
         Assert.Equal(281, rows.Count(row => row["符号种类"] == "附件原文" && row["附件出现"] == "是"));
         Assert.Equal(513, rows.Count(row => row["真实语料次数"] != "0"));
-        Assert.Equal(new[] { "B", "C", "D", "X" }, rows
+        Assert.Equal(new[] { "B", "C", "D", "E", "X" }, rows
             .Select(row => row["兼容状态"])
             .Distinct(StringComparer.Ordinal)
             .Order(StringComparer.Ordinal));
@@ -102,6 +103,18 @@ public sealed class LingFengEnvirCorpusCatalogTests
                 if (row["兼容状态"] == "C")
                     Assert.Contains("兼容", row["已知差异或实施结论"], StringComparison.Ordinal);
             }
+            else if (row["测试编号"] == "LFENV07-P2")
+            {
+                Assert.Equal("B", row["兼容状态"]);
+                Assert.Contains("SymbolAdapter", row["当前实现"], StringComparison.Ordinal);
+                Assert.Contains("LFENV-07", row["已知差异或实施结论"], StringComparison.Ordinal);
+            }
+            else if (row["测试编号"] == "LFENV07-E")
+            {
+                Assert.Equal("E", row["兼容状态"]);
+                Assert.Contains("依赖缺失", row["当前实现"], StringComparison.Ordinal);
+                Assert.Contains("不得", row["已知差异或实施结论"], StringComparison.Ordinal);
+            }
             else
             {
                 Assert.Equal("LFENV-CATALOG-001", row["测试编号"]);
@@ -113,6 +126,14 @@ public sealed class LingFengEnvirCorpusCatalogTests
         AssertSymbol(rows, "直接", "KILLMONNAME", "战斗事件", "4183");
         AssertSymbol(rows, "函数", "STR()", "变量表达式", "507158");
         AssertSymbol(rows, "索引", "BOXITEM[].NAME", "物品事件", "5360");
+        Assert.Equal(109, rows.Count(row => row["测试编号"] == "LFENV07-P2"));
+        Assert.Equal(48, rows.Count(row => row["测试编号"] == "LFENV07-E"));
+        Assert.Equal(
+            LingFengP0ServerSymbols.P2CanonicalNames.OrderBy(name => name, StringComparer.Ordinal),
+            rows.Where(row => row["测试编号"] == "LFENV07-P2")
+                .Select(row => row["规范名称"])
+                .Distinct(StringComparer.Ordinal)
+                .OrderBy(name => name, StringComparer.Ordinal));
     }
 
     [Fact]

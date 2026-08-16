@@ -2,11 +2,34 @@ using System;
 
 namespace Server.Scripting
 {
+    public enum LingFengCombatActorKind
+    {
+        Unknown,
+        Player,
+        Hero,
+        Pet
+    }
+
     public readonly record struct LingFengMonsterKillEvent(
         string MonsterName,
         int X,
         int Y,
-        uint Experience);
+        uint Experience,
+        LingFengCombatActorKind ActorKind = LingFengCombatActorKind.Unknown)
+    {
+        public LingFengMonsterKillEvent(string monsterName, int x, int y, uint experience)
+            : this(monsterName, x, y, experience, LingFengCombatActorKind.Unknown)
+        {
+        }
+
+        public void Deconstruct(out string monsterName, out int x, out int y, out uint experience)
+        {
+            monsterName = MonsterName;
+            x = X;
+            y = Y;
+            experience = Experience;
+        }
+    }
 
     public enum LingFengItemTriggerKind
     {
@@ -34,7 +57,59 @@ namespace Server.Scripting
         int TargetY = 0,
         int TargetHp = 0,
         int TargetMaxHp = 0,
-        string MagicId = "0");
+        string MagicId = "0",
+        LingFengCombatActorKind ActorKind = LingFengCombatActorKind.Unknown)
+    {
+        public LingFengDamageEvent(
+            PlayerDamagePerspective perspective,
+            string attackerName,
+            string targetName,
+            string currentTargetName,
+            int damageValue,
+            int appliedDamage,
+            bool isAfter,
+            bool targetIsMonster,
+            int targetX,
+            int targetY,
+            int targetHp,
+            int targetMaxHp,
+            string magicId)
+            : this(perspective, attackerName, targetName, currentTargetName, damageValue, appliedDamage,
+                isAfter, targetIsMonster, targetX, targetY, targetHp, targetMaxHp, magicId,
+                LingFengCombatActorKind.Unknown)
+        {
+        }
+
+        public void Deconstruct(
+            out PlayerDamagePerspective perspective,
+            out string attackerName,
+            out string targetName,
+            out string currentTargetName,
+            out int damageValue,
+            out int appliedDamage,
+            out bool isAfter,
+            out bool targetIsMonster,
+            out int targetX,
+            out int targetY,
+            out int targetHp,
+            out int targetMaxHp,
+            out string magicId)
+        {
+            perspective = Perspective;
+            attackerName = AttackerName;
+            targetName = TargetName;
+            currentTargetName = CurrentTargetName;
+            damageValue = DamageValue;
+            appliedDamage = AppliedDamage;
+            isAfter = IsAfter;
+            targetIsMonster = TargetIsMonster;
+            targetX = TargetX;
+            targetY = TargetY;
+            targetHp = TargetHp;
+            targetMaxHp = TargetMaxHp;
+            magicId = MagicId;
+        }
+    }
 
     public sealed class LingFengTxtTriggerContext
     {

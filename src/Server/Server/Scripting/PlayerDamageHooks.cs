@@ -19,9 +19,23 @@ namespace Server.Scripting
             int armour,
             DefenceType defenceType,
             bool damageWeapon)
+            : this(perspective, attacker, target, damage, armour, defenceType, damageWeapon, attacker)
+        {
+        }
+
+        public PlayerDamageRequest(
+            PlayerDamagePerspective perspective,
+            MapObject attacker,
+            MapObject target,
+            int damage,
+            int armour,
+            DefenceType defenceType,
+            bool damageWeapon,
+            MapObject actor)
         {
             Perspective = perspective;
             Attacker = attacker ?? throw new ArgumentNullException(nameof(attacker));
+            Actor = actor ?? Attacker;
             Target = target ?? throw new ArgumentNullException(nameof(target));
             DefenceType = defenceType;
 
@@ -37,6 +51,7 @@ namespace Server.Scripting
         public PlayerDamagePerspective Perspective { get; }
 
         public MapObject Attacker { get; }
+        public MapObject Actor { get; }
         public MapObject Target { get; }
         public DefenceType DefenceType { get; }
 
@@ -87,9 +102,27 @@ namespace Server.Scripting
             bool critical,
             int appliedDamage,
             ScriptHookDecision decision)
+            : this(perspective, attacker, target, damage, armour, defenceType, damageWeapon,
+                critical, appliedDamage, decision, attacker)
+        {
+        }
+
+        public PlayerDamageResult(
+            PlayerDamagePerspective perspective,
+            MapObject attacker,
+            MapObject target,
+            int damage,
+            int armour,
+            DefenceType defenceType,
+            bool damageWeapon,
+            bool critical,
+            int appliedDamage,
+            ScriptHookDecision decision,
+            MapObject actor)
         {
             Perspective = perspective;
             Attacker = attacker ?? throw new ArgumentNullException(nameof(attacker));
+            Actor = actor ?? Attacker;
             Target = target ?? throw new ArgumentNullException(nameof(target));
             Damage = damage;
             Armour = armour;
@@ -103,6 +136,7 @@ namespace Server.Scripting
         public PlayerDamagePerspective Perspective { get; }
 
         public MapObject Attacker { get; }
+        public MapObject Actor { get; }
         public MapObject Target { get; }
         public DefenceType DefenceType { get; }
 

@@ -101,14 +101,17 @@ namespace Server.Scripting
             MonsterObject monster,
             bool cSharpEligible = false)
         {
-            PlayerObject player = ResolvePlayer(monster?.EXPOwner);
+            PlayerObject player = monster?.LingFengLastDamageActorKind == LingFengCombatActorKind.Unknown
+                ? ResolvePlayer(monster.EXPOwner)
+                : Envir.Main.GetPlayer(monster.LingFengLastDamageOwnerName);
             var payload = monster == null
                 ? default
                 : new LingFengMonsterKillEvent(
                     monster.Info?.Name ?? string.Empty,
                     monster.CurrentLocation.X,
                     monster.CurrentLocation.Y,
-                    monster.Experience);
+                    monster.Experience,
+                    monster.LingFengLastDamageActorKind);
             return TryDispatchTarget(cSharpInvoked, provider, player, payload,
                 cSharpEligible,
                 new LingFengTxtHookTarget("SystemScripts/QFunction-0", "[@KILLMON]"));
@@ -208,7 +211,8 @@ namespace Server.Scripting
                 request.Target?.CurrentLocation.Y ?? 0,
                 (request.Target as MonsterObject)?.HP ?? 0,
                 request.Target?.Stats?[Stat.HP] ?? 0,
-                LingFengTxtTriggerContext.Current?.MagicId ?? "0");
+                LingFengTxtTriggerContext.Current?.MagicId ?? "0",
+                ClassifyDamageSubject(request.Perspective, request.Actor, request.Target));
         }
 
         private static LingFengDamageEvent Snapshot(PlayerDamageResult result)
@@ -227,8 +231,24 @@ namespace Server.Scripting
                 result.Target?.CurrentLocation.Y ?? 0,
                 (result.Target as MonsterObject)?.HP ?? 0,
                 result.Target?.Stats?[Stat.HP] ?? 0,
-                LingFengTxtTriggerContext.Current?.MagicId ?? "0");
+                LingFengTxtTriggerContext.Current?.MagicId ?? "0",
+                ClassifyDamageSubject(result.Perspective, result.Actor, result.Target));
         }
+
+        private static LingFengCombatActorKind ClassifyDamageSubject(
+            PlayerDamagePerspective perspective,
+            MapObject actor,
+            MapObject target) =>
+            ClassifyActor(perspective == PlayerDamagePerspective.Outgoing ? actor : target);
+
+        private static LingFengCombatActorKind ClassifyActor(MapObject actor) => actor switch
+        {
+            HeroObject => LingFengCombatActorKind.Hero,
+            MonsterObject monster when monster.Master is PlayerObject => LingFengCombatActorKind.Pet,
+            MonsterObject monster when monster.Master is HeroObject => LingFengCombatActorKind.Pet,
+            PlayerObject => LingFengCombatActorKind.Player,
+            _ => LingFengCombatActorKind.Unknown
+        };
 
         public static bool TryDispatchAfterCSharp(
             bool cSharpHandled,
