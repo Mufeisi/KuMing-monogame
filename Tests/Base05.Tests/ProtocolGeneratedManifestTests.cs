@@ -33,7 +33,7 @@ public sealed class ProtocolGeneratedManifestTests
         });
 
         JsonElement[] sources = root.GetProperty("sources").EnumerateArray().ToArray();
-        Assert.Equal(21, sources.Length);
+        Assert.Equal(22, sources.Length);
         Assert.Contains(sources, source => source.GetProperty("path").GetString() == "src/Shared/Shared/Packet.cs");
         Assert.Contains(sources, source => source.GetProperty("path").GetString() == "src/Shared/Shared/ClientPackets.cs");
         Assert.Contains(sources, source => source.GetProperty("path").GetString() == "src/Shared/Shared/ServerPackets.cs");

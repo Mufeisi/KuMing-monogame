@@ -7231,30 +7231,26 @@ namespace Client.MirScenes
         private void LingFengMapEffect(S.LingFengMapEffect p)
         {
             MLibrary library = Libraries.GetLingFengEffectLibrary(p.LibraryName);
-            if (library == null || p.StartIndex < 0 || p.FrameCount <= 0 ||
-                p.FrameDelay <= 0 || p.Layer > 2 || p.Light > 5)
+            if (library == null ||
+                !LingFengMapEffectPresentationPlan.TryCreate(
+                    p, CMain.Time, out LingFengMapEffectPresentationPlan plan))
                 return;
-            int duration;
-            try
-            {
-                duration = checked(p.FrameCount * p.FrameDelay);
-            }
-            catch (OverflowException)
-            {
-                return;
-            }
-            var effect = new Effect(
-                library, p.StartIndex, p.FrameCount, duration, p.Location,
-                drawBehind: p.Layer == 0)
-            {
-                Blend = p.Blend,
-                Light = p.Light,
-                Repeat = p.RepeatCount == -1 || p.RepeatCount > 1,
-                RepeatUntil = p.RepeatCount > 1
-                    ? CMain.Time + (long)duration * p.RepeatCount
-                    : 0
-            };
-            MapControl.Effects.Add(effect);
+            MapObject owner = plan.ResolveAnchor(
+                MapControl.Objects, value => value.ObjectID);
+            var effect = owner == null
+                ? new Effect(library, p.StartIndex, p.FrameCount, plan.Duration,
+                    p.Location, drawBehind: p.Layer == 0)
+                : new Effect(library, p.StartIndex, p.FrameCount, plan.Duration,
+                    owner, drawBehind: p.Layer == 0);
+            effect.PixelOffset = plan.PixelOffset;
+            effect.Blend = p.Blend;
+            effect.Light = p.Light;
+            effect.Repeat = plan.Repeat;
+            effect.RepeatUntil = plan.RepeatUntil;
+            if (owner == null)
+                MapControl.Effects.Add(effect);
+            else
+                owner.Effects.Add(effect);
         }
 
         public Color ItemNameColor(UserItem item)

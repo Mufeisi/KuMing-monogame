@@ -3,6 +3,7 @@ namespace Server.Scripting
     internal sealed class LingFengCsvContentProvider
     {
         private readonly IReadOnlyDictionary<string, IReadOnlyList<IReadOnlyList<string>>> _tables;
+        private readonly IReadOnlyDictionary<string, IReadOnlyList<IReadOnlyList<string>>> _tablesByName;
 
         internal LingFengCsvContentProvider(
             IReadOnlyDictionary<string, TextFileDefinition> definitions)
@@ -26,6 +27,23 @@ namespace Server.Scripting
                 tables.Add(key, rows.AsReadOnly());
             }
             _tables = tables;
+            _tablesByName = tables
+                .GroupBy(pair => Path.GetFileNameWithoutExtension(pair.Key), StringComparer.OrdinalIgnoreCase)
+                .Where(group => group.Count() == 1)
+                .ToDictionary(group => group.Key, group => group.Single().Value,
+                    StringComparer.OrdinalIgnoreCase);
+        }
+
+        internal bool TryGetCell(string tableName, int row, int column, out string value)
+        {
+            value = string.Empty;
+            string normalizedName = (tableName ?? string.Empty).Trim();
+            if (normalizedName.Length == 0 || row < 0 || column < 0 ||
+                !_tablesByName.TryGetValue(normalizedName, out IReadOnlyList<IReadOnlyList<string>> rows) ||
+                row >= rows.Count || column >= rows[row].Count)
+                return false;
+            value = rows[row][column];
+            return true;
         }
 
         internal bool Contains(string path) =>

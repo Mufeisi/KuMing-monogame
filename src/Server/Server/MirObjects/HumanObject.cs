@@ -226,6 +226,7 @@ namespace Server.MirObjects
         private readonly List<LingFengRateModifier> _lingFengPowerRateModifiers = new();
         private readonly List<LingFengRateModifier> _lingFengDropRateModifiers = new();
         private readonly List<LingFengRateModifier> _lingFengBlastHitRateModifiers = new();
+        private LingFengRateModifier[] _lingFengDropRateSnapshot = [];
         private bool _lingFengSavedCombatRatesLoaded;
 
         public long LingFengSuckDamageRemaining { get; private set; }
@@ -348,6 +349,7 @@ namespace Server.MirObjects
             ProcessLingFengHideMode();
             if ((Race == ObjectType.Player && Connection == null) || Node == null || Info == null) return;
 
+            EnsureLingFengSavedCombatRatesLoaded();
             RemoveExpiredLingFengRateModifiers();
             if (RemoveExpiredLingFengAbilityModifiers() || RemoveExpiredLingFengNewValues())
                 RefreshStats();
@@ -2002,6 +2004,7 @@ namespace Server.MirObjects
             ReplaceLingFengRateModifier(
                 _lingFengDropRateModifiers, normalizedSource, rate,
                 durationSeconds, 0);
+            PublishLingFengDropRateSnapshot();
             return true;
         }
 
@@ -2049,7 +2052,8 @@ namespace Server.MirObjects
         {
             EnsureLingFengSavedCombatRatesLoaded();
             RemoveExpiredLingFengRateModifiers();
-            return AggregateLingFengRate(_lingFengDropRateModifiers);
+            return AggregateActiveLingFengRate(
+                Volatile.Read(ref _lingFengDropRateSnapshot), Envir.Time);
         }
 
         public long GetLingFengDropRateRemainingSeconds()
@@ -2062,7 +2066,10 @@ namespace Server.MirObjects
         public float ApplyLingFengDropRate(float baseRate)
         {
             if (baseRate <= 0) return baseRate;
-            double value = (double)baseRate * GetLingFengDropRatePercent() / 100D;
+            LingFengRateModifier[] snapshot =
+                Volatile.Read(ref _lingFengDropRateSnapshot);
+            int rate = AggregateActiveLingFengRate(snapshot, Envir.Time);
+            double value = (double)baseRate * rate / 100D;
             return (float)Math.Clamp(value, 0D, float.MaxValue);
         }
 
@@ -2084,6 +2091,7 @@ namespace Server.MirObjects
             foreach (LingFengSavedCombatRate saved in
                      Info.LingFengProgress.ReadDropRates(Envir.Now, true))
                 AddSavedLingFengRate(_lingFengDropRateModifiers, saved);
+            PublishLingFengDropRateSnapshot();
         }
 
         private static int AggregateLingFengRate(IEnumerable<LingFengRateModifier> modifiers)
@@ -2092,6 +2100,19 @@ namespace Server.MirObjects
             foreach (LingFengRateModifier modifier in modifiers)
                 rate += (long)modifier.Rate - 100;
             return (int)Math.Clamp(rate, 0L, 1_000_000L);
+        }
+
+        private static int AggregateActiveLingFengRate(
+            IEnumerable<LingFengRateModifier> modifiers, long now)
+        {
+            return AggregateLingFengRate(modifiers.Where(entry =>
+                entry.ExpireTime > now));
+        }
+
+        private void PublishLingFengDropRateSnapshot()
+        {
+            Volatile.Write(ref _lingFengDropRateSnapshot,
+                _lingFengDropRateModifiers.ToArray());
         }
 
         private static long GetLingFengRateRemainingSeconds(
@@ -2142,7 +2163,9 @@ namespace Server.MirObjects
         private void RemoveExpiredLingFengRateModifiers()
         {
             _lingFengPowerRateModifiers.RemoveAll(entry => entry.ExpireTime <= Envir.Time);
-            _lingFengDropRateModifiers.RemoveAll(entry => entry.ExpireTime <= Envir.Time);
+            if (_lingFengDropRateModifiers.RemoveAll(entry =>
+                    entry.ExpireTime <= Envir.Time) > 0)
+                PublishLingFengDropRateSnapshot();
             _lingFengBlastHitRateModifiers.RemoveAll(entry => entry.ExpireTime <= Envir.Time);
         }
 

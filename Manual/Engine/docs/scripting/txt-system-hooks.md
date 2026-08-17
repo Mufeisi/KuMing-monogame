@@ -83,7 +83,8 @@ CHANGEDAMAGEVALUE 0 = 0
 - `@MAGICATTACK` 与 `@MAGICSTRUCK` 在真实伤害后置时点执行，只有本次实际生效技能 ID 非零才触发；普通攻击仍只执行 `@ATTACK/@STRUCK`。
 - `@PLAYDIE` 以死亡人物为脚本人物，`<$KILLER>` 来自最终 `LastHitter` 快照；`@KILLPLAY` 以可归属的击杀人物为脚本人物。英雄及人物/英雄宝宝归属到主人，没有人物归属时不执行 `@KILLPLAY`。
 - C# 人物死亡 Handler 已注册时抑制同一 QFunction TXT 触发，即使 Handler 返回未处理也不重复发奖。QFunction `@PLAYDIE/@KILLPLAY` 不替代旧 DefaultNPC `[@_Die]`，两套页面按各自语义执行。
-- 高频检测支持 `EQUAL 左值 右值`、`LARGE 左值 右值`、`SMALL 左值 右值`，以及放在任一单检测前的 `NOT` 或 `!`。大于/小于只接受十进制数，错误参数失败关闭。
+- 高频检测支持 `EQUAL 左值 右值`、`LARGE 左值 右值`、`SMALL 左值 右值`，以及放在任一单检测前的 `NOT` 或 `!`。原版语料中的单参数 `EQUAL 值` 按与空字符串比较处理，用于检测未传参或未赋值变量。大于/小于只接受十进制数，错误参数失败关闭。
+- `GMEXECUTE` 不是任意管理命令入口。兼容层只允许 `探测 人物名` 与 `开始提问 @页面`：前者只读在线人物的真实地图坐标，后者把 `SystemScripts/QManage` 中的精确页面逐一派发给当前在线人物。页面缺失或参数超出白名单时失败关闭；`开始提问` 同时登记对应的 E2 系统页依赖。
 
 ## 明确未开放
 

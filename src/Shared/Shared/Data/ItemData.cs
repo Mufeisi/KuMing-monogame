@@ -393,7 +393,29 @@ public class UserItem
         other != null && ReferenceEquals(Info, other.Info) &&
         EffectiveBindingFlags == other.EffectiveBindingFlags &&
         LingFengCannotTakeOff == other.LingFengCannotTakeOff &&
-        SoulBoundId == other.SoulBoundId;
+        SoulBoundId == other.SoulBoundId &&
+        CurrentDura == other.CurrentDura &&
+        MaxDura == other.MaxDura &&
+        !HasStackSensitiveInstanceState() &&
+        !other.HasStackSensitiveInstanceState();
+
+    private bool HasStackSensitiveInstanceState() =>
+        GemCount != 0 || RefinedValue != RefinedValue.None || RefineAdded != 0 ||
+        RefineSuccessChance != 0 || Identified || Cursed || WeddingRing != -1 ||
+        Slots.Any(item => item != null) || AddedStats.Count != 0 ||
+        Awake.Type != AwakeType.None || Awake.GetAwakeLevel() != 0 ||
+        BuybackExpiryDate != default || ExpireInfo != null || RentalInformation != null ||
+        SealedInfo != null || IsShopItem || GMMade ||
+        _lingFengCustomAttributes.Any(attribute => attribute.IsDefined) ||
+        _lingFengByteMarks.Any(value => value != 0) ||
+        _lingFengIntMarks.Any(value => value != 0) ||
+        _lingFengTextMarks.Any(value => !string.IsNullOrEmpty(value)) ||
+        _lingFengCustomProgressBars.Any(progress => progress.IsDefined) ||
+        !string.IsNullOrEmpty(_lingFengCustomText) || _lingFengCustomTextColour != 0 ||
+        _lingFengItemEffects.Any(value => value != 0) ||
+        _lingFengNewItemValues.Any(value => value != 0) ||
+        LingFengNameColour != 0 || LingFengLooks.HasValue || LingFengShape.HasValue ||
+        LingFengUpgradeCount != 0;
 
     public bool TrySetLingFengBindingFlags(BindMode flags)
     {

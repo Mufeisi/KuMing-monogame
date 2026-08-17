@@ -1433,7 +1433,12 @@ public sealed class LingFengPlayerCommandTests
         {
             Settings.TxtScriptsEnabled = true;
             Settings.TxtScriptsCompatibilityVersion = "LFM2-2026-08-15-snapshot";
-            var player = new PlayerObject();
+            var player = new PlayerObject
+            {
+                Info = new CharacterInfo { Name = "高频比较人物" },
+                Account = new AccountInfo(),
+                Stats = new Stats()
+            };
 
             var matching = Segment();
             matching.ParseCheck("EQUAL 奖励甲 奖励甲");
@@ -1441,11 +1446,22 @@ public sealed class LingFengPlayerCommandTests
             matching.ParseCheck("SMALL 29 30");
             matching.ParseCheck("NOT EQUAL 玩家甲 玩家乙");
             matching.ParseCheck("!SMALL 30 30");
+            matching.ParseCheck("EQUAL <$SCRIPTPARAM1>");
 
-            Assert.True(matching.Check(player));
-            Assert.Equal(5, matching.CheckList.Count);
+            using (LingFengTxtTriggerContext.PushScriptParameters(new[] { string.Empty }))
+            {
+                Assert.Equal(string.Empty,
+                    matching.ReplaceValue(player, "<$SCRIPTPARAM1>"));
+                Assert.True(matching.Check(player));
+            }
+            Assert.Equal(6, matching.CheckList.Count);
             Assert.True(matching.CheckList[3].Negated);
             Assert.True(matching.CheckList[4].Negated);
+            Assert.Equal(string.Empty, matching.CheckList[5].Params[2]);
+
+            var unaryNotEmpty = Segment();
+            unaryNotEmpty.ParseCheck("NOT EQUAL 已解封");
+            Assert.True(unaryNotEmpty.Check(player));
 
             var existingCheck = Segment();
             existingCheck.ParseCheck("NOT CHECKLEVEL > 100");
@@ -1944,6 +1960,8 @@ public sealed class LingFengPlayerCommandTests
             Envir.Main.Players.Add(target);
             var segment = Segment();
             segment.ParseAct(segment.ActList, "GMEXECUTE 探测 命格追踪目标");
+            segment.ParseAct(segment.ActList,
+                "GMEXECUTE 探测 <$Str(S$命格上下文_追踪目标)>");
 
             Assert.True(segment.Check(source));
             Assert.Contains(
@@ -1958,6 +1976,127 @@ public sealed class LingFengPlayerCommandTests
         {
             Envir.Main.Players.Remove(target);
             Settings.TxtScriptsCompatibilityVersion = oldVersion;
+        }
+    }
+
+    [Fact]
+    public void GMExecute开始提问从QManage向全部在线人物派发原页面()
+    {
+        bool oldTxtEnabled = Settings.TxtScriptsEnabled;
+        bool oldCSharpEnabled = Settings.CSharpScriptsEnabled;
+        string oldPath = Settings.TxtScriptsPath;
+        TxtScriptLayout oldLayout = Settings.TxtScriptsLayout;
+        string oldVersion = Settings.TxtScriptsCompatibilityVersion;
+        string root = Path.Combine(Path.GetTempPath(),
+            $"lfenv16-global-question-{Guid.NewGuid():N}");
+        NPCScript loadedManage = null;
+        var source = new SilentPlayerObject
+        {
+            Info = new CharacterInfo { Name = "全服提问发起者" },
+            Account = new AccountInfo()
+        };
+        var target = new SilentPlayerObject
+        {
+            Info = new CharacterInfo { Name = "全服提问接收者" },
+            Account = new AccountInfo()
+        };
+        Directory.CreateDirectory(Path.Combine(root, "SystemScripts"));
+        try
+        {
+            File.WriteAllText(Path.Combine(root, "SystemScripts", "QManage.txt"),
+                "[@04轮回踢出]\n#ACT\nGIVEGOLD 1\n");
+            Settings.CSharpScriptsEnabled = false;
+            Settings.TxtScriptsEnabled = true;
+            Settings.TxtScriptsPath = root;
+            Settings.TxtScriptsLayout = TxtScriptLayout.LyoCrystal;
+            Settings.TxtScriptsCompatibilityVersion = "LFM2-2026-08-15-snapshot";
+            Envir.Main.ApplyPhysicalTextFileDefinitions();
+            loadedManage = NPCScript.GetOrAdd(
+                0, "SystemScripts/QManage", NPCScriptType.Called);
+            Envir.Main.Players.Add(source);
+            Envir.Main.Players.Add(target);
+
+            var segment = Segment();
+            segment.ParseAct(segment.ActList,
+                "GMEXECUTE 开始提问 @04轮回踢出");
+
+            Assert.True(segment.Check(source));
+            Assert.Equal(1u, source.Account.Gold);
+            Assert.Equal(1u, target.Account.Gold);
+        }
+        finally
+        {
+            Envir.Main.Players.Remove(source);
+            Envir.Main.Players.Remove(target);
+            if (loadedManage != null) Envir.Main.Scripts.Remove(loadedManage.ScriptID);
+            Settings.CSharpScriptsEnabled = oldCSharpEnabled;
+            Settings.TxtScriptsEnabled = oldTxtEnabled;
+            Settings.TxtScriptsPath = oldPath;
+            Settings.TxtScriptsLayout = oldLayout;
+            Settings.TxtScriptsCompatibilityVersion = oldVersion;
+            Envir.Main.ApplyPhysicalTextFileDefinitions();
+            Directory.Delete(root, true);
+        }
+    }
+
+    [Fact]
+    public void HCall只向指定在线人物派发唯一原页面()
+    {
+        bool oldTxtEnabled = Settings.TxtScriptsEnabled;
+        bool oldCSharpEnabled = Settings.CSharpScriptsEnabled;
+        string oldPath = Settings.TxtScriptsPath;
+        TxtScriptLayout oldLayout = Settings.TxtScriptsLayout;
+        string oldVersion = Settings.TxtScriptsCompatibilityVersion;
+        string root = Path.Combine(Path.GetTempPath(),
+            $"lfenv16-human-call-{Guid.NewGuid():N}");
+        NPCScript loadedTarget = null;
+        var source = new SilentPlayerObject
+        {
+            Info = new CharacterInfo { Name = "法宝收录发起者" },
+            Account = new AccountInfo()
+        };
+        var target = new SilentPlayerObject
+        {
+            Info = new CharacterInfo { Name = "法宝属性接收者" },
+            Account = new AccountInfo()
+        };
+        Directory.CreateDirectory(Path.Combine(root, "QuestDiary"));
+        try
+        {
+            File.WriteAllText(Path.Combine(root, "QuestDiary", "属性脚本.txt"),
+                "[@属性计算]\n#ACT\nGIVEGOLD 7\n");
+            Settings.CSharpScriptsEnabled = false;
+            Settings.TxtScriptsEnabled = true;
+            Settings.TxtScriptsPath = root;
+            Settings.TxtScriptsLayout = TxtScriptLayout.LingFeng;
+            Settings.TxtScriptsCompatibilityVersion = "LFM2-2026-08-15-snapshot";
+            Envir.Main.ApplyPhysicalTextFileDefinitions();
+            loadedTarget = NPCScript.GetOrAdd(
+                0, "QuestDiary/属性脚本", NPCScriptType.Called);
+            Envir.Main.Players.Add(source);
+            Envir.Main.Players.Add(target);
+
+            var segment = Segment();
+            segment.ParseAct(segment.ActList,
+                "HCALL 法宝属性接收者 @属性计算");
+
+            Assert.Equal(ActionType.LingFengHumanCall, Assert.Single(segment.ActList).Type);
+            Assert.True(segment.Check(source));
+            Assert.Equal(0u, source.Account.Gold);
+            Assert.Equal(7u, target.Account.Gold);
+        }
+        finally
+        {
+            Envir.Main.Players.Remove(source);
+            Envir.Main.Players.Remove(target);
+            if (loadedTarget != null) Envir.Main.Scripts.Remove(loadedTarget.ScriptID);
+            Settings.CSharpScriptsEnabled = oldCSharpEnabled;
+            Settings.TxtScriptsEnabled = oldTxtEnabled;
+            Settings.TxtScriptsPath = oldPath;
+            Settings.TxtScriptsLayout = oldLayout;
+            Settings.TxtScriptsCompatibilityVersion = oldVersion;
+            Envir.Main.ApplyPhysicalTextFileDefinitions();
+            Directory.Delete(root, true);
         }
     }
 
@@ -3421,10 +3560,11 @@ public sealed class LingFengPlayerCommandTests
             segment.ParseCheck("CHECKSTRINGLENGTH 命格A = 5");
             segment.ParseAct(segment.ActList, "HUMANHP + 30 0 1");
             segment.ParseAct(segment.ActList, "HUMANMP - 5 0 1");
+            segment.ParseAct(segment.ActList, "HUMANMP = 40");
 
             Assert.True(segment.Check(player));
             Assert.Equal(50, player.HP);
-            Assert.Equal(5, player.MP);
+            Assert.Equal(40, player.MP);
 
             player.AMode = AttackMode.Peace;
             var peace = Segment();
@@ -5041,7 +5181,7 @@ public sealed class LingFengPlayerCommandTests
     }
 
     [Fact]
-    public void 命格倍率效果按来源独立到期且短效不清除长效与永久层()
+    public async Task 命格倍率效果按来源独立到期且短效不清除长效与永久层()
     {
         string oldVersion = Settings.TxtScriptsCompatibilityVersion;
         long oldTime = Envir.Main.Time;
@@ -5071,6 +5211,8 @@ public sealed class LingFengPlayerCommandTests
 
             Assert.Equal(270, player.GetLingFengPowerRatePercent(targetIsHuman: false));
             Assert.Equal(270, player.GetLingFengDropRatePercent());
+            Assert.Equal(2.7F, await Task.Run(() =>
+                player.ApplyLingFengDropRate(1F)), 3);
             Assert.Equal("2|0|2|0", permanent.ReplaceValue(player,
                 "<$ATTACKMONPOWERRATE>|<$ATTACKMONPOWERRATETIME>|" +
                 "<$KILLMONBURSTRATE>|<$KILLMONBURSTRATETIME>"));
@@ -5096,6 +5238,8 @@ public sealed class LingFengPlayerCommandTests
 
             typeof(Envir).GetProperty(nameof(Envir.Time))!
                 .SetValue(Envir.Main, oldTime + 11 * Settings.Second);
+            Assert.Equal(2.2F, await Task.Run(() =>
+                player.ApplyLingFengDropRate(1F)), 3);
             Assert.Equal(220, player.GetLingFengPowerRatePercent(targetIsHuman: false));
             Assert.Equal(220, player.GetLingFengDropRatePercent());
             Assert.Equal("2|0|2|0", permanent.ReplaceValue(player,
@@ -5104,6 +5248,8 @@ public sealed class LingFengPlayerCommandTests
 
             typeof(Envir).GetProperty(nameof(Envir.Time))!
                 .SetValue(Envir.Main, oldTime + 31 * Settings.Second);
+            Assert.Equal(1.2F, await Task.Run(() =>
+                player.ApplyLingFengDropRate(1F)), 3);
             Assert.Equal(120, player.GetLingFengPowerRatePercent(targetIsHuman: false));
             Assert.Equal(120, player.GetLingFengDropRatePercent());
             Assert.Equal("1|0|1|0", permanent.ReplaceValue(player,
@@ -6612,8 +6758,10 @@ public sealed class LingFengPlayerCommandTests
             Envir.Main.ItemInfoList.Add(info);
             var player = new SilentPlayerObject
             {
-                Info = new CharacterInfo { Name = "命格状态物品人物" }
+                Info = new CharacterInfo { Name = "命格状态物品人物" },
+                Stats = new Stats()
             };
+            player.Report = new Reporting(player);
             var connection = (Server.MirNetwork.MirConnection)
                 System.Runtime.CompilerServices.RuntimeHelpers.GetUninitializedObject(
                     typeof(Server.MirNetwork.MirConnection));
@@ -6638,6 +6786,37 @@ public sealed class LingFengPlayerCommandTests
             Assert.True(stateItem.HasBindingFlag(BindMode.DontSell));
             Assert.True(stateItem.HasBindingFlag(BindMode.DontDeathdrop));
             Assert.True(stateItem.HasBindingFlag(BindMode.DestroyOnDrop));
+
+            UserItem ordinaryItem = player.Info.Inventory[0];
+            player.MergeItem(MirGridType.Inventory, MirGridType.Inventory,
+                stateItem.UniqueID, ordinaryItem.UniqueID);
+            Assert.Equal((ushort)5, stateItem.Count);
+            Assert.Equal((ushort)2, ordinaryItem.Count);
+            Assert.Contains(stateItem, player.Info.Inventory);
+
+            var customized = new UserItem(info)
+            {
+                UniqueID = 98169801,
+                Count = 3
+            };
+            var plain = new UserItem(info)
+            {
+                UniqueID = 98169802,
+                Count = 4
+            };
+            Assert.True(customized.TrySetLingFengCustomText("不可丢失的实例说明", 7));
+            Assert.True(customized.TryChangeLingFengUpgradeCount("=", 5));
+            Assert.True(customized.TrySetLingFengItemEffect(0, 88));
+            player.Info.Inventory[2] = customized;
+            player.Info.Inventory[3] = plain;
+
+            player.MergeItem(MirGridType.Inventory, MirGridType.Inventory,
+                customized.UniqueID, plain.UniqueID);
+
+            Assert.Equal((ushort)3, customized.Count);
+            Assert.Equal((ushort)4, plain.Count);
+            Assert.Same(customized, player.Info.Inventory[2]);
+            Assert.Same(plain, player.Info.Inventory[3]);
 
             using var stream = new MemoryStream();
             using (var writer = new BinaryWriter(stream, System.Text.Encoding.UTF8, true))
@@ -7349,7 +7528,6 @@ public sealed class LingFengPlayerCommandTests
                 "BREAKADDSELLPLAYER",
                 "STOPTAKEON",
                 "SETITEMFROM -1 0 2",
-                "HCALL 目标人物 @目标页",
                 "ADDATTACKSABUKALL 0",
                 "AUTOTAKEONITEM 命格装备 2",
                 "CHANGEHUMNAME 新名字",

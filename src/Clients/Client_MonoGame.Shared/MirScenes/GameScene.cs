@@ -6996,33 +6996,22 @@ namespace MonoShare.MirScenes
         private void LingFengMapEffect(S.LingFengMapEffect p)
         {
             MLibrary library = Libraries.GetLingFengEffectLibrary(p.LibraryName);
-            if (library == null || p.StartIndex < 0 || p.FrameCount <= 0 ||
-                p.FrameDelay <= 0 || p.Layer > 2 || p.Light > 5)
+            if (library == null ||
+                !LingFengMapEffectPresentationPlan.TryCreate(
+                    p, CMain.Time, out LingFengMapEffectPresentationPlan plan))
                 return;
-            int duration;
-            try
-            {
-                duration = checked(p.FrameCount * p.FrameDelay);
-            }
-            catch (OverflowException)
-            {
-                return;
-            }
-            MapObject owner = p.AnchorObjectId == 0
-                ? null
-                : MapControl.Objects.FirstOrDefault(value => value.ObjectID == p.AnchorObjectId);
+            MapObject owner = plan.ResolveAnchor(
+                MapControl.Objects, value => value.ObjectID);
             var effect = owner == null
-                ? new Effect(library, p.StartIndex, p.FrameCount, duration, p.Location,
+                ? new Effect(library, p.StartIndex, p.FrameCount, plan.Duration, p.Location,
                     drawBehind: p.Layer == 0)
-                : new Effect(library, p.StartIndex, p.FrameCount, duration, owner,
+                : new Effect(library, p.StartIndex, p.FrameCount, plan.Duration, owner,
                     drawBehind: p.Layer == 0);
-            effect.PixelOffset = p.PixelOffset;
+            effect.PixelOffset = plan.PixelOffset;
             effect.Blend = p.Blend;
             effect.Light = p.Light;
-            effect.Repeat = p.RepeatCount <= 0 || p.RepeatCount > 1;
-            effect.RepeatUntil = p.RepeatCount > 1
-                ? CMain.Time + (long)duration * p.RepeatCount
-                : 0;
+            effect.Repeat = plan.Repeat;
+            effect.RepeatUntil = plan.RepeatUntil;
             if (owner == null)
                 MapControl.Effects.Add(effect);
             else

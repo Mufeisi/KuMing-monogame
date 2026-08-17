@@ -128,6 +128,7 @@ namespace MonoShare.MirObjects
             {
                 DrawLocation = new Point((Source.X - MapObject.User.Movement.X + MapControl.OffSetX) * MapControl.CellWidth,
                                          (Source.Y - MapObject.User.Movement.Y + MapControl.OffSetY) * MapControl.CellHeight);
+                DrawLocation.Offset(PixelOffset);
                 DrawLocation.Offset(MapObject.User.OffSetMove);
             }
 

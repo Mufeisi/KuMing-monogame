@@ -1893,7 +1893,7 @@ namespace Server.MirObjects
             if (page != null) return page;
 
             if (Envir.TextFileProvider?.GetByKey(FileName) is not TextFileDefinition definition ||
-                !definition.Lines.Any(line => line.Trim().Equals(key, StringComparison.OrdinalIgnoreCase)))
+                !definition.Lines.Any(line => IsMatchingPageDeclaration(line, key)))
                 return null;
 
             page = ParsePage(definition.Lines.ToList(), key);

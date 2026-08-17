@@ -120,6 +120,11 @@ namespace Server.Scripting
             (_maps.ContainsKey(name) || _maps.Values.Any(value =>
                 string.Equals(value.FileName, name, StringComparison.OrdinalIgnoreCase)));
 
+        internal Dictionary<string, int> GetPhysicalMapInstanceCounts() =>
+            _maps.Values
+                .GroupBy(value => value.FileName, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(group => group.Key, group => group.Count(), StringComparer.OrdinalIgnoreCase);
+
         internal IEnumerable<LingFengDependencyRequirement> GetDependencyRequirements()
         {
             foreach (MapDefinition map in _maps.Values)
@@ -131,12 +136,27 @@ namespace Server.Scripting
                     LingFengDependencyLevel.E2, "World/MapInfo");
             }
             foreach (RespawnDefinition respawn in _respawns)
+            {
+                yield return new LingFengDependencyRequirement(
+                    LingFengDependencyKind.Map, respawn.MapAlias, LingFengDependencyLevel.E1, "World/Mongen");
                 yield return new LingFengDependencyRequirement(
                     LingFengDependencyKind.Monster, respawn.MonsterName, LingFengDependencyLevel.E1, "World/Mongen");
+            }
+            foreach (MovementDefinition movement in _movements)
+            {
+                yield return new LingFengDependencyRequirement(
+                    LingFengDependencyKind.Map, movement.SourceMap, LingFengDependencyLevel.E1, "World/MapInfo/Movement");
+                yield return new LingFengDependencyRequirement(
+                    LingFengDependencyKind.Map, movement.DestinationMap, LingFengDependencyLevel.E1, "World/MapInfo/Movement");
+            }
             foreach (LingFengMapQuestRule quest in MapQuests)
+            {
+                yield return new LingFengDependencyRequirement(
+                    LingFengDependencyKind.Map, quest.MapAlias, LingFengDependencyLevel.E1, "World/MapQuest");
                 if (quest.MonsterName != "*")
                     yield return new LingFengDependencyRequirement(
                         LingFengDependencyKind.Monster, quest.MonsterName, LingFengDependencyLevel.E1, "World/MapQuest");
+            }
             foreach (MapDefinition map in _maps.Values)
                 foreach (string option in map.Options.Keys.Where(option =>
                              !ImplementedOrDefaultEquivalentMapOptions.Contains(option)))

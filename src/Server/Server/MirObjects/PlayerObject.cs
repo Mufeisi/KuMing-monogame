@@ -8412,7 +8412,8 @@ namespace Server.MirObjects
                 break;
             }
 
-            if (tempTo == null || tempTo.Info != tempFrom.Info || tempTo.Count == tempTo.Info.StackSize)
+            if (tempTo == null || !tempFrom.CanStackWith(tempTo) ||
+                tempTo.Count == tempTo.Info.StackSize)
             {
                 Enqueue(p);
                 return;

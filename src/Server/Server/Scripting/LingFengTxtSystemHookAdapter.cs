@@ -237,6 +237,46 @@ namespace Server.Scripting
                 new LingFengTxtHookTarget(
                     "SystemScripts/QFunction-0", "[@NPCREVIVAL]"));
 
+        internal static int DispatchGlobalQuestion(ITextFileProvider provider, string label)
+        {
+            string normalized = (label ?? string.Empty).Trim();
+            if (!normalized.StartsWith('@')) return 0;
+            normalized = $"[@{normalized.TrimStart('@')}]";
+            int dispatched = 0;
+            foreach (PlayerObject player in Envir.Main.Players.ToArray())
+                if (TryDispatchTarget(false, provider, player, player, false,
+                        new LingFengTxtHookTarget("SystemScripts/QManage", normalized)))
+                    dispatched++;
+            return dispatched;
+        }
+
+        internal static bool TryDispatchHumanCall(
+            ITextFileProvider provider,
+            PlayerObject caller,
+            string targetName,
+            string label)
+        {
+            string normalizedName = (targetName ?? string.Empty).Trim();
+            string normalizedLabel = (label ?? string.Empty).Trim();
+            if (provider == null || caller == null || normalizedName.Length == 0 ||
+                !normalizedLabel.StartsWith('@'))
+                return false;
+
+            PlayerObject target = string.Equals(caller.Name, normalizedName,
+                                      StringComparison.OrdinalIgnoreCase)
+                                  ? caller
+                                  : Envir.Main.Players.FirstOrDefault(player =>
+                                      string.Equals(player.Name, normalizedName,
+                                          StringComparison.OrdinalIgnoreCase));
+            if (target == null ||
+                !LingFengScriptReferenceResolver.TryResolveUniquePage(
+                    provider, normalizedLabel, out string targetKey))
+                return false;
+
+            return TryDispatchTarget(false, provider, target, caller, false,
+                new LingFengTxtHookTarget(targetKey, $"[@{normalizedLabel.TrimStart('@')}]"));
+        }
+
         private static bool TryDispatchTarget(
             bool cSharpInvoked,
             ITextFileProvider provider,

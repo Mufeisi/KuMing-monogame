@@ -66,7 +66,7 @@ namespace Server.MirObjects
         private bool TryFormatScriptVariable(PlayerObject player, string expression, out string text)
         {
             text = string.Empty;
-            if (player == null || player.NPCObjectID == 0 || string.IsNullOrWhiteSpace(expression))
+            if (player == null || string.IsNullOrWhiteSpace(expression))
                 return false;
 
             Match currentTarget = Regex.Match(
@@ -297,6 +297,20 @@ namespace Server.MirObjects
                     break;
 
                 case "EQUAL" when IsLingFengCompatibility:
+                    if (parts.Length == 2)
+                    {
+                        CheckList.Add(new NPCChecks(
+                            CheckType.LingFengCompare,
+                            parts[0].ToUpperInvariant(), parts[1], string.Empty));
+                        break;
+                    }
+                    if (parts.Length != 3)
+                        throw new InvalidDataException("EQUAL 需要一个或两个比较参数。");
+                    CheckList.Add(new NPCChecks(
+                        CheckType.LingFengCompare,
+                        parts[0].ToUpperInvariant(), parts[1], parts[2]));
+                    break;
+
                 case "LARGE" when IsLingFengCompatibility:
                 case "SMALL" when IsLingFengCompatibility:
                     if (parts.Length != 3)
@@ -3031,6 +3045,11 @@ namespace Server.MirObjects
                     break;
 
                 case "HCALL" when IsLingFengCompatibility:
+                    if (parts.Length != 3 || !parts[2].StartsWith("@", StringComparison.Ordinal))
+                        throw new InvalidDataException("HCALL 需要目标人物和 @页面。");
+                    acts.Add(new NPCActions(ActionType.LingFengHumanCall, parts[1], parts[2]));
+                    break;
+
                 case "ADDATTACKSABUKALL" when IsLingFengCompatibility:
                 case "AUTOTAKEONITEM" when IsLingFengCompatibility:
                 case "CHANGEHUMNAME" when IsLingFengCompatibility:
@@ -3049,7 +3068,6 @@ namespace Server.MirObjects
                     string deferredCommand = parts[0].ToUpperInvariant();
                     bool deferredSyntaxValid = deferredCommand switch
                     {
-                        "HCALL" => parts.Length == 3 && parts[2].StartsWith("@", StringComparison.Ordinal),
                         "ADDATTACKSABUKALL" or "CHANGEHUMNAME" or "CREATEMYSHOP" or
                             "OPENGODBLESS" or "SETOFFLINEPLAY" or "SHOWGODBLESS" or
                             "TAKEPOSW" => parts.Length == 2,
@@ -3748,10 +3766,10 @@ namespace Server.MirObjects
                 case "HUMANMP" when IsLingFengCompatibility:
                 case "L.HUMANHP" when IsLingFengCompatibility:
                 case "<$KILLER>.HUMANHP" when IsLingFengCompatibility:
-                    if (parts.Length != 5 || parts[1] is not ("+" or "-" or "=") ||
-                        parts[3] != "0" || parts[4] != "1")
+                    if (parts.Length is not (3 or 5) || parts[1] is not ("+" or "-" or "=") ||
+                        (parts.Length == 5 && (parts[3] != "0" || parts[4] != "1")))
                         throw new InvalidDataException(
-                            $"{parts[0].ToUpperInvariant()} 当前仅支持命格使用的即时单次固定值格式。");
+                            $"{parts[0].ToUpperInvariant()} 需要操作符和数值；可选即时单次参数 0 1。");
                     acts.Add(new NPCActions(
                         ActionType.LingFengAdjustResource,
                         parts[0].EndsWith("HUMANHP", StringComparison.OrdinalIgnoreCase) ? "HP" : "MP",
@@ -3855,11 +3873,17 @@ namespace Server.MirObjects
                     break;
 
                 case "GMEXECUTE" when IsLingFengCompatibility:
-                    if (parts.Length != 3 ||
-                        !parts[1].Equals("探测", StringComparison.OrdinalIgnoreCase))
+                    if (parts.Length >= 3 &&
+                        parts[1].Equals("探测", StringComparison.OrdinalIgnoreCase))
+                        acts.Add(new NPCActions(
+                            ActionType.LingFengProbePlayer, string.Join(" ", parts.Skip(2))));
+                    else if (parts.Length == 3 &&
+                             parts[1].Equals("开始提问", StringComparison.OrdinalIgnoreCase) &&
+                             parts[2].StartsWith('@'))
+                        acts.Add(new NPCActions(ActionType.LingFengGlobalQuestion, parts[2]));
+                    else
                         throw new InvalidDataException(
-                            "GMEXECUTE 仅允许酷明命格使用的‘探测 人物名’。");
-                    acts.Add(new NPCActions(ActionType.LingFengProbePlayer, parts[2]));
+                            $"GMEXECUTE 仅允许‘探测 人物名’或‘开始提问 @页面’；实际参数={string.Join('|', parts)}。");
                     break;
 
                 case "HIDEMODEEX" when IsLingFengCompatibility:
@@ -4366,6 +4390,10 @@ namespace Server.MirObjects
             string param,
             uint? invocationNpcObjectId = null)
         {
+            if (IsLingFengCompatibility &&
+                TryResolveLingFengCsvCell(player, param, out string csvCell))
+                return csvCell;
+
             if (IsLingFengCompatibility && param.Contains("<$", StringComparison.Ordinal))
             {
                 Match variablePlaceholder = Regex.Match(param, @"\<\$(.*)\>");
@@ -4388,6 +4416,32 @@ namespace Server.MirObjects
             }
 
             return ReplaceLegacyValue(player, param);
+        }
+
+        private bool TryResolveLingFengCsvCell(
+            PlayerObject player,
+            string param,
+            out string value)
+        {
+            value = string.Empty;
+            Match match = Regex.Match(
+                param ?? string.Empty,
+                @"^<\$(?<table>[^<>()$,]+)\((?:<\$STR\((?<reference>[^()<>]+)\)>|(?<row>\d+)),(?<column>\d+)\)>$",
+                RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+            if (!match.Success ||
+                !int.TryParse(match.Groups["column"].Value, NumberStyles.None,
+                    CultureInfo.InvariantCulture, out int column))
+                return false;
+
+            string rowText = match.Groups["row"].Success
+                ? match.Groups["row"].Value
+                : TryFormatScriptVariable(
+                    player, $"STR({match.Groups["reference"].Value})", out string formatted)
+                    ? formatted
+                    : string.Empty;
+            return int.TryParse(rowText, NumberStyles.None, CultureInfo.InvariantCulture, out int row) &&
+                   Envir.PhysicalCsvContentProvider?.TryGetCell(
+                       match.Groups["table"].Value, row, column, out value) == true;
         }
 
         private static void ReportServerSymbolDiagnostics(ScriptTextRenderResult rendered)
@@ -6961,6 +7015,11 @@ namespace Server.MirObjects
                                     null, param[0], param[1], param[2], param[3]))
                                 MessageQueue.Enqueue(
                                     $"[TxtScripts] GUILDNOTICEMSG 全局执行失败，页码：{Key}");
+                            break;
+
+                        case ActionType.LingFengGlobalQuestion:
+                            LingFengTxtSystemHookAdapter.DispatchGlobalQuestion(
+                                Envir.TextFileProvider, param[0]);
                             break;
 
                         case ActionType.Break:
@@ -10474,6 +10533,11 @@ namespace Server.MirObjects
                         player.LingFengProbePlayer(param[0]);
                         break;
 
+                    case ActionType.LingFengGlobalQuestion:
+                        LingFengTxtSystemHookAdapter.DispatchGlobalQuestion(
+                            Envir.TextFileProvider, param[0]);
+                        break;
+
                     case ActionType.LingFengHideModeEx:
                         if (!int.TryParse(param[0], NumberStyles.None, CultureInfo.InvariantCulture,
                                 out int hideDuration) ||
@@ -10684,6 +10748,13 @@ namespace Server.MirObjects
                         if (Server.Scripting.ScriptTrace.IsEnabled(player))
                             Server.Scripting.ScriptTrace.Record(
                                 player, "[TXT] SETBODYCOLOR -> 等待人体染色客户端契约");
+                        break;
+
+                    case ActionType.LingFengHumanCall:
+                        if (!LingFengTxtSystemHookAdapter.TryDispatchHumanCall(
+                                Envir.TextFileProvider, player, param[0], param[1]))
+                            MessageQueue.Enqueue(
+                                $"[TxtScripts] HCALL 执行失败，页码：{Key}");
                         break;
 
                     case ActionType.LingFengDeferredCompatibilityCommand:
@@ -10998,7 +11069,6 @@ namespace Server.MirObjects
 
                     case ActionType.VariableMutate:
                         {
-                            if (player.NPCObjectID == 0) return;
                             var context = ScriptVariableContext.ForConversation(player, player.NPCObjectID, player.CurrentMap);
                             ScriptVariableMutationResult result = Envir.CSharpScripts.VariableCommands.Mutate(
                                 context, param[0], param[1], param[2]);

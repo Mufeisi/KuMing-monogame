@@ -23,6 +23,7 @@ namespace Client.MirObjects
         public bool Blend = true;
         public float Rate = 1F;
         public Point DrawLocation;
+        public Point PixelOffset;
         public Point DrawOffset = Point.Empty;
         public bool Repeat;
         public long RepeatUntil;
@@ -116,11 +117,13 @@ namespace Client.MirObjects
             if (Owner != null)
             {
                 DrawLocation = Owner.DrawLocation;
+                DrawLocation.Offset(PixelOffset);
             }
             else
             {
                 DrawLocation = new Point((Source.X - MapObject.User.Movement.X + MapControl.OffSetX) * MapControl.CellWidth + MapControl.ViewOffsetX,
                                          (Source.Y - MapObject.User.Movement.Y + MapControl.OffSetY) * MapControl.CellHeight + MapControl.ViewOffsetY);
+                DrawLocation.Offset(PixelOffset);
                 DrawLocation.Offset(DrawOffset);
                 DrawLocation.Offset(MapObject.User.OffSetMove);
             }

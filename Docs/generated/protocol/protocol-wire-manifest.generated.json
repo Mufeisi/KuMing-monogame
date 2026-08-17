@@ -36,7 +36,7 @@
     },
     {
       "path": "src/Shared/Shared/Data/ItemData.cs",
-      "sha256": "8f4904b02587b03c3eaf06e23f2c426ecbcace1f382dc5fe8844cf44d95beffd"
+      "sha256": "2d0e32196be7bd185f3c1ae041f309961fdb027df357a88e3c96555fbcf158d1"
     },
     {
       "path": "src/Shared/Shared/Data/LingFengClientPresentationState.cs",
@@ -45,6 +45,10 @@
     {
       "path": "src/Shared/Shared/Data/LingFengLegacyColorTable.cs",
       "sha256": "9451f2d84c4766038e6d7102eaafcf643212486dc0d3c7678f5e176d7196655d"
+    },
+    {
+      "path": "src/Shared/Shared/Data/LingFengMapEffectPresentationPlan.cs",
+      "sha256": "c138962eb20b5d3c2066b21e0bce63d054e078a861113557892c4c0cd22699d5"
     },
     {
       "path": "src/Shared/Shared/Data/Notice.cs",

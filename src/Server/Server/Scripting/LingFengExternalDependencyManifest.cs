@@ -231,6 +231,13 @@ namespace Server.Scripting
                             LingFengDependencyKind.DomainAdapter,
                             "LingFeng/RobotPage/" + tokens[^1].Trim(),
                             LingFengDependencyLevel.E2, $"{definition.Key}:{index + 1}");
+                    if (command.Equals("GMEXECUTE", StringComparison.OrdinalIgnoreCase) &&
+                        tokens.Length == 3 &&
+                        tokens[1].Equals("开始提问", StringComparison.OrdinalIgnoreCase))
+                        yield return new LingFengDependencyRequirement(
+                            LingFengDependencyKind.DomainAdapter,
+                            "LingFeng/SystemPage/" + tokens[2].Trim(),
+                            LingFengDependencyLevel.E2, $"{definition.Key}:{index + 1}");
                     if (tokens[0].StartsWith("#", StringComparison.Ordinal))
                     {
                         if ((command.Equals("INCLUDE", StringComparison.OrdinalIgnoreCase) ||

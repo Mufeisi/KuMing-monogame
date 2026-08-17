@@ -9,8 +9,10 @@ using Server.MirObjects;
 using Server.Persistence;
 using Server.Persistence.Sql;
 using Server.Scripting;
+using Server.Scripting.Variables;
 using System.Drawing;
 using System.Runtime.CompilerServices;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
 using Shared;
@@ -22,6 +24,136 @@ namespace Base05.Tests;
 [Collection(nameof(PhysicalTextFileProviderCollection))]
 public sealed class LingFengCompleteSliceTests
 {
+    [Fact]
+    public void 封神原版法宝收录扣币回收登记并在重启后保留()
+    {
+        string sourceRoot = @"D:\ChuanQi\服务端\封神\MirServer_法宝玩法精简提取包\MirServer\Mir200\Envir";
+        string sourceDatabase = @"D:\ChuanQi\服务端\封神\MirServer\Mud2\DB\ApexM2.DB";
+        if (!Directory.Exists(sourceRoot) || !File.Exists(sourceDatabase))
+            throw Xunit.Sdk.SkipException.ForSkip("本机未挂载封神原版法宝语料或数据库。");
+
+        string sourceDigest = ComputeDirectoryDigest(sourceRoot);
+        string root = Path.Combine(Path.GetTempPath(), $"lfenv16-original-treasure-{Guid.NewGuid():N}");
+        string databasePath = Path.Combine(Path.GetTempPath(), $"lfenv16-original-treasure-{Guid.NewGuid():N}.db");
+        bool oldTxtEnabled = Settings.TxtScriptsEnabled;
+        bool oldCSharpEnabled = Settings.CSharpScriptsEnabled;
+        bool oldStrict = Settings.TxtScriptsStrictCompatibility;
+        string oldTxtPath = Settings.TxtScriptsPath;
+        TxtScriptLayout oldLayout = Settings.TxtScriptsLayout;
+        string oldVersion = Settings.TxtScriptsCompatibilityVersion;
+        LingFengDependencyLevel oldLevel = Settings.TxtScriptsDependencyLevel;
+        ItemInfo[] oldItems = Envir.Main.ItemInfoList.ToArray();
+        string[] oldMessages = MessageQueue.Instance.MessageLog.ToArray();
+        string[] oldDebugMessages = MessageQueue.Instance.DebugLog.ToArray();
+        NPCScript script = null;
+        try
+        {
+            CopyOriginalFile(sourceRoot, root,
+                @"QuestDiary\【2功能脚本】\法宝收录.txt");
+            CopyOriginalFile(sourceRoot, root,
+                @"QuestDiary\【3表格脚本】\法宝图鉴.csv");
+
+            Settings.CSharpScriptsEnabled = false;
+            Settings.TxtScriptsEnabled = true;
+            Settings.TxtScriptsPath = root;
+            Settings.TxtScriptsLayout = TxtScriptLayout.LingFeng;
+            Settings.TxtScriptsStrictCompatibility = true;
+            Settings.TxtScriptsCompatibilityVersion = "LFM2-2026-08-15-snapshot";
+            Settings.TxtScriptsDependencyLevel = LingFengDependencyLevel.None;
+            Envir.Main.ApplyPhysicalTextFileDefinitions();
+
+            TextFileDefinition definition = Assert.Single(
+                Envir.Main.TextFileProvider.GetAll(), value =>
+                    value.SourcePath.EndsWith("法宝收录.txt", StringComparison.OrdinalIgnoreCase));
+            script = NPCScript.GetOrAdd(0, definition.Key, NPCScriptType.Called);
+
+            ItemInfo treasure = LoadLegacyItem(sourceDatabase, "【法宝】乾坤圈");
+            Envir.Main.ItemInfoList.Add(treasure);
+            var account = new AccountInfo { Index = 916170, AccountID = "lfenv16-original-treasure" };
+            var character = new CharacterInfo
+            {
+                Index = 916171,
+                Name = "封神原版法宝人物",
+                AccountInfo = account
+            };
+            account.Characters.Add(character);
+            character.Inventory[0] = new UserItem(treasure) { Count = 1 };
+            character.LingFengProgress.SetGameGird(200);
+            var player = new TestPlayer
+            {
+                Info = character,
+                Account = account,
+                Stats = new Stats(),
+                CurrentMap = new Map(new MapInfo
+                {
+                    Index = 916172,
+                    FileName = "LFENV16-ORIGINAL-TREASURE"
+                }),
+                NPCDelayed = true
+            };
+            character.Mount = new MountInfo(player);
+            player.Report = new Reporting(player);
+
+            Assert.True(script.CallSystem(
+                player, "[@法宝开始收录](1,人品,13,13)"));
+            NPCPage collectionPage = Assert.Single(script.NPCPages, page =>
+                page.Key.StartsWith("[@法宝开始收录]", StringComparison.OrdinalIgnoreCase));
+            var rowResult = Envir.Main.CSharpScripts.VariableCommands.Format(
+                ScriptVariableContext.ForPlayer(player), "N$收录法宝位置");
+            Assert.True(rowResult.Success);
+            Assert.Equal("13", rowResult.Text);
+            bool directCellFound = Envir.Main.PhysicalCsvContentProvider.TryGetCell(
+                "法宝图鉴", 13, 13, out string directCell);
+            Assert.True(directCellFound);
+            Assert.Equal("200", directCell);
+            string literalCostCell = collectionPage.SegmentList[1].ReplaceValue(
+                player, "<$法宝图鉴(13,13)>");
+            Assert.Equal("200", literalCostCell);
+            string costCell = collectionPage.SegmentList[1].ReplaceValue(
+                player, "<$法宝图鉴(<$Str(N$收录法宝位置)>,13)>");
+            Assert.Equal("200", costCell);
+            Assert.True(character.Flags[403]);
+            Assert.Equal(0, character.LingFengProgress.GameGird);
+            Assert.DoesNotContain(character.Inventory, item => item?.Info == treasure);
+
+            var persistence = new SqlServerPersistence(DatabaseProviderKind.Sqlite,
+                new SqlDatabaseOptions { SqlitePath = databasePath });
+            var source = new Envir();
+            source.ItemInfoList.Add(treasure);
+            source.AccountList.Add(account);
+            source.CharacterList.Add(character);
+            persistence.SaveAccounts(source);
+            ((IPendingSaveCoordinator)persistence).DrainPendingSaves();
+
+            var restarted = new Envir();
+            restarted.ItemInfoList.Add(LoadLegacyItem(sourceDatabase, treasure.Name));
+            persistence.LoadAccounts(restarted);
+            CharacterInfo restored = Assert.Single(restarted.CharacterList);
+            Assert.True(restored.Flags[403]);
+            Assert.Equal(0, restored.LingFengProgress.GameGird);
+            Assert.DoesNotContain(restored.Inventory, item => item?.Info.Name == treasure.Name);
+            Assert.Equal(sourceDigest, ComputeDirectoryDigest(sourceRoot));
+        }
+        finally
+        {
+            if (script != null) Envir.Main.Scripts.Remove(script.ScriptID);
+            Settings.CSharpScriptsEnabled = oldCSharpEnabled;
+            Settings.TxtScriptsEnabled = oldTxtEnabled;
+            Settings.TxtScriptsPath = oldTxtPath;
+            Settings.TxtScriptsLayout = oldLayout;
+            Settings.TxtScriptsStrictCompatibility = oldStrict;
+            Settings.TxtScriptsCompatibilityVersion = oldVersion;
+            Settings.TxtScriptsDependencyLevel = oldLevel;
+            Envir.Main.ItemInfoList.Clear();
+            Envir.Main.ItemInfoList.AddRange(oldItems);
+            Envir.Main.ApplyPhysicalTextFileDefinitions();
+            RestoreQueue(MessageQueue.Instance.MessageLog, oldMessages);
+            RestoreQueue(MessageQueue.Instance.DebugLog, oldDebugMessages);
+            if (Directory.Exists(root)) Directory.Delete(root, true);
+            TryDelete(databasePath);
+        }
+    }
+
     [Fact]
     public void 法宝玩法从登录到击杀提交保存重启形成可核账闭环()
     {
@@ -42,7 +174,8 @@ public sealed class LingFengCompleteSliceTests
                 name => name == questItem.Name || name == rewardItem.Name,
                 index => index == questItem.Index || index == rewardItem.Index,
                 name => name == monsterInfo.Name,
-                name => name == mapInfo.FileName,
+                name => provider.WorldContentProvider?.DefinesMapReference(name) == true ||
+                        name == mapInfo.FileName,
                 key => key == "Maps/新龙城.map" && File.Exists(sourceMap),
                 _ => false));
         Assert.True(report.Success, string.Join(Environment.NewLine,
@@ -200,9 +333,6 @@ public sealed class LingFengCompleteSliceTests
             Envir.Main.ItemInfoList.Remove(rewardItem);
             Envir.Main.MonsterInfoList.Remove(monsterInfo);
             Envir.Main.MapInfoList.Remove(mapInfo);
-            Settings.TxtScriptsEnabled = false;
-            Settings.TxtScriptsDependencyLevel = LingFengDependencyLevel.None;
-            Envir.Main.ApplyPhysicalTextFileDefinitions();
             Settings.CSharpScriptsEnabled = oldCSharpEnabled;
             Settings.CSharpScriptsFallbackToTxt = oldFallback;
             Settings.TxtScriptsEnabled = oldTxtEnabled;
@@ -213,6 +343,7 @@ public sealed class LingFengCompleteSliceTests
             Settings.TxtScriptsDependencyLevel = oldLevel;
             Settings.TxtScriptsClientContracts = oldContracts;
             Settings.DropRate = oldDropRate;
+            Envir.Main.ApplyPhysicalTextFileDefinitions();
             Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
             TryDelete(databasePath);
             TryDelete(databasePath + "-wal");
@@ -270,6 +401,104 @@ public sealed class LingFengCompleteSliceTests
         AssertStrictSnapshot(
             @"D:\ChuanQi\服务端\01酷明传奇\MirServer_01\Mir200\Envir",
             "LFENV-ROOT-0002");
+    }
+
+    [Fact]
+    public void 酷明原样机器人脚本通过真实运行时解析()
+    {
+        const string sourceRoot = @"D:\ChuanQi\服务端\01酷明传奇\MirServer_01\Mir200\Envir";
+        if (!Directory.Exists(sourceRoot))
+            throw Xunit.Sdk.SkipException.ForSkip("本机未挂载 01酷明原版 Envir。");
+
+        bool oldTxtEnabled = Settings.TxtScriptsEnabled;
+        bool oldCSharpEnabled = Settings.CSharpScriptsEnabled;
+        bool oldStrict = Settings.TxtScriptsStrictCompatibility;
+        string oldTxtPath = Settings.TxtScriptsPath;
+        TxtScriptLayout oldLayout = Settings.TxtScriptsLayout;
+        string oldVersion = Settings.TxtScriptsCompatibilityVersion;
+        LingFengDependencyLevel oldLevel = Settings.TxtScriptsDependencyLevel;
+        NPCScript? robot = null;
+        try
+        {
+            Settings.CSharpScriptsEnabled = false;
+            Settings.TxtScriptsEnabled = true;
+            Settings.TxtScriptsPath = sourceRoot;
+            Settings.TxtScriptsLayout = TxtScriptLayout.LingFeng;
+            Settings.TxtScriptsStrictCompatibility = true;
+            Settings.TxtScriptsCompatibilityVersion = "LFM2-2026-08-15-snapshot";
+            Settings.TxtScriptsDependencyLevel = LingFengDependencyLevel.None;
+            Envir.Main.ApplyPhysicalTextFileDefinitions();
+
+            robot = NPCScript.GetOrAdd(uint.MaxValue - 1616,
+                Settings.RobotNPCFilename, NPCScriptType.Robot);
+            Assert.NotEmpty(robot.NPCPages);
+        }
+        finally
+        {
+            if (robot != null) Envir.Main.Scripts.Remove(robot.ScriptID);
+            Settings.CSharpScriptsEnabled = oldCSharpEnabled;
+            Settings.TxtScriptsEnabled = oldTxtEnabled;
+            Settings.TxtScriptsPath = oldTxtPath;
+            Settings.TxtScriptsLayout = oldLayout;
+            Settings.TxtScriptsStrictCompatibility = oldStrict;
+            Settings.TxtScriptsCompatibilityVersion = oldVersion;
+            Settings.TxtScriptsDependencyLevel = oldLevel;
+            Envir.Main.ApplyPhysicalTextFileDefinitions();
+        }
+    }
+
+    [Fact]
+    public void 酷明原样Envir真实资源缺口被E1审计准确报告()
+    {
+        const string sourceRoot = @"D:\ChuanQi\服务端\01酷明传奇\MirServer_01\Mir200\Envir";
+        const string sourceMaps = @"D:\ChuanQi\服务端\01酷明传奇\MirServer_01\Mir200\MAP";
+        const string sourceDatabase = @"D:\ChuanQi\服务端\01酷明传奇\MirServer_01\Mud2\DB\ApexM2.DB";
+        if (!Directory.Exists(sourceRoot) || !Directory.Exists(sourceMaps) || !File.Exists(sourceDatabase))
+            throw Xunit.Sdk.SkipException.ForSkip("本机未挂载 01酷明原版 Envir、地图或数据库。");
+
+        var provider = new PhysicalTextFileProvider(
+            new PhysicalTextFileProviderOptions(sourceRoot, TxtScriptLayout.LingFeng)
+            {
+                MaxFileBytes = 2 * 1024 * 1024
+            });
+        var items = new List<ItemInfo>();
+        var monsters = new List<MonsterInfo>();
+        LoadAllLegacyItems(sourceDatabase, items);
+        LoadAllLegacyMonsters(sourceDatabase, monsters);
+        var itemNames = items.Select(item => item.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var itemIndexes = items.Select(item => item.Index).ToHashSet();
+        var monsterNames = monsters.Select(monster => monster.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var mapNames = Directory.EnumerateFiles(sourceMaps, "*.map", SearchOption.TopDirectoryOnly)
+            .Select(Path.GetFileNameWithoutExtension)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        LingFengDependencyReport report = provider.ExternalDependencyManifest.Evaluate(
+            LingFengDependencyLevel.E1,
+            new LingFengDependencyProbe(
+                itemNames.Contains,
+                itemIndexes.Contains,
+                monsterNames.Contains,
+                mapNames.Contains,
+                _ => false,
+                _ => false));
+
+        Assert.False(report.Success,
+            "酷明原始资源已满足 E1；请将本阻断测试升级为真实生产冷启动验收。");
+        Assert.NotEmpty(report.Missing);
+        Assert.All(report.Missing, requirement =>
+        {
+            bool exists = requirement.Kind switch
+            {
+                LingFengDependencyKind.ItemName => itemNames.Contains(requirement.Key),
+                LingFengDependencyKind.ItemIndex => int.TryParse(requirement.Key, out int index) &&
+                                                    itemIndexes.Contains(index),
+                LingFengDependencyKind.Monster => monsterNames.Contains(requirement.Key),
+                LingFengDependencyKind.Map => mapNames.Contains(requirement.Key),
+                _ => false
+            };
+            Assert.False(exists,
+                $"审计误报：{requirement.Kind}:{requirement.Key}:{requirement.SourceKey}");
+        });
     }
 
     [Fact]
@@ -358,9 +587,6 @@ public sealed class LingFengCompleteSliceTests
                                           script.FileName.Equals("questdiary/跨文件", StringComparison.OrdinalIgnoreCase))
                          .Select(script => script.ScriptID)).Distinct().ToArray())
                 Envir.Main.Scripts.Remove(scriptId);
-            Settings.TxtScriptsEnabled = false;
-            Settings.TxtScriptsDependencyLevel = LingFengDependencyLevel.None;
-            Envir.Main.ApplyPhysicalTextFileDefinitions();
             Settings.CSharpScriptsEnabled = oldCSharpEnabled;
             Settings.TxtScriptsEnabled = oldTxtEnabled;
             Settings.TxtScriptsPath = oldTxtPath;
@@ -430,7 +656,7 @@ public sealed class LingFengCompleteSliceTests
     {
         AssertStrictSnapshot(
             @"D:\ChuanQi\服务端\封神\MirServer_法宝玩法精简提取包\MirServer\Mir200\Envir",
-            "LFENV-ROOT-0016");
+            "LFENV-ROOT-0018");
     }
 
     private static void AssertStrictSnapshot(string root, string rootId)
@@ -438,6 +664,7 @@ public sealed class LingFengCompleteSliceTests
         if (!Directory.Exists(root))
             throw Xunit.Sdk.SkipException.ForSkip($"本机未挂载 {rootId} 代表语料。");
 
+        string sourceDigest = ComputeDirectoryDigest(root);
         bool oldStrict = Settings.TxtScriptsStrictCompatibility;
         string oldVersion = Settings.TxtScriptsCompatibilityVersion;
         try
@@ -458,12 +685,90 @@ public sealed class LingFengCompleteSliceTests
                     .Take(20)) + Environment.NewLine +
                 string.Join(Environment.NewLine, errors.Take(20)) + Environment.NewLine +
                 $"{rootId} 严格预检错误总数：{errors.Count}");
+            Assert.Equal(sourceDigest, ComputeDirectoryDigest(root));
         }
         finally
         {
             Settings.TxtScriptsStrictCompatibility = oldStrict;
             Settings.TxtScriptsCompatibilityVersion = oldVersion;
         }
+    }
+
+    private static void CopyOriginalFile(string sourceRoot, string targetRoot,
+        string relativePath)
+    {
+        string source = Path.Combine(sourceRoot, relativePath);
+        string target = Path.Combine(targetRoot, relativePath);
+        Directory.CreateDirectory(Path.GetDirectoryName(target)!);
+        File.Copy(source, target);
+        Assert.Equal(SHA256.HashData(File.ReadAllBytes(source)),
+            SHA256.HashData(File.ReadAllBytes(target)));
+    }
+
+    private static void LoadAllLegacyItems(string databasePath, ICollection<ItemInfo> target)
+    {
+        using var connection = new SqliteConnection($"Data Source={databasePath};Mode=ReadOnly;Pooling=False");
+        connection.Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = "SELECT Idx, Name FROM StdItems WHERE Name <> '' ORDER BY Idx";
+        using SqliteDataReader reader = command.ExecuteReader();
+        var indexes = new HashSet<int>();
+        var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        while (reader.Read())
+        {
+            int index = reader.GetInt32(0);
+            string name = reader.GetString(1).Trim();
+            if (!indexes.Add(index) || !names.Add(name)) continue;
+            target.Add(new ItemInfo
+            {
+                Index = index,
+                Name = name,
+                Type = ItemType.Nothing,
+                StackSize = ushort.MaxValue,
+                Durability = 1
+            });
+        }
+    }
+
+    private static void LoadAllLegacyMonsters(string databasePath, ICollection<MonsterInfo> target)
+    {
+        using var connection = new SqliteConnection($"Data Source={databasePath};Mode=ReadOnly;Pooling=False");
+        connection.Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = "SELECT rowid, Name FROM Monster WHERE Name <> '' ORDER BY rowid";
+        using SqliteDataReader reader = command.ExecuteReader();
+        var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        while (reader.Read())
+        {
+            string name = reader.GetString(1).Trim();
+            if (!names.Add(name)) continue;
+            var monster = new MonsterInfo
+            {
+                Index = checked((int)reader.GetInt64(0)),
+                Name = name,
+                Image = Monster.Guard,
+                Level = 1,
+                MoveSpeed = 1000,
+                AttackSpeed = 1000
+            };
+            monster.Stats[Stat.HP] = 1;
+            target.Add(monster);
+        }
+    }
+
+    private static string ComputeDirectoryDigest(string root)
+    {
+        using IncrementalHash digest = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+        foreach (string file in Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories)
+                     .OrderBy(path => Path.GetRelativePath(root, path)
+                         .Replace('\\', '/'), StringComparer.Ordinal))
+        {
+            string relative = Path.GetRelativePath(root, file).Replace('\\', '/');
+            digest.AppendData(Encoding.UTF8.GetBytes(relative));
+            digest.AppendData([0]);
+            digest.AppendData(SHA256.HashData(File.ReadAllBytes(file)));
+        }
+        return Convert.ToHexString(digest.GetHashAndReset());
     }
 
     private static string Summarize(IEnumerable<string> errors)
@@ -600,6 +905,14 @@ public sealed class LingFengCompleteSliceTests
     {
         try { if (File.Exists(path)) File.Delete(path); }
         catch (IOException) { }
+    }
+
+    private static void RestoreQueue(
+        System.Collections.Concurrent.ConcurrentQueue<string> queue,
+        IEnumerable<string> values)
+    {
+        queue.Clear();
+        foreach (string value in values) queue.Enqueue(value);
     }
 
     private sealed class TestMonster : MonsterObject
