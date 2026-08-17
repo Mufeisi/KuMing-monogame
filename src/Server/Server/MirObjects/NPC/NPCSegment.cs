@@ -1722,6 +1722,14 @@ namespace Server.MirObjects
 
                 case "GIVE" when IsLingFengCompatibility:
                     if (parts.Length < 2) return;
+                    if (parts[1].Equals("金币", StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (parts.Length > 3)
+                            throw new InvalidDataException("LFM2 GIVE 金币只接受可选数量参数。");
+                        acts.Add(new NPCActions(ActionType.GiveGold,
+                            parts.Length == 3 ? parts[2] : "1"));
+                        break;
+                    }
                     if (parts.Length > 3)
                         throw new InvalidDataException("LFM2 扩展 GIVE 极品属性参数尚无等价物品模型；请改用 GIVEITEM 或移除扩展参数。");
                     count = parts.Length < 3 ? string.Empty : parts[2];
@@ -1739,6 +1747,14 @@ namespace Server.MirObjects
 
                 case "TAKE" when IsLingFengCompatibility:
                     if (parts.Length < 2 || parts.Length > 7) return;
+                    if (parts[1].Equals("金币", StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (parts.Length > 3)
+                            throw new InvalidDataException("LFM2 TAKE 金币只接受可选数量参数。");
+                        acts.Add(new NPCActions(ActionType.TakeGold,
+                            parts.Length == 3 ? parts[2] : "1"));
+                        break;
+                    }
                     acts.Add(new NPCActions(
                         ActionType.TakeItemLingFeng,
                         parts[1],

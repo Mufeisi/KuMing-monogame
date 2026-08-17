@@ -298,6 +298,11 @@ namespace Server.Scripting
                     {
                         if (tokens.Length <= argument.Index) continue;
                         string key = tokens[argument.Index].Trim();
+                        if (argument.Kind == LingFengDependencyKind.ItemName &&
+                            key.Equals("金币", StringComparison.OrdinalIgnoreCase) &&
+                            (command.Equals("GIVE", StringComparison.OrdinalIgnoreCase) ||
+                             command.Equals("TAKE", StringComparison.OrdinalIgnoreCase)))
+                            continue;
                         if (!IsStaticLiteral(key))
                         {
                             yield return new LingFengDependencyRequirement(

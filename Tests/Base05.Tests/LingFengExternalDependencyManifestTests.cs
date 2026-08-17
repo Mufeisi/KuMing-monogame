@@ -169,6 +169,20 @@ public sealed class LingFengExternalDependencyManifestTests
     }
 
     [Fact]
+    public void 翎风Give与Take金币不生成物品数据库依赖()
+    {
+        var definition = new TextFileDefinition("NPCs/金币兼容")
+            .AddLines(["[@MAIN]", "#ACT", "GIVE 金币 50", "TAKE 金币 25", "GIVEITEM 金条 1"]);
+
+        LingFengDependencyRequirement[] requirements =
+            LingFengScriptDependencyExtractor.Extract([definition]).ToArray();
+
+        LingFengDependencyRequirement item = Assert.Single(requirements);
+        Assert.Equal(LingFengDependencyKind.ItemName, item.Kind);
+        Assert.Equal("金条", item.Key);
+    }
+
+    [Fact]
     public void 缺失E1依赖在候选发布前阻断且保留上一文本快照()
     {
         bool oldEnabled = Settings.TxtScriptsEnabled;

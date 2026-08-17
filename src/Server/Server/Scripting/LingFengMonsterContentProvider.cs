@@ -218,6 +218,7 @@ namespace Server.Scripting
                 }
                 else if (section.Equals("UseItems", StringComparison.OrdinalIgnoreCase))
                 {
+                    value = value.TrimEnd('\u007F').TrimEnd();
                     if (!key.StartsWith("UseItems", StringComparison.OrdinalIgnoreCase) ||
                         !int.TryParse(key.AsSpan(8), out int slot) || slot < 0 || slot > 99)
                         errors.Add($"LFENV11-CONTENT-003：无效装备槽 {key}（{file.GetSourceLocation(index)}）。");

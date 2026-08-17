@@ -487,6 +487,8 @@ public sealed class LingFengCompleteSliceTests
         var mapNames = Directory.EnumerateFiles(sourceMaps, "*.map", SearchOption.TopDirectoryOnly)
             .Select(Path.GetFileNameWithoutExtension)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        bool MapExists(string name) => mapNames.Contains(name) ||
+                                       provider.WorldContentProvider?.DefinesMapReference(name) == true;
 
         LingFengDependencyReport report = provider.ExternalDependencyManifest.Evaluate(
             LingFengDependencyLevel.E1,
@@ -494,7 +496,7 @@ public sealed class LingFengCompleteSliceTests
                 itemNames.Contains,
                 itemIndexes.Contains,
                 monsterNames.Contains,
-                mapNames.Contains,
+                MapExists,
                 _ => false,
                 _ => false));
 
@@ -509,7 +511,7 @@ public sealed class LingFengCompleteSliceTests
                 LingFengDependencyKind.ItemIndex => int.TryParse(requirement.Key, out int index) &&
                                                     itemIndexes.Contains(index),
                 LingFengDependencyKind.Monster => monsterNames.Contains(requirement.Key),
-                LingFengDependencyKind.Map => mapNames.Contains(requirement.Key),
+                LingFengDependencyKind.Map => MapExists(requirement.Key),
                 _ => false
             };
             Assert.False(exists,
@@ -729,12 +731,11 @@ public sealed class LingFengCompleteSliceTests
         command.CommandText = "SELECT Idx, Name FROM StdItems WHERE Name <> '' ORDER BY Idx";
         using SqliteDataReader reader = command.ExecuteReader();
         var indexes = new HashSet<int>();
-        var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         while (reader.Read())
         {
             int index = reader.GetInt32(0);
             string name = reader.GetString(1).Trim();
-            if (!indexes.Add(index) || !names.Add(name)) continue;
+            if (!indexes.Add(index)) continue;
             target.Add(new ItemInfo
             {
                 Index = index,

@@ -349,6 +349,23 @@ public sealed class LingFengMonsterDropProviderTests
         Assert.Contains(errors, error => error.Contains(expectedCode, StringComparison.Ordinal));
     }
 
+    [Fact]
+    public void MonsterContent_将原版DEL填充识别为空槽或物品名终止符()
+    {
+        TextFileDefinition source = new TextFileDefinition(
+                "MonsterUseItems/原版填充怪", "MonUseItems/原版填充怪.txt", "CP936", "CRLF")
+            .AddLines(["[Info]", "Job=0", "[UseItems]", "UseItems1=\u007F", "UseItems2=原版法宝\u007F"]);
+
+        Assert.True(LingFengMonsterContentProvider.TryCreate([source], [],
+            out LingFengMonsterContentProvider provider, out IReadOnlyList<string> errors),
+            string.Join(Environment.NewLine, errors));
+
+        LingFengDependencyRequirement requirement = Assert.Single(
+            provider.GetDependencyRequirements(), value =>
+                value.Kind == LingFengDependencyKind.ItemName);
+        Assert.Equal("原版法宝", requirement.Key);
+    }
+
     [Theory]
     [InlineData(true, "LFENV11-CONTENT-007")]
     [InlineData(false, "LFENV11-CONTENT-008")]

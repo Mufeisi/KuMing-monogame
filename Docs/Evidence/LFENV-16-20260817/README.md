@@ -41,7 +41,7 @@
 
 - `LFENV-ROOT-0002` 的严格脚本候选和机器人运行时解析通过。
 - 审计直接读取源 `ApexM2.DB` 的全部物品/怪物名称与编号，并只枚举源 `MAP` 的实际 `.map` 文件；manifest 中不存在的项全部进入 `Missing`。
-- 2026-08-17 只读诊断共确认 `1493` 个 E1 缺失引用：物品名 `987`、物品编号 `10`、怪物 `95`、地图 `401`；该规模属于源包完整性阻断，不能从其他版本拼装后冒充酷明原样输入。
+- 2026-08-18 只读诊断共确认 `901` 个 E1 缺失引用：物品名 `783`、物品编号 `9`、怪物 `95`、地图 `14`；该规模属于源包完整性阻断，不能从其他版本拼装后冒充酷明原样输入。审计已按生产语义识别 `MapInfo.txt` 地图别名、原版 `MonUseItems` 的 DEL 填充终止符，并将酷明大量使用的 `GIVE/TAKE 金币`路由到账户金币账本而非物品数据库，旧的 `1493` 计数因此作废。
 - 测试显式断言审计失败且每个缺失项在真实资源集合中确实不存在；不复制替代地图，不新增物品或怪物，不关闭数据库检查，也不把阻断冒充冷启动通过。
 
 封神原版法宝输入为 `LFENV-ROOT-0018`：185 个文件，清单摘要 `32AE59C3A0C41955019C84E15E8DEF030554655BE1606A8D4CC770A16BB406D1`，内容摘要 `8A5FC2F237A48056FA1DA2EFD7D6C5AB4B52521B9611CB0FA89BA070FF4139A0`；原版闭环同样在执行前后断言源目录摘要一致。
@@ -51,10 +51,10 @@
 ### Base05 当前阶段全量
 
 ```powershell
-dotnet test Tests/Base05.Tests/Base05.Tests.csproj --configuration Release --no-build --filter "FullyQualifiedName!~LingFengMultiVersionMatrixTests" --logger "trx;LogFileName=lfenv16-full-gate-current.trx" --logger "console;verbosity=minimal"
+dotnet test Tests/Base05.Tests/Base05.Tests.csproj --configuration Release --no-restore --filter "FullyQualifiedName!~LingFengMultiVersionMatrixTests" --logger "trx;LogFileName=lfenv16-full-gate-final2.trx" --logger "console;verbosity=minimal"
 ```
 
-当前结果为 `1056/1056` 通过，`0` 失败，`0` 跳过，用时 `5 分 53 秒`；TRX 为 `Tests/Base05.Tests/TestResults/lfenv16-full-gate-current.trx`。`LingFengMultiVersionMatrixTests` 是用户工作区中属于 LFENV-17 的下一阶段红测，本轮按当前阶段边界排除且未修改。
+当前结果为 `1059/1059` 通过，`0` 失败，`0` 跳过，用时 `5 分 42 秒`；TRX 为 `Tests/Base05.Tests/TestResults/lfenv16-full-gate-final2.trx`。该结果基于 2026-08-18 的最终工作区，覆盖地图别名、DEL 填充、金币保留语义及 `RepeatCount <= 0` 永久播放回归。`LingFengMultiVersionMatrixTests` 是用户工作区中属于 LFENV-17 的下一阶段红测，本轮按当前阶段边界排除且未修改。
 
 ### Windows 解决方案构建
 
@@ -62,7 +62,7 @@ dotnet test Tests/Base05.Tests/Base05.Tests.csproj --configuration Release --no-
 dotnet build LyoCrystal.Windows.slnf --configuration Release --no-restore
 ```
 
-结果：`0` 错误；`517` 条既有编译警告，用时 `1 分 12.17 秒`。
+结果：`0` 错误；`517` 条既有编译警告，用时 `59.13 秒`。
 
 ### 协议清单漂移
 
@@ -88,7 +88,7 @@ Push-Location Manual/Engine
 Pop-Location
 ```
 
-结果：通过，站点在 `13.38 秒` 内完成构建；Material for MkDocs 的上游版本提示不属于 MkDocs 严格模式错误。
+结果：通过，站点在 `8.88 秒` 内完成构建；Material for MkDocs 的上游版本提示不属于 MkDocs 严格模式错误。
 
 ### 网关正常观察性能基线
 

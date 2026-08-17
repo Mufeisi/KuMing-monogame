@@ -7320,6 +7320,33 @@ public sealed class LingFengPlayerCommandTests
     }
 
     [Fact]
+    public void 翎风Give与Take金币路由到账户账本而非背包物品()
+    {
+        string oldVersion = Settings.TxtScriptsCompatibilityVersion;
+        try
+        {
+            Settings.TxtScriptsCompatibilityVersion = "LFM2-2026-08-15-snapshot";
+            var player = new SilentPlayerObject
+            {
+                Account = new AccountInfo { Gold = 100 },
+                Info = new CharacterInfo { Name = "金币兼容人物" }
+            };
+            var segment = Segment();
+            segment.ParseAct(segment.ActList, "GIVE 金币 50");
+            segment.ParseAct(segment.ActList, "TAKE 金币 25");
+
+            Assert.Equal(new[] { ActionType.GiveGold, ActionType.TakeGold },
+                segment.ActList.Select(action => action.Type));
+            Assert.True(segment.Check(player));
+            Assert.Equal(125u, player.Account.Gold);
+        }
+        finally
+        {
+            Settings.TxtScriptsCompatibilityVersion = oldVersion;
+        }
+    }
+
+    [Fact]
     public void CheckItem改名兼容标志在当前无改名模型时仍按数据库原名计数()
     {
         string oldVersion = Settings.TxtScriptsCompatibilityVersion;
