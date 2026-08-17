@@ -28,6 +28,14 @@ namespace Server.Scripting.Variables
             return new ScriptVariableReference(scope, normalized, false, -1);
         }
 
+        internal static ScriptVariableReference LingFengNamed(
+            ScriptVariableScope scope, string key)
+        {
+            if (!ScriptVariableName.TryNormalizeLingFeng(key, out var normalized))
+                throw new ArgumentException("翎风变量名称无效。", nameof(key));
+            return new ScriptVariableReference(scope, normalized, false, -1);
+        }
+
         public static ScriptVariableReference Legacy(ScriptVariableScope scope, int index)
         {
             if (index < 0 || index > 999) throw new ArgumentOutOfRangeException(nameof(index));

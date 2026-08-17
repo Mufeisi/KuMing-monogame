@@ -335,6 +335,8 @@ public sealed class ScriptVariableModuleTests
     [InlineData("P.DropRate", ScriptVariableScope.P, false, -1, "DROPRATE")]
     [InlineData("P.Drop.Rate", ScriptVariableScope.P, false, -1, "DROP.RATE")]
     [InlineData("N$Score", ScriptVariableScope.N, false, -1, "SCORE")]
+    [InlineData("N$1121", ScriptVariableScope.N, false, -1, "1121")]
+    [InlineData("S$1", ScriptVariableScope.S, false, -1, "1")]
     [InlineData("S$标题", ScriptVariableScope.S, false, -1, "标题")]
     [InlineData("guild.GuildRate", ScriptVariableScope.Guild, false, -1, "GUILDRATE")]
     public void ReferenceParserAcceptsLegacyAndExplicitNamedReferences(

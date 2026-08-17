@@ -1896,8 +1896,11 @@ public sealed class LingFengPlayerCommandTests
             };
 
             var segment = Segment();
+            segment.ParseAct(segment.ActList, "MOV S$数据库物品名 命格试炼石");
             segment.ParseAct(segment.ActList, "GETDBITEMFIELDVALUE 命格试炼石 IDX N1");
             segment.ParseAct(segment.ActList, "GETDBITEMFIELDVALUE 命格试炼石 DC2 N2");
+            segment.ParseAct(segment.ActList,
+                "GETDBITEMFIELDVALUE <$STR(S$数据库物品名)> IDX N7");
             segment.ParseAct(segment.ActList,
                 "GETDBIDXITEMFIELDVALUE 981620 NAME S$可回收异兽");
             segment.ParseAct(segment.ActList, "GETBAGITEMCOUNT 命格试炼石 N3");
@@ -1911,6 +1914,7 @@ public sealed class LingFengPlayerCommandTests
             Assert.True(segment.Check(player));
             Assert.Equal("981620", segment.FindVariable(player, "%N1"));
             Assert.Equal("9", segment.FindVariable(player, "%N2"));
+            Assert.Equal("981620", segment.FindVariable(player, "%N7"));
             var context = ScriptVariableContext.ForConversation(
                 player, player.NPCObjectID, player.CurrentMap);
             Assert.Equal("命格试炼石", Envir.Main.CSharpScripts.VariableCommands
@@ -4848,7 +4852,9 @@ public sealed class LingFengPlayerCommandTests
             Assert.True(permanent.Check(player));
 
             NPCSegment thirtySeconds = Segment("cool-fate-exp-thirty");
-            thirtySeconds.ParseAct(thirtySeconds.ActList, "KILLMONEXPRATE 300 30 1 1");
+            thirtySeconds.ParseAct(thirtySeconds.ActList, "MOV N$经验倍数 300");
+            thirtySeconds.ParseAct(thirtySeconds.ActList,
+                "KILLMONEXPRATE <$Str(N$经验倍数)> 30 1 1");
             Assert.True(thirtySeconds.Check(player));
 
             NPCSegment tenSeconds = Segment("cool-fate-exp-ten");

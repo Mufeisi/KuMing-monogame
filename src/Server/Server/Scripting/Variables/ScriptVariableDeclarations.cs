@@ -216,13 +216,22 @@ namespace Server.Scripting.Variables
     internal static class ScriptVariableName
     {
         public static bool TryNormalize(string key, out string normalized)
+            => TryNormalize(key, false, out normalized);
+
+        public static bool TryNormalizeLingFeng(string key, out string normalized)
+            => TryNormalize(key, true, out normalized);
+
+        private static bool TryNormalize(
+            string key, bool allowLeadingDigit, out string normalized)
         {
             normalized = string.Empty;
             if (string.IsNullOrWhiteSpace(key)) return false;
 
             string value = key.Trim();
             if (value.Length > 64) return false;
-            if (!char.IsLetter(value[0])) return false;
+            if (!char.IsLetter(value[0]) &&
+                !(allowLeadingDigit && char.IsDigit(value[0])))
+                return false;
 
             for (var i = 1; i < value.Length; i++)
             {

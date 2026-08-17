@@ -28,9 +28,11 @@ public sealed class LingFengCompleteSliceTests
     public void 封神原版法宝收录扣币回收登记并在重启后保留()
     {
         string sourceRoot = @"D:\ChuanQi\服务端\封神\MirServer_法宝玩法精简提取包\MirServer\Mir200\Envir";
+        string fullSourceRoot = @"D:\ChuanQi\服务端\封神\MirServer\Mir200\Envir";
         string sourceDatabase = @"D:\ChuanQi\服务端\封神\MirServer\Mud2\DB\ApexM2.DB";
-        if (!Directory.Exists(sourceRoot) || !File.Exists(sourceDatabase))
-            throw Xunit.Sdk.SkipException.ForSkip("本机未挂载封神原版法宝语料或数据库。");
+        if (!Directory.Exists(sourceRoot) || !Directory.Exists(fullSourceRoot) ||
+            !File.Exists(sourceDatabase))
+            throw Xunit.Sdk.SkipException.ForSkip("本机未挂载封神原版法宝语料、完整 Envir 或数据库。");
 
         string sourceDigest = ComputeDirectoryDigest(sourceRoot);
         string root = Path.Combine(Path.GetTempPath(), $"lfenv16-original-treasure-{Guid.NewGuid():N}");
@@ -52,6 +54,8 @@ public sealed class LingFengCompleteSliceTests
                 @"QuestDiary\【2功能脚本】\法宝收录.txt");
             CopyOriginalFile(sourceRoot, root,
                 @"QuestDiary\【3表格脚本】\法宝图鉴.csv");
+            CopyOriginalFile(fullSourceRoot, root,
+                @"QuestDiary\【1通用脚本】\属性脚本.txt");
 
             Settings.CSharpScriptsEnabled = false;
             Settings.TxtScriptsEnabled = true;
@@ -74,7 +78,8 @@ public sealed class LingFengCompleteSliceTests
             {
                 Index = 916171,
                 Name = "封神原版法宝人物",
-                AccountInfo = account
+                AccountInfo = account,
+                Level = 1
             };
             account.Characters.Add(character);
             character.Inventory[0] = new UserItem(treasure) { Count = 1 };
@@ -112,6 +117,17 @@ public sealed class LingFengCompleteSliceTests
             string costCell = collectionPage.SegmentList[1].ReplaceValue(
                 player, "<$法宝图鉴(<$Str(N$收录法宝位置)>,13)>");
             Assert.Equal("200", costCell);
+            string[] newMessages = MessageQueue.Instance.MessageLog
+                .Skip(oldMessages.Length).ToArray();
+            Assert.DoesNotContain(newMessages, message =>
+                message.Contains("特殊触发执行失败", StringComparison.Ordinal) ||
+                message.Contains("HCALL 执行失败", StringComparison.Ordinal) ||
+                message.Contains("KILLMONEXPRATE 参数", StringComparison.Ordinal));
+            Assert.Contains(newMessages, message =>
+                message.Contains("GETDBITEMFIELDVALUE 物品或字段无效", StringComparison.Ordinal) ||
+                (message.Contains("[Variables][TXT]", StringComparison.Ordinal) &&
+                 message.Contains("TypeMismatch", StringComparison.Ordinal)) ||
+                message.Contains("CSVFINDTEXTROW 执行失败", StringComparison.Ordinal));
             Assert.True(character.Flags[403]);
             Assert.Equal(0, character.LingFengProgress.GameGird);
             Assert.DoesNotContain(character.Inventory, item => item?.Info == treasure);

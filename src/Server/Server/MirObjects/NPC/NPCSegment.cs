@@ -2236,16 +2236,10 @@ namespace Server.MirObjects
 
                 case "KILLMONEXPRATE" when IsLingFengCompatibility:
                     if (parts.Length is < 3 or > 5 ||
-                        !int.TryParse(parts[1], NumberStyles.None,
-                            CultureInfo.InvariantCulture, out int experienceRate) ||
-                        experienceRate is < 100 or > 1_000_000 ||
-                        !int.TryParse(parts[2], NumberStyles.None,
-                            CultureInfo.InvariantCulture, out int experienceRateSeconds) ||
-                        experienceRateSeconds < 0 ||
                         parts.Length >= 4 && parts[3] is not ("0" or "1") ||
                         parts.Length == 5 && parts[4] is not ("0" or "1"))
                         throw new InvalidDataException(
-                            "KILLMONEXPRATE 需要100至1000000倍率、非负秒数、可选保存和静默标志0或1。");
+                            "KILLMONEXPRATE 需要倍率、有效时间、可选保存和静默标志0或1。");
                     acts.Add(new NPCActions(ActionType.LingFengKillMonsterExperienceRate,
                         parts[1], parts[2], parts.Length >= 4 ? parts[3] : "0",
                         parts.Length == 5 ? parts[4] : "0"));

@@ -23,7 +23,8 @@ namespace Server.Scripting.Variables
                 };
                 try
                 {
-                    reference = ScriptVariableReference.Named(extendedScope, value.Substring(2));
+                    reference = ScriptVariableReference.LingFengNamed(
+                        extendedScope, value.Substring(2));
                     return true;
                 }
                 catch (ArgumentException)
