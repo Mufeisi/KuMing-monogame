@@ -219,6 +219,7 @@ namespace MonoShare.MirObjects
 
             ItemSets.Clear();
             MirSet.Clear();
+            var lingFengWholeBodyPercentages = new Stats();
 
             for (int i = 0; i < Equipment.Length; i++)
             {
@@ -236,6 +237,10 @@ namespace MonoShare.MirObjects
 
                 Stats.Add(RealItem.Stats);
                 Stats.Add(temp.AddedStats);
+                var lingFengItemStats = new Stats(RealItem.Stats);
+                lingFengItemStats.Add(temp.AddedStats);
+                temp.ApplyLingFengCustomStats(Stats, lingFengItemStats);
+                temp.AccumulateLingFengWholeBodyPercentages(lingFengWholeBodyPercentages);
 
                 Stats[Stat.MinAC] += temp.Awake.GetAC();
                 Stats[Stat.MaxAC] += temp.Awake.GetAC();
@@ -263,17 +268,21 @@ namespace MonoShare.MirObjects
                     FastRun = true;
                 }
 
-                RefreshSocketStats(temp);
+                RefreshSocketStats(temp, lingFengWholeBodyPercentages);
 
                 if (RealItem.Type == ItemType.Armour)
                 {
                     Armour = RealItem.Shape;
-                    WingEffect = RealItem.Effect;
+                    WingEffect = temp.GetLingFengItemEffect(1) is ushort armourEffect and > 0 and <= byte.MaxValue
+                        ? (byte)armourEffect
+                        : RealItem.Effect;
                 }
                 if (RealItem.Type == ItemType.Weapon)
                 {
                     Weapon = RealItem.Shape;
-                    WeaponEffect = RealItem.Effect;
+                    WeaponEffect = temp.GetLingFengItemEffect(1) is ushort weaponEffect and > 0
+                        ? weaponEffect
+                        : RealItem.Effect;
                 }
 
                 if (RealItem.Type == ItemType.Mount)
@@ -301,6 +310,8 @@ namespace MonoShare.MirObjects
                 }
             }
 
+            UserItem.ApplyLingFengWholeBodyPercentages(Stats, lingFengWholeBodyPercentages);
+
             if (ItemMode.HasFlag(SpecialItemMode.Muscle))
             {
                 Stats[Stat.BagWeight] = Stats[Stat.BagWeight] * 2;
@@ -310,7 +321,7 @@ namespace MonoShare.MirObjects
         }
 
 
-        private void RefreshSocketStats(UserItem equipItem)
+        private void RefreshSocketStats(UserItem equipItem, Stats lingFengWholeBodyPercentages)
         {
             if (equipItem == null) return;
 
@@ -340,6 +351,10 @@ namespace MonoShare.MirObjects
 
                 Stats.Add(RealItem.Stats);
                 Stats.Add(temp.AddedStats);
+                var lingFengItemStats = new Stats(RealItem.Stats);
+                lingFengItemStats.Add(temp.AddedStats);
+                temp.ApplyLingFengCustomStats(Stats, lingFengItemStats);
+                temp.AccumulateLingFengWholeBodyPercentages(lingFengWholeBodyPercentages);
 
                 if (RealItem.Light > Light) Light = RealItem.Light;
                 if (RealItem.Unique != SpecialItemMode.None)

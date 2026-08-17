@@ -72,7 +72,7 @@ public sealed class LingFengEnvirCorpusCatalogTests
         IReadOnlyList<IReadOnlyDictionary<string, string>> rows =
             ReadCsv("lingfeng-server-symbols.csv");
 
-        Assert.Equal(906, rows.Count);
+        Assert.Equal(908, rows.Count);
         Assert.Equal(rows.Count, rows.Select(row => row["ID"]).Distinct(StringComparer.Ordinal).Count());
         Assert.Equal(rows.Count, rows
             .Select(row => $"{row["符号种类"]}|{row["规范名称"]}")
@@ -98,7 +98,10 @@ public sealed class LingFengEnvirCorpusCatalogTests
             Assert.False(string.IsNullOrWhiteSpace(row["来源"]));
             if (row["测试编号"] == "LFENV06-P1")
             {
-                Assert.Contains("LingFengTxtTriggerContext", row["当前实现"], StringComparison.Ordinal);
+                if (row["规范名称"] is "NPCREBORNCOUNT" or "TRIGGERNPCREBORNCOUNT")
+                    Assert.Contains("PlayerObject", row["当前实现"], StringComparison.Ordinal);
+                else
+                    Assert.Contains("LingFengTxtTriggerContext", row["当前实现"], StringComparison.Ordinal);
                 Assert.Contains("LFENV-06", row["已知差异或实施结论"], StringComparison.Ordinal);
                 if (row["兼容状态"] == "C")
                     Assert.Contains("兼容", row["已知差异或实施结论"], StringComparison.Ordinal);

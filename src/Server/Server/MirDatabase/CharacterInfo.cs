@@ -107,6 +107,9 @@ namespace Server.MirDatabase
         public bool HeroSpawned;
         public HeroBehaviour HeroBehaviour;
         public CharacterScriptVariableStore ScriptVariables { get; } = new CharacterScriptVariableStore();
+        private LingFengCharacterProgress _lingFengProgress;
+        public LingFengCharacterProgress LingFengProgress =>
+            _lingFengProgress ??= new LingFengCharacterProgress(ScriptVariables);
 
         public CharacterInfo() { }
 

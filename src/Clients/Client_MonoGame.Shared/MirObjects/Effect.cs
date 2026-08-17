@@ -29,6 +29,7 @@ namespace MonoShare.MirObjects
         public bool Blend = true;
         public float Rate = 1F;
         public Point DrawLocation;
+        public Point PixelOffset;
         public bool Repeat;
         public long RepeatUntil;
 
@@ -121,6 +122,7 @@ namespace MonoShare.MirObjects
             if (Owner != null)
             {
                 DrawLocation = Owner.DrawLocation;
+                DrawLocation.Offset(PixelOffset);
             }
             else
             {

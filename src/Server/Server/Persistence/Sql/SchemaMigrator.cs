@@ -1143,6 +1143,13 @@ namespace Server.Persistence.Sql
                         "CREATE INDEX character_script_variables_ix_rank ON character_script_variables(variable_namespace, variable_key, integer_value)",
                         "CREATE INDEX server_script_variables_ix_rank ON server_script_variables(variable_namespace, variable_key, integer_value)",
                     ]),
+                new SchemaMigration(
+                    version: 21,
+                    description: "翎风物品自定义属性持久化",
+                    statements:
+                    [
+                        "ALTER TABLE item_instances ADD COLUMN lingfeng_custom_attributes TEXT NOT NULL DEFAULT ''",
+                    ]),
             };
         }
     }

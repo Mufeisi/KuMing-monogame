@@ -1,5 +1,6 @@
 using System.Text;
 using Server;
+using Server.MirDatabase;
 using Server.MirEnvir;
 using Server.MirObjects;
 using Server.Scripting;
@@ -27,6 +28,33 @@ public sealed class LingFengTxtSyntaxGoldenTests
     {
         Assert.False(TxtScriptTokenizer.TryTokenize("MOV S1 \"未闭合", out _, out string error));
         Assert.Contains("右侧双引号", error, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void 参数Tokenizer忽略旧脚本行首DOS控制字符()
+    {
+        Assert.True(TxtScriptTokenizer.TryTokenize("\u001a", out string[] eofTokens, out string eofError), eofError);
+        Assert.Empty(eofTokens);
+
+        Assert.True(TxtScriptTokenizer.TryTokenize(
+            "\u001f[@STDMODEFUNC209]", out string[] labelTokens, out string labelError), labelError);
+        Assert.Equal(new[] { "[@STDMODEFUNC209]" }, labelTokens);
+    }
+
+    [Fact]
+    public void 参数Tokenizer忽略参数边界后的行尾注释但保留正文分号()
+    {
+        Assert.True(TxtScriptTokenizer.TryTokenize(
+            "SetOnTimer 1 1   ;1秒级定时器",
+            out string[] tokens,
+            out string error), error);
+        Assert.Equal(new[] { "SetOnTimer", "1", "1" }, tokens);
+
+        Assert.True(TxtScriptTokenizer.TryTokenize(
+            "MOV S1 \"正文;仍保留\"",
+            out tokens,
+            out error), error);
+        Assert.Equal(new[] { "MOV", "S1", "正文;仍保留" }, tokens);
     }
 
     [Fact]
@@ -123,6 +151,39 @@ public sealed class LingFengTxtSyntaxGoldenTests
     }
 
     [Fact]
+    public void 翎风While结构缺失配对时严格候选失败关闭()
+    {
+        string oldVersion = Settings.TxtScriptsCompatibilityVersion;
+        bool oldStrict = Settings.TxtScriptsStrictCompatibility;
+        try
+        {
+            Settings.TxtScriptsCompatibilityVersion = "LFM2-2026-08-15-snapshot";
+            Settings.TxtScriptsStrictCompatibility = true;
+            var definition = new TextFileDefinition(
+                    "NPCs/循环错误", "D:/受控/NPCs/循环错误.txt", "UTF-8", "LF")
+                .AddLines(new[]
+                {
+                    "[@MAIN]", "#ACT", "ENDWHILE", "WHILE N$次数 < 3", "MOV N$次数 1"
+                });
+            ITextFileProvider provider = new CSharpTextFileProvider(
+                new Dictionary<string, TextFileDefinition>(StringComparer.Ordinal)
+                {
+                    [definition.Key] = definition
+                });
+
+            IReadOnlyList<string> errors = TxtScriptSnapshotValidator.Validate(provider);
+
+            Assert.Equal(2, errors.Count(error =>
+                error.StartsWith("TXT-SNAPSHOT-018", StringComparison.Ordinal)));
+        }
+        finally
+        {
+            Settings.TxtScriptsStrictCompatibility = oldStrict;
+            Settings.TxtScriptsCompatibilityVersion = oldVersion;
+        }
+    }
+
+    [Fact]
     public void Call支持带空格引号和QuestDiary跨目录脚本()
     {
         using ParsedNpc fixture = Parse(
@@ -140,6 +201,79 @@ public sealed class LingFengTxtSyntaxGoldenTests
         Assert.Equal("questdiary/公共 库", called.FileName);
         Assert.Equal("跨目录调用成功",
             Assert.Single(Assert.Single(called.NPCPages).SegmentList).Say.Single());
+    }
+
+    [Fact]
+    public void 翎风根相对井号Call保留目标脚本标签()
+    {
+        using ParsedNpc fixture = Parse(
+            "[@MAIN]\n#ACT\n#CALL [\\命格系统\\事件.txt] @命格入口\n",
+            new Dictionary<string, string>
+            {
+                ["QuestDiary/命格系统/事件.txt"] = "[@命格入口]\n#SAY\n命格调用成功"
+            });
+
+        NPCSegment segment = Assert.Single(Assert.Single(fixture.Script.NPCPages).SegmentList);
+        NPCActions action = Assert.Single(segment.ActList);
+        Assert.Equal(ActionType.Call, action.Type);
+        Assert.Equal("@命格入口", action.Params[1]);
+
+        var player = new PlayerObject
+        {
+            Info = new CharacterInfo { Name = "命格调用人物" },
+            Account = new AccountInfo(),
+            NPCObjectID = 123
+        };
+        Assert.True(segment.Check(player));
+        DelayedAction delayed = Assert.Single(player.ActionList);
+        Assert.Equal(DelayedType.NPC, delayed.Type);
+        Assert.Equal("[@命格入口]", delayed.Params[2]);
+    }
+
+    [Fact]
+    public void 翎风Or条件任一命中即执行动作()
+    {
+        using ParsedNpc fixture = Parse(
+            "[@MAIN]\n#OR\nCHECKLEVEL == 1\nCHECKLEVEL == 2\n#ACT\nGIVEGOLD 7\n");
+        NPCSegment segment = Assert.Single(Assert.Single(fixture.Script.NPCPages).SegmentList);
+        Assert.True(segment.MatchAnyCheck);
+        Assert.Equal(2, segment.CheckList.Count);
+        Assert.Single(segment.ActList);
+        var player = new PlayerObject
+        {
+            Info = new CharacterInfo { Name = "命格条件人物", Level = 2 },
+            Account = new AccountInfo()
+        };
+
+        Assert.True(segment.Check(player));
+        Assert.Equal(7u, player.Account.Gold);
+    }
+
+    [Fact]
+    public void 翎风If数量条件满足指定个数才进入成功分支()
+    {
+        using ParsedNpc fixture = Parse(
+            "[@MAIN]\n#IF(2)\nCHECKLEVEL == 2\nCHECKLEVEL >= 2\nCHECKLEVEL == 3\n" +
+            "#ACT\nGIVEGOLD 11\n#ELSEACT\nGIVEGOLD 1\n");
+        NPCSegment segment = Assert.Single(Assert.Single(fixture.Script.NPCPages).SegmentList);
+        Assert.Equal(2, segment.RequiredCheckMatches);
+        Assert.False(segment.MatchAnyCheck);
+
+        var matching = new PlayerObject
+        {
+            Info = new CharacterInfo { Name = "多条件命中人物", Level = 2 },
+            Account = new AccountInfo()
+        };
+        Assert.True(segment.Check(matching));
+        Assert.Equal(11u, matching.Account.Gold);
+
+        var failing = new PlayerObject
+        {
+            Info = new CharacterInfo { Name = "多条件失败人物", Level = 1 },
+            Account = new AccountInfo()
+        };
+        Assert.False(segment.Check(failing));
+        Assert.Equal(1u, failing.Account.Gold);
     }
 
     [Fact]

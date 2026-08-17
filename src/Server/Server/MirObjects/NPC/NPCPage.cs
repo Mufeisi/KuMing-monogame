@@ -27,7 +27,7 @@ namespace Server.MirObjects
             Match match = r.Match(key);
             if (!match.Success) return key;
 
-            key = Regex.Replace(key, r.ToString(), "()");
+            key = Regex.Replace(key, r.ToString(), string.Empty);
 
             string strValues = match.Groups[1].Value;
             string[] arrValues = strValues.Split(',');

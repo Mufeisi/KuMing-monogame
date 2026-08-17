@@ -53,6 +53,7 @@ public sealed class LingFengWorldContentProviderTests
         Assert.True(first.NoDrug);
         Assert.True(first.NoPosition);
         Assert.True(first.NoThrowItem);
+        Assert.False(first.NoDropPlayer);
         Assert.True(first.Fight);
         Assert.Equal(LightSetting.Night, first.Light);
         MovementInfo movement = Assert.Single(first.Movements);
@@ -71,6 +72,65 @@ public sealed class LingFengWorldContentProviderTests
         Assert.Equal("逻辑二", first.LingFengOptions["NORECONNECT"]);
         Assert.Single(provider.MapQuests);
         Assert.Throws<InvalidOperationException>(plan.Commit);
+    }
+
+    [Fact]
+    public void LegacyMapOptionsAndSevenOrNineColumnMongenKeepExplicitCompatibilityBoundary()
+    {
+        TextFileDefinition mapInfo = Definition("World/MapInfo", "MapInfo.txt",
+            "[逻辑一|M101 第一地图[剧情世界]] NODROPITEM MISSION RUNHUMAN HORSE OPOSITIONMOVE NO X " +
+            "[逻辑二|M102 同行第二地图] SAFE");
+        TextFileDefinition mongen = Definition("World/Mongen", "Mongen.txt",
+            "；[全角分号历史注释]",
+            "逻辑一 1 2 七列怪 3 1 10",
+            "逻辑一 4 5 九列怪 6 2 20 0 25500");
+
+        Assert.True(LingFengWorldContentProvider.TryCreate(
+            mapInfo, mongen, null, new Dictionary<string, TextFileDefinition>(),
+            out LingFengWorldContentProvider provider, out IReadOnlyList<string> errors),
+            string.Join(Environment.NewLine, errors));
+        var map = new MapInfo { Index = 1, FileName = "M101" };
+        var secondMap = new MapInfo { Index = 4, FileName = "M102" };
+        var seven = new MonsterInfo { Index = 2, Name = "七列怪" };
+        var nine = new MonsterInfo { Index = 3, Name = "九列怪" };
+        Assert.True(provider.TryBuildPlan([map, secondMap], [seven, nine], out LingFengWorldContentPlan plan, out errors),
+            string.Join(Environment.NewLine, errors));
+
+        plan.Commit();
+
+        Assert.Equal("第一地图[剧情世界]", map.Title);
+        Assert.True(map.NoDropPlayer);
+        Assert.True(map.NoPosition);
+        Assert.Equal("同行第二地图", secondMap.Title);
+        Assert.Equal(2, map.Respawns.Count);
+        Assert.All(map.Respawns, respawn => Assert.Equal((byte)0, respawn.Direction));
+        Assert.Contains(provider.GetDependencyRequirements(), dependency =>
+            dependency.Level == LingFengDependencyLevel.E2 &&
+            dependency.Key == "LingFeng/MapOption/MISSION");
+    }
+
+    [Fact]
+    public void 同一物理行的冲突地图别名按最后完整定义确定发布()
+    {
+        TextFileDefinition mapInfo = Definition("World/MapInfo", "MapInfo.txt",
+            "[D4308_fix 葬龙渊] NORECALL NORECONNECT(D4307_fix) " +
+            "[D4308_fix|D4301_fix 葬龙渊副本] NORECALL");
+
+        Assert.True(LingFengWorldContentProvider.TryCreate(
+            mapInfo, null, null, new Dictionary<string, TextFileDefinition>(),
+            out LingFengWorldContentProvider provider, out IReadOnlyList<string> errors),
+            string.Join(Environment.NewLine, errors));
+        var physical = new MapInfo { Index = 4301, FileName = "D4301_fix" };
+        Assert.True(provider.TryBuildPlan(
+            [physical], Array.Empty<MonsterInfo>(), out LingFengWorldContentPlan plan, out errors),
+            string.Join(Environment.NewLine, errors));
+
+        plan.Commit();
+
+        Assert.Equal("D4308_fix", physical.LingFengAlias);
+        Assert.Equal("葬龙渊副本", physical.Title);
+        Assert.True(physical.NoRecall);
+        Assert.False(physical.NoReconnect);
     }
 
     [Theory]
@@ -130,6 +190,33 @@ public sealed class LingFengWorldContentProviderTests
         Assert.Contains(errors, error => error.Contains(expectedCode, StringComparison.Ordinal));
     }
 
+    [Theory]
+    [InlineData("FB(0,命格副本,2,1)")]
+    [InlineData("FB(60,命格副本,4,1)")]
+    [InlineData("FB(60,命格副本,2,-1)")]
+    [InlineData("FB(60,命格副本,2,1,0)")]
+    public void InvalidEctypeDefinitionsRejectTheWholeCandidate(string option)
+    {
+        Assert.False(LingFengWorldContentProvider.TryCreate(
+            Definition("World/MapInfo", "MapInfo.txt", $"[A|M101 A] {option}"),
+            null, null, new Dictionary<string, TextFileDefinition>(),
+            out _, out IReadOnlyList<string> errors));
+        Assert.Contains(errors, error => error.Contains("LFENV12-MAP-FB", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void DuplicateEctypeNamesRejectTheWholeCandidateCaseInsensitively()
+    {
+        Assert.False(LingFengWorldContentProvider.TryCreate(
+            Definition("World/MapInfo", "MapInfo.txt",
+                "[A|M101 A] FB(60,命格副本,2,1)",
+                "[B|M102 B] FB(60,命格副本,2,1,10)"),
+            null, null, new Dictionary<string, TextFileDefinition>(),
+            out _, out IReadOnlyList<string> errors));
+        Assert.Contains(errors, error =>
+            error.Contains("副本名称 命格副本", StringComparison.Ordinal));
+    }
+
     [Fact]
     public void DanglingReconnectAndInsufficientPhysicalInstancesFailPlan()
     {
@@ -156,16 +243,17 @@ public sealed class LingFengWorldContentProviderTests
     }
 
     [Fact]
-    public void SemanticDuplicateMapQuestRulesAreRejectedCaseInsensitively()
+    public void SemanticDuplicateMapQuestRulesAreDeduplicatedCaseInsensitively()
     {
         TextFileDefinition page = Definition("MapQuests/击杀任务", "MapQuest_def/击杀任务.txt", "[@MAIN]");
-        Assert.False(LingFengWorldContentProvider.TryCreate(null, null,
+        Assert.True(LingFengWorldContentProvider.TryCreate(null, null,
             Definition("World/MapQuest", "MapQuest.txt",
                 "A [1] 1 Monster * 击杀任务",
                 "a [1] 1 monster * 击杀任务"),
             new Dictionary<string, TextFileDefinition> { [page.Key] = page },
-            out _, out IReadOnlyList<string> errors));
-        Assert.Contains(errors, error => error.Contains("LFENV12-MAPQUEST-DUPLICATE", StringComparison.Ordinal));
+            out LingFengWorldContentProvider provider, out IReadOnlyList<string> errors),
+            string.Join(Environment.NewLine, errors));
+        Assert.Single(provider.MapQuests);
     }
 
     [Fact]

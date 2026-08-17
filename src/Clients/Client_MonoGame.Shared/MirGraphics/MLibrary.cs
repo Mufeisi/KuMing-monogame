@@ -48,6 +48,8 @@ namespace MonoShare.MirGraphics
 
         //Map
         public static readonly MLibrary[] MapLibs = new MLibrary[400];
+        private static readonly Dictionary<string, MLibrary> LingFengEffectLibraries =
+            new(StringComparer.OrdinalIgnoreCase);
 
         //Items
         public static readonly MLibrary
@@ -191,6 +193,23 @@ namespace MonoShare.MirGraphics
 
             Thread thread = new Thread(LoadGameLibraries) { IsBackground = true };
             thread.Start();
+        }
+
+        public static MLibrary GetLingFengEffectLibrary(string name)
+        {
+            string stem = (name ?? string.Empty).Trim();
+            if (stem.Length is < 1 or > 64 || stem.IndexOfAny(new[] { '/', '\\' }) >= 0 ||
+                !string.Equals(Path.GetFileName(stem), stem, StringComparison.Ordinal))
+                return null;
+            lock (LingFengEffectLibraries)
+            {
+                MLibrary library;
+                if (LingFengEffectLibraries.TryGetValue(stem, out library)) return library;
+                if (LingFengEffectLibraries.Count >= 256) return null;
+                library = new MLibrary(Settings.DataPath + stem);
+                LingFengEffectLibraries.Add(stem, library);
+                return library;
+            }
         }
 
         static void InitLibrary(ref MLibrary[] library, string path, string toStringValue, string suffix = "")

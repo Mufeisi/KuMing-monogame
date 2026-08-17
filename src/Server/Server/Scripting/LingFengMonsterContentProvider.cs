@@ -87,7 +87,8 @@ namespace Server.Scripting
             var failures = new List<string>();
             var parsed = new Dictionary<string, Parsed>(StringComparer.OrdinalIgnoreCase);
             var useItemNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            var smartNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var smartDefinitions = new Dictionary<string,
+                IReadOnlyDictionary<string, IReadOnlyDictionary<string, string>>>(StringComparer.OrdinalIgnoreCase);
             foreach (TextFileDefinition file in useItemFiles ?? Array.Empty<TextFileDefinition>())
             {
                 string name = Path.GetFileName(file.SourcePath);
@@ -106,12 +107,14 @@ namespace Server.Scripting
             foreach (TextFileDefinition file in smartFiles ?? Array.Empty<TextFileDefinition>())
             {
                 string name = Path.GetFileNameWithoutExtension(file.SourcePath);
-                if (!smartNames.Add(name))
+                IReadOnlyDictionary<string, IReadOnlyDictionary<string, string>> smart = ParseIni(file, failures);
+                if (smartDefinitions.TryGetValue(name, out var previousSmart))
                 {
-                    failures.Add($"LFENV11-CONTENT-008：怪物 {name} 存在重复的 SmartMonster 定义。");
+                    if (!SmartDefinitionsEqual(previousSmart, smart))
+                        failures.Add($"LFENV11-CONTENT-008：怪物 {name} 存在冲突的 SmartMonster 定义。");
                     continue;
                 }
-                IReadOnlyDictionary<string, IReadOnlyDictionary<string, string>> smart = ParseIni(file, failures);
+                smartDefinitions.Add(name, smart);
                 if (parsed.TryGetValue(name, out Parsed existing))
                     parsed[name] = existing with { SmartSections = smart };
                 else
@@ -123,6 +126,15 @@ namespace Server.Scripting
             provider = failures.Count == 0 ? new LingFengMonsterContentProvider(parsed) : null;
             return failures.Count == 0;
         }
+
+        private static bool SmartDefinitionsEqual(
+            IReadOnlyDictionary<string, IReadOnlyDictionary<string, string>> left,
+            IReadOnlyDictionary<string, IReadOnlyDictionary<string, string>> right) =>
+            left.Count == right.Count && left.All(section =>
+                right.TryGetValue(section.Key, out IReadOnlyDictionary<string, string> other) &&
+                section.Value.Count == other.Count && section.Value.All(pair =>
+                    other.TryGetValue(pair.Key, out string value) &&
+                    string.Equals(pair.Value, value, StringComparison.Ordinal)));
 
         public IReadOnlyList<string> Apply(IEnumerable<MonsterInfo> monsters, Func<string, ItemInfo> itemResolver)
         {

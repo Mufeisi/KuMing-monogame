@@ -32,6 +32,65 @@ namespace Server.Scripting
         private static readonly TimeSpan MaximumInterval = TimeSpan.FromDays(365);
         private const int MaximumEntries = 4096;
 
+        public static bool IsKnownExternalPage(string page) =>
+            string.Equals((page ?? string.Empty).Trim().TrimStart('[').TrimEnd(']'),
+                "@Mir2_沙城奖励Rm",
+                StringComparison.OrdinalIgnoreCase);
+
+        public static bool TryResolvePages(
+            LingFengRobotScheduleSnapshot snapshot,
+            IEnumerable<string> availablePages,
+            out LingFengRobotScheduleSnapshot resolved,
+            out IReadOnlyList<string> errors)
+        {
+            var pages = (availablePages ?? Array.Empty<string>())
+                .Where(page => !string.IsNullOrWhiteSpace(page))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+            var failures = new List<string>();
+            var entries = new List<LingFengRobotScheduleEntry>();
+            foreach (LingFengRobotScheduleEntry entry in
+                     snapshot?.Entries ?? Array.Empty<LingFengRobotScheduleEntry>())
+            {
+                string page = pages.FirstOrDefault(candidate =>
+                    candidate.Equals(entry.Page, StringComparison.OrdinalIgnoreCase));
+                if (page == null)
+                {
+                    string semantic = NormalizeLegacyPageSemantic(entry.Page);
+                    string[] matches = pages.Where(candidate =>
+                            NormalizeLegacyPageSemantic(candidate).Equals(
+                                semantic, StringComparison.OrdinalIgnoreCase))
+                        .ToArray();
+                    if (matches.Length == 1) page = matches[0];
+                }
+                if (page == null)
+                {
+                    if (IsKnownExternalPage(entry.Page)) continue;
+                    failures.Add($"LFENV10-ROBOT-009：Robot 调度标签不存在 {entry.Page}（AutoRunRobot:{entry.SourceLine}）。");
+                    continue;
+                }
+                entries.Add(entry with { Page = page });
+            }
+            resolved = new LingFengRobotScheduleSnapshot(entries);
+            errors = failures.AsReadOnly();
+            return failures.Count == 0;
+        }
+
+        private static string NormalizeLegacyPageSemantic(string page)
+        {
+            string value = (page ?? string.Empty).Trim().TrimStart('[').TrimEnd(']');
+            if (value.StartsWith('@')) value = value[1..];
+            if (value.StartsWith("Mir2_", StringComparison.OrdinalIgnoreCase))
+                value = value[5..];
+            value = value.TrimStart('_');
+            int digitCount = 0;
+            while (digitCount < value.Length && char.IsDigit(value[digitCount])) digitCount++;
+            value = value[digitCount..];
+            if (value.EndsWith("Rm", StringComparison.OrdinalIgnoreCase))
+                value = value[..^2];
+            return value.Trim();
+        }
+
         public static bool TryCreate(
             TextFileDefinition definition,
             out LingFengRobotScheduleSnapshot snapshot,

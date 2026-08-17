@@ -10,6 +10,7 @@ using Server.MirObjects.Monsters;
 using System.Threading;
 using Server.Operations;
 using Server.Scripting;
+using Server.Scripting.Variables;
 
 namespace Server.MirObjects
 {
@@ -25,11 +26,488 @@ namespace Server.MirObjects
         private Point _csharpRegionsLastLocation;
         private bool _csharpRegionsLastInitialized;
         private Server.Scripting.PlayerRegionTransitionReason _csharpRegionsMoveReasonOverride = Server.Scripting.PlayerRegionTransitionReason.Unknown;
+        private readonly Dictionary<int, LingFengSkillPowerState> _lingFengSkillPower = new();
+        private readonly Dictionary<int, LingFengPersonalTimer> _lingFengPersonalTimers = new();
+        private int _lingFengNpcRebornRemaining;
+        private int _lingFengNpcRebornTriggered;
+        private long _lingFengNpcRebornExpires;
+        private bool _lingFengAttackModeForced;
+        private AttackMode _lingFengAttackModePrevious;
+        private long _lingFengAttackModeExpires;
+        private Map _lingFengAttackModeMap;
+
+        public bool TryApplyLingFengForcedAttackMode(
+            AttackMode mode, int durationSeconds, string mapName = null)
+        {
+            if (!Enum.IsDefined(typeof(AttackMode), mode) ||
+                durationSeconds is < 1 or > 604800)
+                return false;
+
+            Map restrictedMap = null;
+            if (!string.IsNullOrWhiteSpace(mapName) && mapName != "*")
+            {
+                restrictedMap = Envir.GetMapByNameAndInstance(mapName);
+                if (restrictedMap == null || CurrentMap != restrictedMap) return false;
+            }
+
+            if (!_lingFengAttackModeForced)
+                _lingFengAttackModePrevious = AMode;
+            _lingFengAttackModeForced = true;
+            _lingFengAttackModeMap = restrictedMap;
+            long duration = (long)durationSeconds * Settings.Second;
+            _lingFengAttackModeExpires = Envir.Time +
+                Math.Min(long.MaxValue - Envir.Time, duration);
+            AMode = mode;
+            Enqueue(new S.ChangeAMode { Mode = AMode });
+            return true;
+        }
+
+        public bool TryChangeAttackModeFromClient(AttackMode mode)
+        {
+            ProcessLingFengForcedAttackMode();
+            if (_lingFengAttackModeForced) return false;
+            AMode = mode;
+            return true;
+        }
+
+        internal void ProcessLingFengForcedAttackMode()
+        {
+            if (!_lingFengAttackModeForced ||
+                Envir.Time < _lingFengAttackModeExpires &&
+                (_lingFengAttackModeMap == null || CurrentMap == _lingFengAttackModeMap))
+                return;
+
+            AttackMode previous = _lingFengAttackModePrevious;
+            _lingFengAttackModeForced = false;
+            _lingFengAttackModeExpires = 0;
+            _lingFengAttackModeMap = null;
+            AMode = previous;
+            Enqueue(new S.ChangeAMode { Mode = AMode });
+        }
+
+        private readonly record struct LingFengPersonalTimer(
+            long Interval, long NextTick, int RemainingExecutions);
+
+        public bool TrySetLingFengPersonalTimer(
+            int timerIndex, int intervalSeconds, int executionCount = 0)
+        {
+            if (timerIndex is < 0 or > byte.MaxValue || intervalSeconds <= 0 ||
+                executionCount < 0)
+                return false;
+            long interval = Math.Min(long.MaxValue / 2,
+                (long)intervalSeconds * Settings.Second);
+            long nextTick = Envir.Time + Math.Min(long.MaxValue - Envir.Time, interval);
+            _lingFengPersonalTimers[timerIndex] = new LingFengPersonalTimer(
+                interval, nextTick, executionCount);
+            return true;
+        }
+
+        public bool TryStopLingFengPersonalTimer(int timerIndex)
+        {
+            if (timerIndex is < 0 or > byte.MaxValue) return false;
+            _lingFengPersonalTimers.Remove(timerIndex);
+            return true;
+        }
+
+        internal void ProcessLingFengPersonalTimers()
+        {
+            if (_lingFengPersonalTimers.Count == 0) return;
+            int[] due = _lingFengPersonalTimers
+                .Where(entry => entry.Value.NextTick <= Envir.Time)
+                .OrderBy(entry => entry.Key)
+                .Take(256)
+                .Select(entry => entry.Key)
+                .ToArray();
+            foreach (int timerIndex in due)
+            {
+                if (!_lingFengPersonalTimers.TryGetValue(
+                        timerIndex, out LingFengPersonalTimer timer) ||
+                    timer.NextTick > Envir.Time)
+                    continue;
+                if (timer.RemainingExecutions == 1)
+                    _lingFengPersonalTimers.Remove(timerIndex);
+                else
+                {
+                    long nextTick = Envir.Time + Math.Min(
+                        long.MaxValue - Envir.Time, timer.Interval);
+                    int remaining = timer.RemainingExecutions > 1
+                        ? timer.RemainingExecutions - 1
+                        : 0;
+                    _lingFengPersonalTimers[timerIndex] = timer with
+                    {
+                        NextTick = nextTick,
+                        RemainingExecutions = remaining
+                    };
+                }
+                LingFengTxtSystemHookAdapter.TryDispatchPersonalTimer(
+                    Envir.TextFileProvider, this, timerIndex);
+            }
+        }
+
+        public bool TrySetLingFengNpcReborn(int count, int durationSeconds)
+        {
+            if (count is < 0 or > 1_000_000 || durationSeconds < 0 ||
+                count > 0 && durationSeconds == 0)
+                return false;
+
+            _lingFengNpcRebornRemaining = count;
+            _lingFengNpcRebornTriggered = 0;
+            _lingFengNpcRebornExpires = count == 0
+                ? 0
+                : Envir.Time + Math.Min(
+                    long.MaxValue - Envir.Time,
+                    (long)durationSeconds * Settings.Second);
+            return true;
+        }
+
+        public int GetLingFengNpcRebornRemaining()
+        {
+            ExpireLingFengNpcRebornIfNeeded();
+            return _lingFengNpcRebornRemaining;
+        }
+
+        public int GetLingFengNpcRebornTriggered()
+        {
+            ExpireLingFengNpcRebornIfNeeded();
+            return _lingFengNpcRebornTriggered;
+        }
+
+        private void ExpireLingFengNpcRebornIfNeeded()
+        {
+            if (_lingFengNpcRebornRemaining <= 0 ||
+                _lingFengNpcRebornExpires <= 0 ||
+                Envir.Time < _lingFengNpcRebornExpires)
+                return;
+
+            _lingFengNpcRebornRemaining = 0;
+            _lingFengNpcRebornTriggered = 0;
+            _lingFengNpcRebornExpires = 0;
+        }
+
+        private bool TryConsumeLingFengNpcReborn()
+        {
+            ExpireLingFengNpcRebornIfNeeded();
+            if (_lingFengNpcRebornRemaining <= 0) return false;
+
+            _lingFengNpcRebornRemaining--;
+            _lingFengNpcRebornTriggered++;
+            SetHP(Stats[Stat.HP]);
+            RefreshStats();
+            ReceiveChat("复活命令生效，体力恢复。", ChatType.System);
+            LingFengTxtSystemHookAdapter.TryDispatchNpcRevival(
+                Envir.TextFileProvider, this);
+            return true;
+        }
+
+        private readonly record struct LingFengSkillPowerState(
+            short PlayerPercent, short PlayerFlat,
+            short MonsterPercent, short MonsterFlat,
+            short DefencePercent, short DefenceFlat,
+            long ExpiryTicks, bool Persistent)
+        {
+            public bool Expired(long nowTicks) => ExpiryTicks > 0 && nowTicks >= ExpiryTicks;
+        }
+
+        public bool TryChangeLingFengSkillPower(
+            int skillId, string operation, IReadOnlyList<int> values,
+            int durationSeconds, bool persistent)
+        {
+            if (skillId <= 0 || values == null || values.Count != 6 ||
+                operation is not ("=" or "+" or "-") ||
+                durationSeconds is < 0 or > ushort.MaxValue)
+                return false;
+
+            TryGetLingFengSkillPower(skillId, out LingFengSkillPowerState current);
+            short[] oldValues =
+            {
+                current.PlayerPercent, current.PlayerFlat,
+                current.MonsterPercent, current.MonsterFlat,
+                current.DefencePercent, current.DefenceFlat
+            };
+            var changed = new short[6];
+            for (int index = 0; index < changed.Length; index++)
+            {
+                long value = operation switch
+                {
+                    "=" => values[index],
+                    "+" => (long)oldValues[index] + values[index],
+                    "-" => (long)oldValues[index] - values[index],
+                    _ => long.MaxValue
+                };
+                if (value is < short.MinValue or > short.MaxValue) return false;
+                changed[index] = (short)value;
+            }
+
+            long expiry = durationSeconds == 0
+                ? 0
+                : checked(Envir.Now.Ticks + (long)durationSeconds * TimeSpan.TicksPerSecond);
+            var state = new LingFengSkillPowerState(
+                changed[0], changed[1], changed[2], changed[3], changed[4], changed[5],
+                expiry, persistent);
+            _lingFengSkillPower[skillId] = state;
+            if (persistent)
+                Info.ScriptVariables.Set(ScriptVariableScope.T, LingFengSkillPowerKey(skillId),
+                    ScriptVariableValue.FromString(SerializeLingFengSkillPower(state)));
+            return true;
+        }
+
+        public bool TryApplyLingFengSkillPower(
+            int skillId, bool targetIsMonster, ref int damage, ref int armour,
+            bool applyOutgoing, bool applyDefence)
+        {
+            if (!TryGetLingFengSkillPower(skillId, out LingFengSkillPowerState state)) return false;
+            if (applyOutgoing)
+            {
+                int percent = targetIsMonster ? state.MonsterPercent : state.PlayerPercent;
+                int flat = targetIsMonster ? state.MonsterFlat : state.PlayerFlat;
+                damage = ApplyLingFengSkillPowerValue(damage, percent, flat);
+            }
+            if (applyDefence)
+                armour = ApplyLingFengSkillPowerValue(
+                    armour, state.DefencePercent, state.DefenceFlat);
+            return true;
+        }
+
+        private bool TryGetLingFengSkillPower(int skillId, out LingFengSkillPowerState state)
+        {
+            if (!_lingFengSkillPower.TryGetValue(skillId, out state))
+            {
+                if (!Info.ScriptVariables.TryGet(
+                        ScriptVariableScope.T, LingFengSkillPowerKey(skillId), out ScriptVariableValue value) ||
+                    value.Kind != ScriptVariableKind.String ||
+                    !TryDeserializeLingFengSkillPower(value.Text, out state))
+                    return false;
+                _lingFengSkillPower[skillId] = state;
+            }
+            if (!state.Expired(Envir.Now.Ticks)) return true;
+            _lingFengSkillPower.Remove(skillId);
+            if (state.Persistent)
+            {
+                Info.ScriptVariables.Set(ScriptVariableScope.T, LingFengSkillPowerKey(skillId),
+                    ScriptVariableValue.FromString(string.Empty));
+                state = default;
+                return false;
+            }
+
+            // 运行时定时覆盖到期时必须立即恢复持久基线，不能出现一次攻击空档。
+            if (Info.ScriptVariables.TryGet(
+                    ScriptVariableScope.T, LingFengSkillPowerKey(skillId), out ScriptVariableValue fallback) &&
+                fallback.Kind == ScriptVariableKind.String &&
+                TryDeserializeLingFengSkillPower(fallback.Text, out state) &&
+                !state.Expired(Envir.Now.Ticks))
+            {
+                _lingFengSkillPower[skillId] = state;
+                return true;
+            }
+            state = default;
+            return false;
+        }
+
+        private static int ApplyLingFengSkillPowerValue(int value, int percent, int flat)
+        {
+            long changed = value + (long)value * percent / 100 + flat;
+            return (int)Math.Clamp(changed, int.MinValue, int.MaxValue);
+        }
+
+        private static string LingFengSkillPowerKey(int skillId) => $"LFSP{skillId}";
+
+        private static string SerializeLingFengSkillPower(LingFengSkillPowerState state) =>
+            string.Join(',', state.PlayerPercent, state.PlayerFlat, state.MonsterPercent,
+                state.MonsterFlat, state.DefencePercent, state.DefenceFlat, state.ExpiryTicks);
+
+        private static bool TryDeserializeLingFengSkillPower(
+            string text, out LingFengSkillPowerState state)
+        {
+            state = default;
+            string[] parts = text?.Split(',') ?? Array.Empty<string>();
+            if (parts.Length != 7 || !short.TryParse(parts[0], out short playerPercent) ||
+                !short.TryParse(parts[1], out short playerFlat) ||
+                !short.TryParse(parts[2], out short monsterPercent) ||
+                !short.TryParse(parts[3], out short monsterFlat) ||
+                !short.TryParse(parts[4], out short defencePercent) ||
+                !short.TryParse(parts[5], out short defenceFlat) ||
+                !long.TryParse(parts[6], out long expiry) || expiry < 0)
+                return false;
+            state = new LingFengSkillPowerState(
+                playerPercent, playerFlat, monsterPercent, monsterFlat,
+                defencePercent, defenceFlat, expiry, true);
+            return true;
+        }
+
+        public bool TryTakeLingFengWornItem(string itemName, int required)
+        {
+            if (Info?.Equipment == null || string.IsNullOrWhiteSpace(itemName) || required <= 0)
+                return false;
+
+            var matches = new List<(UserItem Item, int EquipmentIndex, int NestedIndex)>();
+            for (int equipmentIndex = 0; equipmentIndex < Info.Equipment.Length; equipmentIndex++)
+            {
+                UserItem equipment = Info.Equipment[equipmentIndex];
+                if (equipment == null) continue;
+
+                if (string.Equals(equipment.Info?.FriendlyName, itemName,
+                        StringComparison.OrdinalIgnoreCase))
+                {
+                    matches.Add((equipment, equipmentIndex, -1));
+                    continue;
+                }
+
+                for (int nestedIndex = 0; nestedIndex < equipment.Slots.Length; nestedIndex++)
+                {
+                    UserItem nested = equipment.Slots[nestedIndex];
+                    if (nested == null ||
+                        !string.Equals(nested.Info?.FriendlyName, itemName,
+                            StringComparison.OrdinalIgnoreCase))
+                        continue;
+                    matches.Add((nested, equipmentIndex, nestedIndex));
+                }
+            }
+
+            long available = matches.Sum(match => (long)match.Item.Count);
+            if (available < required) return false;
+
+            int remaining = required;
+            foreach ((UserItem item, int equipmentIndex, int nestedIndex) in matches)
+            {
+                ushort removed = (ushort)Math.Min(remaining, item.Count);
+                Enqueue(new S.DeleteItem { UniqueID = item.UniqueID, Count = removed });
+                Report?.ItemChanged(item, removed, 1, "TXT TAKEW");
+                if (removed == item.Count)
+                {
+                    if (nestedIndex < 0)
+                        Info.Equipment[equipmentIndex] = null;
+                    else
+                        Info.Equipment[equipmentIndex].Slots[nestedIndex] = null;
+                }
+                else
+                {
+                    item.Count -= removed;
+                }
+
+                remaining -= removed;
+                if (remaining == 0) break;
+            }
+
+            var refresh = new S.UserSlotsRefresh
+            {
+                Inventory = new UserItem[Info.Inventory.Length],
+                Equipment = new UserItem[Info.Equipment.Length]
+            };
+            Info.Inventory.CopyTo(refresh.Inventory, 0);
+            Info.Equipment.CopyTo(refresh.Equipment, 0);
+            Enqueue(refresh);
+            RefreshStats();
+            return true;
+        }
 
         public string GMPassword = Settings.GMPassword;
         public bool GMLogin, EnableGroupRecall, EnableGuildInvite, AllowMarriage, AllowLoverRecall, AllowMentor, HasMapShout, HasServerShout; //TODO - Remove        
 
         public long LastRecallTime, LastTeleportTime, LastProbeTime;
+
+        public bool LingFengProbePlayer(string targetName)
+        {
+            if (string.IsNullOrWhiteSpace(targetName)) return false;
+
+            PlayerObject target = Envir.GetPlayer(targetName);
+            if (target == null)
+            {
+                ReceiveChat(targetName + " 未在线", ChatType.System);
+                return false;
+            }
+
+            if (target.CurrentMap == null) return false;
+
+            ReceiveChat(
+                string.Format("{0} 位于 {1} ({2},{3})", target.Name,
+                    target.CurrentMap.Info.Title, target.CurrentLocation.X, target.CurrentLocation.Y),
+                ChatType.System);
+            return true;
+        }
+
+        public int LingFengRangeHarm(
+            int x, int y, int range, int damage, int targetKind)
+            => LingFengRangeHarm(
+                this, x, y, range, damage, 0, 0, true, targetKind,
+                string.Empty, 0, 0, 0, false, false);
+
+        public int LingFengRangeHarm(
+            MapObject source, int x, int y, int range, int damage,
+            int effect, int effectValue, bool checkResistance, int targetKind,
+            string effectLibrary, int effectStartIndex, int effectFrameCount,
+            int effectFrameDelay, bool effectBlend, bool physicalDamage)
+        {
+            bool hasVisual = !string.IsNullOrWhiteSpace(effectLibrary);
+            if (source == null || source.CurrentMap == null || source.Node == null || source.Dead ||
+                range < 0 || damage < 0 || effect is not (0 or 8) || effectValue < 0 ||
+                effect == 8 && effectValue == 0 || targetKind is < 0 or > 2 ||
+                effectStartIndex < 0 || effectFrameCount < 0 || effectFrameDelay < 0 ||
+                hasVisual && (effectFrameCount is < 1 or > 1000 ||
+                              effectFrameDelay is < 1 or > 60000))
+                return -1;
+
+            var center = new Point(x, y);
+            var seen = new HashSet<MapObject>(ReferenceEqualityComparer.Instance);
+            IEnumerable<MapObject> candidates = Envir.Objects
+                .Concat<MapObject>(Envir.Players);
+            int hitCount = 0;
+            foreach (MapObject target in candidates.ToArray())
+            {
+                if (target == null || ReferenceEquals(target, source) || !seen.Add(target) ||
+                    target.CurrentMap != source.CurrentMap || target.Dead || target.Node == null ||
+                    Functions.MaxDistance(center, target.CurrentLocation) > range ||
+                    (targetKind == 1 && target.Race != ObjectType.Player) ||
+                    (targetKind == 2 && target.Race != ObjectType.Monster) ||
+                    target.Race is not (ObjectType.Player or ObjectType.Monster) ||
+                    !target.IsAttackTarget(source))
+                    continue;
+
+                using (Server.Scripting.LingFengScriptTriggerSuppression.Enter())
+                {
+                    DefenceType defence = physicalDamage ? DefenceType.AC : DefenceType.MAC;
+                    switch (source)
+                    {
+                        case HumanObject human:
+                            target.Attacked(human, damage, defence, false);
+                            break;
+                        case MonsterObject monster:
+                            target.Attacked(monster, damage, defence);
+                            break;
+                        default:
+                            continue;
+                    }
+
+                    if (effect == 8 && !target.Dead)
+                    {
+                        target.ApplyPoison(new Poison
+                        {
+                            PType = PoisonType.Frozen,
+                            Duration = effectValue,
+                            TickSpeed = Settings.Second
+                        }, source, NoResist: !checkResistance);
+                    }
+                }
+
+                if (hasVisual)
+                {
+                    source.CurrentMap.Broadcast(new S.LingFengMapEffect
+                    {
+                        Location = target.CurrentLocation,
+                        LibraryName = effectLibrary,
+                        StartIndex = effectStartIndex,
+                        FrameCount = effectFrameCount,
+                        RepeatCount = 0,
+                        FrameDelay = effectFrameDelay,
+                        Blend = effectBlend,
+                        Light = 0,
+                        EffectId = -1,
+                        Layer = 1
+                    }, target.CurrentLocation);
+                }
+                hitCount++;
+            }
+            return hitCount;
+        }
         public long NextMailTime;
         public long MenteeEXP;        
 
@@ -483,12 +961,15 @@ namespace Server.MirObjects
         }
         public override void Process()
         {
+            ProcessLingFengHideMode();
+            ProcessLingFengForcedAttackMode();
             if (Connection == null || Node == null || Info == null) return;
 
             if (GroupInvitation != null && GroupInvitation.Node == null)
                 GroupInvitation = null;
 
             base.Process();
+            ProcessLingFengPersonalTimers();
 
             if (Settings.RestedPeriod > 0 && Envir.Time > RestedTime)
             {
@@ -534,7 +1015,8 @@ namespace Server.MirObjects
             switch (action.Type)
             {
                 case DelayedType.Magic:
-                    CompleteMagic(action.Params);
+                    using (PushLingFengDelayedMagic(action.Params))
+                        CompleteMagic(action.Params);
                     break;
                 case DelayedType.Damage:
                     CompleteAttack(action.Params);
@@ -560,7 +1042,56 @@ namespace Server.MirObjects
                 case DelayedType.SpellEffect:
                     CompleteSpellEffect(action.Params);
                     break;
+                case DelayedType.LingFengDelayedMessage:
+                    CompleteLingFengDelayedMessage(action.Params);
+                    break;
+                case DelayedType.LingFengTargetPage:
+                    CompleteLingFengTargetPage(action.Params);
+                    break;
             }
+        }
+
+        public bool TryScheduleLingFengTargetPage(int scriptId, string page, int delayMilliseconds)
+        {
+            if (scriptId <= 0 || string.IsNullOrWhiteSpace(page) ||
+                !page.StartsWith("@", StringComparison.Ordinal) ||
+                delayMilliseconds is < 0 or > 86_400_000 ||
+                ActionList.Count(action => action.Type == DelayedType.LingFengTargetPage) >= 64 ||
+                !NPCScript.TryGet(scriptId, out NPCScript script) ||
+                script.Type != NPCScriptType.Called)
+                return false;
+            long delay = Math.Min(long.MaxValue - Envir.Time, delayMilliseconds);
+            ActionList.Add(new DelayedAction(
+                DelayedType.LingFengTargetPage, Envir.Time + delay,
+                scriptId, $"[{page}]"));
+            return true;
+        }
+
+        private void CompleteLingFengTargetPage(IList<object> data)
+        {
+            if (data == null || data.Count != 2 || data[0] is not int scriptId ||
+                data[1] is not string page ||
+                !NPCScript.TryGet(scriptId, out NPCScript script) ||
+                script.Type != NPCScriptType.Called)
+                return;
+            script.CallSystem(this, page);
+        }
+
+        private void CompleteLingFengDelayedMessage(IList<object> data)
+        {
+            if (data == null || data.Count != 5 ||
+                data[0] is not uint npcId || data[1] is not int scriptId ||
+                data[2] is not string page || data[3] is not Map originalMap ||
+                data[4] is not bool cancelOnMapChange)
+                return;
+            if (cancelOnMapChange && CurrentMap != originalMap) return;
+            if (NPCScript.TryGet(scriptId, out NPCScript script) &&
+                script.Type == NPCScriptType.Called)
+            {
+                script.CallSystem(this, page);
+                return;
+            }
+            CompleteNPC(new object[] { npcId, scriptId, page });
         }
         protected override void Moved()
         {
@@ -637,6 +1168,8 @@ namespace Server.MirObjects
                     return;
                 }
             }
+
+            if (TryConsumeLingFengNpcReborn()) return;
 
             if (LastHitter != null && LastHitter.Race == ObjectType.Player)
             {
@@ -788,7 +1321,7 @@ namespace Server.MirObjects
                     if (item == null)
                         continue;
 
-                    if (item.Info.Bind.HasFlag(BindMode.DontDeathdrop))
+                    if (item.HasBindingFlag(BindMode.DontDeathdrop))
                         continue;
 
                     // TODO: Check this.
@@ -866,7 +1399,7 @@ namespace Server.MirObjects
                 if (item == null)
                     continue;
 
-                if (item.Info.Bind.HasFlag(BindMode.DontDeathdrop))
+                if (item.HasBindingFlag(BindMode.DontDeathdrop))
                     continue;
 
                 if (item.WeddingRing != -1)
@@ -1592,7 +2125,7 @@ namespace Server.MirObjects
             Enqueue(new S.MapChanged
             {
                 MapIndex = CurrentMap.Info.Index,
-                FileName = CurrentMap.Info.FileName,
+                FileName = CurrentMap.Info.GetClientFileName(),
                 Title = CurrentMap.Info.Title,
                 Weather = CurrentMap.Info.WeatherParticles,
                 MiniMap = CurrentMap.Info.MiniMap,
@@ -2038,11 +2571,22 @@ namespace Server.MirObjects
         }        
         private void GetMapInfo(MirConnection c)
         {
-            Enqueue(new S.MapInformation
+            Enqueue(CreateCurrentMapInformation(), c);
+        }
+
+        public void RefreshLingFengCurrentMapInformation()
+        {
+            if (CurrentMap?.Info == null) return;
+            Enqueue(CreateCurrentMapInformation());
+        }
+
+        private S.MapInformation CreateCurrentMapInformation()
+        {
+            return new S.MapInformation
             {
                 MapIndex = CurrentMap.Info.Index,
-                FileName = CurrentMap.Info.FileName,
-                Title = CurrentMap.Info.Title,
+                FileName = CurrentMap.Info.GetClientFileName(),
+                Title = CurrentMap.Info.GetDisplayTitle(),
                 MiniMap = CurrentMap.Info.MiniMap,
                 Lights = CurrentMap.Info.Light,
                 BigMap = CurrentMap.Info.BigMap,
@@ -2051,7 +2595,7 @@ namespace Server.MirObjects
                 Fire = CurrentMap.Info.Fire,
                 MapDarkLight = CurrentMap.Info.MapDarkLight,
                 Music = CurrentMap.Info.Music,
-            }, c);
+            };
         }
         private void GetQuestInfo()
         {
@@ -2214,6 +2758,11 @@ namespace Server.MirObjects
 
                 if (player.PKPoints >= 100)
                     return Color.Yellow;
+
+                return LingFengLegacyPalette.TryGetColor(
+                    player.Info.LingFengProgress.NameColour, out Color colour)
+                    ? colour
+                    : Color.White;
             }
 
             return Color.White;
@@ -5771,7 +6320,7 @@ namespace Server.MirObjects
             Enqueue(new S.MapChanged
             {
                 MapIndex = CurrentMap.Info.Index,
-                FileName = CurrentMap.Info.FileName,
+                FileName = CurrentMap.Info.GetClientFileName(),
                 Title = CurrentMap.Info.Title,
                 Weather = CurrentMap.Info.WeatherParticles,
                 MiniMap = CurrentMap.Info.MiniMap,
@@ -6106,7 +6655,7 @@ namespace Server.MirObjects
                     }
 
                     if (Info.Equipment[to] != null &&
-                        Info.Equipment[to].Info.Bind.HasFlag(BindMode.DontStore))
+                        Info.Equipment[to].HasBindingFlag(BindMode.DontStore))
                     {
                         Enqueue(p);
                         return;
@@ -6285,6 +6834,12 @@ namespace Server.MirObjects
                 return;
             }
 
+            if (temp.LingFengCannotTakeOff)
+            {
+                Enqueue(p);
+                return;
+            }
+
             if (temp.Cursed && !UnlockCurse)
             {
                 Enqueue(p);
@@ -6297,7 +6852,7 @@ namespace Server.MirObjects
                 return;
             }
 
-            if (temp.Info.Bind.HasFlag(BindMode.DontStore) && grid == MirGridType.Storage)
+            if (temp.HasBindingFlag(BindMode.DontStore) && grid == MirGridType.Storage)
             {
                 Enqueue(p);
                 return;
@@ -6607,7 +7162,7 @@ namespace Server.MirObjects
                 return;
             }
 
-            if (temp.Info.Bind.HasFlag(BindMode.DontStore))
+            if (temp.HasBindingFlag(BindMode.DontStore))
             {
                 Enqueue(p);
                 return;
@@ -6818,7 +7373,7 @@ namespace Server.MirObjects
                     return;
                 }
             if (toArray[to] != null &&
-                toArray[to].Info.Bind.HasFlag(BindMode.DontStore))
+                toArray[to].HasBindingFlag(BindMode.DontStore))
             {
                 Enqueue(p);
                 return;
@@ -7155,7 +7710,7 @@ namespace Server.MirObjects
                                 Enqueue(p);
                                 return;
                             }
-                            if (temp.Info.Bind.HasFlag(BindMode.DontRepair))
+                            if (temp.HasBindingFlag(BindMode.DontRepair))
                             {
                                 Enqueue(p);
                                 return;
@@ -7175,7 +7730,7 @@ namespace Server.MirObjects
                                 Enqueue(p);
                                 return;
                             }
-                            if (temp.Info.Bind.HasFlag(BindMode.DontRepair) || (temp.Info.Bind.HasFlag(BindMode.NoSRepair)))
+                            if (temp.HasBindingFlag(BindMode.DontRepair) || (temp.Info.Bind.HasFlag(BindMode.NoSRepair)))
                             {
                                 Enqueue(p);
                                 return;
@@ -7985,7 +8540,7 @@ namespace Server.MirObjects
                 case 5: //SpecialHammer
                 case 6: //SpecialSewingSupplies
 
-                    if (tempTo.Info.Bind.HasFlag(BindMode.DontRepair))
+                    if (tempTo.HasBindingFlag(BindMode.DontRepair))
                     {
                         Enqueue(p);
                         return;
@@ -8591,7 +9146,7 @@ namespace Server.MirObjects
                 return;
             }
 
-            if (temp.Info.Bind.HasFlag(BindMode.DontDrop))
+            if (temp.HasBindingFlag(BindMode.DontDrop))
             {
                 Enqueue(p);
                 return;
@@ -8605,7 +9160,7 @@ namespace Server.MirObjects
 
             if (temp.Count == count)
             {
-                if (!temp.Info.Bind.HasFlag(BindMode.DestroyOnDrop))
+                if (!temp.HasBindingFlag(BindMode.DestroyOnDrop))
                     if (!DropItem(temp))
                     {
                         Enqueue(p);
@@ -8626,7 +9181,7 @@ namespace Server.MirObjects
             {
                 UserItem temp2 = Envir.CreateFreshItem(temp.Info);
                 temp2.Count = count;
-                if (!temp.Info.Bind.HasFlag(BindMode.DestroyOnDrop))
+                if (!temp.HasBindingFlag(BindMode.DestroyOnDrop))
                     if (!DropItem(temp2))
                     {
                         Enqueue(p);
@@ -8732,6 +9287,11 @@ namespace Server.MirObjects
 
                     GainItem(item.Item);
 
+                    int inventoryPosition = Array.FindIndex(
+                        Info.Inventory,
+                        candidate => ReferenceEquals(candidate, item.Item) ||
+                                     candidate?.UniqueID == item.Item.UniqueID);
+
                     Report.ItemChanged(item.Item, item.Item.Count, 2);
 
                     CurrentMap.RemoveObject(ob);
@@ -8745,7 +9305,9 @@ namespace Server.MirObjects
                                 Server.Scripting.PlayerItemPickupSource.Player,
                                 this,
                                 item.Item,
-                                0), tryCSharpPickupAfter);
+                                0,
+                                inventoryPosition >= 0 ? inventoryPosition : null),
+                            tryCSharpPickupAfter);
                     }
 
                     return;
@@ -9432,7 +9994,7 @@ namespace Server.MirObjects
                     return;
                 }
 
-                if (temp.Info.Bind.HasFlag(BindMode.DontSell))
+                if (temp.HasBindingFlag(BindMode.DontSell))
                 {
                     Enqueue(p);
                     return;
@@ -9559,7 +10121,7 @@ namespace Server.MirObjects
 
                 if (temp == null || index == -1) return;
 
-                if ((temp.Info.Bind.HasFlag(BindMode.DontRepair)) || (temp.Info.Bind.HasFlag(BindMode.NoSRepair) && special))
+                if ((temp.HasBindingFlag(BindMode.DontRepair)) || (temp.Info.Bind.HasFlag(BindMode.NoSRepair) && special))
                 {
                     ReceiveChat("无法修复该物品", ChatType.System);
                     return;
@@ -9600,6 +10162,47 @@ namespace Server.MirObjects
                 Enqueue(new S.ItemRepaired { UniqueID = uniqueID, MaxDura = temp.MaxDura, CurrentDura = temp.CurrentDura });
                 return;
             }
+        }
+
+        public int LingFengRepairAllEquipment()
+        {
+            int repaired = 0;
+            foreach (UserItem item in Info.Equipment)
+            {
+                if (item == null || item.CurrentDura >= item.MaxDura ||
+                    item.HasBindingFlag(BindMode.DontRepair) ||
+                    item.Info.Bind.HasFlag(BindMode.NoSRepair))
+                    continue;
+
+                item.CurrentDura = item.MaxDura;
+                item.DuraChanged = false;
+                Enqueue(new S.ItemRepaired
+                {
+                    UniqueID = item.UniqueID,
+                    MaxDura = item.MaxDura,
+                    CurrentDura = item.CurrentDura
+                });
+                repaired++;
+            }
+            return repaired;
+        }
+
+        public ulong LingFengRepairAllEquipmentCost()
+        {
+            ulong cost = 0;
+            foreach (UserItem item in Info.Equipment)
+            {
+                if (item == null || item.CurrentDura >= item.MaxDura ||
+                    item.HasBindingFlag(BindMode.DontRepair) ||
+                    item.Info.Bind.HasFlag(BindMode.NoSRepair))
+                    continue;
+
+                ulong itemCost = (ulong)item.RepairPrice() * 3UL;
+                cost = ulong.MaxValue - cost < itemCost
+                    ? ulong.MaxValue
+                    : cost + itemCost;
+            }
+            return cost;
         }
         public void SendStorage()
         {
@@ -9765,7 +10368,7 @@ namespace Server.MirObjects
                     return;
                 }
 
-                if (temp.Info.Bind.HasFlag(BindMode.DontSell))
+                if (temp.HasBindingFlag(BindMode.DontSell))
                 {
                     Enqueue(p);
                     return;
@@ -11576,7 +12179,7 @@ namespace Server.MirObjects
                         Enqueue(p);
                         return;
                     }
-                    if (Info.Inventory[from].Info.Bind.HasFlag(BindMode.DontStore))
+                    if (Info.Inventory[from].HasBindingFlag(BindMode.DontStore))
                     {
                         Enqueue(p);
                         return;
@@ -11627,7 +12230,7 @@ namespace Server.MirObjects
                         Enqueue(p);
                         return;
                     }
-                    if (MyGuild.StoredItems[from].Item.Info.Bind.HasFlag(BindMode.DontStore))
+                    if (MyGuild.StoredItems[from].Item.HasBindingFlag(BindMode.DontStore))
                     {
                         Enqueue(p);
                         return;
@@ -11661,7 +12264,7 @@ namespace Server.MirObjects
                         Enqueue(p);
                         return;
                     }
-                    if (MyGuild.StoredItems[from].Item.Info.Bind.HasFlag(BindMode.DontStore))
+                    if (MyGuild.StoredItems[from].Item.HasBindingFlag(BindMode.DontStore))
                     {
                         Enqueue(p);
                         return;
@@ -11841,7 +12444,7 @@ namespace Server.MirObjects
                 return;
             }
 
-            if (temp.Info.Bind.HasFlag(BindMode.DontTrade))
+            if (temp.HasBindingFlag(BindMode.DontTrade))
             {
                 Enqueue(p);
                 return;
@@ -13131,7 +13734,7 @@ namespace Server.MirObjects
 
                     if (item == null || items[j] != item.UniqueID) continue;
 
-                    if(item.Info.Bind.HasFlag(BindMode.DontTrade))
+                    if(item.HasBindingFlag(BindMode.DontTrade))
                     {
                         ReceiveChat(string.Format("{0} 无法邮寄", item.FriendlyName), ChatType.System);
                         return;

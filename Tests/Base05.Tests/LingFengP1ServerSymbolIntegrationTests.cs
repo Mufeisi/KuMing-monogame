@@ -26,7 +26,8 @@ public sealed class LingFengP1ServerSymbolIntegrationTests : IDisposable
         "SCRIPTPARAM6", "SCRIPTPARAM7", "SCRIPTPARAM8", "SCRIPTPARAM9",
         "GROUPMEMBERCOUNT", "TEAM0", "TEAM1", "TEAM2", "TEAM3", "TEAM4", "TEAM5", "TEAM6", "TEAM7", "TEAM8", "TEAM9",
         "RECALLREMAININGTIME", "KILLMONEXPRATE", "KILLMONEXPRATETIME", "KILLMONBURSTRATE", "KILLMONBURSTRATETIME",
-        "POWERRATE", "POWERRATETIME", "ATTACKMONPOWERRATE", "ATTACKMONPOWERRATETIME"
+        "POWERRATE", "POWERRATETIME", "ATTACKMONPOWERRATE", "ATTACKMONPOWERRATETIME",
+        "NPCREBORNCOUNT", "TRIGGERNPCREBORNCOUNT"
     };
 
     private readonly string _previousCompatibilityVersion;
@@ -181,14 +182,14 @@ public sealed class LingFengP1ServerSymbolIntegrationTests : IDisposable
             new NPCPage("[@MAIN]"), new List<string>(), new List<string>(),
             new List<string>(), new List<string>(), new List<string>());
 
-        Assert.Equal("2|3|2|3|3",
+        Assert.Equal("2|3|2|1|3",
             segment.ReplaceValue(player,
                 "<$GROUPMEMBERCOUNT>|<$RECALLREMAININGTIME>|<$KILLMONEXPRATE>|" +
                 "<$KILLMONBURSTRATE>|<$KILLMONEXPRATETIME>"));
     }
 
     [Fact]
-    public void 当前模型无独立攻人攻怪倍率时返回显式兼容基线并保留诊断()
+    public void 未设置攻人攻怪倍率时返回一倍基线且不伪造诊断()
     {
         PlayerObject player = Player("倍率人物");
 
@@ -197,10 +198,8 @@ public sealed class LingFengP1ServerSymbolIntegrationTests : IDisposable
             "<$POWERRATE>|<$POWERRATETIME>|<$ATTACKMONPOWERRATE>|<$ATTACKMONPOWERRATETIME>");
 
         Assert.Equal("1|0|1|0", result.Text);
-        Assert.Equal(ScriptTextRenderStatus.CompletedWithDiagnostics, result.Status);
-        Assert.Equal(4, result.Diagnostics.Count);
-        Assert.All(result.Diagnostics, diagnostic =>
-            Assert.Equal(ServerSymbolStatus.CompatibilitySubstitute, diagnostic.SymbolStatus));
+        Assert.Equal(ScriptTextRenderStatus.Rendered, result.Status);
+        Assert.Empty(result.Diagnostics);
     }
 
     [Fact]
@@ -293,6 +292,7 @@ public sealed class LingFengP1ServerSymbolIntegrationTests : IDisposable
             Settings.TxtScriptsPath = root;
             Settings.TxtScriptsLayout = TxtScriptLayout.LyoCrystal;
             Settings.CSharpScriptsEnabled = false;
+            Settings.TxtScriptsEnabled = true;
             Envir.Main.ApplyPhysicalTextFileDefinitions();
             script = NPCScript.GetOrAdd(uint.MaxValue - 607, "参数页", NPCScriptType.Normal);
 

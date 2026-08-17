@@ -1,0 +1,5 @@
+[@LOGIN]
+#IF
+CHECK [950] 0
+#ACT
+LOCALMESSAGE "法宝收录使者正在等待你的帮助。" System

@@ -76,6 +76,10 @@ namespace Server.MirObjects
 
         public bool CoolEye;
         private bool _hidden;
+        private bool _lingFengHidden;
+        private long _lingFengHiddenExpireTime;
+
+        public bool LingFengSemiTransparent { get; private set; }
 
         public bool BufffNoDrug { get; set; }
 
@@ -83,14 +87,50 @@ namespace Server.MirObjects
         {
             get
             {
-                return _hidden;
+                return _hidden || _lingFengHidden;
             }
             set
             {
-                if (_hidden == value) return;
+                bool wasHidden = Hidden;
                 _hidden = value;
-                CurrentMap.Broadcast(new S.ObjectHidden { ObjectID = ObjectID, Hidden = value }, CurrentLocation);
+                PublishHiddenChange(wasHidden);
             }
+        }
+
+        public bool ApplyLingFengHideMode(int durationSeconds, bool semiTransparent)
+        {
+            if (durationSeconds <= 0) return false;
+
+            bool wasHidden = Hidden;
+            _lingFengHidden = true;
+            _lingFengHiddenExpireTime = checked(Envir.Time + (long)durationSeconds * Settings.Second);
+            LingFengSemiTransparent = semiTransparent;
+            PublishHiddenChange(wasHidden);
+            HideFromTargets();
+            return true;
+        }
+
+        public void ClearLingFengHideMode()
+        {
+            bool wasHidden = Hidden;
+            _lingFengHidden = false;
+            _lingFengHiddenExpireTime = 0;
+            LingFengSemiTransparent = false;
+            PublishHiddenChange(wasHidden);
+        }
+
+        protected void ProcessLingFengHideMode()
+        {
+            if (!_lingFengHidden || Envir.Time < _lingFengHiddenExpireTime) return;
+            ClearLingFengHideMode();
+        }
+
+        private void PublishHiddenChange(bool wasHidden)
+        {
+            bool isHidden = Hidden;
+            if (wasHidden == isHidden) return;
+            CurrentMap?.Broadcast(
+                new S.ObjectHidden { ObjectID = ObjectID, Hidden = isHidden }, CurrentLocation);
         }
 
         private bool _observer;
@@ -568,6 +608,18 @@ namespace Server.MirObjects
         public virtual bool Harvest(PlayerObject player) { return false; }
 
         public abstract void ApplyPoison(Poison p, MapObject Caster = null, bool NoResist = false, bool ignoreDefence = true);
+
+        protected int ApplyLingFengRedPoisonArmour(int armour)
+        {
+            Poison poison = PoisonList.FirstOrDefault(entry =>
+                entry.PType == PoisonType.Red && entry.LingFengPowerDefined);
+            if (poison == null) return armour;
+
+            long reduction = poison.LingFengPowerPermille
+                ? (long)armour * poison.Value / 1000
+                : poison.Value;
+            return (int)Math.Clamp((long)armour - reduction, 0L, int.MaxValue);
+        }
 
         public virtual Buff AddBuff(BuffType type, MapObject owner, int duration, Stats stats, bool refreshStats = true, bool updateOnly = false, params int[] values)
         {
@@ -1050,6 +1102,8 @@ namespace Server.MirObjects
         }
         public PoisonType PType;
         public int Value;
+        public bool LingFengPowerDefined;
+        public bool LingFengPowerPermille;
         public long Duration, Time, TickTime, TickSpeed;
 
         public Poison() { }

@@ -2,6 +2,7 @@ using System;
 using System.Text;
 using FairyGUI;
 using MonoShare.MirScenes;
+using XnaColor = Microsoft.Xna.Framework.Color;
 
 namespace MonoShare
 {
@@ -144,7 +145,12 @@ namespace MonoShare
             try
             {
                 if (tips.GetChild("ItemName") is GRichTextField name && name != null && !name._disposed)
+                {
                     name.text = item.FriendlyName ?? (item.Info?.FriendlyName ?? string.Empty);
+                    name.color = TryGetLingFengItemNameColor(item, out XnaColor colour)
+                        ? colour
+                        : XnaColor.White;
+                }
             }
             catch
             {
@@ -208,6 +214,19 @@ namespace MonoShare
             catch
             {
             }
+        }
+
+        internal static bool TryGetLingFengItemNameColor(UserItem item, out XnaColor colour)
+        {
+            if (item?.LingFengNameColour > 0 &&
+                LingFengLegacyColorTable.TryGetRgb(item.LingFengNameColour,
+                    out byte red, out byte green, out byte blue))
+            {
+                colour = new XnaColor(red, green, blue, byte.MaxValue);
+                return true;
+            }
+            colour = XnaColor.White;
+            return false;
         }
 
         private sealed class MobileLongPressTipBinding
@@ -523,6 +542,15 @@ namespace MonoShare
                 }
                 catch
                 {
+                }
+
+                IReadOnlyList<string> lingFengCustomLines = item.GetLingFengCustomAttributeDisplayLines();
+                if (lingFengCustomLines.Count > 0)
+                {
+                    sb.AppendLine();
+                    sb.AppendLine("自定义属性:");
+                    foreach (string line in lingFengCustomLines)
+                        sb.AppendLine(line);
                 }
 
                 if (!string.IsNullOrWhiteSpace(item.Info.ToolTip))

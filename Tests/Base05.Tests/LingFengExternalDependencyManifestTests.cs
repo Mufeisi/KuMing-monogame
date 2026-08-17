@@ -80,7 +80,7 @@ public sealed class LingFengExternalDependencyManifestTests
         try
         {
             Write(root, "Market_Def/依赖.txt",
-                "[@MAIN]\r\n#IF\r\nCHECKITEM 金条 1\r\nCHECKMAP 0\r\n#ACT\r\nMONGEN 稻草人 1\r\nGIVE <$动态物品> 1");
+                "[@MAIN]\r\n#IF\r\nCHECKITEM 金条 1\r\nCHECKMAP 0\r\nCHECKACCOUNTLIST ..\\..\\..\\通区充值\\账号.txt\r\n#ACT\r\nMONGEN 稻草人 1\r\nGIVE <$动态物品> 1\r\nSETARRBUFF 1 1 1 130 10 3 130 4 测试\r\n<$CURRRTARGETNAME>.SETARRBUFF 1 1 1 130 10 3 130 4 目标测试\r\nADDBUTTON 3 1 283 284 285 10 200 1 -1\r\nSETICON 2 39 199 0 -30 10 0 0 250\r\nSETSNDACASKET 1\r\nACTIVATIONCASKET\r\nSETUPGRADEITEM BoxItem1\r\nOPENITEMBOXEX 91 1 放入物品\r\nCHANGEITEMNAME 1 新名字\r\nSETBODYCOLOR 151 120 1\r\nEXTBAGPAGECOUNT + 5\r\nEXTBAGOPENITEMCOUNT + 20\r\nSETBIGSTORAGECOUNT + 49\r\nOPENAUTOPICKITEM 1 0 5 1 0 0 1000\r\nCLOSEAUTOPICKITEM\r\nOPENBIGDIALOGBOX 3 216 1 4 0 -65 1 720 10\r\nOPENITEMBOX 稻草人\r\nBREAKADDSELLPLAYER\r\nSTOPTAKEON\r\nSETITEMFROM -1 0 2\r\nHCALL 目标人物 @目标页\r\nADDATTACKSABUKALL 0\r\nAUTOTAKEONITEM 命格装备 2\r\nCHANGEHUMNAME 新名字\r\nCREATEMYSHOP 命格商店\r\nOPENGODBLESS 0\r\nPLAYSOUNDEXT WAV\\8200-6.wav 1 0\r\nSETOFFLINEPLAY ON\r\nSETRANKLEVELNAME 命格榜首\r\nSHOWGODBLESS 1\r\nSTARTAUTOPLAYGAME\r\nSTOPAUTOPLAYGAME\r\nSTOPBUYUSER\r\nSTOPTAKEOFF\r\nSUPERMOVEMSG 0 9 0 16 200 1 命格公告\r\nTAKEPOSW 17\r\nUNALLOWITEMINTOBOX\r\nRETURNBOXITEM 0\r\nCHANGESLAVEABILITY 9 99 稻草人\r\nRECALCSLAVEABILITY 稻草人\r\nTAKEBAGITEM 金条 1 0 0 0 0 N1 0\r\nADDNAMEDATETIMELIST ..\\QuestDiary\\会员名单.txt 30 0 0\r\nADDACCOUNTLIST ..\\..\\..\\通区充值\\账号.txt\r\nDELACCOUNTLIST ..\\..\\..\\通区充值\\账号.txt\r\n#IF\r\nCHECKMYSHOP\r\nCHECKSHOPNAME 命格商店");
             var provider = new PhysicalTextFileProvider(
                 new PhysicalTextFileProviderOptions(root, TxtScriptLayout.LingFeng));
 
@@ -94,6 +94,73 @@ public sealed class LingFengExternalDependencyManifestTests
             Assert.Contains(provider.ExternalDependencyManifest.Requirements, value =>
                 value.Level == LingFengDependencyLevel.E2 && value.Kind == LingFengDependencyKind.DomainAdapter &&
                 value.Key.StartsWith("ScriptDynamic/", StringComparison.Ordinal));
+            Assert.Contains(provider.ExternalDependencyManifest.Requirements, value =>
+                value.Level == LingFengDependencyLevel.E2 && value.Kind == LingFengDependencyKind.ClientContract &&
+                value.Key == "LingFeng/AutoArrangedBuff");
+            Assert.Contains(provider.ExternalDependencyManifest.Requirements, value =>
+                value.Level == LingFengDependencyLevel.E2 && value.Kind == LingFengDependencyKind.ClientContract &&
+                value.Key == "LingFeng/CustomButton");
+            Assert.Contains(provider.ExternalDependencyManifest.Requirements, value =>
+                value.Level == LingFengDependencyLevel.E2 && value.Kind == LingFengDependencyKind.ClientContract &&
+                value.Key == "LingFeng/OverheadIcon");
+            Assert.Contains(provider.ExternalDependencyManifest.Requirements, value =>
+                value.Level == LingFengDependencyLevel.E2 && value.Kind == LingFengDependencyKind.ClientContract &&
+                value.Key == "LingFeng/JewelryCasket");
+            Assert.Contains(provider.ExternalDependencyManifest.Requirements, value =>
+                value.Level == LingFengDependencyLevel.E2 && value.Kind == LingFengDependencyKind.ClientContract &&
+                value.Key == "LingFeng/CustomItemBox");
+            Assert.Contains(provider.ExternalDependencyManifest.Requirements, value =>
+                value.Level == LingFengDependencyLevel.E2 && value.Kind == LingFengDependencyKind.ClientContract &&
+                value.Key == "LingFeng/LegacyItemBox");
+            Assert.Contains(provider.ExternalDependencyManifest.Requirements, value =>
+                value.Level == LingFengDependencyLevel.E2 && value.Kind == LingFengDependencyKind.ClientContract &&
+                value.Key == "LingFeng/BodyColor");
+            Assert.Contains(provider.ExternalDependencyManifest.Requirements, value =>
+                value.Level == LingFengDependencyLevel.E2 && value.Kind == LingFengDependencyKind.ClientContract &&
+                value.Key == "LingFeng/ExtendedBag");
+            Assert.Contains(provider.ExternalDependencyManifest.Requirements, value =>
+                value.Level == LingFengDependencyLevel.E2 && value.Kind == LingFengDependencyKind.ClientContract &&
+                value.Key == "LingFeng/BigDialog");
+            Assert.Contains(provider.ExternalDependencyManifest.Requirements, value =>
+                value.Level == LingFengDependencyLevel.E2 && value.Kind == LingFengDependencyKind.DomainAdapter &&
+                value.Key == "LingFeng/SlaveAbilityBatch");
+            Assert.Contains(provider.ExternalDependencyManifest.Requirements, value =>
+                value.Level == LingFengDependencyLevel.E2 && value.Kind == LingFengDependencyKind.DomainAdapter &&
+                value.Key == "LingFeng/BagRecycleExtendedRewards");
+            Assert.Contains(provider.ExternalDependencyManifest.Requirements, value =>
+                value.Level == LingFengDependencyLevel.E2 && value.Kind == LingFengDependencyKind.DomainAdapter &&
+                value.Key == "LingFeng/TimedNameListImport");
+            Assert.Contains(provider.ExternalDependencyManifest.Requirements, value =>
+                value.Level == LingFengDependencyLevel.E2 && value.Kind == LingFengDependencyKind.DomainAdapter &&
+                value.Key == "LingFeng/ItemInstanceName");
+            Assert.Contains(provider.ExternalDependencyManifest.Requirements, value =>
+                value.Level == LingFengDependencyLevel.E2 && value.Kind == LingFengDependencyKind.DomainAdapter &&
+                value.Key == "LingFeng/AutoPickItem");
+            Assert.Contains(provider.ExternalDependencyManifest.Requirements, value =>
+                value.Level == LingFengDependencyLevel.E2 && value.Kind == LingFengDependencyKind.DomainAdapter &&
+                value.Key == "LingFeng/PlayerSaleTransaction");
+            Assert.Contains(provider.ExternalDependencyManifest.Requirements, value =>
+                value.Level == LingFengDependencyLevel.E2 && value.Kind == LingFengDependencyKind.DomainAdapter &&
+                value.Key == "LingFeng/ItemProvenance");
+            Assert.Contains(provider.ExternalDependencyManifest.Requirements, value =>
+                value.Level == LingFengDependencyLevel.E2 && value.Kind == LingFengDependencyKind.ClientContract &&
+                value.Key == "LingFeng/GodBlessBag");
+            Assert.Contains(provider.ExternalDependencyManifest.Requirements, value =>
+                value.Level == LingFengDependencyLevel.E2 && value.Kind == LingFengDependencyKind.ClientContract &&
+                value.Key == "LingFeng/SuperMoveMessage");
+            Assert.Contains(provider.ExternalDependencyManifest.Requirements, value =>
+                value.Level == LingFengDependencyLevel.E2 && value.Kind == LingFengDependencyKind.DomainAdapter &&
+                value.Key == "LingFeng/PersonalShop");
+            Assert.Contains(provider.ExternalDependencyManifest.Requirements, value =>
+                value.Level == LingFengDependencyLevel.E2 && value.Kind == LingFengDependencyKind.DomainAdapter &&
+                value.Key == "LingFeng/EquipmentTransaction");
+            Assert.Contains(provider.ExternalDependencyManifest.Requirements, value =>
+                value.Level == LingFengDependencyLevel.E2 && value.Kind == LingFengDependencyKind.DomainAdapter &&
+                value.Key == "LingFeng/OfflinePlay");
+            Assert.Equal(3, provider.ExternalDependencyManifest.Requirements.Count(value =>
+                value.Level == LingFengDependencyLevel.E2 &&
+                value.Kind == LingFengDependencyKind.DomainAdapter &&
+                value.Key == "LingFeng/ExternalAccountList"));
         }
         finally
         {

@@ -106,6 +106,71 @@ namespace Server.Scripting
     {
         private sealed record Argument(int Index, LingFengDependencyKind Kind);
 
+        private static readonly IReadOnlyDictionary<string, string> ClientContractCommands =
+            new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["SETARRBUFF"] = "LingFeng/AutoArrangedBuff",
+                ["<$CURRRTARGETNAME>.SETARRBUFF"] = "LingFeng/AutoArrangedBuff",
+                ["CLOSEARRBUFF"] = "LingFeng/AutoArrangedBuff",
+                ["ADDARRBUTTON"] = "LingFeng/AutoArrangedButton",
+                ["DELARRBUTTON"] = "LingFeng/AutoArrangedButton",
+                ["DELBOXITEM"] = "LingFeng/CustomItemBox",
+                ["SETICON"] = "LingFeng/OverheadIcon",
+                ["SETSNDACASKET"] = "LingFeng/JewelryCasket",
+                ["ACTIVATIONCASKET"] = "LingFeng/JewelryCasket",
+                ["UNALLOWITEMINTOBOX"] = "LingFeng/CustomItemBox",
+                ["RETURNBOXITEM"] = "LingFeng/CustomItemBox",
+                ["SETUPGRADEITEM"] = "LingFeng/CustomItemBox",
+                ["OPENITEMBOXEX"] = "LingFeng/LegacyItemBox",
+                ["SETBODYCOLOR"] = "LingFeng/BodyColor",
+                ["EXTBAGPAGECOUNT"] = "LingFeng/ExtendedBag",
+                ["EXTBAGOPENITEMCOUNT"] = "LingFeng/ExtendedBag",
+                ["OPENBIGDIALOGBOX"] = "LingFeng/BigDialog",
+                ["OPENITEMBOX"] = "LingFeng/MonsterItemBox",
+                ["ADDBUTTON"] = "LingFeng/CustomButton",
+                ["OPENGODBLESS"] = "LingFeng/GodBlessBag",
+                ["SHOWGODBLESS"] = "LingFeng/GodBlessBag",
+                ["PLAYSOUNDEXT"] = "LingFeng/ExtendedSound",
+                ["SETRANKLEVELNAME"] = "LingFeng/RankLevelName",
+                ["SUPERMOVEMSG"] = "LingFeng/SuperMoveMessage",
+                ["SENDMOVEHINTMSG"] = "LingFeng/MoveHintMessage"
+            };
+
+        private static readonly IReadOnlyDictionary<string, string> DomainAdapterCommands =
+            new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["CHANGESLAVEABILITY"] = "LingFeng/SlaveAbilityBatch",
+                ["RECALCSLAVEABILITY"] = "LingFeng/SlaveAbilityBatch",
+                ["TAKEBAGITEM"] = "LingFeng/BagRecycleExtendedRewards",
+                ["ADDNAMEDATETIMELIST"] = "LingFeng/TimedNameListImport",
+                ["CHANGEITEMNAME"] = "LingFeng/ItemInstanceName",
+                ["SETBIGSTORAGECOUNT"] = "LingFeng/UnlimitedStorage",
+                ["OPENAUTOPICKITEM"] = "LingFeng/AutoPickItem",
+                ["CLOSEAUTOPICKITEM"] = "LingFeng/AutoPickItem",
+                ["BREAKADDSELLPLAYER"] = "LingFeng/PlayerSaleTransaction",
+                ["STOPTAKEON"] = "LingFeng/EquipmentTakeOnTransaction",
+                ["SETITEMFROM"] = "LingFeng/ItemProvenance",
+                ["HCALL"] = "LingFeng/TargetQFunction",
+                ["ADDATTACKSABUKALL"] = "LingFeng/ConquestMassAttack",
+                ["AUTOTAKEONITEM"] = "LingFeng/EquipmentTransaction",
+                ["CHANGEHUMNAME"] = "LingFeng/CharacterRename",
+                ["CREATEMYSHOP"] = "LingFeng/PersonalShop",
+                ["SETOFFLINEPLAY"] = "LingFeng/OfflinePlay",
+                ["STARTAUTOPLAYGAME"] = "LingFeng/OfflinePlay",
+                ["STOPAUTOPLAYGAME"] = "LingFeng/OfflinePlay",
+                ["STOPBUYUSER"] = "LingFeng/PlayerSaleTransaction",
+                ["STOPTAKEOFF"] = "LingFeng/EquipmentTransaction",
+                ["TAKEPOSW"] = "LingFeng/EquipmentTransaction"
+            };
+
+        private static readonly IReadOnlyDictionary<string, string> CheckDomainAdapterCommands =
+            new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["CHECKMYSHOP"] = "LingFeng/PersonalShop",
+                ["CHECKSHOPNAME"] = "LingFeng/PersonalShop",
+                ["CHECKBOXITEMCOUNT"] = "LingFeng/MonsterItemBox"
+            };
+
         private static readonly IReadOnlyDictionary<string, Argument[]> CheckCommands =
             new Dictionary<string, Argument[]>(StringComparer.OrdinalIgnoreCase)
             {
@@ -159,8 +224,23 @@ namespace Server.Scripting
                     if (!TxtScriptTokenizer.TryTokenize(line, out string[] tokens, out _) || tokens.Length == 0)
                         continue;
                     string command = tokens[0].TrimStart('#');
+                    if (definition.Key.Equals("SystemScripts/AutoRunRobot", StringComparison.OrdinalIgnoreCase) &&
+                        command.Equals("AutoRun", StringComparison.OrdinalIgnoreCase) && tokens.Length >= 5 &&
+                        LingFengRobotScheduleProvider.IsKnownExternalPage(tokens[^1]))
+                        yield return new LingFengDependencyRequirement(
+                            LingFengDependencyKind.DomainAdapter,
+                            "LingFeng/RobotPage/" + tokens[^1].Trim(),
+                            LingFengDependencyLevel.E2, $"{definition.Key}:{index + 1}");
                     if (tokens[0].StartsWith("#", StringComparison.Ordinal))
                     {
+                        if ((command.Equals("INCLUDE", StringComparison.OrdinalIgnoreCase) ||
+                             command.Equals("INSERT", StringComparison.OrdinalIgnoreCase)) &&
+                            tokens.Length >= 2 &&
+                            LingFengScriptReferenceResolver.IsKnownExternalInclude(tokens[1]))
+                            yield return new LingFengDependencyRequirement(
+                                LingFengDependencyKind.DomainAdapter,
+                                "LingFeng/ExternalInclude/Constant.Ini",
+                                LingFengDependencyLevel.E2, $"{definition.Key}:{index + 1}");
                         if (command.Equals("IF", StringComparison.OrdinalIgnoreCase)) section = "IF";
                         else if (command.Equals("ACT", StringComparison.OrdinalIgnoreCase) ||
                                  command.Equals("ELSEACT", StringComparison.OrdinalIgnoreCase)) section = "ACT";
@@ -170,6 +250,41 @@ namespace Server.Scripting
                     }
                     IReadOnlyDictionary<string, Argument[]> commands =
                         section == "IF" ? CheckCommands : section == "ACT" ? ActionCommands : null;
+                    if (section == "ACT" && ClientContractCommands.TryGetValue(
+                            command, out string clientContract))
+                        yield return new LingFengDependencyRequirement(
+                            LingFengDependencyKind.ClientContract, clientContract,
+                            LingFengDependencyLevel.E2, $"{definition.Key}:{index + 1}");
+                    if (section == "ACT" && DomainAdapterCommands.TryGetValue(
+                            command, out string domainAdapter))
+                        yield return new LingFengDependencyRequirement(
+                            LingFengDependencyKind.DomainAdapter, domainAdapter,
+                            LingFengDependencyLevel.E2, $"{definition.Key}:{index + 1}");
+                    if (section == "IF" && CheckDomainAdapterCommands.TryGetValue(
+                            command, out string checkDomainAdapter))
+                        yield return new LingFengDependencyRequirement(
+                            LingFengDependencyKind.DomainAdapter, checkDomainAdapter,
+                            LingFengDependencyLevel.E2, $"{definition.Key}:{index + 1}");
+                    if (((section == "IF" && command.Equals(
+                              "CHECKACCOUNTLIST", StringComparison.OrdinalIgnoreCase)) ||
+                         (section == "ACT" && (command.Equals(
+                              "ADDACCOUNTLIST", StringComparison.OrdinalIgnoreCase) ||
+                                               command.Equals(
+                              "DELACCOUNTLIST", StringComparison.OrdinalIgnoreCase)))) &&
+                        tokens.Length >= 2 && IsStaticLiteral(tokens[1]) &&
+                        !LingFengScriptReferenceResolver.TryResolveCandidateTextKey(
+                            tokens[1], out _))
+                        yield return new LingFengDependencyRequirement(
+                            LingFengDependencyKind.DomainAdapter,
+                            "LingFeng/ExternalAccountList",
+                            LingFengDependencyLevel.E2, $"{definition.Key}:{index + 1}");
+                    if (section == "ACT" && command.Equals("GOTO", StringComparison.OrdinalIgnoreCase) &&
+                        tokens.Length >= 2 &&
+                        LingFengScriptReferenceResolver.IsExternalCallbackLabel(tokens[1]))
+                        yield return new LingFengDependencyRequirement(
+                            LingFengDependencyKind.DomainAdapter,
+                            "LingFeng/ExternalScriptPage/" + tokens[1].Trim(),
+                            LingFengDependencyLevel.E2, $"{definition.Key}:{index + 1}");
                     if (commands == null || !commands.TryGetValue(command, out Argument[] arguments))
                         continue;
                     foreach (Argument argument in arguments)

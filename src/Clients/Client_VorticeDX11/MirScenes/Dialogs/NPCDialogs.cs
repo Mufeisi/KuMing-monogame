@@ -163,6 +163,51 @@ namespace Client.MirScenes.Dialogs
             QuestButton.Click += (o, e) => GameScene.Scene.QuestListDialog.Toggle();
         }
 
+        public void ApplyLingFengStyle(
+            MLibrary library,
+            int imageIndex,
+            bool movable,
+            int position,
+            int offsetX,
+            int offsetY,
+            bool showCloseButton,
+            int closeButtonX,
+            int closeButtonY,
+            Size viewport)
+        {
+            Size imageSize = library?.GetTrueSize(imageIndex) ?? Size.Empty;
+            if (imageSize.IsEmpty)
+            {
+                library = Libraries.Prguse;
+                imageIndex = 995;
+                imageSize = library.GetTrueSize(imageIndex);
+            }
+
+            Library = library;
+            Index = imageIndex;
+            Size = imageSize;
+            AutoSize = false;
+            Movable = movable;
+            Location = LingFengClientPresentationState.ResolveNpcDialogLocation(
+                viewport, imageSize, position, offsetX, offsetY);
+            CloseButton.Visible = showCloseButton;
+            CloseButton.Location = new Point(closeButtonX, closeButtonY);
+            HelpButton.Visible = false;
+        }
+
+        public void ResetLingFengStyle()
+        {
+            Library = Libraries.Prguse;
+            Index = 995;
+            Size = Library.GetTrueSize(Index);
+            AutoSize = false;
+            Movable = false;
+            Location = Point.Empty;
+            CloseButton.Visible = true;
+            CloseButton.Location = new Point(413, 3);
+            HelpButton.Visible = true;
+        }
+
         void NPCDialog_MouseWheel(object sender, MouseEventArgs e)
         {
             int count = e.Delta / SystemInformation.MouseWheelScrollDelta;
@@ -988,7 +1033,7 @@ namespace Client.MirScenes.Dialogs
             switch (PType)
             {
                 case PanelType.Sell:
-                    if (TargetItem.Info.Bind.HasFlag(BindMode.DontSell))
+                    if (TargetItem.HasBindingFlag(BindMode.DontSell))
                     {
                         GameScene.Scene.ChatDialog.ReceiveChat("不能卖出物品", ChatType.System);
                         return;
@@ -1002,7 +1047,7 @@ namespace Client.MirScenes.Dialogs
                     GameScene.Scene.ChatDialog.ReceiveChat("金币已达携带上限", ChatType.System);
                     break;
                 case PanelType.Repair:
-                    if (TargetItem.Info.Bind.HasFlag(BindMode.DontRepair))
+                    if (TargetItem.HasBindingFlag(BindMode.DontRepair))
                     {
                         GameScene.Scene.ChatDialog.ReceiveChat("无法修理此物品", ChatType.System);
                         return;
@@ -1016,7 +1061,7 @@ namespace Client.MirScenes.Dialogs
                     GameScene.Scene.ChatDialog.ReceiveChat(GameLanguage.LowGold, ChatType.System);
                     break;
                 case PanelType.SpecialRepair:
-                    if ((TargetItem.Info.Bind.HasFlag(BindMode.DontRepair)) || (TargetItem.Info.Bind.HasFlag(BindMode.NoSRepair)))
+                    if ((TargetItem.HasBindingFlag(BindMode.DontRepair)) || (TargetItem.Info.Bind.HasFlag(BindMode.NoSRepair)))
                     {
                         GameScene.Scene.ChatDialog.ReceiveChat("不能特修此物品", ChatType.System);
                         return;
@@ -1030,7 +1075,7 @@ namespace Client.MirScenes.Dialogs
                     GameScene.Scene.ChatDialog.ReceiveChat(GameLanguage.LowGold, ChatType.System);
                     break;
                 case PanelType.Consign:
-                    if (TargetItem.Info.Bind.HasFlag(BindMode.DontStore) || TargetItem.Info.Bind.HasFlag(BindMode.DontSell))
+                    if (TargetItem.HasBindingFlag(BindMode.DontStore) || TargetItem.HasBindingFlag(BindMode.DontSell))
                     {
                         GameScene.Scene.ChatDialog.ReceiveChat("不能邮寄此物品", ChatType.System);
                         return;

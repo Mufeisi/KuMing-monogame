@@ -27,7 +27,7 @@ namespace Server.Scripting
         private ScriptVariableDeclarationSnapshot _effectiveVariableDeclarations;
 
         public ScriptManager()
-            : this(new ServerScriptVariableStore(), null, null, null)
+            : this(new ServerScriptVariableStore(), null, null, null, null)
         {
         }
 
@@ -35,13 +35,15 @@ namespace Server.Scripting
             ServerScriptVariableStore serverVariables,
             Action requestAccountAutoSave,
             Action requestServerVariableAutoSave,
-            Func<long> currentDailyPeriod)
+            Func<long> currentDailyPeriod,
+            Func<bool> canAccessVariables)
         {
             _currentRegistry = CreateRegistry();
             _currentRegistry.SealVariableDeclarations();
             _effectiveVariableDeclarations = _currentRegistry.VariableDeclarations;
             VariableModule = new ScriptVariableModule(
                 () => Volatile.Read(ref _effectiveVariableDeclarations),
+                canWrite: canAccessVariables,
                 requestAutoSave: requestAccountAutoSave,
                 serverPersistent: serverVariables,
                 requestServerAutoSave: requestServerVariableAutoSave,

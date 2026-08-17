@@ -2009,6 +2009,14 @@ public enum BuffType : byte
     MagicDefence = 魔法防御提升,
     WonderDrug = 奇异药水,
     Knapsack = 包容万斤,
+
+    翎风脚本槽0 = 240,
+    翎风脚本槽1,
+    翎风脚本槽2,
+    翎风脚本槽3,
+    翎风脚本槽4,
+    翎风脚本槽5,
+    翎风脚本槽6,
 }
 
 [Flags]
@@ -2329,7 +2337,11 @@ public enum ServerPacketIds : short
     CustomGuiOpen = 275,
     CustomGuiStateDelta = 276,
     CustomGuiActionResult = 277,
-    CustomGuiClose = 278
+    CustomGuiClose = 278,
+    LingFengScreenEffect = 279,
+    LingFengDialog = 280,
+    MagicCooldownCleared = 281,
+    LingFengMapEffect = 282
 }
 
 public enum ClientPacketIds : short

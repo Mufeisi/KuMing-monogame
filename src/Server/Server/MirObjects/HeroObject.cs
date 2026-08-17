@@ -462,7 +462,7 @@ namespace Server.MirObjects
                                 Owner.Enqueue(p);
                                 return;
                             }
-                            if (temp.Info.Bind.HasFlag(BindMode.DontRepair))
+                            if (temp.HasBindingFlag(BindMode.DontRepair))
                             {
                                 Owner.Enqueue(p);
                                 return;
@@ -482,7 +482,7 @@ namespace Server.MirObjects
                                 Owner.Enqueue(p);
                                 return;
                             }
-                            if (temp.Info.Bind.HasFlag(BindMode.DontRepair) || (temp.Info.Bind.HasFlag(BindMode.NoSRepair)))
+                            if (temp.HasBindingFlag(BindMode.DontRepair) || (temp.Info.Bind.HasFlag(BindMode.NoSRepair)))
                             {
                                 Owner.Enqueue(p);
                                 return;
@@ -759,7 +759,8 @@ namespace Server.MirObjects
             switch (action.Type)
             {
                 case DelayedType.Magic:
-                    CompleteMagic(action.Params);
+                    using (PushLingFengDelayedMagic(action.Params))
+                        CompleteMagic(action.Params);
                     break;
                 case DelayedType.Damage:
                     CompleteAttack(action.Params);

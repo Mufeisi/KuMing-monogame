@@ -87,7 +87,7 @@ namespace Server.MirEnvir
         }
     }
 
-    public class Envir
+    public partial class Envir
     {
         public static Envir Main { get; } = new Envir();
 
@@ -108,7 +108,8 @@ namespace Server.MirEnvir
                 RequestAutoSave,
                 RequestServerVariableAutoSave,
                 () => ScriptVariableDailyPeriod.FromServerTime(
-                    Now, Settings.ScriptVariableDailyResetHour));
+                    Now, Settings.ScriptVariableDailyResetHour),
+                () => Volatile.Read(ref _mainThreadId) == 0 || IsMainThread);
         }
 
         private IServerPersistence? _persistence;
@@ -129,6 +130,10 @@ namespace Server.MirEnvir
         private LingFengWorldContentProvider _physicalWorldContentProvider;
         private LingFengCommerceContentProvider _physicalCommerceContentProvider;
         private LingFengRuleListContentProvider _physicalRuleListContentProvider;
+        private LingFengCsvContentProvider _physicalCsvContentProvider;
+        internal LingFengCsvContentProvider PhysicalCsvContentProvider => _physicalCsvContentProvider;
+        private LingFengTextDataProvider _physicalTextDataProvider;
+        internal LingFengTextDataProvider PhysicalTextDataProvider => _physicalTextDataProvider;
         private LingFengCommerceSnapshot _physicalCommerceSnapshot;
         internal LingFengCommerceContentProvider PhysicalCommerceContentProvider =>
             _physicalCommerceContentProvider;
@@ -146,6 +151,16 @@ namespace Server.MirEnvir
         private INameListProvider _csharpNameListProvider;
         private INameListProvider _physicalNameListProvider;
         private readonly JsonNameListStore _nameListStore = new JsonNameListStore();
+        private readonly LingFengRuntimeTextListStore _lingFengRuntimeTextLists = new();
+
+        public bool TryAddLingFengRuntimeTextListValue(string sourcePath, string value) =>
+            _lingFengRuntimeTextLists.TryAdd(sourcePath, value);
+
+        public bool TrySetLingFengRuntimeTextListLine(string sourcePath, string value, int line) =>
+            _lingFengRuntimeTextLists.TrySetLine(sourcePath, value, line);
+
+        public IReadOnlyList<string> GetLingFengRuntimeTextListValues(string sourcePath) =>
+            _lingFengRuntimeTextLists.GetValues(sourcePath);
 
         public IRouteProvider RouteProvider { get; private set; }
 
@@ -197,7 +212,7 @@ namespace Server.MirEnvir
 
         public const int MinVersion = 60;
         public const int Version = 110;
-        public const int CustomVersion = 2;
+        public const int CustomVersion = 6;
         public static readonly string DatabasePath = Path.Combine(".", "Server.MirDB");
         public static readonly string AccountPath = Path.Combine(".", "Server.MirADB");
         public static readonly string ScriptVariablePath = Path.Combine(".", "Server.Variables.json");
@@ -1470,6 +1485,8 @@ namespace Server.MirEnvir
 
         public void Process()
         {
+            ProcessLingFengMirrorMaps();
+
             if (Now.Day != dailyTime)
             {
                 dailyTime = Now.Day;
@@ -3079,6 +3096,8 @@ namespace Server.MirEnvir
             LingFengWorldContentProvider previousWorldProvider = _physicalWorldContentProvider;
             LingFengCommerceContentProvider previousCommerceProvider = _physicalCommerceContentProvider;
             LingFengRuleListContentProvider previousRuleListProvider = _physicalRuleListContentProvider;
+            LingFengCsvContentProvider previousCsvProvider = _physicalCsvContentProvider;
+            LingFengTextDataProvider previousTextDataProvider = _physicalTextDataProvider;
             LingFengCommerceSnapshot previousCommerceSnapshot = _physicalCommerceSnapshot;
             IRecipeProvider previousPhysicalRecipeProvider = _physicalRecipeProvider;
             INameListProvider previousPhysicalNameListProvider = _physicalNameListProvider;
@@ -3102,6 +3121,10 @@ namespace Server.MirEnvir
                 CSharpScripts.PublishTxtVariableDeclarations(candidateProvider);
             if (!variableResult.Success)
                 throw new InvalidOperationException(variableResult.Diagnostic);
+            if (candidateProvider == null && previousTextDataProvider != null &&
+                !previousTextDataProvider.FlushCachedWrites(out string cacheDiagnostic))
+                throw new InvalidOperationException(
+                    $"关闭物理 TXT 前无法保存 Cache 配置：{cacheDiagnostic}");
 
             try
             {
@@ -3111,6 +3134,11 @@ namespace Server.MirEnvir
                 _physicalWorldContentProvider = candidateWorldProvider;
                 _physicalCommerceContentProvider = candidateCommerceProvider;
                 _physicalRuleListContentProvider = candidateRuleListProvider;
+                _physicalCsvContentProvider =
+                    (candidateProvider as PhysicalTextFileProvider)?.CsvContentProvider;
+                _physicalTextDataProvider =
+                    (candidateProvider as PhysicalTextFileProvider)?.TextDataProvider;
+                _physicalTextDataProvider?.ImportCachedWritesFrom(previousTextDataProvider);
                 ApplyPhysicalCommerceSnapshot(
                     candidateCommerceProvider, candidateCommerceSnapshot,
                     candidateRuleListProvider?.BuildProvider());
@@ -3137,6 +3165,8 @@ namespace Server.MirEnvir
                 _physicalWorldContentProvider = previousWorldProvider;
                 _physicalCommerceContentProvider = previousCommerceProvider;
                 _physicalRuleListContentProvider = previousRuleListProvider;
+                _physicalCsvContentProvider = previousCsvProvider;
+                _physicalTextDataProvider = previousTextDataProvider;
                 _physicalCommerceSnapshot = previousCommerceSnapshot;
                 _physicalRecipeProvider = previousPhysicalRecipeProvider;
                 _physicalNameListProvider = previousPhysicalNameListProvider;
@@ -4372,6 +4402,7 @@ namespace Server.MirEnvir
 
             _txtScriptReloadCoordinator?.Dispose();
             _txtScriptReloadCoordinator = null;
+            FlushLingFengCachedConfigWrites();
             Robot.Clear();
             FreezeAndCancelPendingMainThreadWork();
 
@@ -4413,6 +4444,14 @@ namespace Server.MirEnvir
                 Thread.Sleep(1);
 
             FinalizePerformanceSession("服务器停止");
+        }
+
+        internal bool FlushLingFengCachedConfigWrites()
+        {
+            if (_physicalTextDataProvider == null) return true;
+            if (_physicalTextDataProvider.FlushCachedWrites(out string diagnostic)) return true;
+            MessageQueue.Enqueue($"[TxtScripts] Cache 配置保存失败：{diagnostic}");
+            return false;
         }
 
         private void FinalizePerformanceSession(string phase)
@@ -4972,6 +5011,7 @@ namespace Server.MirEnvir
 
         private void StartEnvir()
         {
+            ClearLingFengMirrorMapRuntime();
             Players.Clear();
             StartPoints.Clear();
             StartItems.Clear();
@@ -5107,6 +5147,7 @@ namespace Server.MirEnvir
             if (Volatile.Read(ref _shutdownSavePrepared) == 0)
                 SaveGoods(true);
 
+            ClearLingFengMirrorMapRuntime();
             MapList.Clear();
             StartPoints.Clear();
             StartItems.Clear();

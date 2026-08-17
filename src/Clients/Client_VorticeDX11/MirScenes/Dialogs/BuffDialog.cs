@@ -78,7 +78,7 @@ namespace Client.MirScenes.Dialogs
 
         public void CreateBuff(ClientBuff buff)
         {
-            var buffImage = BuffImage(buff.Type);
+            var buffImage = BuffImage(buff);
 
             var buffLibrary = Libraries.BuffIcon;
 
@@ -129,7 +129,7 @@ namespace Client.MirScenes.Dialogs
                 var image = _buffList[i];
                 var buff = Buffs[i];
 
-                var buffImage = BuffImage(buff.Type);
+                var buffImage = BuffImage(buff);
                 var buffLibrary = Libraries.BuffIcon;
 
                 //ArcherSpells - VampireShot,PoisonShot
@@ -279,6 +279,9 @@ namespace Client.MirScenes.Dialogs
 
         public string BuffString(ClientBuff buff)
         {
+            if (buff.IsLingFengScript)
+                return buff.LingFengDescription + "\n";
+
             string text = RegexFunctions.SeperateCamelCase(buff.Type.ToString()) + "\n";
             bool overridestats = false;
 
@@ -489,6 +492,9 @@ namespace Client.MirScenes.Dialogs
 
             return text;
         }
+
+        private int BuffImage(ClientBuff buff) =>
+            buff.IsLingFengScript ? buff.LingFengIconIndex : BuffImage(buff.Type);
 
         private int BuffImage(BuffType type)
         {

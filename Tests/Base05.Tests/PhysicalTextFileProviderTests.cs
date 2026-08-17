@@ -109,6 +109,35 @@ public sealed class PhysicalTextFileProviderTests
     }
 
     [Fact]
+    public void 旧脚本行首控制字符仅在内存规范化且不修改CP936源文件()
+    {
+        string root = CreateTemporaryRoot();
+        try
+        {
+            Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+            string npcDirectory = Path.Combine(root, "NPCs");
+            Directory.CreateDirectory(npcDirectory);
+            string file = Path.Combine(npcDirectory, "控制字符.txt");
+            byte[] original = Encoding.GetEncoding(936).GetBytes(
+                "\u001a\r\n\u001f[@STDMODEFUNC209]\r\n#SAY\r\n中文正文\r\n");
+            File.WriteAllBytes(file, original);
+
+            var provider = new PhysicalTextFileProvider(
+                new PhysicalTextFileProviderOptions(root, TxtScriptLayout.LyoCrystal));
+            TextFileDefinition definition = Assert.Single(provider.GetAll());
+
+            Assert.Equal(string.Empty, definition.Lines[0]);
+            Assert.Equal("[@STDMODEFUNC209]", definition.Lines[1]);
+            Assert.Equal("中文正文", definition.Lines[3]);
+            Assert.Equal(original, File.ReadAllBytes(file));
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
+    [Fact]
     public void 原生Txt无需Cs包装即可进入NPC解析器并生成中文对话()
     {
         bool oldTxtEnabled = Settings.TxtScriptsEnabled;
@@ -377,6 +406,73 @@ public sealed class PhysicalTextFileProviderTests
         finally
         {
             Directory.Delete(root, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void LingFengDefine展开命令名并通过真实元宝检测扣除链()
+    {
+        string root = CreateTemporaryRoot();
+        string oldVersion = Settings.TxtScriptsCompatibilityVersion;
+        try
+        {
+            WriteUtf8(root, "QuestDiary/配置/常量.txt",
+                "[@配置]\n{\n#Define $(货币变量) GameGold\n}");
+            WriteUtf8(root, "QuestDiary/玩法/消费.txt",
+                "[@消费]\n{\n#IF\nCheck$(货币变量) ? 30\n#ACT\n$(货币变量) - 30\n}");
+            Settings.TxtScriptsCompatibilityVersion = "LFM2-2026-08-15-snapshot";
+
+            var provider = new PhysicalTextFileProvider(
+                new PhysicalTextFileProviderOptions(root, TxtScriptLayout.LingFeng));
+            TextFileDefinition definition = provider.GetByKey("QuestDiary/玩法/消费");
+            Assert.Contains("CheckGameGold ? 30", definition.Lines);
+            Assert.Contains("GameGold - 30", definition.Lines);
+            Assert.StartsWith("; #Define", provider.GetByKey("QuestDiary/配置/常量").Lines[2]);
+
+            var player = new PlayerObject
+            {
+                Info = new CharacterInfo { Name = "宏展开命格人物", PearlCount = 100 }
+            };
+            var page = new NPCPage("[@消费]");
+            var segment = new NPCSegment(page, new List<string>(), new List<string>(),
+                new List<string>(), new List<string>(), new List<string>(), "define-test");
+            segment.ParseCheck("CheckGameGold ? 30");
+            segment.ParseAct(segment.ActList, "GameGold - 30");
+            Assert.True(segment.Check(player));
+            Assert.Equal(70, player.Info.PearlCount);
+        }
+        finally
+        {
+            Settings.TxtScriptsCompatibilityVersion = oldVersion;
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void LingFengDefine冲突或循环拒绝整个候选()
+    {
+        string conflictRoot = CreateTemporaryRoot();
+        string cycleRoot = CreateTemporaryRoot();
+        try
+        {
+            WriteUtf8(conflictRoot, "QuestDiary/A.txt", "#Define $(货币) GameGold");
+            WriteUtf8(conflictRoot, "QuestDiary/B.txt", "#Define $(货币) GoldCount");
+            InvalidDataException conflict = Assert.Throws<InvalidDataException>(() =>
+                new PhysicalTextFileProvider(
+                    new PhysicalTextFileProviderOptions(conflictRoot, TxtScriptLayout.LingFeng)));
+            Assert.Contains("LFENV16-DEFINE-002", conflict.Message, StringComparison.Ordinal);
+
+            WriteUtf8(cycleRoot, "QuestDiary/A.txt",
+                "#Define $(甲) $(乙)\n#Define $(乙) $(甲)");
+            InvalidDataException cycle = Assert.Throws<InvalidDataException>(() =>
+                new PhysicalTextFileProvider(
+                    new PhysicalTextFileProviderOptions(cycleRoot, TxtScriptLayout.LingFeng)));
+            Assert.Contains("LFENV16-DEFINE-003", cycle.Message, StringComparison.Ordinal);
+        }
+        finally
+        {
+            Directory.Delete(conflictRoot, recursive: true);
+            Directory.Delete(cycleRoot, recursive: true);
         }
     }
 

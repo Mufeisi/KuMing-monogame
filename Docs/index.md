@@ -55,6 +55,7 @@ LEG-09、LEG-10 与传奇类参考源码吸收路线均已完成并转入维护�
 | 桌面作者工具 GUI | [`design/launcher/桌面作者工具GUI设计规范.md`](design/launcher/桌面作者工具GUI设计规范.md) | 启动器编辑器及后续桌面作者工具的信息架构、设计令牌、交互、无障碍与验收唯一规范 |
 | 自定义游戏 GUI | [`design/custom-gui/游戏GUI运行描述规范.md`](design/custom-gui/游戏GUI运行描述规范.md)、[`design/custom-gui/游戏GUI动态协议规范.md`](design/custom-gui/游戏GUI动态协议规范.md) | 静态运行描述、动态协议、上限和失败关闭语义 |
 | 脚本变量系统 | [`design/scripting/翎风变量系统兼容实施规格.md`](design/scripting/翎风变量系统兼容实施规格.md) | 翎风变量行为盘点、LyoCrystal 兼容设计、分阶段进度、迁移与验证门禁 |
+| TXT 脚本兼容迁移 | [`design/scripting/翎风TXT脚本兼容迁移实施规格.md`](design/scripting/翎风TXT脚本兼容迁移实施规格.md)、[`design/scripting/翎风TXT脚本兼容差异说明.md`](design/scripting/翎风TXT脚本兼容差异说明.md)、[`guides/原生TXT脚本快速开始.md`](guides/原生TXT脚本快速开始.md)、[`generated/scripting/README.md`](generated/scripting/README.md) | 原生 TXT 入口、翎风命令与触发兼容、开发顺序、审计清单、测试、灰度迁移和说明书交付门禁 |
 | 引擎用户说明书 | [`../Manual/Engine/README.md`](../Manual/Engine/README.md)、[`governance/引擎说明书维护规范.md`](governance/引擎说明书维护规范.md) | Material for MkDocs 源工程、中文搜索、图文页面、离线构建和功能同步门禁 |
 | 构建/Android | [`runbooks/build/`](runbooks/build/) | 平台构建与打包专项说明 |
 

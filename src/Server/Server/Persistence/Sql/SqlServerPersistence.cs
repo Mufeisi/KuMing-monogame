@@ -249,6 +249,7 @@ namespace Server.Persistence.Sql
             public long SealedExpiryUtcMs { get; set; }
             public long SealedNextSealUtcMs { get; set; }
             public int GmMade { get; set; }
+            public string LingFengCustomAttributes { get; set; }
         }
 
         private sealed class ItemAddedStatRow
@@ -2229,6 +2230,7 @@ namespace Server.Persistence.Sql
                     SealedExpiryUtcMs = item.SealedInfo != null ? ToUtcMs(item.SealedInfo.ExpiryDate) : 0,
                     SealedNextSealUtcMs = item.SealedInfo != null ? ToUtcMs(item.SealedInfo.NextSealDate) : 0,
                     GmMade = item.GMMade ? 1 : 0,
+                    LingFengCustomAttributes = item.SerializeLingFengCustomAttributes(),
                 };
 
                 itemRows.Add(row);
@@ -2396,6 +2398,7 @@ namespace Server.Persistence.Sql
                         "sealed_expiry_utc_ms",
                         "sealed_next_seal_utc_ms",
                         "gm_made",
+                        "lingfeng_custom_attributes",
                         "updated_utc_ms",
                     ],
                     keyColumns: ["item_id"],
@@ -2424,6 +2427,7 @@ namespace Server.Persistence.Sql
                         "sealed_expiry_utc_ms",
                         "sealed_next_seal_utc_ms",
                         "gm_made",
+                        "lingfeng_custom_attributes",
                         "updated_utc_ms",
                     ]);
 
@@ -2463,6 +2467,7 @@ namespace Server.Persistence.Sql
                             sealed_expiry_utc_ms = item.SealedExpiryUtcMs,
                             sealed_next_seal_utc_ms = item.SealedNextSealUtcMs,
                             gm_made = item.GmMade,
+                            lingfeng_custom_attributes = item.LingFengCustomAttributes ?? string.Empty,
                             updated_utc_ms = nowMs,
                         });
                     }
@@ -2601,7 +2606,8 @@ namespace Server.Persistence.Sql
                 "is_shop_item AS IsShopItem, " +
                 "sealed_expiry_utc_ms AS SealedExpiryUtcMs, " +
                 "sealed_next_seal_utc_ms AS SealedNextSealUtcMs, " +
-                "gm_made AS GmMade " +
+                "gm_made AS GmMade, " +
+                "lingfeng_custom_attributes AS LingFengCustomAttributes " +
                 "FROM item_instances");
         }
 
@@ -2871,6 +2877,9 @@ namespace Server.Persistence.Sql
                     : null;
 
                 item.GMMade = row.GmMade != 0;
+                if (!item.TryDeserializeLingFengCustomAttributes(row.LingFengCustomAttributes))
+                    throw new InvalidDataException(
+                        $"物品 {row.ItemId} 的翎风自定义属性持久化数据无效。");
 
                 var stats = new Stats();
                 if (statsByItem.TryGetValue(row.ItemId, out var statList))

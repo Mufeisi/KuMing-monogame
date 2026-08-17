@@ -144,6 +144,10 @@ namespace Client.MirScenes
 
         public BuffDialog BuffsDialog;
         public BuffDialog HeroBuffsDialog;
+        public readonly LingFengClientPresentationState LingFengPresentation = new();
+        private bool _lingFengNpcStylePending;
+        private bool _lingFengNpcStylePersistent;
+        private uint _lingFengNpcStyleObjectId;
 
         public KeyboardLayoutDialog KeyboardLayoutDialog;
         public NoticeDialog NoticeDialog;
@@ -1766,6 +1770,18 @@ namespace Client.MirScenes
                     break;
                 case (short)ServerPacketIds.AddBuff:
                     AddBuff((S.AddBuff)p);
+                    break;
+                case (short)ServerPacketIds.LingFengScreenEffect:
+                    LingFengPresentation.Apply((S.LingFengScreenEffect)p);
+                    break;
+                case (short)ServerPacketIds.LingFengDialog:
+                    ApplyLingFengDialog((S.LingFengDialog)p);
+                    break;
+                case (short)ServerPacketIds.LingFengMapEffect:
+                    LingFengMapEffect((S.LingFengMapEffect)p);
+                    break;
+                case (short)ServerPacketIds.MagicCooldownCleared:
+                    MagicCooldownCleared((S.MagicCooldownCleared)p);
                     break;
                 case (short)ServerPacketIds.RemoveBuff:
                     RemoveBuff((S.RemoveBuff)p);
@@ -3966,6 +3982,17 @@ namespace Client.MirScenes
         }
         private void NPCResponse(S.NPCResponse p)
         {
+            if (_lingFengNpcStylePending)
+            {
+                _lingFengNpcStylePending = false;
+                _lingFengNpcStyleObjectId = NPCID;
+            }
+            else if (!_lingFengNpcStylePersistent ||
+                     _lingFengNpcStyleObjectId != NPCID)
+            {
+                ResetLingFengNpcStyle();
+            }
+
             NPCTime = 0;
             NPCDialog.BigButtons.Clear();
             NPCDialog.BigButtonDialog.Hide();
@@ -3986,6 +4013,35 @@ namespace Client.MirScenes
             StorageDialog.Hide();
             TrustMerchantDialog.Hide();
             QuestListDialog.Hide();
+        }
+
+        private void ApplyLingFengDialog(S.LingFengDialog packet)
+        {
+            LingFengPresentation.Apply(packet);
+            if (packet.DialogId != 0) return;
+            if (packet.Remove)
+            {
+                ResetLingFengNpcStyle();
+                return;
+            }
+            if (!packet.NpcStyle) return;
+
+            MLibrary library = Libraries.GetLingFengEffectLibrary(packet.LibraryName);
+            NPCDialog.ApplyLingFengStyle(
+                library, packet.ImageIndex, packet.Movable, packet.Position,
+                packet.X, packet.Y, packet.ShowCloseButton,
+                packet.CloseButtonX, packet.CloseButtonY, Size);
+            _lingFengNpcStylePending = true;
+            _lingFengNpcStylePersistent = packet.ContinueNpcStyle;
+            _lingFengNpcStyleObjectId = 0;
+        }
+
+        private void ResetLingFengNpcStyle()
+        {
+            _lingFengNpcStylePending = false;
+            _lingFengNpcStylePersistent = false;
+            _lingFengNpcStyleObjectId = 0;
+            NPCDialog.ResetLingFengStyle();
         }
 
         private void NPCUpdate(S.NPCUpdate p)
@@ -4776,6 +4832,13 @@ namespace Client.MirScenes
             else
                 magic = User.GetMagic(p.Spell);
             magic.Delay = p.Delay;
+        }
+
+        private void MagicCooldownCleared(S.MagicCooldownCleared p)
+        {
+            UserObject actor = p.ObjectID == Hero?.ObjectID ? Hero : User;
+            ClientMagic magic = actor?.GetMagic(p.Spell);
+            if (magic != null) magic.CastTime = 0;
         }
 
         private void MagicCast(S.MagicCast p)
@@ -7165,6 +7228,44 @@ namespace Client.MirScenes
             }
         }
 
+        private void LingFengMapEffect(S.LingFengMapEffect p)
+        {
+            MLibrary library = Libraries.GetLingFengEffectLibrary(p.LibraryName);
+            if (library == null || p.StartIndex < 0 || p.FrameCount <= 0 ||
+                p.FrameDelay <= 0 || p.Layer > 2 || p.Light > 5)
+                return;
+            int duration;
+            try
+            {
+                duration = checked(p.FrameCount * p.FrameDelay);
+            }
+            catch (OverflowException)
+            {
+                return;
+            }
+            var effect = new Effect(
+                library, p.StartIndex, p.FrameCount, duration, p.Location,
+                drawBehind: p.Layer == 0)
+            {
+                Blend = p.Blend,
+                Light = p.Light,
+                Repeat = p.RepeatCount == -1 || p.RepeatCount > 1,
+                RepeatUntil = p.RepeatCount > 1
+                    ? CMain.Time + (long)duration * p.RepeatCount
+                    : 0
+            };
+            MapControl.Effects.Add(effect);
+        }
+
+        public Color ItemNameColor(UserItem item)
+        {
+            if (item?.LingFengNameColour > 0 &&
+                LingFengLegacyColorTable.TryGetRgb(item.LingFengNameColour,
+                    out byte red, out byte green, out byte blue))
+                return Color.FromArgb(255, red, green, blue);
+            return GradeNameColor(item?.Info?.Grade ?? ItemGrade.None);
+        }
+
         public void DisposeItemLabel()
         {
             //CMain.SaveError(DXManager.PrintParentMethod());
@@ -7229,7 +7330,7 @@ namespace Client.MirScenes
             MirLabel nameLabel = new MirLabel
             {
                 AutoSize = true,
-                ForeColour = GradeNameColor(HoverItem.Info.Grade),
+                ForeColour = ItemNameColor(HoverItem),
                 Location = new Point(4, 4),
                 OutLine = true,
                 Parent = ItemLabel,
@@ -9273,7 +9374,7 @@ namespace Client.MirScenes
 
             #region DONT_DEATH_DROP
 
-            if (HoverItem.Info.Bind != BindMode.None && HoverItem.Info.Bind.HasFlag(BindMode.DontDeathdrop))
+            if (HoverItem.HasBindingFlag(BindMode.DontDeathdrop))
             {
                 count++;
                 MirLabel DONT_DEATH_DROPLabel = new MirLabel
@@ -9294,7 +9395,7 @@ namespace Client.MirScenes
 
             #region DONT_DROP
 
-            if (HoverItem.Info.Bind != BindMode.None && HoverItem.Info.Bind.HasFlag(BindMode.DontDrop))
+            if (HoverItem.HasBindingFlag(BindMode.DontDrop))
             {
                 count++;
                 MirLabel DONT_DROPLabel = new MirLabel
@@ -9336,7 +9437,7 @@ namespace Client.MirScenes
 
             #region DONT_SELL
 
-            if (HoverItem.Info.Bind != BindMode.None && HoverItem.Info.Bind.HasFlag(BindMode.DontSell))
+            if (HoverItem.HasBindingFlag(BindMode.DontSell))
             {
                 count++;
                 MirLabel DONT_SELLLabel = new MirLabel
@@ -9357,7 +9458,7 @@ namespace Client.MirScenes
 
             #region DONT_TRADE
 
-            if (HoverItem.Info.Bind != BindMode.None && HoverItem.Info.Bind.HasFlag(BindMode.DontTrade))
+            if (HoverItem.HasBindingFlag(BindMode.DontTrade))
             {
                 count++;
                 MirLabel DONT_TRADELabel = new MirLabel
@@ -9378,7 +9479,7 @@ namespace Client.MirScenes
 
             #region DONT_STORE
 
-            if (HoverItem.Info.Bind != BindMode.None && HoverItem.Info.Bind.HasFlag(BindMode.DontStore))
+            if (HoverItem.HasBindingFlag(BindMode.DontStore))
             {
                 count++;
                 MirLabel DONT_STORELabel = new MirLabel
@@ -9399,7 +9500,7 @@ namespace Client.MirScenes
 
             #region DONT_REPAIR
 
-            if (HoverItem.Info.Bind != BindMode.None && HoverItem.Info.Bind.HasFlag(BindMode.DontRepair))
+            if (HoverItem.HasBindingFlag(BindMode.DontRepair))
             {
                 count++;
                 MirLabel DONT_REPAIRLabel = new MirLabel
@@ -9462,7 +9563,7 @@ namespace Client.MirScenes
 
             #region DONT_DESTROY_ON_DROP
 
-            if (HoverItem.Info.Bind != BindMode.None && HoverItem.Info.Bind.HasFlag(BindMode.DestroyOnDrop))
+            if (HoverItem.HasBindingFlag(BindMode.DestroyOnDrop))
             {
                 count++;
                 MirLabel DONT_DODLabel = new MirLabel
@@ -10196,6 +10297,38 @@ namespace Client.MirScenes
             }
         }
 
+        public MirControl LingFengCustomItemAttributeLabel(UserItem item)
+        {
+            IReadOnlyList<string> lines = item.GetLingFengCustomAttributeDisplayLines();
+            if (lines.Count == 0) return null;
+
+            ItemLabel.Size = new Size(ItemLabel.Size.Width, ItemLabel.Size.Height + 4);
+            MirLabel label = new MirLabel
+            {
+                AutoSize = true,
+                ForeColour = Color.Khaki,
+                Location = new Point(4, ItemLabel.DisplayRectangle.Bottom),
+                OutLine = true,
+                Parent = ItemLabel,
+                Text = "自定义属性\n" + string.Join("\n", lines)
+            };
+            ItemLabel.Size = new Size(
+                Math.Max(ItemLabel.Size.Width, label.DisplayRectangle.Right + 4),
+                Math.Max(ItemLabel.Size.Height + 4, label.DisplayRectangle.Bottom + 4));
+            var outline = new MirControl
+            {
+                BackColour = Color.FromArgb(255, 50, 50, 50),
+                Border = true,
+                BorderColour = Color.Gray,
+                NotControl = true,
+                Parent = ItemLabel,
+                Opacity = 0.4F,
+                Location = new Point(0, 0),
+                Size = ItemLabel.Size
+            };
+            return outline;
+        }
+
         public void CreateItemLabel(UserItem item, bool inspect = false, bool hideDura = false, bool hideAdded = false)
         {
             CMain.DebugText = CMain.Random.Next(1, 100).ToString();
@@ -10229,7 +10362,7 @@ namespace Client.MirScenes
             };
 
             //Name Info Label
-            MirControl[] outlines = new MirControl[12];
+            MirControl[] outlines = new MirControl[13];
             outlines[0] = NameInfoLabel(item, inspect, hideDura);
             //Attribute Info1 Label - Attack Info
             outlines[1] = AttackInfoLabel(item, inspect, hideAdded);
@@ -10253,6 +10386,8 @@ namespace Client.MirScenes
             outlines[10] = GMMadeLabel(item);
 			//Info Label
             outlines[11] = ItemSetInfoLabel(item, inspect);
+            //翎风自定义物品属性
+            outlines[12] = LingFengCustomItemAttributeLabel(item);
 
             foreach (var outline in outlines)
             {
@@ -12027,7 +12162,7 @@ namespace Client.MirScenes
                 }
 
                 MirItemCell cell = GameScene.SelectedCell;
-                if (cell.Item.Info.Bind.HasFlag(BindMode.DontDrop))
+                if (cell.Item.HasBindingFlag(BindMode.DontDrop))
                 {
                     MirMessageBox messageBox = new MirMessageBox(string.Format("你不能丢弃 {0}", cell.Item.FriendlyName), MirMessageBoxButtons.OK);
                     messageBox.Show();

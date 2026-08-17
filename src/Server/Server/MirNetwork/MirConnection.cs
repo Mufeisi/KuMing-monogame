@@ -1458,7 +1458,7 @@ namespace Server.MirNetwork
         {
             if (Stage != GameStage.Game) return;
 
-            Player.AMode = p.Mode;
+            Player.TryChangeAttackModeFromClient(p.Mode);
 
             Enqueue(new S.ChangeAMode {Mode = Player.AMode});
         }

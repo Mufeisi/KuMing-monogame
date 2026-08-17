@@ -191,6 +191,7 @@ namespace MonoShare.MirScenes
         public static List<ClientRecipeInfo> RecipeInfoList = new List<ClientRecipeInfo>();
 
         public List<ClientBuff> Buffs = new List<ClientBuff>();
+        public readonly LingFengClientPresentationState LingFengPresentation = new();
 
         public static UserItem[] Storage = new UserItem[80];
         public static UserItem[] GuildStorage = new UserItem[112];
@@ -3130,6 +3131,18 @@ namespace MonoShare.MirScenes
                 case (short)ServerPacketIds.AddBuff:
                     AddBuff((S.AddBuff)p);
                     break;
+                case (short)ServerPacketIds.LingFengScreenEffect:
+                    LingFengPresentation.Apply((S.LingFengScreenEffect)p);
+                    break;
+                case (short)ServerPacketIds.LingFengDialog:
+                    LingFengPresentation.Apply((S.LingFengDialog)p);
+                    break;
+                case (short)ServerPacketIds.LingFengMapEffect:
+                    LingFengMapEffect((S.LingFengMapEffect)p);
+                    break;
+                case (short)ServerPacketIds.MagicCooldownCleared:
+                    MagicCooldownCleared((S.MagicCooldownCleared)p);
+                    break;
                 case (short)ServerPacketIds.RemoveBuff:
                     RemoveBuff((S.RemoveBuff)p);
                     break;
@@ -5845,6 +5858,14 @@ namespace MonoShare.MirScenes
             if (Environment.OSVersion.Platform == PlatformID.Win32NT)
                 return;
 
+            if (p?.Page == null || p.Page.Count == 0)
+            {
+                NPCID = 0;
+                MonoShare.FairyGuiHost.UpdateMobileNpcPage(0, string.Empty, Array.Empty<string>());
+                MonoShare.FairyGuiHost.TryHideMobileWindow("Npc");
+                return;
+            }
+
             NPCTime = 0;
             BeginNpcConversation(NPCID, npcName);
             MonoShare.FairyGuiHost.UpdateMobileNpcPage(NPCID, npcName, p.Page);
@@ -6485,6 +6506,12 @@ namespace MonoShare.MirScenes
             magic.Delay = p.Delay;
         }
 
+        private void MagicCooldownCleared(S.MagicCooldownCleared p)
+        {
+            ClientMagic magic = p.ObjectID == User?.ObjectID ? User.GetMagic(p.Spell) : null;
+            if (magic != null) magic.CastTime = 0;
+        }
+
         private void MagicCast(S.MagicCast p)
         {
             ClientMagic magic = User.GetMagic(p.Spell);
@@ -6964,6 +6991,42 @@ namespace MonoShare.MirScenes
                     MapControl.Effects.Add(HitWall);
                     break;
             }
+        }
+
+        private void LingFengMapEffect(S.LingFengMapEffect p)
+        {
+            MLibrary library = Libraries.GetLingFengEffectLibrary(p.LibraryName);
+            if (library == null || p.StartIndex < 0 || p.FrameCount <= 0 ||
+                p.FrameDelay <= 0 || p.Layer > 2 || p.Light > 5)
+                return;
+            int duration;
+            try
+            {
+                duration = checked(p.FrameCount * p.FrameDelay);
+            }
+            catch (OverflowException)
+            {
+                return;
+            }
+            MapObject owner = p.AnchorObjectId == 0
+                ? null
+                : MapControl.Objects.FirstOrDefault(value => value.ObjectID == p.AnchorObjectId);
+            var effect = owner == null
+                ? new Effect(library, p.StartIndex, p.FrameCount, duration, p.Location,
+                    drawBehind: p.Layer == 0)
+                : new Effect(library, p.StartIndex, p.FrameCount, duration, owner,
+                    drawBehind: p.Layer == 0);
+            effect.PixelOffset = p.PixelOffset;
+            effect.Blend = p.Blend;
+            effect.Light = p.Light;
+            effect.Repeat = p.RepeatCount <= 0 || p.RepeatCount > 1;
+            effect.RepeatUntil = p.RepeatCount > 1
+                ? CMain.Time + (long)duration * p.RepeatCount
+                : 0;
+            if (owner == null)
+                MapControl.Effects.Add(effect);
+            else
+                owner.Effects.Add(effect);
         }
 
         private void ObjectRangeAttack(S.ObjectRangeAttack p)

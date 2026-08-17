@@ -36,6 +36,8 @@ MOV P0 1
 
 翎风布局的 `MapQuest_def/QManage.txt` 与 `Robot_def/ROBOTMANAGE.TXT` 已分别映射到 `SystemScripts/QManage` 和 `SystemScripts/RobotManage`；`QFunction-0` 使用 `SystemScripts/QFunction-0`。这些文件仍属于统一候选快照，编码、引用、严格命令、变量声明或标签验证失败时整批回滚。
 
+`QuestDiary` 与 `DeFines` 下的 `.ini` 脚本文件按与 `.txt` 相同的页面脚本处理，逻辑键会去掉扩展名。普通 `GOTO` 优先匹配当前文件页面；当前文件没有目标且整个候选恰好只有一个同名页面时，允许跳入该唯一页面。零个或多个候选都不会猜测。酷明遗留的 `@_@...` 外部回调页与已识别的机器人外部页会登记为 E2 页面依赖，不伪造成已执行页面；除已确认的单个历史重复页按首个页面语义归一外，其他重复标签仍拒绝候选。
+
 ## 定时机器人
 
 `Robot_def/AUTORUNROBOT.TXT` 映射到 `SystemScripts/AutoRunRobot`，示例：
@@ -48,7 +50,7 @@ MOV P0 1
 #AutoRun NPC RUNONWEEK 5:19:55 @每周五任务
 ```
 
-对应页面必须写在 `Robot_def/ROBOTMANAGE.TXT` 中，例如 `[@五秒任务]`。标签大小写不敏感，但名称必须完整一致；不会把 `Mir2_`、数字前缀或 `RM` 后缀做模糊纠正。缺少 RobotManage 或目标标签会拒绝整个候选并保留上一成功版本。`RUNONDAY` 接受 `HH:mm` 或 `HH:mm:ss`，`RUNONWEEK` 使用 `0=星期日` 至 `6=星期六` 的 `日:时:分[:秒]` 格式。
+对应页面必须写在 `Robot_def/ROBOTMANAGE.TXT` 中，例如 `[@五秒任务]`。标签大小写不敏感并优先完整一致；兼容酷明旧版本时，可去除确定的 `Mir2_`、前导编号和 `Rm` 装饰，但去除后必须恰好命中唯一同义页。没有候选或存在歧义都会拒绝整个候选并保留上一成功版本，不按包含关系、相似度或页面顺序猜测。`RUNONDAY` 接受 `HH:mm` 或 `HH:mm:ss`，`RUNONWEEK` 使用 `0=星期日` 至 `6=星期六` 的 `日:时:分[:秒]` 格式。
 
 周期任务在发布成功后开始计时，固定时刻任务按服务器本地时间运行。单次主循环最多执行 128 个到期页，递归进入会被拒绝；一个页面异常不阻断同 tick 的其他页面。任何候选语法或编码错误都会拒绝整次热更新并继续使用上一成功版本；服务停止后全部调度立即清空。
 

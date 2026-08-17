@@ -276,8 +276,63 @@ public class ItemInfo
 
 }
 
+public sealed class LingFengCustomItemAttribute
+{
+    public byte Colour;
+    public byte Binding;
+    public byte DisplayOrder;
+    public byte Mode;
+    public byte Module;
+    public int Value1;
+    public int Value2;
+    public int Value3;
+
+    public bool IsDefined => Colour != 0 || Binding != 0 || DisplayOrder != 0 ||
+                             Mode != 0 || Module != 0 || Value1 != 0 || Value2 != 0 || Value3 != 0;
+
+    public LingFengCustomItemAttribute Clone() => new()
+    {
+        Colour = Colour,
+        Binding = Binding,
+        DisplayOrder = DisplayOrder,
+        Mode = Mode,
+        Module = Module,
+        Value1 = Value1,
+        Value2 = Value2,
+        Value3 = Value3
+    };
+}
+
+public sealed class LingFengCustomItemProgressBar
+{
+    public bool Enabled { get; set; }
+    public string Text { get; set; } = string.Empty;
+    public byte Colour { get; set; }
+    public byte FrameCount { get; set; }
+    public byte DisplayMode { get; set; }
+    public int Maximum { get; set; }
+    public int Current { get; set; }
+
+    public bool IsDefined => Enabled || Text.Length > 0 || Colour != 0 || FrameCount != 0 ||
+                             DisplayMode != 0 || Maximum != 0 || Current != 0;
+
+    public LingFengCustomItemProgressBar Clone() => new()
+    {
+        Enabled = Enabled,
+        Text = Text,
+        Colour = Colour,
+        FrameCount = FrameCount,
+        DisplayMode = DisplayMode,
+        Maximum = Maximum,
+        Current = Current
+    };
+}
+
 public class UserItem
 {
+    public const int LingFengCustomAttributeLimit = 60;
+    public const int LingFengCustomProgressBarLimit = 10;
+    public const int LingFengNewItemValueLimit = 26;
     public ulong UniqueID;
     public int ItemIndex;
 
@@ -310,6 +365,84 @@ public class UserItem
     public Awake Awake = new Awake();
 
     public Stats AddedStats;
+    private LingFengCustomItemAttribute[] _lingFengCustomAttributes =
+        CreateLingFengCustomAttributes();
+    private byte[] _lingFengByteMarks = new byte[20];
+    private int[] _lingFengIntMarks = new int[10];
+    private string[] _lingFengTextMarks = { string.Empty, string.Empty };
+    private LingFengCustomItemProgressBar[] _lingFengCustomProgressBars =
+        CreateLingFengCustomProgressBars();
+    private string _lingFengCustomText = string.Empty;
+    private byte _lingFengCustomTextColour;
+    private ushort[] _lingFengItemEffects = new ushort[3];
+    private int[] _lingFengNewItemValues = new int[LingFengNewItemValueLimit];
+    public byte LingFengNameColour { get; private set; }
+    public ushort? LingFengLooks { get; private set; }
+    public short? LingFengShape { get; private set; }
+    public BindMode LingFengBindingFlags { get; private set; }
+    public byte LingFengUpgradeCount { get; private set; }
+    public bool LingFengCannotTakeOff { get; private set; }
+
+    public BindMode EffectiveBindingFlags =>
+        (Info?.Bind ?? BindMode.None) | LingFengBindingFlags |
+        (RentalInformation?.BindingFlags ?? BindMode.None);
+
+    public bool HasBindingFlag(BindMode flag) => EffectiveBindingFlags.HasFlag(flag);
+
+    public bool CanStackWith(UserItem other) =>
+        other != null && ReferenceEquals(Info, other.Info) &&
+        EffectiveBindingFlags == other.EffectiveBindingFlags &&
+        LingFengCannotTakeOff == other.LingFengCannotTakeOff &&
+        SoulBoundId == other.SoulBoundId;
+
+    public bool TrySetLingFengBindingFlags(BindMode flags)
+    {
+        const BindMode supported = BindMode.DontDrop | BindMode.DontTrade |
+                                   BindMode.DontStore | BindMode.DontRepair |
+                                   BindMode.DontSell | BindMode.DontDeathdrop |
+                                   BindMode.DestroyOnDrop;
+        if ((flags & ~supported) != 0) return false;
+        LingFengBindingFlags = flags;
+        return true;
+    }
+
+    public bool TrySetLingFengItemState(int stateIndex, bool enabled)
+    {
+        if (stateIndex == 7)
+        {
+            LingFengCannotTakeOff = enabled;
+            return true;
+        }
+
+        BindMode flag = stateIndex switch
+        {
+            0 => BindMode.DontDrop,
+            1 => BindMode.DontTrade,
+            2 => BindMode.DontStore,
+            3 => BindMode.DontRepair,
+            4 => BindMode.DontSell,
+            5 => BindMode.DontDeathdrop,
+            6 => BindMode.DestroyOnDrop,
+            _ => BindMode.None
+        };
+        if (flag == BindMode.None) return false;
+        return TrySetLingFengBindingFlags(enabled
+            ? LingFengBindingFlags | flag
+            : LingFengBindingFlags & ~flag);
+    }
+
+    public bool HasLingFengItemState(int stateIndex) => stateIndex switch
+    {
+        0 => HasBindingFlag(BindMode.DontDrop),
+        1 => HasBindingFlag(BindMode.DontTrade),
+        2 => HasBindingFlag(BindMode.DontStore),
+        3 => HasBindingFlag(BindMode.DontRepair),
+        4 => HasBindingFlag(BindMode.DontSell),
+        5 => HasBindingFlag(BindMode.DontDeathdrop),
+        6 => HasBindingFlag(BindMode.DestroyOnDrop),
+        7 => LingFengCannotTakeOff,
+        _ => false
+    };
 
     public bool IsAdded
     {
@@ -455,6 +588,16 @@ public class UserItem
         {
             GMMade = reader.ReadBoolean();
         }
+
+        if (customVersion >= 3)
+            ReadLingFengCustomAttributes(
+                reader,
+                customVersion >= 4,
+                customVersion >= 4,
+                customVersion >= 5,
+                customVersion >= 5,
+                customVersion >= 6,
+                customVersion >= 6);
     }
 
     public void Save(BinaryWriter writer)
@@ -506,7 +649,674 @@ public class UserItem
         SealedInfo?.Save(writer);
 
         writer.Write(GMMade);
+
+        WriteLingFengCustomAttributes(writer);
     }
+
+    public LingFengCustomItemAttribute GetLingFengCustomAttribute(int index)
+    {
+        if (index < 0 || index >= LingFengCustomAttributeLimit)
+            throw new ArgumentOutOfRangeException(nameof(index));
+        return _lingFengCustomAttributes[index];
+    }
+
+    public bool TrySetLingFengNameColour(int colour)
+    {
+        if (colour is < byte.MinValue or > byte.MaxValue) return false;
+        LingFengNameColour = (byte)colour;
+        return true;
+    }
+
+    public bool TryChangeLingFengUpgradeCount(string operation, int value)
+    {
+        if (value is < 0 or > byte.MaxValue ||
+            !TryCalculate(LingFengUpgradeCount, operation, value, out int result) ||
+            result is < 0 or > byte.MaxValue)
+            return false;
+        LingFengUpgradeCount = (byte)result;
+        return true;
+    }
+
+    public bool TryChangeLingFengLooks(string operation, int value)
+    {
+        int current = LingFengLooks ?? Info.Image;
+        if (!TryCalculate(current, operation, value, out int result) ||
+            result is < ushort.MinValue or > ushort.MaxValue)
+            return false;
+        LingFengLooks = (ushort)result;
+        return true;
+    }
+
+    public bool TryChangeLingFengShape(string operation, int value)
+    {
+        int current = LingFengShape ?? Info.Shape;
+        if (!TryCalculate(current, operation, value, out int result) ||
+            result is < short.MinValue or > short.MaxValue)
+            return false;
+        LingFengShape = (short)result;
+        return true;
+    }
+
+    public bool TrySetLingFengCustomAbility(int index, int field, int value)
+    {
+        if (index < 0 || index >= LingFengCustomAttributeLimit || field is < 0 or > 4)
+            return false;
+        LingFengCustomItemAttribute attribute = _lingFengCustomAttributes[index];
+        switch (field)
+        {
+            case 0 when value is >= 0 and <= 255:
+                attribute.Colour = (byte)value;
+                return true;
+            case 1 when value is >= 0 and <= 60:
+                attribute.Binding = (byte)value;
+                return true;
+            case 2 when value is >= 0 and <= 255:
+                attribute.DisplayOrder = (byte)value;
+                return true;
+            case 3 when value is >= 0 and <= 2:
+                attribute.Mode = (byte)value;
+                return true;
+            case 4 when value is >= 0 and <= 14:
+                attribute.Module = (byte)value;
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    public bool TryChangeLingFengCustomValues(
+        int index, string operation, int value1, int value2 = 0, int value3 = 0)
+    {
+        if (index < 0 || index >= LingFengCustomAttributeLimit ||
+            operation is not ("+" or "-" or "="))
+            return false;
+        LingFengCustomItemAttribute attribute = _lingFengCustomAttributes[index];
+        if (!TryCalculate(attribute.Value1, operation, value1, out int next1) ||
+            !TryCalculate(attribute.Value2, operation, value2, out int next2) ||
+            !TryCalculate(attribute.Value3, operation, value3, out int next3))
+            return false;
+        attribute.Value1 = next1;
+        attribute.Value2 = next2;
+        attribute.Value3 = next3;
+        return true;
+    }
+
+    public IReadOnlyList<string> GetLingFengCustomAttributeDisplayLines()
+    {
+        var lines = new List<string>();
+        if (!string.IsNullOrWhiteSpace(_lingFengCustomText))
+            lines.Add(_lingFengCustomText);
+        lines.AddRange(_lingFengCustomAttributes
+            .Select((attribute, index) => (attribute, index))
+            .Where(entry => entry.attribute.IsDefined && entry.attribute.Binding > 0)
+            .OrderBy(entry => entry.attribute.DisplayOrder)
+            .ThenBy(entry => entry.index)
+            .Select(entry => FormatLingFengCustomAttribute(entry.attribute)));
+        lines.AddRange(_lingFengCustomProgressBars
+            .Where(progress => progress.Enabled)
+            .Select(FormatLingFengCustomProgressBar));
+        lines.AddRange(_lingFengNewItemValues
+            .Select((value, index) => (value, index))
+            .Where(entry => entry.value != 0)
+            .Select(entry => $"翎风新增属性[{entry.index}]: {entry.value}"));
+        return lines;
+    }
+
+    public bool TrySetLingFengCustomText(string text, int colour)
+    {
+        if (text == null || text.Length > 120 || colour is < 0 or > byte.MaxValue) return false;
+        _lingFengCustomText = text;
+        _lingFengCustomTextColour = (byte)colour;
+        return true;
+    }
+
+    public bool TrySetLingFengCustomText(string text) =>
+        TrySetLingFengCustomText(text, _lingFengCustomTextColour);
+
+    public bool TrySetLingFengCustomTextColour(int colour) =>
+        TrySetLingFengCustomText(_lingFengCustomText, colour);
+
+    public bool TrySetLingFengItemEffect(int position, int effect)
+    {
+        if (position < 0 || position >= _lingFengItemEffects.Length ||
+            effect is < 0 or > ushort.MaxValue)
+            return false;
+        _lingFengItemEffects[position] = (ushort)effect;
+        return true;
+    }
+
+    public ushort GetLingFengItemEffect(int position) =>
+        position >= 0 && position < _lingFengItemEffects.Length
+            ? _lingFengItemEffects[position]
+            : (ushort)0;
+
+    public bool TryChangeLingFengNewItemValue(int type, string operation, int value)
+    {
+        if (type < 0 || type >= LingFengNewItemValueLimit || value < 0 ||
+            operation is not ("+" or "-" or "="))
+            return false;
+        if (!TryCalculate(_lingFengNewItemValues[type], operation, value, out int next) ||
+            next is < 0 or > 1000)
+            return false;
+        _lingFengNewItemValues[type] = next;
+        return true;
+    }
+
+    public bool TryGetLingFengNewItemValue(int type, out int value)
+    {
+        value = 0;
+        if (type < 0 || type >= LingFengNewItemValueLimit) return false;
+        value = _lingFengNewItemValues[type];
+        return true;
+    }
+
+    public bool TrySetLingFengCustomProgressBar(int index, int field, string value)
+    {
+        if (index < 0 || index >= LingFengCustomProgressBarLimit || field is < 0 or > 4)
+            return false;
+        LingFengCustomItemProgressBar progress = _lingFengCustomProgressBars[index];
+        switch (field)
+        {
+            case 0 when int.TryParse(value, out int enabled) && enabled is 0 or 1:
+                progress.Enabled = enabled == 1;
+                return true;
+            case 1 when value != null && value.Length <= 120:
+                progress.Text = value;
+                return true;
+            case 2 when byte.TryParse(value, out byte colour):
+                progress.Colour = colour;
+                return true;
+            case 3 when byte.TryParse(value, out byte frames):
+                progress.FrameCount = frames;
+                return true;
+            case 4 when byte.TryParse(value, out byte mode) && mode <= 2:
+                progress.DisplayMode = mode;
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    public bool TryChangeLingFengCustomProgressBarValue(
+        int index, int valueKind, string operation, int operand)
+    {
+        if (index < 0 || index >= LingFengCustomProgressBarLimit || valueKind is < 0 or > 2)
+            return false;
+        LingFengCustomItemProgressBar progress = _lingFengCustomProgressBars[index];
+        int current = valueKind switch
+        {
+            0 => progress.Maximum,
+            1 => progress.Current,
+            _ => progress.Maximum <= 0 ? 0 : checked((int)((long)progress.Current * 100 / progress.Maximum))
+        };
+        if (!TryCalculate(current, operation, operand, out int changed) || changed < 0)
+            return false;
+        if (valueKind == 0)
+        {
+            progress.Maximum = changed;
+            if (progress.Current > changed) progress.Current = changed;
+        }
+        else if (valueKind == 1)
+        {
+            progress.Current = progress.Maximum > 0 ? Math.Min(changed, progress.Maximum) : changed;
+        }
+        else
+        {
+            if (changed > 100 || progress.Maximum < 0) return false;
+            progress.Current = checked((int)((long)progress.Maximum * changed / 100));
+        }
+        return true;
+    }
+
+    public bool TryGetLingFengCustomProgressBarValue(int index, int valueKind, out int value)
+    {
+        value = 0;
+        if (index < 0 || index >= LingFengCustomProgressBarLimit || valueKind is < 0 or > 2)
+            return false;
+        LingFengCustomItemProgressBar progress = _lingFengCustomProgressBars[index];
+        value = valueKind switch
+        {
+            0 => progress.Maximum,
+            1 => progress.Current,
+            _ => progress.Maximum <= 0 ? 0 : checked((int)((long)progress.Current * 100 / progress.Maximum))
+        };
+        return true;
+    }
+
+    public bool TrySetLingFengByteMark(int index, int value)
+    {
+        if (index < 0 || index >= _lingFengByteMarks.Length || value is < 0 or > byte.MaxValue)
+            return false;
+        _lingFengByteMarks[index] = (byte)value;
+        return true;
+    }
+
+    public bool TryGetLingFengByteMark(int index, out byte value)
+    {
+        if (index < 0 || index >= _lingFengByteMarks.Length)
+        {
+            value = 0;
+            return false;
+        }
+        value = _lingFengByteMarks[index];
+        return true;
+    }
+
+    public bool TrySetLingFengIntMark(int index, int value)
+    {
+        if (index < 0 || index >= _lingFengIntMarks.Length) return false;
+        _lingFengIntMarks[index] = value;
+        return true;
+    }
+
+    public bool TryGetLingFengIntMark(int index, out int value)
+    {
+        if (index < 0 || index >= _lingFengIntMarks.Length)
+        {
+            value = 0;
+            return false;
+        }
+        value = _lingFengIntMarks[index];
+        return true;
+    }
+
+    public bool TrySetLingFengTextMark(int index, string value)
+    {
+        if (index < 0 || index >= _lingFengTextMarks.Length || value == null || value.Length > 20)
+            return false;
+        _lingFengTextMarks[index] = value;
+        return true;
+    }
+
+    public bool TryGetLingFengTextMark(int index, out string value)
+    {
+        if (index < 0 || index >= _lingFengTextMarks.Length)
+        {
+            value = string.Empty;
+            return false;
+        }
+        value = _lingFengTextMarks[index];
+        return true;
+    }
+
+    public void ApplyLingFengCustomStats(Stats target, Stats itemStats)
+    {
+        if (target == null || itemStats == null) return;
+        foreach (LingFengCustomItemAttribute attribute in _lingFengCustomAttributes)
+        {
+            if (attribute.Binding is < 1 or > 7 || attribute.Mode > 1) continue;
+            foreach (Stat stat in GetLingFengBoundStats(attribute.Binding))
+            {
+                long addition = attribute.Mode == 0
+                    ? attribute.Value1
+                    : (long)itemStats[stat] * attribute.Value1 / 100;
+                target[stat] = SaturatingAdd(target[stat], addition);
+            }
+        }
+    }
+
+    public void AccumulateLingFengWholeBodyPercentages(Stats percentages)
+    {
+        if (percentages == null) return;
+        foreach (LingFengCustomItemAttribute attribute in _lingFengCustomAttributes)
+        {
+            if (attribute.Binding is < 1 or > 7 || attribute.Mode != 2) continue;
+            foreach (Stat stat in GetLingFengBoundStats(attribute.Binding))
+                percentages[stat] = SaturatingAdd(percentages[stat], attribute.Value1);
+        }
+    }
+
+    public static void ApplyLingFengWholeBodyPercentages(Stats target, Stats percentages)
+    {
+        if (target == null || percentages == null) return;
+        foreach (KeyValuePair<Stat, int> pair in percentages.Values)
+            target[pair.Key] = SaturatingAdd(target[pair.Key],
+                (long)target[pair.Key] * pair.Value / 100);
+    }
+
+    public string SerializeLingFengCustomAttributes()
+    {
+        using var stream = new MemoryStream();
+        using (var writer = new BinaryWriter(stream, System.Text.Encoding.UTF8, true))
+            WriteLingFengCustomAttributes(writer);
+        return Convert.ToBase64String(stream.ToArray());
+    }
+
+    public bool TryDeserializeLingFengCustomAttributes(string value)
+    {
+        if (string.IsNullOrEmpty(value))
+        {
+            _lingFengCustomAttributes = CreateLingFengCustomAttributes();
+            _lingFengByteMarks = new byte[20];
+            _lingFengIntMarks = new int[10];
+            _lingFengTextMarks = new[] { string.Empty, string.Empty };
+            _lingFengCustomProgressBars = CreateLingFengCustomProgressBars();
+            _lingFengCustomText = string.Empty;
+            _lingFengCustomTextColour = 0;
+            _lingFengItemEffects = new ushort[3];
+            _lingFengNewItemValues = new int[LingFengNewItemValueLimit];
+            LingFengNameColour = 0;
+            LingFengLooks = null;
+            LingFengShape = null;
+            LingFengBindingFlags = BindMode.None;
+            LingFengUpgradeCount = 0;
+            LingFengCannotTakeOff = false;
+            return true;
+        }
+        try
+        {
+            byte[] data = Convert.FromBase64String(value);
+            using var stream = new MemoryStream(data, false);
+            using var reader = new BinaryReader(stream, System.Text.Encoding.UTF8, true);
+            LingFengCustomItemAttribute[] previous = _lingFengCustomAttributes;
+            byte[] previousByteMarks = _lingFengByteMarks;
+            int[] previousIntMarks = _lingFengIntMarks;
+            string[] previousTextMarks = _lingFengTextMarks;
+            LingFengCustomItemProgressBar[] previousProgressBars = _lingFengCustomProgressBars;
+            string previousCustomText = _lingFengCustomText;
+            byte previousCustomTextColour = _lingFengCustomTextColour;
+            ushort[] previousItemEffects = _lingFengItemEffects;
+            int[] previousNewItemValues = _lingFengNewItemValues;
+            byte previousNameColour = LingFengNameColour;
+            ushort? previousLooks = LingFengLooks;
+            short? previousShape = LingFengShape;
+            BindMode previousBindingFlags = LingFengBindingFlags;
+            byte previousUpgradeCount = LingFengUpgradeCount;
+            bool previousCannotTakeOff = LingFengCannotTakeOff;
+            try
+            {
+                ReadLingFengCustomAttributes(reader, true, false, true, false, true, false);
+                if (stream.Position != stream.Length) throw new InvalidDataException();
+                return true;
+            }
+            catch
+            {
+                _lingFengCustomAttributes = previous;
+                _lingFengByteMarks = previousByteMarks;
+                _lingFengIntMarks = previousIntMarks;
+                _lingFengTextMarks = previousTextMarks;
+                _lingFengCustomProgressBars = previousProgressBars;
+                _lingFengCustomText = previousCustomText;
+                _lingFengCustomTextColour = previousCustomTextColour;
+                _lingFengItemEffects = previousItemEffects;
+                _lingFengNewItemValues = previousNewItemValues;
+                LingFengNameColour = previousNameColour;
+                LingFengLooks = previousLooks;
+                LingFengShape = previousShape;
+                LingFengBindingFlags = previousBindingFlags;
+                LingFengUpgradeCount = previousUpgradeCount;
+                LingFengCannotTakeOff = previousCannotTakeOff;
+                return false;
+            }
+        }
+        catch (FormatException)
+        {
+            return false;
+        }
+    }
+
+    private static LingFengCustomItemAttribute[] CreateLingFengCustomAttributes()
+    {
+        var values = new LingFengCustomItemAttribute[LingFengCustomAttributeLimit];
+        for (int i = 0; i < values.Length; i++) values[i] = new LingFengCustomItemAttribute();
+        return values;
+    }
+
+    private static LingFengCustomItemProgressBar[] CreateLingFengCustomProgressBars()
+    {
+        var values = new LingFengCustomItemProgressBar[LingFengCustomProgressBarLimit];
+        for (int i = 0; i < values.Length; i++) values[i] = new LingFengCustomItemProgressBar();
+        return values;
+    }
+
+    private void WriteLingFengCustomAttributes(BinaryWriter writer)
+    {
+        int count = _lingFengCustomAttributes.Count(value => value.IsDefined);
+        writer.Write((byte)count);
+        for (int index = 0; index < _lingFengCustomAttributes.Length; index++)
+        {
+            LingFengCustomItemAttribute attribute = _lingFengCustomAttributes[index];
+            if (!attribute.IsDefined) continue;
+            writer.Write((byte)index);
+            writer.Write(attribute.Colour);
+            writer.Write(attribute.Binding);
+            writer.Write(attribute.DisplayOrder);
+            writer.Write(attribute.Mode);
+            writer.Write(attribute.Module);
+            writer.Write(attribute.Value1);
+            writer.Write(attribute.Value2);
+            writer.Write(attribute.Value3);
+        }
+        writer.Write(_lingFengByteMarks);
+        foreach (int value in _lingFengIntMarks) writer.Write(value);
+        foreach (string value in _lingFengTextMarks) writer.Write(value ?? string.Empty);
+        writer.Write(_lingFengCustomText ?? string.Empty);
+        writer.Write(_lingFengCustomTextColour);
+        int progressCount = _lingFengCustomProgressBars.Count(value => value.IsDefined);
+        writer.Write((byte)progressCount);
+        for (int index = 0; index < _lingFengCustomProgressBars.Length; index++)
+        {
+            LingFengCustomItemProgressBar progress = _lingFengCustomProgressBars[index];
+            if (!progress.IsDefined) continue;
+            writer.Write((byte)index);
+            writer.Write(progress.Enabled);
+            writer.Write(progress.Text ?? string.Empty);
+            writer.Write(progress.Colour);
+            writer.Write(progress.FrameCount);
+            writer.Write(progress.DisplayMode);
+            writer.Write(progress.Maximum);
+            writer.Write(progress.Current);
+        }
+        foreach (ushort effect in _lingFengItemEffects) writer.Write(effect);
+        foreach (int value in _lingFengNewItemValues) writer.Write(value);
+        writer.Write(LingFengNameColour);
+        writer.Write(LingFengLooks.HasValue);
+        if (LingFengLooks.HasValue) writer.Write(LingFengLooks.Value);
+        writer.Write(LingFengShape.HasValue);
+        if (LingFengShape.HasValue) writer.Write(LingFengShape.Value);
+        writer.Write((short)LingFengBindingFlags);
+        writer.Write(LingFengUpgradeCount);
+        writer.Write(LingFengCannotTakeOff);
+    }
+
+    private void ReadLingFengCustomAttributes(
+        BinaryReader reader,
+        bool readBindingFlags,
+        bool requireBindingFlags,
+        bool readUpgradeCount,
+        bool requireUpgradeCount,
+        bool readCannotTakeOff,
+        bool requireCannotTakeOff)
+    {
+        int count = reader.ReadByte();
+        if (count > LingFengCustomAttributeLimit) throw new InvalidDataException();
+        var values = CreateLingFengCustomAttributes();
+        var seen = new HashSet<int>();
+        for (int entry = 0; entry < count; entry++)
+        {
+            int index = reader.ReadByte();
+            if (index >= LingFengCustomAttributeLimit || !seen.Add(index))
+                throw new InvalidDataException();
+            var attribute = new LingFengCustomItemAttribute
+            {
+                Colour = reader.ReadByte(),
+                Binding = reader.ReadByte(),
+                DisplayOrder = reader.ReadByte(),
+                Mode = reader.ReadByte(),
+                Module = reader.ReadByte(),
+                Value1 = reader.ReadInt32(),
+                Value2 = reader.ReadInt32(),
+                Value3 = reader.ReadInt32()
+            };
+            if (attribute.Binding > 60 || attribute.Mode > 2 || attribute.Module > 14)
+                throw new InvalidDataException();
+            values[index] = attribute;
+        }
+        byte[] byteMarks = reader.ReadBytes(20);
+        if (byteMarks.Length != 20) throw new EndOfStreamException();
+        var intMarks = new int[10];
+        for (int index = 0; index < intMarks.Length; index++) intMarks[index] = reader.ReadInt32();
+        var textMarks = new string[2];
+        for (int index = 0; index < textMarks.Length; index++)
+        {
+            textMarks[index] = reader.ReadString();
+            if (textMarks[index].Length > 20) throw new InvalidDataException();
+        }
+        string customText = reader.ReadString();
+        if (customText.Length > 120) throw new InvalidDataException();
+        byte customTextColour = reader.ReadByte();
+        int progressCount = reader.ReadByte();
+        if (progressCount > LingFengCustomProgressBarLimit) throw new InvalidDataException();
+        LingFengCustomItemProgressBar[] progressBars = CreateLingFengCustomProgressBars();
+        var seenProgress = new HashSet<int>();
+        for (int entry = 0; entry < progressCount; entry++)
+        {
+            int index = reader.ReadByte();
+            if (index >= LingFengCustomProgressBarLimit || !seenProgress.Add(index))
+                throw new InvalidDataException();
+            var progress = new LingFengCustomItemProgressBar
+            {
+                Enabled = reader.ReadBoolean(),
+                Text = reader.ReadString(),
+                Colour = reader.ReadByte(),
+                FrameCount = reader.ReadByte(),
+                DisplayMode = reader.ReadByte(),
+                Maximum = reader.ReadInt32(),
+                Current = reader.ReadInt32()
+            };
+            if (progress.Text.Length > 120 || progress.DisplayMode > 2 ||
+                progress.Maximum < 0 || progress.Current < 0 ||
+                progress.Maximum > 0 && progress.Current > progress.Maximum)
+                throw new InvalidDataException();
+            progressBars[index] = progress;
+        }
+        var itemEffects = new ushort[3];
+        for (int index = 0; index < itemEffects.Length; index++)
+            itemEffects[index] = reader.ReadUInt16();
+        var newItemValues = new int[LingFengNewItemValueLimit];
+        for (int index = 0; index < newItemValues.Length; index++)
+        {
+            newItemValues[index] = reader.ReadInt32();
+            if (newItemValues[index] is < 0 or > 1000) throw new InvalidDataException();
+        }
+        byte nameColour = reader.ReadByte();
+        ushort? looks = reader.ReadBoolean() ? reader.ReadUInt16() : null;
+        short? shape = reader.ReadBoolean() ? reader.ReadInt16() : null;
+        BindMode bindingFlags = BindMode.None;
+        if (readBindingFlags)
+        {
+            if (reader.BaseStream.Position < reader.BaseStream.Length)
+                bindingFlags = (BindMode)reader.ReadInt16();
+            else if (requireBindingFlags)
+                throw new EndOfStreamException();
+            const BindMode supported = BindMode.DontDrop | BindMode.DontTrade |
+                                       BindMode.DontStore | BindMode.DontRepair |
+                                       BindMode.DontSell | BindMode.DontDeathdrop |
+                                       BindMode.DestroyOnDrop;
+            if ((bindingFlags & ~supported) != 0) throw new InvalidDataException();
+        }
+        byte upgradeCount = 0;
+        if (readUpgradeCount)
+        {
+            if (reader.BaseStream.Position < reader.BaseStream.Length)
+                upgradeCount = reader.ReadByte();
+            else if (requireUpgradeCount)
+                throw new EndOfStreamException();
+        }
+        bool cannotTakeOff = false;
+        if (readCannotTakeOff)
+        {
+            if (reader.BaseStream.Position < reader.BaseStream.Length)
+            {
+                byte encoded = reader.ReadByte();
+                if (encoded > 1) throw new InvalidDataException();
+                cannotTakeOff = encoded == 1;
+            }
+            else if (requireCannotTakeOff)
+                throw new EndOfStreamException();
+        }
+        _lingFengCustomAttributes = values;
+        _lingFengByteMarks = byteMarks;
+        _lingFengIntMarks = intMarks;
+        _lingFengTextMarks = textMarks;
+        _lingFengCustomText = customText;
+        _lingFengCustomTextColour = customTextColour;
+        _lingFengCustomProgressBars = progressBars;
+        _lingFengItemEffects = itemEffects;
+        _lingFengNewItemValues = newItemValues;
+        LingFengNameColour = nameColour;
+        LingFengLooks = looks;
+        LingFengShape = shape;
+        LingFengBindingFlags = bindingFlags;
+        LingFengUpgradeCount = upgradeCount;
+        LingFengCannotTakeOff = cannotTakeOff;
+    }
+
+    private static bool TryCalculate(int current, string operation, int value, out int result)
+    {
+        long calculated = operation switch
+        {
+            "+" => (long)current + value,
+            "-" => (long)current - value,
+            "=" => value,
+            _ => long.MaxValue
+        };
+        if (calculated is < int.MinValue or > int.MaxValue)
+        {
+            result = 0;
+            return false;
+        }
+        result = (int)calculated;
+        return true;
+    }
+
+    private static IEnumerable<Stat> GetLingFengBoundStats(int binding) => binding switch
+    {
+        1 => new[] { Stat.MinAC, Stat.MaxAC },
+        2 => new[] { Stat.MinMAC, Stat.MaxMAC },
+        3 => new[] { Stat.MinDC, Stat.MaxDC },
+        4 => new[] { Stat.MinMC, Stat.MaxMC },
+        5 => new[] { Stat.MinSC, Stat.MaxSC },
+        6 => new[] { Stat.HP },
+        7 => new[] { Stat.MP },
+        _ => Array.Empty<Stat>()
+    };
+
+    private static string FormatLingFengCustomAttribute(LingFengCustomItemAttribute attribute)
+    {
+        string label = attribute.Binding switch
+        {
+            1 => "防御",
+            2 => "魔防",
+            3 => "攻击",
+            4 => "魔法",
+            5 => "道术",
+            6 => "生命",
+            7 => "魔法值",
+            _ => $"自定义属性{attribute.Binding}"
+        };
+        string suffix = attribute.Mode == 0 ? string.Empty : "%";
+        return $"{label}: {attribute.Value1}{suffix}/{attribute.Value2}{suffix}/{attribute.Value3}{suffix}";
+    }
+
+    private static string FormatLingFengCustomProgressBar(LingFengCustomItemProgressBar progress)
+    {
+        int percent = progress.Maximum <= 0 ? 0 :
+            checked((int)((long)progress.Current * 100 / progress.Maximum));
+        string text = string.IsNullOrEmpty(progress.Text) ? "进度" : progress.Text;
+        text = text.Replace("%p", progress.Current.ToString(), StringComparison.OrdinalIgnoreCase)
+            .Replace("%m", progress.Maximum.ToString(), StringComparison.OrdinalIgnoreCase)
+            .Replace("%r", percent.ToString(), StringComparison.OrdinalIgnoreCase);
+        return progress.DisplayMode switch
+        {
+            1 => $"{text}{percent}%",
+            2 => $"{text}{progress.Current}/{progress.Maximum}",
+            _ => text
+        };
+    }
+
+    private static int SaturatingAdd(int current, long addition) =>
+        (int)Math.Max(int.MinValue, Math.Min(int.MaxValue, (long)current + addition));
 
     public int GetTotal(Stat type)
     {
@@ -642,6 +1452,7 @@ public class UserItem
     {
         get
         {
+            if (LingFengLooks.HasValue) return LingFengLooks.Value;
             switch (Info.Type)
             {
                 #region Amulet and Poison Stack Image changes
@@ -702,6 +1513,25 @@ public class UserItem
             IsShopItem = IsShopItem,
             GMMade = GMMade
         };
+
+        for (int index = 0; index < LingFengCustomAttributeLimit; index++)
+            item._lingFengCustomAttributes[index] = _lingFengCustomAttributes[index].Clone();
+        Array.Copy(_lingFengByteMarks, item._lingFengByteMarks, _lingFengByteMarks.Length);
+        Array.Copy(_lingFengIntMarks, item._lingFengIntMarks, _lingFengIntMarks.Length);
+        Array.Copy(_lingFengTextMarks, item._lingFengTextMarks, _lingFengTextMarks.Length);
+        item._lingFengCustomText = _lingFengCustomText;
+        item._lingFengCustomTextColour = _lingFengCustomTextColour;
+        for (int index = 0; index < LingFengCustomProgressBarLimit; index++)
+            item._lingFengCustomProgressBars[index] = _lingFengCustomProgressBars[index].Clone();
+        Array.Copy(_lingFengItemEffects, item._lingFengItemEffects, _lingFengItemEffects.Length);
+        Array.Copy(_lingFengNewItemValues, item._lingFengNewItemValues,
+            _lingFengNewItemValues.Length);
+        item.LingFengNameColour = LingFengNameColour;
+        item.LingFengLooks = LingFengLooks;
+        item.LingFengShape = LingFengShape;
+        item.LingFengBindingFlags = LingFengBindingFlags;
+        item.LingFengUpgradeCount = LingFengUpgradeCount;
+        item.LingFengCannotTakeOff = LingFengCannotTakeOff;
 
         return item;
     }

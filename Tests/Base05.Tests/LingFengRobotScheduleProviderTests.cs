@@ -45,6 +45,28 @@ public sealed class LingFengRobotScheduleProviderTests
     }
 
     [Fact]
+    public void 酷明旧Robot标签按唯一同义页解析且已知外部页登记后不进入E1调度()
+    {
+        var definition = new TextFileDefinition("SystemScripts/AutoRunRobot")
+            .AddLines(new[]
+            {
+                "#AutoRun NPC RUNONDAY 12:00 @Mir2_轮回开启Rm",
+                "#AutoRun NPC RUNONDAY 18:00 @03战场开放",
+                "#AutoRun NPC RUNONDAY 22:02 @Mir2_沙城奖励Rm"
+            });
+        Assert.True(LingFengRobotScheduleProvider.TryCreate(
+            definition, out LingFengRobotScheduleSnapshot snapshot, out _));
+
+        Assert.True(LingFengRobotScheduleProvider.TryResolvePages(
+            snapshot, new[] { "[@03轮回开启]", "[@12战场开放]" },
+            out LingFengRobotScheduleSnapshot resolved,
+            out IReadOnlyList<string> errors));
+        Assert.Equal(new[] { "[@03轮回开启]", "[@12战场开放]" },
+            resolved.Entries.Select(entry => entry.Page));
+        Assert.Empty(errors);
+    }
+
+    [Fact]
     public void 调度器按到期时点执行并阻止重入限制单次预算()
     {
         DateTime start = new(2026, 8, 17, 12, 0, 0, DateTimeKind.Local);

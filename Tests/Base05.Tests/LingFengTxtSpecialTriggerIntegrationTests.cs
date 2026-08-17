@@ -166,7 +166,7 @@ public sealed class LingFengTxtSpecialTriggerIntegrationTests
                 "[@KILLPLAY]\n#ACT\nGIVEGOLD 256\n" +
                 "[@STRUCKDAMAGE]\n#ACT\nCHANGEDAMAGEVALUE 0 = 1\n" +
                 "[@STRUCK]\n#ACT\nLOCALMESSAGE \"受击:<$KILLER>|<$STRUCKHP>\" System\nGIVEGOLD 2\n" +
-                "[@PICKUPITEMEX]\n#ACT\nLOCALMESSAGE \"拾取:<$PICKDROPITEMNAME>|<$CURITEMNAME>\" System\nGIVEGOLD 4\n" +
+                "[@PICKUPITEMEX]\n#ACT\nLOCALMESSAGE \"拾取:<$PICKDROPITEMNAME>|<$CURITEMNAME>\" System\nLINKPICKUPITEM\nSETITEMEFFECT -1 218 2\nUPDATEITEM -1\nGIVEGOLD 4\n" +
                 "[@KILLMON]\n#ACT\nLOCALMESSAGE \"击杀:<$KILLMONNAME>|<$KILLMONX>|<$KILLMONY>|<$GETEXP>\" System\nGIVEGOLD 8\n" +
                 "[@M2DROPITEM]\n#ACT\nLOCALMESSAGE \"掉落:<$PICKDROPITEMNAME>|<$CURITEMNAME>\" System\nGIVEGOLD 16\n" +
                 "[@PLAYLEVELUP]\n#ACT\nGIVEGOLD 32\n" +
@@ -206,7 +206,7 @@ public sealed class LingFengTxtSpecialTriggerIntegrationTests
                 "[@KILLPLAY]\n#ACT\nGIVEGOLD 256\n" +
                 "[@STRUCKDAMAGE]\n#ACT\nCHANGEDAMAGEVALUE 0 = 1\n" +
                 "[@STRUCK]\n#ACT\nLOCALMESSAGE \"受击:<$KILLER>|<$STRUCKHP>\" System\nGIVEGOLD 2\n" +
-                "[@PICKUPITEMEX]\n#ACT\nLOCALMESSAGE \"拾取:<$PICKDROPITEMNAME>|<$CURITEMNAME>\" System\nGIVEGOLD 4\n" +
+                "[@PICKUPITEMEX]\n#ACT\nLOCALMESSAGE \"拾取:<$PICKDROPITEMNAME>|<$CURITEMNAME>\" System\nLINKPICKUPITEM\nSETITEMEFFECT -1 218 2\nUPDATEITEM -1\nGIVEGOLD 4\n" +
                 "[@KILLMON]\n#ACT\nLOCALMESSAGE \"击杀:<$KILLMONNAME>|<$KILLMONX>|<$KILLMONY>|<$GETEXP>\" System\nGIVEGOLD 8\n" +
                 "[@M2DROPITEM]\n#ACT\nLOCALMESSAGE \"掉落:<$PICKDROPITEMNAME>|<$CURITEMNAME>\" System\nGIVEGOLD 16\n" +
                 "[@PLAYLEVELUP]\n#ACT\nGIVEGOLD 32\n" +
@@ -304,13 +304,38 @@ public sealed class LingFengTxtSpecialTriggerIntegrationTests
             Assert.Contains(attacker.Packets.OfType<ServerPackets.Chat>(), packet =>
                 packet.Message == "拾取:金币|金币" && packet.Type == ChatType.System);
 
+            var pickupInfo = new ItemInfo
+            {
+                Index = 9111,
+                Name = "命格拾取绑定石",
+                Type = ItemType.杂物,
+                StackSize = 1,
+                Durability = 1000
+            };
+            var pickupItem = new UserItem(pickupInfo) { UniqueID = 9111001, Count = 1 };
+            var pickupConnection = (Server.MirNetwork.MirConnection)
+                System.Runtime.CompilerServices.RuntimeHelpers.GetUninitializedObject(
+                    typeof(Server.MirNetwork.MirConnection));
+            pickupConnection.SentItemInfo = [pickupInfo];
+            pickupConnection.SentHeroInfo = [];
+            attacker.Connection = pickupConnection;
+            var pickupObject = new ItemObject(attacker, pickupItem);
+            map.GetCell(attacker.CurrentLocation).Add(pickupObject);
+            pickupObject.Spawned();
+            attacker.PickUp();
+            Assert.Contains(pickupItem, attacker.Info.Inventory);
+            Assert.Equal((ushort)218, pickupItem.GetLingFengItemEffect(2));
+            Assert.DoesNotContain(
+                pickupObject,
+                map.GetCell(attacker.CurrentLocation).Objects ?? new List<MapObject>());
+
             var dyingMonster = Monster(912, "TXT11领域死亡怪", map);
             dyingMonster.CurrentLocation = new Point(1, 0);
             dyingMonster.Info.Experience = 321;
             dyingMonster.EXPOwner = attacker;
             dyingMonster.Master = Monster(913, "TXT11跳过掉落的主人", map);
             dyingMonster.Die();
-            Assert.Equal(25u, attacker.Account.Gold);
+            Assert.Equal(29u, attacker.Account.Gold);
             Assert.Contains(attacker.Packets.OfType<ServerPackets.Chat>(), packet =>
                 packet.Message == "击杀:TXT11领域死亡怪|1|0|321" && packet.Type == ChatType.System);
 
@@ -559,6 +584,197 @@ public sealed class LingFengTxtSpecialTriggerIntegrationTests
             true, new SingleProvider("[@ATTACKDAMAGE]"), player, request));
         Assert.Equal(10, request.Damage);
         Assert.Equal(ScriptHookDecision.Continue, request.Decision);
+    }
+
+    [Fact]
+    public void 锦囊击杀触发强制掉落到怪物身边并继续单次派发掉落事件()
+    {
+        bool oldTxtEnabled = Settings.TxtScriptsEnabled;
+        bool oldCSharpEnabled = Settings.CSharpScriptsEnabled;
+        string oldTxtPath = Settings.TxtScriptsPath;
+        TxtScriptLayout oldLayout = Settings.TxtScriptsLayout;
+        string oldVersion = Settings.TxtScriptsCompatibilityVersion;
+        string root = Path.Combine(Path.GetTempPath(),
+            "lfenv16-mon-drop-items-ex-" + Guid.NewGuid().ToString("N"));
+        NPCScript loadedScript = null;
+        var map = new Map(new MapInfo { Index = 9914, FileName = "LF-MONDROPITEMSEX" })
+        {
+            Width = 5,
+            Height = 5,
+            Cells = new Cell[5, 5]
+        };
+        for (int x = 0; x < map.Width; x++)
+        for (int y = 0; y < map.Height; y++)
+            map.Cells[x, y] = new Cell { Attribute = CellAttribute.Walk };
+        var itemInfo = new ItemInfo
+        {
+            Index = 991401,
+            Name = "锦囊真实掉落印",
+            Type = ItemType.杂物
+        };
+        var monsterInfo = new MonsterInfo
+        {
+            Index = 991402,
+            Name = "锦囊真实掉落怪",
+            Stats = new Stats { [Stat.HP] = 100 }
+        };
+        var player = Player("锦囊击杀人物", map);
+        player.CurrentLocation = Point.Empty;
+        player.Node = new LinkedListNode<MapObject>(null);
+        player.MaxExperience = uint.MaxValue;
+        var monster = new TestMonster(monsterInfo)
+        {
+            CurrentMap = map,
+            CurrentLocation = new Point(3, 3),
+            Node = new LinkedListNode<MapObject>(null),
+            EXPOwner = player,
+            HP = 100
+        };
+        try
+        {
+            Directory.CreateDirectory(Path.Combine(root, "SystemScripts"));
+            File.WriteAllText(Path.Combine(root, "SystemScripts", "QFunction-0.txt"),
+                "[@KILLMON]\n#ACT\n" +
+                "MONDROPITEMSEX <$KILLMONNAME> 锦囊真实掉落印 1 1\n" +
+                "[@M2DROPITEM]\n#ACT\nGIVEGOLD 8\n",
+                new UTF8Encoding(false));
+            Settings.CSharpScriptsEnabled = false;
+            Settings.TxtScriptsEnabled = true;
+            Settings.TxtScriptsPath = root;
+            Settings.TxtScriptsLayout = TxtScriptLayout.LyoCrystal;
+            Settings.TxtScriptsCompatibilityVersion = "LFM2-2026-08-15-snapshot";
+            Envir.Main.MapList.Add(map);
+            Envir.Main.ItemInfoList.Add(itemInfo);
+            Envir.Main.MonsterInfoList.Add(monsterInfo);
+            Envir.Main.Objects.AddLast(monster);
+            map.Cells[0, 0].Add(player);
+            map.Cells[3, 3].Add(monster);
+            Envir.Main.ApplyPhysicalTextFileDefinitions();
+            loadedScript = NPCScript.GetOrAdd(
+                0, "SystemScripts/QFunction-0", NPCScriptType.Called);
+
+            monster.Die();
+
+            ItemObject dropped = map.Cells.Cast<Cell>()
+                .SelectMany(cell => cell.Objects ?? new List<MapObject>())
+                .OfType<ItemObject>()
+                .Single(value => value.Item.Info == itemInfo);
+            Assert.True(Functions.InRange(monster.CurrentLocation,
+                dropped.CurrentLocation, Settings.DropRange));
+            Assert.Same(player, dropped.Owner);
+            Assert.Equal(8u, player.Account.Gold);
+            Assert.Null(LingFengTxtTriggerContext.Current);
+        }
+        finally
+        {
+            if (loadedScript != null) Envir.Main.Scripts.Remove(loadedScript.ScriptID);
+            Settings.TxtScriptsEnabled = false;
+            Envir.Main.ApplyPhysicalTextFileDefinitions();
+            map.Cells[0, 0].Remove(player);
+            map.Cells[3, 3].Remove(monster);
+            Envir.Main.Objects.Remove(monster);
+            Envir.Main.MonsterInfoList.Remove(monsterInfo);
+            Envir.Main.ItemInfoList.Remove(itemInfo);
+            Envir.Main.MapList.Remove(map);
+            Settings.CSharpScriptsEnabled = oldCSharpEnabled;
+            Settings.TxtScriptsEnabled = oldTxtEnabled;
+            Settings.TxtScriptsPath = oldTxtPath;
+            Settings.TxtScriptsLayout = oldLayout;
+            Settings.TxtScriptsCompatibilityVersion = oldVersion;
+            if (Directory.Exists(root)) Directory.Delete(root, true);
+        }
+    }
+
+    [Fact]
+    public void 封神法宝限时复活经过真实人物死亡链并派发NpcRevival()
+    {
+        bool oldTxtEnabled = Settings.TxtScriptsEnabled;
+        bool oldCSharpEnabled = Settings.CSharpScriptsEnabled;
+        string oldTxtPath = Settings.TxtScriptsPath;
+        TxtScriptLayout oldLayout = Settings.TxtScriptsLayout;
+        string oldVersion = Settings.TxtScriptsCompatibilityVersion;
+        NPCScript oldDefaultNpc = Envir.Main.DefaultNPC;
+        string root = Path.Combine(Path.GetTempPath(),
+            "lfenv16-set-reborn-" + Guid.NewGuid().ToString("N"));
+        NPCScript loadedScript = null;
+        var map = new Map(new MapInfo
+        {
+            Index = 9915,
+            FileName = "LF-FENGSHEN-REBORNHALIDOM"
+        })
+        {
+            Width = 1,
+            Height = 1,
+            Cells = new Cell[1, 1]
+        };
+        map.Cells[0, 0] = new Cell { Attribute = CellAttribute.Walk };
+        var player = Player("封神法宝复活人物", map);
+        player.CurrentLocation = Point.Empty;
+        player.Node = new LinkedListNode<MapObject>(player);
+        player.MaxExperience = uint.MaxValue;
+
+        try
+        {
+            Directory.CreateDirectory(Path.Combine(root, "SystemScripts"));
+            File.WriteAllText(Path.Combine(root, "SystemScripts", "QFunction-0.txt"),
+                "[@GRANT]\n#ACT\nSETREBORN 2 300\n" +
+                "[@NPCREVIVAL]\n#ACT\nGIVEGOLD <$TRIGGERNPCREBORNCOUNT>\n",
+                new UTF8Encoding(false));
+            Settings.CSharpScriptsEnabled = false;
+            Settings.TxtScriptsEnabled = true;
+            Settings.TxtScriptsPath = root;
+            Settings.TxtScriptsLayout = TxtScriptLayout.LyoCrystal;
+            Settings.TxtScriptsCompatibilityVersion = "LFM2-2026-08-15-snapshot";
+            Envir.Main.MapList.Add(map);
+            map.Cells[0, 0].Add(player);
+            Envir.Main.ApplyPhysicalTextFileDefinitions();
+            loadedScript = NPCScript.GetOrAdd(
+                0, "SystemScripts/QFunction-0", NPCScriptType.Called);
+            Envir.Main.DefaultNPC = loadedScript;
+
+            Assert.True(loadedScript.CallSystem(player, "[@GRANT]"));
+            var renderer = new NPCSegment(
+                null, new List<string>(), new List<string>(),
+                new List<string>(), new List<string>(), new List<string>());
+            Assert.Equal("2|0", renderer.ReplaceValue(
+                player, "<$NpcRebornCount>|<$TriggerNpcRebornCount>"));
+
+            player.HP = 1;
+            player.Die();
+            Assert.False(player.Dead);
+            Assert.Equal(player.Stats[Stat.HP], player.HP);
+            Assert.Equal(1u, player.Account.Gold);
+            Assert.Equal("1|1", renderer.ReplaceValue(
+                player, "<$NpcRebornCount>|<$TriggerNpcRebornCount>"));
+
+            player.HP = 1;
+            player.Die();
+            Assert.False(player.Dead);
+            Assert.Equal(3u, player.Account.Gold);
+            Assert.Equal("0|2", renderer.ReplaceValue(
+                player, "<$NpcRebornCount>|<$TriggerNpcRebornCount>"));
+
+            player.HP = 1;
+            player.Die();
+            Assert.True(player.Dead);
+            Assert.Equal(3u, player.Account.Gold);
+            Assert.Null(LingFengTxtTriggerContext.Current);
+        }
+        finally
+        {
+            Envir.Main.DefaultNPC = oldDefaultNpc;
+            if (loadedScript != null) Envir.Main.Scripts.Remove(loadedScript.ScriptID);
+            Settings.TxtScriptsEnabled = false;
+            Envir.Main.ApplyPhysicalTextFileDefinitions();
+            map.Cells[0, 0].Remove(player);
+            Envir.Main.MapList.Remove(map);
+            Settings.CSharpScriptsEnabled = oldCSharpEnabled;
+            Settings.TxtScriptsEnabled = oldTxtEnabled;
+            Settings.TxtScriptsPath = oldTxtPath;
+            Settings.TxtScriptsLayout = oldLayout;
+            Settings.TxtScriptsCompatibilityVersion = oldVersion;
+            if (Directory.Exists(root)) Directory.Delete(root, true);
+        }
     }
 
     private static TestPlayer Player(string name, Map map = null)

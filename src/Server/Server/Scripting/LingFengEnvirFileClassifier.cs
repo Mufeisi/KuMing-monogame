@@ -67,13 +67,20 @@ namespace Server.Scripting
 
             string fileStem = Path.GetFileNameWithoutExtension(fileName);
             if (fileName.StartsWith("~$", StringComparison.OrdinalIgnoreCase) ||
+                fileStem.Equals("新建文本文档", StringComparison.OrdinalIgnoreCase) ||
+                segments.Take(segments.Length - 1).Any(segment =>
+                    segment.Contains("备份", StringComparison.OrdinalIgnoreCase) ||
+                    segment.Contains("backup", StringComparison.OrdinalIgnoreCase)) ||
                 fileStem.Contains(" - 副本", StringComparison.OrdinalIgnoreCase) ||
                 fileStem.EndsWith(" - 备份", StringComparison.OrdinalIgnoreCase) ||
                 fileStem.EndsWith("-备份", StringComparison.OrdinalIgnoreCase) ||
                 BackupExtensions.Contains(extension))
                 return Result(LingFengEnvirFileOwner.BackupOrArchive, "LFENV09-BACKUP");
 
-            if (RuntimeDirectories.Contains(topDirectory) || RuntimeExtensions.Contains(extension))
+            if (RuntimeDirectories.Contains(topDirectory) ||
+                segments.Any(RuntimeDirectories.Contains) ||
+                ContainsPath(segments, "GuildBase", "Guilds") ||
+                RuntimeExtensions.Contains(extension))
                 return Result(LingFengEnvirFileOwner.RuntimeData, "LFENV09-RUNTIME");
 
             if (fileName.Equals(".txt", StringComparison.OrdinalIgnoreCase))
@@ -88,7 +95,11 @@ namespace Server.Scripting
             if (ClientContractDirectories.Contains(topDirectory))
                 return Result(LingFengEnvirFileOwner.ClientContract, "LFENV09-CLIENT-CONTRACT");
 
-            if (extension.Equals(".txt", StringComparison.OrdinalIgnoreCase) &&
+            bool scriptExtension = extension.Equals(".txt", StringComparison.OrdinalIgnoreCase) ||
+                                   extension.Equals(".ini", StringComparison.OrdinalIgnoreCase) &&
+                                   (topDirectory.Equals("QuestDiary", StringComparison.OrdinalIgnoreCase) ||
+                                    topDirectory.Equals("DeFines", StringComparison.OrdinalIgnoreCase));
+            if (scriptExtension &&
                 TryMapScriptLogicKey(normalized, out string logicKey))
                 return new LingFengEnvirFileClassification(
                     LingFengEnvirFileOwner.Script, "LFENV09-SCRIPT", true, logicKey);
@@ -127,9 +138,9 @@ namespace Server.Scripting
             else if (directory.Equals("Npc_def", StringComparison.OrdinalIgnoreCase))
                 mappedPath = $"NpcDefs/{nestedPath}";
             else if (directory.Equals("QuestDiary", StringComparison.OrdinalIgnoreCase))
-                mappedPath = $"QuestDiary/{nestedPath}";
+                mappedPath = $"QuestDiary/{Path.ChangeExtension(nestedPath, null)}";
             else if (directory.Equals("DeFines", StringComparison.OrdinalIgnoreCase))
-                mappedPath = $"Defines/{nestedPath}";
+                mappedPath = $"Defines/{Path.ChangeExtension(nestedPath, null)}";
             else if (directory.Equals("MapQuest_def", StringComparison.OrdinalIgnoreCase) &&
                      nestedPath.Equals("QManage.txt", StringComparison.OrdinalIgnoreCase))
                 mappedPath = "SystemScripts/QManage";
@@ -149,6 +160,15 @@ namespace Server.Scripting
             topDirectory.Equals("Npc_def", StringComparison.OrdinalIgnoreCase) ||
             topDirectory.Equals("QuestDiary", StringComparison.OrdinalIgnoreCase) ||
             topDirectory.Equals("DeFines", StringComparison.OrdinalIgnoreCase);
+
+        private static bool ContainsPath(IReadOnlyList<string> segments, string parent, string child)
+        {
+            for (int index = 0; index + 1 < segments.Count; index++)
+                if (segments[index].Equals(parent, StringComparison.OrdinalIgnoreCase) &&
+                    segments[index + 1].Equals(child, StringComparison.OrdinalIgnoreCase))
+                    return true;
+            return false;
+        }
 
         private static bool TryNormalizeRelativePath(string relativePath, out string normalized)
         {

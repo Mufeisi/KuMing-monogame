@@ -266,15 +266,29 @@ namespace Server.MirDatabase
             return Storage.Length;
         }
 
+        public bool IsLingFengStorageOpen(int page)
+        {
+            if (page == 1) return true;
+            return page is >= 2 and <= 4 && HasExpandedStorage &&
+                   Storage != null && Storage.Length >= page * Globals.StorageGridSize;
+        }
+
+        public bool TryOpenLingFengStorage(int page)
+        {
+            if (page is < 2 or > 4) return false;
+            int requiredLength = checked(page * Globals.StorageGridSize);
+            if (Storage == null) Storage = new UserItem[Globals.StorageGridSize];
+            if (Storage.Length < requiredLength)
+                Array.Resize(ref Storage, requiredLength);
+            HasExpandedStorage = true;
+            ExpandedStorageExpiryDate = new DateTime(9990, 1, 1);
+            return true;
+        }
+
         public bool IsValidStorageIndex(int index)
         {
-            if (index >= Globals.StorageGridSize)
-            {
-                var level = index / Globals.StorageGridSize;
-                if (level > (HasExpandedStorage ? 1 : 0))
-                    return false;
-            }
-            return true;
+            return index >= 0 && Storage != null && index < Storage.Length &&
+                   (index < Globals.StorageGridSize || HasExpandedStorage);
         }
     }
 }

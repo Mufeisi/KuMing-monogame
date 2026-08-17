@@ -67,12 +67,12 @@ public sealed class LingFengTxtCompatibilityCatalogTests
             .GroupBy(row => row["兼容状态"], StringComparer.Ordinal)
             .ToDictionary(group => group.Key, group => group.Count(), StringComparer.Ordinal);
 
-        Assert.Equal(496, rows.Count);
-        Assert.Equal(51, statuses["B"]);
-        Assert.Equal(15, statuses["C"]);
-        Assert.Equal(322, statuses["D"]);
-        Assert.Equal(83, statuses["E"]);
-        Assert.Equal(25, statuses["X"]);
+        Assert.Equal(586, rows.Count);
+        Assert.Equal(117, statuses["B"]);
+        Assert.Equal(107, statuses["C"]);
+        Assert.Equal(265, statuses["D"]);
+        Assert.Equal(75, statuses["E"]);
+        Assert.Equal(22, statuses["X"]);
         Assert.False(statuses.ContainsKey("?"));
     }
 

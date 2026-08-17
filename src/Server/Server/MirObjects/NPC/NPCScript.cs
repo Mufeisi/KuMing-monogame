@@ -11,8 +11,25 @@ namespace Server.MirObjects
     {
         [ThreadStatic]
         private static int _systemCallDepth;
+        [ThreadStatic]
+        private static int _currentSystemScriptId;
+        [ThreadStatic]
+        private static Stack<LingFengLoopContext> _lingFengLoops;
+
+        private sealed class LingFengLoopBudget
+        {
+            public int RemainingBudget = 10_000;
+        }
+
+        private sealed class LingFengLoopContext
+        {
+            public LingFengLoopBudget Budget;
+            public bool BreakRequested;
+        }
 
         internal static bool IsSystemCallActive => _systemCallDepth > 0;
+        internal static int? CurrentSystemScriptId =>
+            _currentSystemScriptId > 0 ? _currentSystemScriptId : null;
 
         internal static bool BlockSystemNavigation(string action)
         {
@@ -33,6 +50,73 @@ namespace Server.MirObjects
         public static NPCScript Get(int index)
         {
             return Envir.Scripts[index];
+        }
+
+        internal static bool TryGet(int index, out NPCScript script) =>
+            Envir.Scripts.TryGetValue(index, out script);
+
+        internal static bool TryBreakLingFengLoop()
+        {
+            if (_lingFengLoops == null || _lingFengLoops.Count == 0) return false;
+            _lingFengLoops.Peek().BreakRequested = true;
+            return true;
+        }
+
+        internal bool CallLingFengLoop(PlayerObject player, string key, int count)
+        {
+            if (player == null || string.IsNullOrWhiteSpace(key)) return false;
+            int iterations = count <= 0 ? 1 : count;
+            string label = key.Trim().Trim('[', ']').TrimStart('@');
+            NPCPage page = ResolveSystemPage($"[@{label}]".ToUpperInvariant());
+            if (page == null) return false;
+
+            _lingFengLoops ??= new Stack<LingFengLoopContext>();
+            var context = new LingFengLoopContext
+            {
+                Budget = _lingFengLoops.Count == 0
+                    ? new LingFengLoopBudget()
+                    : _lingFengLoops.Peek().Budget
+            };
+            _lingFengLoops.Push(context);
+            uint previousObjectId = player.NPCObjectID;
+            int previousScriptId = player.NPCScriptID;
+            NPCPage previousPage = player.NPCPage;
+            bool previousDelayed = player.NPCDelayed;
+            KeyValuePair<NPCSegment, bool>[] previousSuccess = player.NPCSuccess.ToArray();
+            try
+            {
+                for (int iteration = 0; iteration < iterations; iteration++)
+                {
+                    if (--context.Budget.RemainingBudget < 0)
+                    {
+                        MessageQueue.Enqueue(
+                            $"[TxtScripts][TXT-RUNTIME-001] LOOPGOTO 超过 10000 次预算，已终止玩家 {player.Name} 的当前循环。");
+                        return false;
+                    }
+                    context.BreakRequested = false;
+                    foreach (NPCSegment segment in page.SegmentList)
+                    {
+                        // 同一循环页会重复执行同一 Segment，不能沿用上一轮的成功缓存。
+                        player.NPCSuccess.Remove(segment);
+                        ProcessSegment(player, page, segment, previousObjectId);
+                        if (context.BreakRequested || page.BreakFromSegments) break;
+                    }
+                    page.BreakFromSegments = false;
+                    if (context.BreakRequested) break;
+                }
+                return true;
+            }
+            finally
+            {
+                _lingFengLoops.Pop();
+                player.NPCObjectID = previousObjectId;
+                player.NPCScriptID = previousScriptId;
+                player.NPCPage = previousPage;
+                player.NPCDelayed = previousDelayed;
+                player.NPCSuccess.Clear();
+                foreach (KeyValuePair<NPCSegment, bool> entry in previousSuccess)
+                    player.NPCSuccess.Add(entry.Key, entry.Value);
+            }
         }
 
         public static NPCScript GetOrAdd(uint loadedObjectID, string fileName, NPCScriptType type)
@@ -479,7 +563,12 @@ namespace Server.MirObjects
             if (!LingFengRobotScheduleProvider.TryCreate(
                     definition, out LingFengRobotScheduleSnapshot snapshot, out IReadOnlyList<string> errors))
                 throw new InvalidDataException(string.Join(";", errors));
-            Robot.PublishLingFengSchedules(snapshot, Envir.Now);
+            if (!LingFengRobotScheduleProvider.TryResolvePages(
+                    snapshot, NPCPages.Select(page => page.Key),
+                    out LingFengRobotScheduleSnapshot resolved,
+                    out IReadOnlyList<string> pageErrors))
+                throw new InvalidDataException(string.Join(";", pageErrors));
+            Robot.PublishLingFengSchedules(resolved, Envir.Now);
         }
 
         private bool TryApplyCSharpShopDefinition()
@@ -992,6 +1081,15 @@ namespace Server.MirObjects
 
                 if (match) continue;
 
+                bool localPageExists = lines.Any(line =>
+                    IsMatchingPageDeclaration(line, section));
+                if (!localPageExists &&
+                    Settings.TxtScriptsCompatibilityVersion.StartsWith(
+                        "LFM2-", StringComparison.OrdinalIgnoreCase) &&
+                    LingFengScriptReferenceResolver.TryResolveUniquePage(
+                        Envir.TextFileProvider, section, out _))
+                    continue;
+
                 page = ParsePage(lines, section);
                 buttons.AddRange(page.Buttons);
 
@@ -999,6 +1097,18 @@ namespace Server.MirObjects
             }
 
             return pages;
+        }
+
+        private static bool IsMatchingPageDeclaration(string line, string requestedSection)
+        {
+            string candidate = line?.Trim() ?? string.Empty;
+            string requested = requestedSection?.Trim() ?? string.Empty;
+            if (!candidate.StartsWith("[@", StringComparison.Ordinal) ||
+                !candidate.EndsWith(']') || requested.Length == 0)
+                return false;
+            string candidateBase = new NPCPage(candidate).ArgumentParse(candidate);
+            string requestedBase = new NPCPage(requested).ArgumentParse(requested);
+            return candidateBase.Equals(requestedBase, StringComparison.OrdinalIgnoreCase);
         }
 
         private NPCPage ParsePage(IList<string> scriptLines, string sectionName)
@@ -1020,7 +1130,8 @@ namespace Server.MirObjects
 
                 if (structuralLine.StartsWith(";", StringComparison.Ordinal)) continue;
 
-                if (!structuralLine.StartsWith(tempSectionName, StringComparison.OrdinalIgnoreCase)) continue;
+                if (!structuralLine.StartsWith(tempSectionName, StringComparison.OrdinalIgnoreCase) &&
+                    !IsMatchingPageDeclaration(structuralLine, sectionName)) continue;
 
                 List<string> segmentLines = new List<string>();
 
@@ -1043,7 +1154,8 @@ namespace Server.MirObjects
                         nextPage = true;
                     }
 
-                    else if (nextLine.StartsWith("#IF"))
+                    else if (nextLine.StartsWith("#IF", StringComparison.OrdinalIgnoreCase) ||
+                             nextLine.StartsWith("#OR", StringComparison.OrdinalIgnoreCase))
                     {
                         nextSection = true;
                     }
@@ -1053,7 +1165,9 @@ namespace Server.MirObjects
                         segmentLines.Add(lines[j]);
 
                         //end of segment, so need to parse it and put into the segment list within the page
-                        if (segmentLines.Count > 0)
+                        if (segmentLines.Any(value =>
+                                !string.IsNullOrWhiteSpace(value) &&
+                                !value.TrimStart().StartsWith(";", StringComparison.Ordinal)))
                         {
                             NPCSegment segment = ParseSegment(Page, segmentLines);
 
@@ -1066,8 +1180,10 @@ namespace Server.MirObjects
                             Page.SegmentList.Add(segment);
                             segmentLines.Clear();
 
-                            nextSection = false;
                         }
+
+                        segmentLines.Clear();
+                        nextSection = false;
 
                         if (nextPage) break;
 
@@ -1112,6 +1228,8 @@ namespace Server.MirObjects
 
             List<string> lines = scriptLines.ToList();
             List<string> currentSay = say, currentButtons = buttons;
+            bool matchAnyCheck = false;
+            int requiredCheckMatches = 0;
 
             Regex regex = new Regex(@"<.*?/(\@.*?)>");
 
@@ -1126,11 +1244,31 @@ namespace Server.MirObjects
                 if (structuralLine.StartsWith("#", StringComparison.Ordinal))
                 {
                     string[] action = structuralLine.Remove(0, 1).ToUpperInvariant().Trim().Split(' ');
+                    Match thresholdIf = Regex.Match(
+                        action[0], @"^IF(?:\(([0-9]+)\))?$",
+                        RegexOptions.CultureInvariant);
+                    if (thresholdIf.Success)
+                    {
+                        currentSay = checks;
+                        currentButtons = null;
+                        if (thresholdIf.Groups[1].Success)
+                        {
+                            if (!int.TryParse(thresholdIf.Groups[1].Value, out requiredCheckMatches) ||
+                                requiredCheckMatches <= 0)
+                                throw new InvalidDataException(
+                                    $"#IF(n) 的满足数量必须大于零：{structuralLine}");
+                            matchAnyCheck = requiredCheckMatches == 1;
+                        }
+                        continue;
+                    }
+
                     switch (action[0])
                     {
-                        case "IF":
+                        case "OR":
                             currentSay = checks;
                             currentButtons = null;
+                            matchAnyCheck = true;
+                            requiredCheckMatches = 1;
                             continue;
                         case "SAY":
                             currentSay = say;
@@ -1148,6 +1286,9 @@ namespace Server.MirObjects
                             currentSay = elseActs;
                             currentButtons = gotoButtons;
                             continue;
+                        case "CALL":
+                            structuralLine = structuralLine.Substring(1).TrimStart();
+                            break;
                         default:
                             throw new NotImplementedException();
                     }
@@ -1196,7 +1337,11 @@ namespace Server.MirObjects
                 currentSay.Add(isSpeech ? lines[i].TrimEnd() : structuralLine);
             }
 
-            NPCSegment segment = new NPCSegment(page, say, buttons, elseSay, elseButtons, gotoButtons);
+            NPCSegment segment = new NPCSegment(
+                page, say, buttons, elseSay, elseButtons, gotoButtons,
+                $"{FileName}|{page.Key}|{page.SegmentList.Count}");
+            segment.MatchAnyCheck = matchAnyCheck;
+            segment.RequiredCheckMatches = requiredCheckMatches;
 
             for (int i = 0; i < checks.Count; i++)
                 segment.ParseCheck(checks[i]);
@@ -1615,6 +1760,17 @@ namespace Server.MirObjects
                 MessageQueue.Enqueue($"[Scripts][NpcDialog] 未找到NPC页：Player={player.Name} NPCFile={FileName} Key={key} ObjectID={objectID} {csharpState}（请检查 Envir/NPCs/{FileName}.txt 是否存在该页）");
             }
 
+            if (!legacyPageMatched &&
+                Settings.TxtScriptsCompatibilityVersion.StartsWith(
+                    "LFM2-", StringComparison.OrdinalIgnoreCase) &&
+                LingFengScriptReferenceResolver.TryResolveUniquePage(
+                    Envir.TextFileProvider, key, out string globalTargetKey) &&
+                !globalTargetKey.Equals(FileName, StringComparison.OrdinalIgnoreCase))
+            {
+                NPCScript globalTarget = GetOrAdd(0, globalTargetKey, NPCScriptType.Called);
+                legacyPageMatched = globalTarget.CallSystem(player, key);
+            }
+
             // 兼容：当 NPC 页未命中时，也要给客户端一个可见响应，避免“点 NPC 无任何反馈”。
             // 说明：当前工程已移除磁盘 txt 回落，并且可能存在 npcFileName 与脚本注册名不一致（如是否带 "-"）的问题。
             //      这里提供一个最小兜底对话，便于玩家/GM 发现问题，同时不影响已有脚本逻辑。
@@ -1665,11 +1821,13 @@ namespace Server.MirObjects
             var previousSuccess = player.NPCSuccess.ToArray();
             var existingActions = new HashSet<DelayedAction>(player.ActionList);
             var budget = new Server.Scripting.TxtScriptExecutionBudget(Settings.TxtScriptsMaxImmediateTransitions);
+            int previousSystemScriptId = _currentSystemScriptId;
 
             try
             {
                 // 系统事件拥有独立的无响应输出缓冲，不能向正在进行的 NPC 对话追加 #SAY。
                 player.NPCSpeech = new List<string>();
+                _currentSystemScriptId = ScriptID;
                 _systemCallDepth++;
                 while (page != null)
                 {
@@ -1711,6 +1869,7 @@ namespace Server.MirObjects
             finally
             {
                 _systemCallDepth--;
+                _currentSystemScriptId = previousSystemScriptId;
                 player.ActionList.RemoveAll(action =>
                     !existingActions.Contains(action) &&
                     action.Type == DelayedType.NPC);
@@ -1760,7 +1919,7 @@ namespace Server.MirObjects
             player.NPCScriptID = ScriptID;
             using (Server.Scripting.LingFengTxtTriggerContext.PushScriptParameters(page.Args))
                 player.NPCSuccess.Add(segment, segment.Check(player));
-            player.NPCPage = page;
+            player.NPCPage = player.NPCObjectID == objectID ? page : null;
         }
 
         private void ProcessSegment(MonsterObject monster, NPCPage page, NPCSegment segment)

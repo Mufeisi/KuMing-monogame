@@ -1,0 +1,7 @@
+[@KILLMON]
+#IF
+CHECK [950] 1
+EQUAL <$KILLMONNAME> 试炼守卫
+#ACT
+SET [951] 1
+LOCALMESSAGE "已取得【法宝】乾坤圈，请返回法宝收录使者。" System

@@ -2,7 +2,7 @@
   "schemaVersion": "PROTO-02.generated-wire-manifest.v2",
   "coverage": {
     "clientPacketCount": 147,
-    "serverPacketCount": 279,
+    "serverPacketCount": 283,
     "enumCount": 76
   },
   "sources": [
@@ -24,7 +24,7 @@
     },
     {
       "path": "src/Shared/Shared/Data/ClientData.cs",
-      "sha256": "d9a8c7f41376765eb182c6fb72361da1a278dac82d1282207d7960925e399667"
+      "sha256": "033cbb8980ae865c4a2c747a7af84a6b4b8e70f145b45837644ed9d9aab64513"
     },
     {
       "path": "src/Shared/Shared/Data/GuildData.cs",
@@ -36,7 +36,15 @@
     },
     {
       "path": "src/Shared/Shared/Data/ItemData.cs",
-      "sha256": "4e4b87c4019ed9fd1babe0580495febc8520ba901c1bd87bd953f44bcf1177a1"
+      "sha256": "8f4904b02587b03c3eaf06e23f2c426ecbcace1f382dc5fe8844cf44d95beffd"
+    },
+    {
+      "path": "src/Shared/Shared/Data/LingFengClientPresentationState.cs",
+      "sha256": "a1b90684011aba9b0dbc8b58d93a8f1e4218ae317fddeb245cab3e334966d7e6"
+    },
+    {
+      "path": "src/Shared/Shared/Data/LingFengLegacyColorTable.cs",
+      "sha256": "9451f2d84c4766038e6d7102eaafcf643212486dc0d3c7678f5e176d7196655d"
     },
     {
       "path": "src/Shared/Shared/Data/Notice.cs",
@@ -52,7 +60,7 @@
     },
     {
       "path": "src/Shared/Shared/Enums.cs",
-      "sha256": "eb22fb7ba2c77335805f0c8d102d9d6d52f9b3a28abe51df484f4d044fc3fa8b"
+      "sha256": "49872754d0f44612d1bc5431b99a8eb87c3dc8d18ba3fd91dc940bc5ff2aa201"
     },
     {
       "path": "src/Shared/Shared/Extensions/ExtensionMethods.cs",
@@ -76,11 +84,11 @@
     },
     {
       "path": "src/Shared/Shared/Packet.cs",
-      "sha256": "0812a1244192776dd494bbce4a31c25617050a6d957d647fd5c491c9f636ec93"
+      "sha256": "b019e81e2f646c732a314593376f9b17bdf873c619867f09b5ff0fa6938cdef7"
     },
     {
       "path": "src/Shared/Shared/ServerPackets.cs",
-      "sha256": "251431fa90c8eee30732b887ca9094491eeee5eee4c0332352cac8345d2d90a6"
+      "sha256": "8e725213d1ea1727b27aca3b51ff91d4672c59611c790fe08a21ec1ec2c76514"
     }
   ],
   "packets": [
@@ -8077,6 +8085,218 @@
       ],
       "readIlSha256": "38a5fbb48e1678e417691255995d35544731e3a6ee446d654c894e3ca1187f73",
       "writeIlSha256": "e49f535c9c05c28320f7cd99b6acb8abaa10a468a61404582f73f78f75776a36"
+    },
+    {
+      "direction": "serverToClient",
+      "id": 279,
+      "type": "ServerPackets.LingFengScreenEffect",
+      "compressed": false,
+      "fields": [
+        {
+          "name": "Stop",
+          "type": "System.Boolean"
+        },
+        {
+          "name": "X",
+          "type": "System.Int32"
+        },
+        {
+          "name": "Y",
+          "type": "System.Int32"
+        },
+        {
+          "name": "IconPackage",
+          "type": "System.Int32"
+        },
+        {
+          "name": "StartIndex",
+          "type": "System.Int32"
+        },
+        {
+          "name": "FrameCount",
+          "type": "System.Int32"
+        },
+        {
+          "name": "LoopCount",
+          "type": "System.Int32"
+        },
+        {
+          "name": "FrameDelay",
+          "type": "System.Int32"
+        },
+        {
+          "name": "BlendMode",
+          "type": "System.Int32"
+        },
+        {
+          "name": "Reserved",
+          "type": "System.Int32"
+        },
+        {
+          "name": "Layer",
+          "type": "System.Int32"
+        }
+      ],
+      "readIlSha256": "a0c4e14a0d645503426d96e5b0abc34d5b2f6ca6ace6dd1b5c7b7a176d6e38f1",
+      "writeIlSha256": "6f6854ac9bb92eda59b1a1462b8dcb2caf340144004c4575142809e7f8452ea0"
+    },
+    {
+      "direction": "serverToClient",
+      "id": 280,
+      "type": "ServerPackets.LingFengDialog",
+      "compressed": false,
+      "fields": [
+        {
+          "name": "Remove",
+          "type": "System.Boolean"
+        },
+        {
+          "name": "DialogId",
+          "type": "System.Int32"
+        },
+        {
+          "name": "IconPackage",
+          "type": "System.Int32"
+        },
+        {
+          "name": "ImageIndex",
+          "type": "System.Int32"
+        },
+        {
+          "name": "Movable",
+          "type": "System.Boolean"
+        },
+        {
+          "name": "X",
+          "type": "System.Int32"
+        },
+        {
+          "name": "Y",
+          "type": "System.Int32"
+        },
+        {
+          "name": "OffsetX",
+          "type": "System.Int32"
+        },
+        {
+          "name": "OffsetY",
+          "type": "System.Int32"
+        },
+        {
+          "name": "Position",
+          "type": "System.Int32"
+        },
+        {
+          "name": "ExternalTextFile",
+          "type": "System.String"
+        },
+        {
+          "name": "AbsolutePath",
+          "type": "System.Boolean"
+        },
+        {
+          "name": "NpcStyle",
+          "type": "System.Boolean"
+        },
+        {
+          "name": "LibraryName",
+          "type": "System.String"
+        },
+        {
+          "name": "ShowCloseButton",
+          "type": "System.Boolean"
+        },
+        {
+          "name": "CloseButtonX",
+          "type": "System.Int32"
+        },
+        {
+          "name": "CloseButtonY",
+          "type": "System.Int32"
+        },
+        {
+          "name": "ContinueNpcStyle",
+          "type": "System.Boolean"
+        }
+      ],
+      "readIlSha256": "cf06586870392ee429e1155691f6c861d1ca6f8ccf63ffa113c51a5e99408293",
+      "writeIlSha256": "d462403efb26561d6eb8b9356cf8ae1e97bd60c952283bebe099b61cb04df0c4"
+    },
+    {
+      "direction": "serverToClient",
+      "id": 281,
+      "type": "ServerPackets.MagicCooldownCleared",
+      "compressed": false,
+      "fields": [
+        {
+          "name": "ObjectID",
+          "type": "System.UInt32"
+        },
+        {
+          "name": "Spell",
+          "type": "Spell"
+        }
+      ],
+      "readIlSha256": "dc97b9153f101c13f86c5338b182c96bd7cb6c1c68cfc292b36b49817f6a6f50",
+      "writeIlSha256": "5f59d8bc059a278d7bb1e26ba63194785a132c7a3e7ad95e98b709cc5bee72f8"
+    },
+    {
+      "direction": "serverToClient",
+      "id": 282,
+      "type": "ServerPackets.LingFengMapEffect",
+      "compressed": false,
+      "fields": [
+        {
+          "name": "Location",
+          "type": "System.Drawing.Point"
+        },
+        {
+          "name": "LibraryName",
+          "type": "System.String"
+        },
+        {
+          "name": "StartIndex",
+          "type": "System.Int32"
+        },
+        {
+          "name": "FrameCount",
+          "type": "System.Int32"
+        },
+        {
+          "name": "RepeatCount",
+          "type": "System.Int32"
+        },
+        {
+          "name": "FrameDelay",
+          "type": "System.Int32"
+        },
+        {
+          "name": "Blend",
+          "type": "System.Boolean"
+        },
+        {
+          "name": "Light",
+          "type": "System.Byte"
+        },
+        {
+          "name": "EffectId",
+          "type": "System.Int32"
+        },
+        {
+          "name": "Layer",
+          "type": "System.Byte"
+        },
+        {
+          "name": "AnchorObjectId",
+          "type": "System.UInt32"
+        },
+        {
+          "name": "PixelOffset",
+          "type": "System.Drawing.Point"
+        }
+      ],
+      "readIlSha256": "900250ac304c8cdd0f010e79418eed42f6d8becd9b695b0f6dbfb68856ec53b3",
+      "writeIlSha256": "c5c0a6180c39dc0ece8d37503640dfa2425f7856c0b3364be4f79329f05167a3"
     }
   ],
   "enums": [
@@ -8401,11 +8621,11 @@
           "value": "3"
         },
         {
-          "name": "\u8F7B\u8EAB\u6B65",
+          "name": "SwiftFeet",
           "value": "4"
         },
         {
-          "name": "SwiftFeet",
+          "name": "\u8F7B\u8EAB\u6B65",
           "value": "4"
         },
         {
@@ -8433,27 +8653,27 @@
           "value": "7"
         },
         {
-          "name": "LightBody",
-          "value": "8"
-        },
-        {
           "name": "\u98CE\u8EAB\u672F",
           "value": "8"
         },
         {
-          "name": "UltimateEnhancer",
-          "value": "9"
+          "name": "LightBody",
+          "value": "8"
         },
         {
           "name": "\u65E0\u6781\u771F\u6C14",
           "value": "9"
         },
         {
-          "name": "\u62A4\u8EAB\u6C14\u5E55",
-          "value": "10"
+          "name": "UltimateEnhancer",
+          "value": "9"
         },
         {
           "name": "ProtectionField",
+          "value": "10"
+        },
+        {
+          "name": "\u62A4\u8EAB\u6C14\u5E55",
           "value": "10"
         },
         {
@@ -8473,11 +8693,11 @@
           "value": "12"
         },
         {
-          "name": "MoonLight",
+          "name": "\u6708\u5F71\u672F",
           "value": "13"
         },
         {
-          "name": "\u6708\u5F71\u672F",
+          "name": "MoonLight",
           "value": "13"
         },
         {
@@ -8489,11 +8709,11 @@
           "value": "14"
         },
         {
-          "name": "\u6C14\u6D41\u672F",
+          "name": "Concentration",
           "value": "15"
         },
         {
-          "name": "Concentration",
+          "name": "\u6C14\u6D41\u672F",
           "value": "15"
         },
         {
@@ -8521,11 +8741,11 @@
           "value": "18"
         },
         {
-          "name": "\u7CBE\u795E\u72B6\u6001",
+          "name": "MentalState",
           "value": "19"
         },
         {
-          "name": "MentalState",
+          "name": "\u7CBE\u795E\u72B6\u6001",
           "value": "19"
         },
         {
@@ -8537,11 +8757,11 @@
           "value": "20"
         },
         {
-          "name": "\u6DF1\u5EF6\u672F",
+          "name": "MagicBooster",
           "value": "21"
         },
         {
-          "name": "MagicBooster",
+          "name": "\u6DF1\u5EF6\u672F",
           "value": "21"
         },
         {
@@ -8725,35 +8945,35 @@
           "value": "104"
         },
         {
-          "name": "\u80CC\u5305\u8D1F\u91CD\u63D0\u5347",
-          "value": "105"
-        },
-        {
           "name": "BagWeight",
           "value": "105"
         },
         {
-          "name": "\u53D8\u5F62\u6548\u679C",
-          "value": "106"
+          "name": "\u80CC\u5305\u8D1F\u91CD\u63D0\u5347",
+          "value": "105"
         },
         {
           "name": "Transform",
           "value": "106"
         },
         {
-          "name": "\u5FC3\u5FC3\u76F8\u6620",
-          "value": "107"
+          "name": "\u53D8\u5F62\u6548\u679C",
+          "value": "106"
         },
         {
           "name": "RelationshipEXP",
           "value": "107"
         },
         {
-          "name": "Mentee",
-          "value": "108"
+          "name": "\u5FC3\u5FC3\u76F8\u6620",
+          "value": "107"
         },
         {
           "name": "\u8863\u94B5\u76F8\u4F20",
+          "value": "108"
+        },
+        {
+          "name": "Mentee",
           "value": "108"
         },
         {
@@ -8833,19 +9053,19 @@
           "value": "122"
         },
         {
-          "name": "\u653B\u51FB\u529B\u63D0\u5347",
-          "value": "200"
-        },
-        {
           "name": "Impact",
           "value": "200"
         },
         {
-          "name": "Magic",
-          "value": "201"
+          "name": "\u653B\u51FB\u529B\u63D0\u5347",
+          "value": "200"
         },
         {
           "name": "\u9B54\u6CD5\u529B\u63D0\u5347",
+          "value": "201"
+        },
+        {
+          "name": "Magic",
           "value": "201"
         },
         {
@@ -8873,35 +9093,35 @@
           "value": "204"
         },
         {
-          "name": "\u6CD5\u529B\u503C\u63D0\u5347",
-          "value": "205"
-        },
-        {
           "name": "ManaAid",
           "value": "205"
         },
         {
-          "name": "\u9632\u5FA1\u63D0\u5347",
-          "value": "206"
+          "name": "\u6CD5\u529B\u503C\u63D0\u5347",
+          "value": "205"
         },
         {
           "name": "Defence",
           "value": "206"
         },
         {
-          "name": "\u9B54\u6CD5\u9632\u5FA1\u63D0\u5347",
-          "value": "207"
+          "name": "\u9632\u5FA1\u63D0\u5347",
+          "value": "206"
         },
         {
           "name": "MagicDefence",
           "value": "207"
         },
         {
-          "name": "\u5947\u5F02\u836F\u6C34",
-          "value": "208"
+          "name": "\u9B54\u6CD5\u9632\u5FA1\u63D0\u5347",
+          "value": "207"
         },
         {
           "name": "WonderDrug",
+          "value": "208"
+        },
+        {
+          "name": "\u5947\u5F02\u836F\u6C34",
           "value": "208"
         },
         {
@@ -8991,6 +9211,34 @@
         {
           "name": "\u9EC4\u91D1\u5B97\u5E08\u795D\u798F",
           "value": "229"
+        },
+        {
+          "name": "\u7FCE\u98CE\u811A\u672C\u69FD0",
+          "value": "240"
+        },
+        {
+          "name": "\u7FCE\u98CE\u811A\u672C\u69FD1",
+          "value": "241"
+        },
+        {
+          "name": "\u7FCE\u98CE\u811A\u672C\u69FD2",
+          "value": "242"
+        },
+        {
+          "name": "\u7FCE\u98CE\u811A\u672C\u69FD3",
+          "value": "243"
+        },
+        {
+          "name": "\u7FCE\u98CE\u811A\u672C\u69FD4",
+          "value": "244"
+        },
+        {
+          "name": "\u7FCE\u98CE\u811A\u672C\u69FD5",
+          "value": "245"
+        },
+        {
+          "name": "\u7FCE\u98CE\u811A\u672C\u69FD6",
+          "value": "246"
         }
       ]
     },
@@ -15795,6 +16043,22 @@
         {
           "name": "CustomGuiClose",
           "value": "278"
+        },
+        {
+          "name": "LingFengScreenEffect",
+          "value": "279"
+        },
+        {
+          "name": "LingFengDialog",
+          "value": "280"
+        },
+        {
+          "name": "MagicCooldownCleared",
+          "value": "281"
+        },
+        {
+          "name": "LingFengMapEffect",
+          "value": "282"
         }
       ]
     },

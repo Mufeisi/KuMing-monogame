@@ -46,6 +46,46 @@ namespace Server.MirEnvir
             Thread = Envir.Random.Next(Settings.ThreadLimit);
         }
 
+        internal static Map CreateLingFengMirror(Map source, MapInfo mirrorInfo)
+        {
+            if (source?.Cells == null || mirrorInfo == null)
+                throw new ArgumentException("镜像地图源布局不可用。");
+
+            var mirror = new Map(mirrorInfo)
+            {
+                Width = source.Width,
+                Height = source.Height,
+                Cells = new Cell[source.Width, source.Height],
+                DoorIndex = new Door[source.Width, source.Height],
+                WalkableCells = source.WalkableCells == null
+                    ? null
+                    : new List<Point>(source.WalkableCells)
+            };
+
+            for (int x = 0; x < source.Width; x++)
+            for (int y = 0; y < source.Height; y++)
+            {
+                Cell cell = source.Cells[x, y];
+                mirror.Cells[x, y] = new Cell
+                {
+                    Attribute = cell.Attribute,
+                    FishingAttribute = cell.FishingAttribute
+                };
+            }
+
+            foreach (Door sourceDoor in source.Doors)
+            {
+                Door door = mirror.AddDoor(sourceDoor.index, sourceDoor.Location);
+                door.DoorState = sourceDoor.DoorState;
+                door.ImageIndex = sourceDoor.ImageIndex;
+                door.LastTick = sourceDoor.LastTick;
+                mirror.DoorIndex[sourceDoor.Location.X, sourceDoor.Location.Y] = door;
+            }
+
+            if (mirror.WalkableCells == null) mirror.GetWalkableCells();
+            return mirror;
+        }
+
         public Door AddDoor(byte DoorIndex, Point location)
         {
             DoorIndex = (byte)(DoorIndex & 0x7F);

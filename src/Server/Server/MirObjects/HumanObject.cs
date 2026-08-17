@@ -172,6 +172,9 @@ namespace Server.MirObjects
 
         public bool Stacking;
         public bool IsGM, GMNeverDie, GMGameMaster;
+        private long _lingFengInvincibleExpireTime;
+        public bool LingFengInvincible =>
+            _lingFengInvincibleExpireTime > Envir.Time;
         public bool HasUpdatedBaseStats = true;
 
         public virtual int PotionBeltMinimum => 0;
@@ -213,6 +216,22 @@ namespace Server.MirObjects
         public long LastRevivalTime;
         public float HpDrain = 0;
 
+        private readonly List<LingFengAbilityModifier> _lingFengAbilityModifiers = new();
+        private long _lingFengAbilitySequence;
+        private readonly List<LingFengSpeedModifier> _lingFengSpeedModifiers = new();
+        private List<LingFengNewValueModifier> _lingFengNewValueModifiers = new();
+        private List<LingFengNewValueModifier> LingFengNewValueModifiers =>
+            _lingFengNewValueModifiers ??= new List<LingFengNewValueModifier>();
+        private bool _lingFengSavedExperienceRatesLoaded;
+        private readonly List<LingFengRateModifier> _lingFengPowerRateModifiers = new();
+        private readonly List<LingFengRateModifier> _lingFengDropRateModifiers = new();
+        private readonly List<LingFengRateModifier> _lingFengBlastHitRateModifiers = new();
+        private bool _lingFengSavedCombatRatesLoaded;
+
+        public long LingFengSuckDamageRemaining { get; private set; }
+        private int _lingFengSuckDamagePermille;
+        private int _lingFengSuckDamageChance;
+
         public bool UnlockCurse = false;
         public bool FastRun = false;
         public bool CanGainExp = true;
@@ -244,15 +263,94 @@ namespace Server.MirObjects
         }
         public long GetDelayTime(long original)
         {
+            original = GetLingFengSpeedDelay(1, original);
             if (CurrentPoison.HasFlag(PoisonType.Slow))
             {
                 return original * 2;
             }
             return original;
         }
+
+        public bool TryChangeLingFengSpeed(
+            string sourceKey, int speedType, int value, int durationSeconds)
+        {
+            if (string.IsNullOrWhiteSpace(sourceKey) || speedType is < 1 or > 3 ||
+                value is < -100 or > 100 || durationSeconds < 0)
+                return false;
+
+            _lingFengSpeedModifiers.RemoveAll(entry =>
+                entry.SpeedType == speedType &&
+                string.Equals(entry.SourceKey, sourceKey, StringComparison.Ordinal));
+            if (value == 0) return true;
+
+            long expireTime = durationSeconds == 0
+                ? long.MaxValue
+                : checked(Envir.Time + (long)durationSeconds * Settings.Second);
+            _lingFengSpeedModifiers.Add(
+                new LingFengSpeedModifier(sourceKey, speedType, value, expireTime));
+            return true;
+        }
+
+        public long GetLingFengSpeedDelay(int speedType, long original)
+        {
+            _lingFengSpeedModifiers.RemoveAll(entry => entry.ExpireTime <= Envir.Time);
+            long speed = _lingFengSpeedModifiers
+                .Where(entry => entry.SpeedType == speedType)
+                .Sum(entry => (long)entry.Value);
+            return Math.Clamp(original - speed * 60L, 100L, int.MaxValue);
+        }
+
+        public bool TrySetLingFengSuckDamage(
+            string operation, long amount, int permille, int chance)
+        {
+            if (permille is < 1 or > 1000 || chance is < 1 or > 100 ||
+                (amount == -1 && operation != "=") || amount < -1)
+                return false;
+
+            if (amount == -1)
+            {
+                LingFengSuckDamageRemaining = -1;
+            }
+            else if (!Server.Scripting.LingFengNumericCommandExecutor.TryAdjust(
+                         Math.Max(0, LingFengSuckDamageRemaining), operation,
+                         amount.ToString(System.Globalization.CultureInfo.InvariantCulture), 0, 2_000_000_000,
+                         true, out long adjusted, out _))
+            {
+                return false;
+            }
+            else
+            {
+                LingFengSuckDamageRemaining = adjusted;
+            }
+
+            _lingFengSuckDamagePermille = permille;
+            _lingFengSuckDamageChance = chance;
+            return true;
+        }
+
+        private int ApplyLingFengSuckDamage(int appliedDamage)
+        {
+            if (appliedDamage <= 0 || LingFengSuckDamageRemaining == 0 ||
+                _lingFengSuckDamagePermille <= 0 ||
+                Envir.Random.Next(100) >= _lingFengSuckDamageChance)
+                return appliedDamage;
+
+            long absorbed = (long)appliedDamage * _lingFengSuckDamagePermille / 1000;
+            if (LingFengSuckDamageRemaining > 0)
+                absorbed = Math.Min(absorbed, LingFengSuckDamageRemaining);
+            absorbed = Math.Clamp(absorbed, 0, appliedDamage);
+            if (LingFengSuckDamageRemaining > 0)
+                LingFengSuckDamageRemaining -= absorbed;
+            return appliedDamage - (int)absorbed;
+        }
         public override void Process()
         {
+            ProcessLingFengHideMode();
             if ((Race == ObjectType.Player && Connection == null) || Node == null || Info == null) return;
+
+            RemoveExpiredLingFengRateModifiers();
+            if (RemoveExpiredLingFengAbilityModifiers() || RemoveExpiredLingFengNewValues())
+                RefreshStats();
 
             if (CellTime + 700 < Envir.Time) _stepCounter = 0;
 
@@ -716,7 +814,8 @@ namespace Server.MirObjects
                 switch (poison.PType)
                 {
                     case PoisonType.Red:
-                        ArmourRate -= 0.10F;
+                        if (!poison.LingFengPowerDefined)
+                            ArmourRate -= 0.10F;
                         break;
                     case PoisonType.Stun:
                         DamageRate += 0.20F;
@@ -846,6 +945,22 @@ namespace Server.MirObjects
 
             AddBuff(BuffType.游戏管理, this, 0, null, false, values: (byte)options);
         }
+
+        public bool ApplyLingFengInvincibleMode(int durationSeconds)
+        {
+            if (durationSeconds is < 0 or > 65535) return false;
+            if (durationSeconds == 0)
+            {
+                _lingFengInvincibleExpireTime = 0;
+                return true;
+            }
+            long duration = (long)durationSeconds * Settings.Second;
+            _lingFengInvincibleExpireTime = Envir.Time +
+                Math.Min(long.MaxValue - Envir.Time, duration);
+            SetHP(Stats[Stat.HP]);
+            return true;
+        }
+
         public virtual void LevelUp()
         {
             RefreshStats();
@@ -864,7 +979,7 @@ namespace Server.MirObjects
             if (HP == amount) return;
 
             HP = amount <= Stats[Stat.HP] ? amount : Stats[Stat.HP];
-            HP = GMNeverDie ? Stats[Stat.HP] : HP;
+            HP = GMNeverDie || LingFengInvincible ? Stats[Stat.HP] : HP;
 
             if (!Dead && HP == 0) Die();
 
@@ -881,7 +996,7 @@ namespace Server.MirObjects
             if (MP == amount) return;
             //was info.MP
             MP = amount <= Stats[Stat.MP] ? amount : Stats[Stat.MP];
-            MP = GMNeverDie ? Stats[Stat.MP] : MP;
+            MP = GMNeverDie || LingFengInvincible ? Stats[Stat.MP] : MP;
 
             // HealthChanged = true;
             SendHealthChanged();
@@ -900,7 +1015,7 @@ namespace Server.MirObjects
             if (amount == 0) return;
 
             HP += amount;
-            HP = GMNeverDie ? Stats[Stat.HP] : HP;
+            HP = GMNeverDie || LingFengInvincible ? Stats[Stat.HP] : HP;
 
             if (HP < 0) HP = 0;
 
@@ -921,7 +1036,7 @@ namespace Server.MirObjects
             if (amount == 0) return;
 
             MP += amount;
-            MP = GMNeverDie ? Stats[Stat.MP] : MP;
+            MP = GMNeverDie || LingFengInvincible ? Stats[Stat.MP] : MP;
 
             if (MP < 0) MP = 0;
 
@@ -1412,7 +1527,7 @@ namespace Server.MirObjects
                     if (item == null)
                         continue;
 
-                    if (item.Info.Bind.HasFlag(BindMode.DontDeathdrop))
+                    if (item.HasBindingFlag(BindMode.DontDeathdrop))
                         continue;
 
                     // TODO: Check this.
@@ -1507,7 +1622,7 @@ namespace Server.MirObjects
                 if (item == null)
                     continue;
 
-                if (item.Info.Bind.HasFlag(BindMode.DontDeathdrop))
+                if (item.HasBindingFlag(BindMode.DontDeathdrop))
                     continue;
 
                 if (item.WeddingRing != -1)
@@ -1589,7 +1704,7 @@ namespace Server.MirObjects
                 for (int i = 0; i < Info.Inventory.Length; i++)
                 {
                     UserItem temp = Info.Inventory[i];
-                    if (temp == null || item.Info != temp.Info || temp.Count >= temp.Info.StackSize) continue;
+                    if (temp == null || !item.CanStackWith(temp) || temp.Count >= temp.Info.StackSize) continue;
 
                     if (item.Count + temp.Count <= temp.Info.StackSize)
                     {
@@ -1713,7 +1828,7 @@ namespace Server.MirObjects
             Enqueue(new S.MapChanged
             {
                 MapIndex = CurrentMap.Info.Index,
-                FileName = CurrentMap.Info.FileName,
+                FileName = CurrentMap.Info.GetClientFileName(),
                 Title = CurrentMap.Info.Title,
                 Weather = CurrentMap.Info.WeatherParticles,
                 MiniMap = CurrentMap.Info.MiniMap,
@@ -1766,6 +1881,9 @@ namespace Server.MirObjects
             Stats[Stat.MaxSC] += (Stats[Stat.MaxSC] * Stats[Stat.最大道术攻击数率]) / 100;
             Stats[Stat.攻击速度] += (Stats[Stat.攻击速度] * Stats[Stat.攻击速度数率]) / 100;
 
+            ApplyLingFengAbilityModifiers();
+            ApplyLingFengNewValueStats();
+
             RefreshStatCaps();
 
             if (HP > Stats[Stat.HP]) SetHP(Stats[Stat.HP]);
@@ -1775,6 +1893,446 @@ namespace Server.MirObjects
 
             if (AttackSpeed < 550) AttackSpeed = 550;
         }
+
+        public bool TryChangeLingFengAbility(
+            string sourceKey, int abilityIndex, string operation, int value,
+            int durationSeconds, bool percentage)
+        {
+            if (string.IsNullOrWhiteSpace(sourceKey)) return false;
+            if (!TryGetLingFengAbilityStat(abilityIndex, out _)) return false;
+            if (operation is not ("+" or "-" or "=")) return false;
+            if (durationSeconds < 0) return false;
+
+            if (percentage && operation == "=" && value == 100 && durationSeconds == 0)
+            {
+                _lingFengAbilityModifiers.RemoveAll(entry =>
+                    entry.AbilityIndex == abilityIndex && entry.Percentage);
+                RefreshStats();
+                return true;
+            }
+
+            bool isTemporary = durationSeconds > 0;
+            _lingFengAbilityModifiers.RemoveAll(entry =>
+                string.Equals(entry.SourceKey, sourceKey, StringComparison.Ordinal));
+
+            long expireTime = durationSeconds == 0
+                ? long.MaxValue
+                : Envir.Time + Math.Min(long.MaxValue - Envir.Time,
+                    (long)durationSeconds * Settings.Second);
+            _lingFengAbilityModifiers.Add(new LingFengAbilityModifier(
+                sourceKey, abilityIndex, operation[0], value, expireTime, percentage,
+                isTemporary, ++_lingFengAbilitySequence));
+            RefreshStats();
+            return true;
+        }
+
+        public bool TryChangeLingFengNewValue(
+            string sourceKey, int attributeIndex, string operation, int value,
+            int durationSeconds)
+        {
+            int maximum = attributeIndex switch
+            {
+                24 or 25 => 1000,
+                26 => 100000,
+                _ => 100
+            };
+            if (string.IsNullOrWhiteSpace(sourceKey) ||
+                attributeIndex is < 0 or > 26 or 12 ||
+                operation is not ("+" or "-" or "=") ||
+                value is < 0 || value > maximum || durationSeconds < 0)
+                return false;
+
+            LingFengNewValueModifiers.RemoveAll(entry =>
+                entry.AttributeIndex == attributeIndex &&
+                string.Equals(entry.SourceKey, sourceKey, StringComparison.Ordinal));
+            int contribution = operation == "-" ? -value : value;
+            if (contribution != 0)
+            {
+                long expireTime = durationSeconds == 0
+                    ? long.MaxValue
+                    : Envir.Time + Math.Min(long.MaxValue - Envir.Time,
+                        (long)durationSeconds * Settings.Second);
+                LingFengNewValueModifiers.Add(new LingFengNewValueModifier(
+                    sourceKey, attributeIndex, contribution, expireTime));
+            }
+            RefreshStats();
+            return true;
+        }
+
+        public bool TrySetLingFengExperienceRate(
+            string sourceKey, int rate, int durationSeconds, bool save)
+        {
+            if (Info == null || rate is < 100 or > 1_000_000 || durationSeconds < 0)
+                return false;
+            string normalizedSource = Info.LingFengProgress.ExperienceRateSourceKey(sourceKey);
+            if (!Info.LingFengProgress.TryStoreExperienceRate(
+                    sourceKey, rate, Envir.Now, durationSeconds, save))
+                return false;
+            return TryChangeLingFengNewValue(
+                normalizedSource, 26, "=", rate - 100, durationSeconds);
+        }
+
+        public bool TrySetLingFengPowerRate(
+            string sourceKey, int rate, int durationSeconds, bool save, int targetType)
+        {
+            if (Info == null || rate is < 0 or > 1_000_000 || durationSeconds < 0 ||
+                targetType is < 0 or > 2)
+                return false;
+            EnsureLingFengSavedCombatRatesLoaded();
+            string normalizedSource = Info.LingFengProgress.PowerRateSourceKey(sourceKey);
+            if (!Info.LingFengProgress.TryStorePowerRate(
+                    sourceKey, rate, Envir.Now, durationSeconds, save, targetType))
+                return false;
+            ReplaceLingFengRateModifier(
+                _lingFengPowerRateModifiers, normalizedSource, rate,
+                durationSeconds, targetType);
+            return true;
+        }
+
+        public bool TrySetLingFengDropRate(
+            string sourceKey, int rate, int durationSeconds, bool save)
+        {
+            if (Info == null || rate is < 0 or > 1_000_000 || durationSeconds < 0)
+                return false;
+            EnsureLingFengSavedCombatRatesLoaded();
+            string normalizedSource = Info.LingFengProgress.DropRateSourceKey(sourceKey);
+            if (!Info.LingFengProgress.TryStoreDropRate(
+                    sourceKey, rate, Envir.Now, durationSeconds, save))
+                return false;
+            ReplaceLingFengRateModifier(
+                _lingFengDropRateModifiers, normalizedSource, rate,
+                durationSeconds, 0);
+            return true;
+        }
+
+        public bool TrySetLingFengBlastHitRate(
+            string sourceKey, int rate, int durationSeconds)
+        {
+            if (string.IsNullOrWhiteSpace(sourceKey) ||
+                rate is < 0 or > 1_000_000 || durationSeconds < 0)
+                return false;
+            ReplaceLingFengRateModifier(
+                _lingFengBlastHitRateModifiers, sourceKey, rate,
+                durationSeconds, 0);
+            return true;
+        }
+
+        public int GetLingFengPowerRatePercent(bool targetIsHuman)
+        {
+            EnsureLingFengSavedCombatRatesLoaded();
+            RemoveExpiredLingFengRateModifiers();
+            int targetType = targetIsHuman ? 1 : 2;
+            return AggregateLingFengRate(
+                _lingFengPowerRateModifiers.Where(entry =>
+                    entry.TargetType == 0 || entry.TargetType == targetType));
+        }
+
+        public long GetLingFengPowerRateRemainingSeconds(bool targetIsHuman)
+        {
+            EnsureLingFengSavedCombatRatesLoaded();
+            RemoveExpiredLingFengRateModifiers();
+            int targetType = targetIsHuman ? 1 : 2;
+            return GetLingFengRateRemainingSeconds(
+                _lingFengPowerRateModifiers.Where(entry =>
+                    entry.TargetType == 0 || entry.TargetType == targetType));
+        }
+
+        public int ApplyLingFengPowerRate(int damage, bool targetIsHuman)
+        {
+            if (damage <= 0) return damage;
+            return (int)Math.Clamp(
+                (long)damage * GetLingFengPowerRatePercent(targetIsHuman) / 100,
+                0L, int.MaxValue);
+        }
+
+        public int GetLingFengDropRatePercent()
+        {
+            EnsureLingFengSavedCombatRatesLoaded();
+            RemoveExpiredLingFengRateModifiers();
+            return AggregateLingFengRate(_lingFengDropRateModifiers);
+        }
+
+        public long GetLingFengDropRateRemainingSeconds()
+        {
+            EnsureLingFengSavedCombatRatesLoaded();
+            RemoveExpiredLingFengRateModifiers();
+            return GetLingFengRateRemainingSeconds(_lingFengDropRateModifiers);
+        }
+
+        public float ApplyLingFengDropRate(float baseRate)
+        {
+            if (baseRate <= 0) return baseRate;
+            double value = (double)baseRate * GetLingFengDropRatePercent() / 100D;
+            return (float)Math.Clamp(value, 0D, float.MaxValue);
+        }
+
+        public int ApplyLingFengBlastHitRate(int criticalDamage)
+        {
+            if (criticalDamage <= 0) return criticalDamage;
+            RemoveExpiredLingFengRateModifiers();
+            int rate = AggregateLingFengRate(_lingFengBlastHitRateModifiers);
+            return (int)Math.Clamp((long)criticalDamage * rate / 100, 0L, int.MaxValue);
+        }
+
+        private void EnsureLingFengSavedCombatRatesLoaded()
+        {
+            if (_lingFengSavedCombatRatesLoaded || Info == null) return;
+            _lingFengSavedCombatRatesLoaded = true;
+            foreach (LingFengSavedCombatRate saved in
+                     Info.LingFengProgress.ReadPowerRates(Envir.Now, true))
+                AddSavedLingFengRate(_lingFengPowerRateModifiers, saved);
+            foreach (LingFengSavedCombatRate saved in
+                     Info.LingFengProgress.ReadDropRates(Envir.Now, true))
+                AddSavedLingFengRate(_lingFengDropRateModifiers, saved);
+        }
+
+        private static int AggregateLingFengRate(IEnumerable<LingFengRateModifier> modifiers)
+        {
+            long rate = 100;
+            foreach (LingFengRateModifier modifier in modifiers)
+                rate += (long)modifier.Rate - 100;
+            return (int)Math.Clamp(rate, 0L, 1_000_000L);
+        }
+
+        private static long GetLingFengRateRemainingSeconds(
+            IEnumerable<LingFengRateModifier> modifiers)
+        {
+            LingFengRateModifier[] matches = modifiers.ToArray();
+            if (matches.Length == 0 || matches.Any(entry => entry.ExpireTime == long.MaxValue))
+                return 0;
+            long remaining = matches.Max(entry => Math.Max(
+                0, entry.ExpireTime - Server.MirEnvir.Envir.Main.Time));
+            return (remaining + Settings.Second - 1) / Settings.Second;
+        }
+
+        private static void ReplaceLingFengRateModifier(
+            List<LingFengRateModifier> modifiers, string sourceKey,
+            int rate, int durationSeconds, int targetType)
+        {
+            modifiers.RemoveAll(entry =>
+                string.Equals(entry.SourceKey, sourceKey, StringComparison.Ordinal));
+            long expireTime = durationSeconds == 0
+                ? long.MaxValue
+                : Server.MirEnvir.Envir.Main.Time + Math.Min(
+                    long.MaxValue - Server.MirEnvir.Envir.Main.Time,
+                    (long)durationSeconds * Settings.Second);
+            modifiers.Add(new LingFengRateModifier(
+                sourceKey, rate, expireTime, targetType));
+        }
+
+        private static void AddSavedLingFengRate(
+            List<LingFengRateModifier> modifiers, LingFengSavedCombatRate saved)
+        {
+            long expireTime = long.MaxValue;
+            if (saved.Expiry.HasValue)
+            {
+                double milliseconds = (saved.Expiry.Value -
+                    Server.MirEnvir.Envir.Main.Now).TotalMilliseconds;
+                if (milliseconds <= 0) return;
+                long duration = (long)Math.Ceiling(milliseconds);
+                expireTime = Server.MirEnvir.Envir.Main.Time + Math.Min(
+                    long.MaxValue - Server.MirEnvir.Envir.Main.Time, duration);
+            }
+            modifiers.RemoveAll(entry =>
+                string.Equals(entry.SourceKey, saved.SourceKey, StringComparison.Ordinal));
+            modifiers.Add(new LingFengRateModifier(
+                saved.SourceKey, saved.Rate, expireTime, saved.TargetType));
+        }
+
+        private void RemoveExpiredLingFengRateModifiers()
+        {
+            _lingFengPowerRateModifiers.RemoveAll(entry => entry.ExpireTime <= Envir.Time);
+            _lingFengDropRateModifiers.RemoveAll(entry => entry.ExpireTime <= Envir.Time);
+            _lingFengBlastHitRateModifiers.RemoveAll(entry => entry.ExpireTime <= Envir.Time);
+        }
+
+        public int GetLingFengNewValue(int attributeIndex)
+        {
+            EnsureLingFengSavedExperienceRatesLoaded();
+            RemoveExpiredLingFengNewValues();
+            long value = LingFengNewValueModifiers
+                .Where(entry => entry.AttributeIndex == attributeIndex)
+                .Sum(entry => (long)entry.Value);
+            return (int)Math.Clamp(value, 0L, int.MaxValue);
+        }
+
+        public long GetLingFengExperienceRateRemainingSeconds()
+        {
+            EnsureLingFengSavedExperienceRatesLoaded();
+            RemoveExpiredLingFengNewValues();
+            LingFengNewValueModifier[] matches = LingFengNewValueModifiers
+                .Where(entry => entry.AttributeIndex == 26 &&
+                                entry.SourceKey.StartsWith(
+                                    "LFENV.EXPRATE.", StringComparison.Ordinal))
+                .ToArray();
+            if (matches.Length == 0 || matches.Any(entry => entry.ExpireTime == long.MaxValue))
+                return 0;
+            long remaining = matches.Max(entry => Math.Max(0, entry.ExpireTime - Envir.Time));
+            return (remaining + Settings.Second - 1) / Settings.Second;
+        }
+
+        public void ApplyLingFengNewValueDamage(
+            HumanObject target, DefenceType defenceType, ref int damage, ref int armour)
+        {
+            int attackBonus = Math.Max(0,
+                GetLingFengNewValue(1) - (target?.GetLingFengNewValue(25) ?? 0));
+            damage = ApplyLingFengPercent(damage, attackBonus, increase: true);
+            armour = ApplyLingFengPercent(
+                armour, Math.Min(100, GetLingFengNewValue(4)), increase: false);
+            if (target != null)
+            {
+                int reductionIndex = defenceType is DefenceType.MAC or DefenceType.MACAgility ? 3 : 2;
+                damage = ApplyLingFengPercent(
+                    damage, Math.Min(100, target.GetLingFengNewValue(reductionIndex)),
+                    increase: false);
+            }
+        }
+
+        private static int ApplyLingFengPercent(int value, int percent, bool increase)
+        {
+            long delta = (long)value * Math.Max(0, percent) / 100;
+            long changed = increase ? (long)value + delta : (long)value - delta;
+            return (int)Math.Clamp(changed, 0L, int.MaxValue);
+        }
+
+        private bool RemoveExpiredLingFengNewValues() =>
+            LingFengNewValueModifiers.RemoveAll(entry => entry.ExpireTime <= Envir.Time) > 0;
+
+        private void ApplyLingFengNewValueStats()
+        {
+            EnsureLingFengSavedExperienceRatesLoaded();
+            RemoveExpiredLingFengNewValues();
+            Stats[Stat.反弹伤害] += GetLingFengNewValue(5);
+            Stats[Stat.生命值数率] += GetLingFengNewValue(7);
+            Stats[Stat.法力值数率] += GetLingFengNewValue(8);
+            Stats[Stat.物品掉落数率] += GetLingFengNewValue(11);
+            Stats[Stat.经验增长数率] += GetLingFengNewValue(26);
+        }
+
+        private void EnsureLingFengSavedExperienceRatesLoaded()
+        {
+            if (_lingFengSavedExperienceRatesLoaded || Info == null) return;
+            _lingFengSavedExperienceRatesLoaded = true;
+            foreach (LingFengSavedExperienceRate saved in
+                     Info.LingFengProgress.ReadExperienceRates(Envir.Now, true))
+            {
+                long expireTime = long.MaxValue;
+                if (saved.Expiry.HasValue)
+                {
+                    double milliseconds = (saved.Expiry.Value - Envir.Now).TotalMilliseconds;
+                    if (milliseconds <= 0) continue;
+                    long duration = (long)Math.Ceiling(milliseconds);
+                    expireTime = Envir.Time + Math.Min(long.MaxValue - Envir.Time, duration);
+                }
+                LingFengNewValueModifiers.RemoveAll(entry =>
+                    entry.AttributeIndex == 26 &&
+                    string.Equals(entry.SourceKey, saved.SourceKey, StringComparison.Ordinal));
+                LingFengNewValueModifiers.Add(new LingFengNewValueModifier(
+                    saved.SourceKey, 26, saved.Rate - 100, expireTime));
+            }
+        }
+
+        private bool RemoveExpiredLingFengAbilityModifiers()
+        {
+            int removed = _lingFengAbilityModifiers.RemoveAll(entry => entry.ExpireTime <= Envir.Time);
+            return removed > 0;
+        }
+
+        private void ApplyLingFengAbilityModifiers()
+        {
+            RemoveExpiredLingFengAbilityModifiers();
+            foreach (IGrouping<int, LingFengAbilityModifier> group in
+                     _lingFengAbilityModifiers.OrderBy(entry => entry.IsTemporary)
+                         .ThenBy(entry => entry.Sequence)
+                         .GroupBy(entry => entry.AbilityIndex))
+            {
+                if (!TryGetLingFengAbilityStat(group.Key, out Stat stat)) continue;
+
+                long current = Stats[stat];
+                foreach (LingFengAbilityModifier modifier in group.Where(entry => !entry.Percentage))
+                {
+                    current = modifier.Operation switch
+                    {
+                        '+' => current + modifier.Value,
+                        '-' => current - modifier.Value,
+                        '=' => modifier.Value,
+                        _ => current
+                    };
+                }
+
+                long percentageBase = current;
+                foreach (LingFengAbilityModifier modifier in group.Where(entry => entry.Percentage))
+                {
+                    long amount = percentageBase * modifier.Value / 100;
+                    current = modifier.Operation switch
+                    {
+                        '+' => current + amount,
+                        '-' => current - amount,
+                        '=' => amount,
+                        _ => current
+                    };
+                }
+
+                Stats[stat] = (int)Math.Clamp(current, 0L, int.MaxValue);
+            }
+        }
+
+        private static bool TryGetLingFengAbilityStat(int abilityIndex, out Stat stat)
+        {
+            stat = abilityIndex switch
+            {
+                1 => Stat.MinAC,
+                2 => Stat.MaxAC,
+                3 => Stat.MinMAC,
+                4 => Stat.MaxMAC,
+                5 => Stat.MinDC,
+                6 => Stat.MaxDC,
+                7 => Stat.MinMC,
+                8 => Stat.MaxMC,
+                9 => Stat.MinSC,
+                10 => Stat.MaxSC,
+                11 => Stat.HP,
+                12 => Stat.MP,
+                14 => Stat.生命恢复,
+                15 => Stat.法力恢复,
+                16 => Stat.中毒恢复,
+                17 => Stat.毒物躲避,
+                18 => Stat.魔法躲避,
+                19 => Stat.准确,
+                20 => Stat.敏捷,
+                21 => Stat.幸运,
+                _ => default
+            };
+            return abilityIndex is >= 1 and <= 12 or >= 14 and <= 21;
+        }
+
+        private sealed record LingFengAbilityModifier(
+            string SourceKey,
+            int AbilityIndex,
+            char Operation,
+            int Value,
+            long ExpireTime,
+            bool Percentage,
+            bool IsTemporary,
+            long Sequence);
+
+        private sealed record LingFengSpeedModifier(
+            string SourceKey,
+            int SpeedType,
+            int Value,
+            long ExpireTime);
+
+        private sealed record LingFengNewValueModifier(
+            string SourceKey,
+            int AttributeIndex,
+            int Value,
+            long ExpireTime);
+
+        private sealed record LingFengRateModifier(
+            string SourceKey,
+            int Rate,
+            long ExpireTime,
+            int TargetType);
         public virtual void RefreshGuildBuffs() { }
         protected void RefreshLevelStats()
         {
@@ -1827,6 +2385,7 @@ namespace Server.MirObjects
 
             ItemSets.Clear();
             MirSet.Clear();
+            var lingFengWholeBodyPercentages = new Stats();
 
             for (int i = 0; i < Info.Equipment.Length; i++)
             {
@@ -1843,13 +2402,13 @@ namespace Server.MirObjects
 
                 if (realItem.Type == ItemType.盔甲)
                 {
-                    Looks_Armour = realItem.Shape;
+                    Looks_Armour = temp.LingFengShape ?? realItem.Shape;
                     Looks_Wings = realItem.Effect;
                 }
 
                 if (realItem.Type == ItemType.武器)
                 {
-                    Looks_Weapon = realItem.Shape;
+                    Looks_Weapon = temp.LingFengShape ?? realItem.Shape;
                     Looks_WeaponEffect = realItem.Effect;
                 }
 
@@ -1863,6 +2422,10 @@ namespace Server.MirObjects
 
                 Stats.Add(realItem.Stats);
                 Stats.Add(temp.AddedStats);
+                var lingFengItemStats = new Stats(realItem.Stats);
+                lingFengItemStats.Add(temp.AddedStats);
+                temp.ApplyLingFengCustomStats(Stats, lingFengItemStats);
+                temp.AccumulateLingFengWholeBodyPercentages(lingFengWholeBodyPercentages);
 
                 Stats[Stat.MinAC] += temp.Awake.GetAC();
                 Stats[Stat.MaxAC] += temp.Awake.GetAC();
@@ -1894,7 +2457,7 @@ namespace Server.MirObjects
                     FastRun = true;
                 }
 
-                RefreshSocketStats(temp, skillsToAdd);
+                RefreshSocketStats(temp, skillsToAdd, lingFengWholeBodyPercentages);
 
                 if (realItem.Set == ItemSet.非套装) continue;
 
@@ -1920,6 +2483,7 @@ namespace Server.MirObjects
                 }
             }
 
+            UserItem.ApplyLingFengWholeBodyPercentages(Stats, lingFengWholeBodyPercentages);
             AddTempSkills(skillsToAdd);
             RemoveTempSkills(skillsToRemove.Except(skillsToAdd));
 
@@ -1940,7 +2504,8 @@ namespace Server.MirObjects
                 RefreshMount(false);
             }
         }
-        private void RefreshSocketStats(UserItem equipItem, List<string> skillsToAdd)
+        private void RefreshSocketStats(
+            UserItem equipItem, List<string> skillsToAdd, Stats lingFengWholeBodyPercentages)
         {
             if (equipItem == null) return;
 
@@ -1970,6 +2535,10 @@ namespace Server.MirObjects
 
                 Stats.Add(RealItem.Stats);
                 Stats.Add(temp.AddedStats);
+                var lingFengItemStats = new Stats(RealItem.Stats);
+                lingFengItemStats.Add(temp.AddedStats);
+                temp.ApplyLingFengCustomStats(Stats, lingFengItemStats);
+                temp.AccumulateLingFengWholeBodyPercentages(lingFengWholeBodyPercentages);
 
                 if (RealItem.Light > Light) Light = RealItem.Light;
                 if (RealItem.Unique != SpecialItemMode.None)
@@ -2630,7 +3199,7 @@ namespace Server.MirObjects
             Enqueue(new S.RangeAttack { TargetID = targetID, Target = location, Spell = spell });
             Broadcast(new S.ObjectRangeAttack { ObjectID = ObjectID, Direction = Direction, Location = CurrentLocation, TargetID = targetID, Target = location, Spell = spell });
 
-            AttackTime = Envir.Time + AttackSpeed;
+            AttackTime = Envir.Time + GetLingFengSpeedDelay(2, AttackSpeed);
             ActionTime = Envir.Time + 550;
             RegenTime = Envir.Time + RegenDelay;
         }
@@ -2760,7 +3329,7 @@ namespace Server.MirObjects
             Enqueue(new S.UserLocation { Direction = Direction, Location = CurrentLocation });
             Broadcast(new S.ObjectAttack { ObjectID = ObjectID, Direction = Direction, Location = CurrentLocation, Spell = spell, Level = level });
 
-            AttackTime = Envir.Time + AttackSpeed;
+            AttackTime = Envir.Time + GetLingFengSpeedDelay(2, AttackSpeed);
             ActionTime = Envir.Time + 550;
             RegenTime = Envir.Time + RegenDelay;
 
@@ -3202,13 +3771,20 @@ namespace Server.MirObjects
         public virtual MapObject DefaultMagicTarget => this;
         public void Magic(Spell spell, MirDirection dir, uint targetID, Point location, bool spellTargetLock = false)
         {
-            if (!CanCast)
+            MagicCore(spell, dir, targetID, location, spellTargetLock, null);
+        }
+
+        private void MagicCore(
+            Spell spell, MirDirection dir, uint targetID, Point location,
+            bool spellTargetLock, LingFengMagicCastOptions lingFengOptions)
+        {
+            if (lingFengOptions == null && !CanCast)
             {
                 Enqueue(new S.UserLocation { Direction = Direction, Location = CurrentLocation });
                 return;
             }
 
-            UserMagic magic = GetMagic(spell);
+            UserMagic magic = lingFengOptions?.Magic ?? GetMagic(spell);
 
             if (magic == null)
             {
@@ -3225,7 +3801,7 @@ namespace Server.MirObjects
             }
 
             AttackTime = Envir.Time + MoveDelay;
-            SpellTime = Envir.Time + 1800; //Spell Delay
+            SpellTime = Envir.Time + GetLingFengSpeedDelay(3, 1800); //Spell Delay
 
             if (spell != Spell.ShoulderDash)
             {
@@ -3250,7 +3826,8 @@ namespace Server.MirObjects
             {
                 scriptPlayer = p;
 
-                var scriptsRuntimeActive = Settings.CSharpScriptsEnabled && Envir.CSharpScripts.Enabled;
+                var scriptsRuntimeActive = lingFengOptions?.DispatchScripts != false &&
+                                           Settings.CSharpScriptsEnabled && Envir.CSharpScripts.Enabled;
                 var allowCSharpBefore = scriptsRuntimeActive && Server.Scripting.ScriptDispatchPolicy.ShouldTryCSharp(Server.Scripting.ScriptHookKeys.OnPlayerMagicCastBefore);
                 allowCSharpAfter = scriptsRuntimeActive && Server.Scripting.ScriptDispatchPolicy.ShouldTryCSharp(Server.Scripting.ScriptHookKeys.OnPlayerMagicCastAfter);
 
@@ -3270,6 +3847,14 @@ namespace Server.MirObjects
                     consumeMp = request.ConsumeMp;
                     applyCooldown = request.ApplyCooldown;
                 }
+            }
+
+            if (lingFengOptions?.IgnoreCostAndCooldown == true)
+            {
+                ignoreCooldownCheck = true;
+                ignoreMpCostCheck = true;
+                consumeMp = false;
+                applyCooldown = false;
             }
 
             if (cost < 0) cost = 0;
@@ -3314,13 +3899,13 @@ namespace Server.MirObjects
             if (spell != Spell.ShoulderDash && spell != Spell.BackStep && spell != Spell.FlashDash)
                 Enqueue(new S.UserLocation { Direction = Direction, Location = CurrentLocation });
 
-            MapObject target = null;
+            MapObject target = lingFengOptions?.Target;
 
-            if (targetID == ObjectID)
+            if (target == null && targetID == ObjectID)
             {
                 target = this;
             }
-            else if (targetID > 0)
+            else if (target == null && targetID > 0)
             {
                 target = FindObject(targetID, 10);
             }
@@ -3482,7 +4067,7 @@ namespace Server.MirObjects
                 case Spell.StormEscape:
                     ThunderStorm(magic);
                     if (spell == Spell.FlameField)
-                        SpellTime = Envir.Time + 2500; //Spell Delay
+                        SpellTime = Envir.Time + GetLingFengSpeedDelay(3, 2500); //Spell Delay
                     if (spell == Spell.StormEscape)
                         //Start teleport.
                         ActionList.Add(new DelayedAction(DelayedType.Magic, Envir.Time + 750, magic, location));
@@ -3490,7 +4075,7 @@ namespace Server.MirObjects
                 case Spell.StormEscapeRare:
                     ThunderStorm(magic);
                     if (spell == Spell.FlameField)
-                        SpellTime = Envir.Time + 2500;
+                        SpellTime = Envir.Time + GetLingFengSpeedDelay(3, 2500);
                     if (spell == Spell.StormEscapeRare)
                         ActionList.Add(new DelayedAction(DelayedType.Magic, Envir.Time + 750, magic, location));
                     break;
@@ -3807,8 +4392,11 @@ namespace Server.MirObjects
                 cooldownApplied = true;
             }
 
-            Enqueue(new S.Magic { Spell = spell, TargetID = targetID, Target = location, Cast = cast, Level = level });
-            Broadcast(new S.ObjectMagic { ObjectID = ObjectID, Direction = Direction, Location = CurrentLocation, Spell = spell, TargetID = targetID, Target = location, Cast = cast, Level = level });
+            if (lingFengOptions?.EmitCastAction != false)
+            {
+                Enqueue(new S.Magic { Spell = spell, TargetID = targetID, Target = location, Cast = cast, Level = level });
+                Broadcast(new S.ObjectMagic { ObjectID = ObjectID, Direction = Direction, Location = CurrentLocation, Spell = spell, TargetID = targetID, Target = location, Cast = cast, Level = level });
+            }
 
             if (allowCSharpAfter && scriptPlayer != null)
             {
@@ -3829,6 +4417,46 @@ namespace Server.MirObjects
                         decision: scriptDecision));
             }
         }
+
+        public bool TryReleaseLingFengMagic(
+            int spellId, byte level, MapObject target, bool emitCastAction, bool dispatchScripts)
+        {
+            if (target == null || target.Dead || target.CurrentMap != CurrentMap ||
+                spellId < ushort.MinValue || spellId > ushort.MaxValue)
+                return false;
+
+            Spell spell = (Spell)(ushort)spellId;
+            if (!Enum.IsDefined(typeof(Spell), spell)) return false;
+            UserMagic learned = GetMagic(spell);
+            if (learned?.Info == null) return false;
+
+            var scriptedMagic = new UserMagic(spell)
+            {
+                Info = learned.Info,
+                Level = level,
+                IsTempSpell = true
+            };
+            var options = new LingFengMagicCastOptions(
+                scriptedMagic, target, true, emitCastAction, dispatchScripts);
+            using IDisposable suppression = dispatchScripts
+                ? null
+                : Server.Scripting.LingFengScriptTriggerSuppression.Enter();
+            MagicCore(
+                spell,
+                Functions.DirectionFromPoint(CurrentLocation, target.CurrentLocation),
+                target.ObjectID,
+                target.CurrentLocation,
+                true,
+                options);
+            return true;
+        }
+
+        private sealed record LingFengMagicCastOptions(
+            UserMagic Magic,
+            MapObject Target,
+            bool IgnoreCostAndCooldown,
+            bool EmitCastAction,
+            bool DispatchScripts);
 
         #region Elemental System
         private void Concentration(UserMagic magic)
@@ -5680,9 +6308,10 @@ namespace Server.MirObjects
 
             if (travel == 0) location = CurrentLocation;
 
-            int attackDelay = (AttackSpeed - 120) <= 300 ? 300 : (AttackSpeed - 120);
+            int attackDelay = (int)GetLingFengSpeedDelay(
+                2, (AttackSpeed - 120) <= 300 ? 300 : (AttackSpeed - 120));
             AttackTime = Envir.Time + attackDelay;
-            SpellTime = Envir.Time + 300;
+            SpellTime = Envir.Time + GetLingFengSpeedDelay(3, 300);
 
             location = Functions.PointMove(location, Direction, 1);
             if (CurrentMap.ValidPoint(location))
@@ -7082,6 +7711,12 @@ namespace Server.MirObjects
                 target.Direction++;
             target.Broadcast(target.GetInfo());
         }
+        protected IDisposable PushLingFengDelayedMagic(IList<object> data)
+        {
+            UserMagic magic = data?.OfType<UserMagic>().FirstOrDefault();
+            return Server.Scripting.LingFengTxtTriggerContext.PushMagic(
+                magic == null ? "0" : ((int)magic.Spell).ToString());
+        }
         protected void CompleteAttack(IList<object> data)
         {
             MapObject target = (MapObject)data[0];
@@ -7308,7 +7943,7 @@ namespace Server.MirObjects
             Enqueue(new S.MapChanged
             {
                 MapIndex = CurrentMap.Info.Index,
-                FileName = CurrentMap.Info.FileName,
+                FileName = CurrentMap.Info.GetClientFileName(),
                 Title = CurrentMap.Info.Title,
                 Weather = CurrentMap.Info.WeatherParticles,
                 MiniMap = CurrentMap.Info.MiniMap,
@@ -7421,12 +8056,17 @@ namespace Server.MirObjects
             }
 
             armour = (int)Math.Max(int.MinValue, (Math.Min(int.MaxValue, (decimal)(armour * ArmourRate))));
+            armour = ApplyLingFengRedPoisonArmour(armour);
             damage = (int)Math.Max(int.MinValue, (Math.Min(int.MaxValue, (decimal)(damage * DamageRate))));
 
             damage += attacker.Stats[Stat.武器增伤];
+            attacker.ApplyLingFengNewValueDamage(this, type, ref damage, ref armour);
+            damage = attacker.ApplyLingFengPowerRate(damage, targetIsHuman: true);
 
-            var scriptsRuntimeActive = Settings.CSharpScriptsEnabled && Envir.CSharpScripts.Enabled;
-            var txtSpecialTriggersActive = Server.Scripting.LingFengTxtSystemHookAdapter.IsCompatibilityEnabled(Envir.TextFileProvider);
+            var scriptsRuntimeActive = !Server.Scripting.LingFengScriptTriggerSuppression.IsActive &&
+                                       Settings.CSharpScriptsEnabled && Envir.CSharpScripts.Enabled;
+            var txtSpecialTriggersActive = !Server.Scripting.LingFengScriptTriggerSuppression.IsActive &&
+                                           Server.Scripting.LingFengTxtSystemHookAdapter.IsCompatibilityEnabled(Envir.TextFileProvider);
             var tryCSharpBefore = scriptsRuntimeActive && Server.Scripting.ScriptDispatchPolicy.ShouldTryCSharp(Server.Scripting.ScriptHookKeys.OnPlayerDamageBefore);
             var tryCSharpAfter = scriptsRuntimeActive && Server.Scripting.ScriptDispatchPolicy.ShouldTryCSharp(Server.Scripting.ScriptHookKeys.OnPlayerDamageAfter);
             var allowCSharpBefore = txtSpecialTriggersActive || tryCSharpBefore;
@@ -7444,6 +8084,20 @@ namespace Server.MirObjects
                 targetPlayer = this as PlayerObject;
                 if (targetPlayer == null && this is HeroObject heroTarget)
                     targetPlayer = heroTarget.Owner;
+            }
+
+            if (int.TryParse(Server.Scripting.LingFengTxtTriggerContext.Current?.MagicId,
+                    out int lingFengSkillId) && lingFengSkillId > 0)
+            {
+                attackerPlayer ??= attacker as PlayerObject;
+                targetPlayer ??= this as PlayerObject;
+                if (targetPlayer == null && this is HeroObject skillHeroTarget)
+                    targetPlayer = skillHeroTarget.Owner;
+                attackerPlayer?.TryApplyLingFengSkillPower(
+                    lingFengSkillId, false, ref damage, ref armour, true, false);
+                if (targetPlayer != null && !ReferenceEquals(targetPlayer, attackerPlayer))
+                    targetPlayer.TryApplyLingFengSkillPower(
+                        lingFengSkillId, false, ref damage, ref armour, false, true);
             }
 
             var damageWeaponFlag = damageWeapon;
@@ -7571,12 +8225,34 @@ namespace Server.MirObjects
             }
 
             var critical = false;
-            if (allowCritical && (forceCritical || Envir.Random.Next(100) < (attacker.Stats[Stat.暴击倍率] * Settings.CriticalRateWeight)))
+            int criticalChance = Math.Clamp(
+                attacker.Stats[Stat.暴击倍率] * Settings.CriticalRateWeight +
+                attacker.GetLingFengNewValue(0) - GetLingFengNewValue(24), 0, 100);
+            if (allowCritical && (forceCritical || Envir.Random.Next(100) < criticalChance))
             {
                 critical = true;
                 CurrentMap.Broadcast(new S.ObjectEffect { ObjectID = ObjectID, Effect = SpellEffect.Critical }, CurrentLocation);
                 damage = Math.Min(int.MaxValue, damage + (int)Math.Floor(damage * (((double)attacker.Stats[Stat.暴击伤害] / (double)Settings.CriticalDamageWeight) * 10)));
+                damage = attacker.ApplyLingFengBlastHitRate(damage);
                 BroadcastDamageIndicator(DamageType.Critical);
+            }
+
+            int fatalChance = Math.Clamp(
+                attacker.GetLingFengNewValue(21) - GetLingFengNewValue(23), 0, 100);
+            if (allowCritical && Envir.Random.Next(100) < fatalChance)
+            {
+                damage = ApplyLingFengPercent(
+                    damage, attacker.GetLingFengNewValue(22), increase: true);
+                if (!critical)
+                {
+                    critical = true;
+                    CurrentMap.Broadcast(new S.ObjectEffect
+                    {
+                        ObjectID = ObjectID,
+                        Effect = SpellEffect.Critical
+                    }, CurrentLocation);
+                    BroadcastDamageIndicator(DamageType.Critical);
+                }
             }
 
             if (HasBuff(BuffType.魔法盾, out Buff magicShield))
@@ -7637,9 +8313,9 @@ namespace Server.MirObjects
 
             BroadcastDamageIndicator(DamageType.Hit, armour - damage);
 
-            var appliedDamage = damage - armour;
+            var appliedDamage = ApplyLingFengSuckDamage(damage - armour);
 
-            ChangeHP(armour - damage);
+            ChangeHP(-appliedDamage);
 
             if (allowCSharpAfter)
             {
@@ -7691,8 +8367,12 @@ namespace Server.MirObjects
                 return 0;
             }
 
-            var scriptsRuntimeActive = Settings.CSharpScriptsEnabled && Envir.CSharpScripts.Enabled;
-            var txtSpecialTriggersActive = Server.Scripting.LingFengTxtSystemHookAdapter.IsCompatibilityEnabled(Envir.TextFileProvider);
+            damage = attacker.ApplyLingFengAttackHumanPowerRate(damage);
+
+            var scriptsRuntimeActive = !Server.Scripting.LingFengScriptTriggerSuppression.IsActive &&
+                                       Settings.CSharpScriptsEnabled && Envir.CSharpScripts.Enabled;
+            var txtSpecialTriggersActive = !Server.Scripting.LingFengScriptTriggerSuppression.IsActive &&
+                                           Server.Scripting.LingFengTxtSystemHookAdapter.IsCompatibilityEnabled(Envir.TextFileProvider);
             var tryCSharpBefore = scriptsRuntimeActive && Server.Scripting.ScriptDispatchPolicy.ShouldTryCSharp(Server.Scripting.ScriptHookKeys.OnPlayerDamageBefore);
             var tryCSharpAfter = scriptsRuntimeActive && Server.Scripting.ScriptDispatchPolicy.ShouldTryCSharp(Server.Scripting.ScriptHookKeys.OnPlayerDamageAfter);
             var allowCSharpBefore = txtSpecialTriggersActive || tryCSharpBefore;
@@ -7759,7 +8439,13 @@ namespace Server.MirObjects
             }
 
             armour = (int)Math.Max(int.MinValue, (Math.Min(int.MaxValue, (decimal)(armour * ArmourRate))));
+            armour = ApplyLingFengRedPoisonArmour(armour);
             damage = (int)Math.Max(int.MinValue, (Math.Min(int.MaxValue, (decimal)(damage * DamageRate))));
+
+            int reductionIndex = type is DefenceType.MAC or DefenceType.MACAgility ? 3 : 2;
+            damage = ApplyLingFengPercent(
+                damage, Math.Min(100, GetLingFengNewValue(reductionIndex)),
+                increase: false);
 
             //MagicShield, ElementalBarrier
             if (Stats[Stat.伤害减免数率] != 0)
@@ -7830,9 +8516,9 @@ namespace Server.MirObjects
 
             BroadcastDamageIndicator(DamageType.Hit, armour - damage);
 
-            var appliedDamage = damage - armour;
+            var appliedDamage = ApplyLingFengSuckDamage(damage - armour);
 
-            ChangeHP(armour - damage);
+            ChangeHP(-appliedDamage);
 
             if (allowCSharpAfter && targetPlayer != null)
             {
@@ -7882,6 +8568,7 @@ namespace Server.MirObjects
             }
 
             armour = (int)Math.Max(int.MinValue, (Math.Min(int.MaxValue, (decimal)(armour * ArmourRate))));
+            armour = ApplyLingFengRedPoisonArmour(armour);
             damage = (int)Math.Max(int.MinValue, (Math.Min(int.MaxValue, (decimal)(damage * DamageRate))));
 
             //MagicShield, ElementalBarrier
@@ -7913,12 +8600,25 @@ namespace Server.MirObjects
             Enqueue(new S.Struck { AttackerID = 0 });
             Broadcast(new S.ObjectStruck { ObjectID = ObjectID, AttackerID = 0, Direction = Direction, Location = CurrentLocation });
 
-            ChangeHP(armour - damage);
-            return damage - armour;
+            int appliedDamage = ApplyLingFengSuckDamage(damage - armour);
+            ChangeHP(-appliedDamage);
+            return appliedDamage;
         }
 
         public override void ApplyPoison(Poison p, MapObject Caster = null, bool NoResist = false, bool ignoreDefence = true)
         {
+            int hiddenResistance = p.PType switch
+            {
+                PoisonType.Paralysis => GetLingFengNewValue(13),
+                PoisonType.LRParalysis => GetLingFengNewValue(20),
+                PoisonType.Frozen => GetLingFengNewValue(19),
+                PoisonType.Green or PoisonType.Red => GetLingFengNewValue(16),
+                _ => 0
+            };
+            if (!NoResist && hiddenResistance > 0 &&
+                Envir.Random.Next(100) < Math.Min(100, hiddenResistance))
+                return;
+
             if (Caster != null && !NoResist)
             {
                 if (((Caster.Race != ObjectType.Player) || Settings.PvpCanResistPoison) && (Envir.Random.Next(Settings.PoisonResistWeight) < Stats[Stat.毒物躲避]))
@@ -8132,7 +8832,7 @@ namespace Server.MirObjects
                 {
                     UserItem bagItem = Info.Inventory[i];
 
-                    if (bagItem == null || bagItem.Info != item.Info) continue;
+                    if (bagItem == null || !item.CanStackWith(bagItem)) continue;
 
                     if (bagItem.Count + count <= bagItem.Info.StackSize) return true;
 
@@ -8150,7 +8850,7 @@ namespace Server.MirObjects
                 {
                     UserItem bagItem = Info.Inventory[i];
 
-                    if (bagItem.Info != item.Info) continue;
+                    if (bagItem == null || !item.CanStackWith(bagItem)) continue;
 
                     if (bagItem.Count + count <= bagItem.Info.StackSize) return true;
 
@@ -8179,7 +8879,7 @@ namespace Server.MirObjects
                     {
                         UserItem bagItem = Info.Inventory[u];
 
-                        if (bagItem == null || bagItem.Info != items[i].Info) continue;
+                    if (bagItem == null || !items[i].CanStackWith(bagItem)) continue;
 
                         if (bagItem.Count + count > bagItem.Info.StackSize) stackOffset++;
 

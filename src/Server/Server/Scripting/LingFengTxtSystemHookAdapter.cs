@@ -98,7 +98,7 @@ namespace Server.Scripting
             var payload = new LingFengItemTriggerEvent(
                 LingFengItemTriggerKind.Pickup,
                 itemName ?? string.Empty,
-                null,
+                result?.InventoryPosition,
                 result?.Gold ?? 0);
             return TryDispatchTarget(cSharpInvoked, provider, player, payload, cSharpEligible,
                 new LingFengTxtHookTarget("SystemScripts/QFunction-0", "[@PICKUPITEMEX]"));
@@ -222,6 +222,21 @@ namespace Server.Scripting
                 new LingFengTxtHookTarget("SystemScripts/QFunction-0", "[@M2DROPITEM]"));
         }
 
+        public static bool TryDispatchPersonalTimer(
+            ITextFileProvider provider, PlayerObject player, int timerIndex)
+        {
+            if (timerIndex is < 0 or > byte.MaxValue) return false;
+            return TryDispatchTarget(false, provider, player, null, false,
+                new LingFengTxtHookTarget(
+                    "SystemScripts/QManage", $"[@ONTIMER{timerIndex}]"));
+        }
+
+        public static bool TryDispatchNpcRevival(
+            ITextFileProvider provider, PlayerObject player) =>
+            TryDispatchTarget(false, provider, player, player, false,
+                new LingFengTxtHookTarget(
+                    "SystemScripts/QFunction-0", "[@NPCREVIVAL]"));
+
         private static bool TryDispatchTarget(
             bool cSharpInvoked,
             ITextFileProvider provider,
@@ -302,11 +317,14 @@ namespace Server.Scripting
         {
             if (request == null) return default;
             int applied = request.ComputeFinalDamage();
+            MapObject currentTarget = request.Perspective == PlayerDamagePerspective.Outgoing
+                ? request.Target
+                : request.Attacker;
             return new LingFengDamageEvent(
                 request.Perspective,
                 request.Attacker?.Name ?? string.Empty,
                 request.Target?.Name ?? string.Empty,
-                request.Target?.Name ?? string.Empty,
+                currentTarget?.Name ?? string.Empty,
                 applied,
                 applied,
                 false,
@@ -316,17 +334,24 @@ namespace Server.Scripting
                 (request.Target as MonsterObject)?.HP ?? 0,
                 request.Target?.Stats?[Stat.HP] ?? 0,
                 LingFengTxtTriggerContext.Current?.MagicId ?? "0",
-                ClassifyDamageSubject(request.Perspective, request.Actor, request.Target));
+                ClassifyDamageSubject(request.Perspective, request.Actor, request.Target))
+            {
+                CurrentTargetObjectId = currentTarget?.ObjectID ?? 0,
+                ActorObjectId = (request.Actor ?? request.Attacker)?.ObjectID ?? 0
+            };
         }
 
         private static LingFengDamageEvent Snapshot(PlayerDamageResult result)
         {
             if (result == null) return default;
+            MapObject currentTarget = result.Perspective == PlayerDamagePerspective.Outgoing
+                ? result.Target
+                : result.Attacker;
             return new LingFengDamageEvent(
                 result.Perspective,
                 result.Attacker?.Name ?? string.Empty,
                 result.Target?.Name ?? string.Empty,
-                result.Target?.Name ?? string.Empty,
+                currentTarget?.Name ?? string.Empty,
                 Math.Max(0, result.Damage - result.Armour),
                 result.AppliedDamage,
                 true,
@@ -336,7 +361,11 @@ namespace Server.Scripting
                 (result.Target as MonsterObject)?.HP ?? 0,
                 result.Target?.Stats?[Stat.HP] ?? 0,
                 LingFengTxtTriggerContext.Current?.MagicId ?? "0",
-                ClassifyDamageSubject(result.Perspective, result.Actor, result.Target));
+                ClassifyDamageSubject(result.Perspective, result.Actor, result.Target))
+            {
+                CurrentTargetObjectId = currentTarget?.ObjectID ?? 0,
+                ActorObjectId = (result.Actor ?? result.Attacker)?.ObjectID ?? 0
+            };
         }
 
         private static LingFengCombatActorKind ClassifyDamageSubject(

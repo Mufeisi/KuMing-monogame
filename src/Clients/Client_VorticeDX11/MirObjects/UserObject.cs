@@ -212,6 +212,7 @@ namespace Client.MirObjects
 
             ItemSets.Clear();
             MirSet.Clear();
+            var lingFengWholeBodyPercentages = new Stats();
 
             for (int i = 0; i < Equipment.Length; i++)
             {
@@ -230,12 +231,16 @@ namespace Client.MirObjects
                 if (realItem.Type == ItemType.盔甲)
                 {
                     Armour = realItem.Shape;
-                    WingEffect = realItem.Effect;
+                    WingEffect = temp.GetLingFengItemEffect(1) is ushort armourEffect and > 0 and <= byte.MaxValue
+                        ? (byte)armourEffect
+                        : realItem.Effect;
                 }
                 if (realItem.Type == ItemType.武器)
                 {
                     Weapon = realItem.Shape;
-                    WeaponEffect = realItem.Effect;
+                    WeaponEffect = temp.GetLingFengItemEffect(1) is ushort weaponEffect and > 0
+                        ? weaponEffect
+                        : realItem.Effect;
                 }
 
                 if (realItem.Type == ItemType.坐骑)
@@ -247,6 +252,10 @@ namespace Client.MirObjects
 
                 Stats.Add(realItem.Stats);
                 Stats.Add(temp.AddedStats);
+                var lingFengItemStats = new Stats(realItem.Stats);
+                lingFengItemStats.Add(temp.AddedStats);
+                temp.ApplyLingFengCustomStats(Stats, lingFengItemStats);
+                temp.AccumulateLingFengWholeBodyPercentages(lingFengWholeBodyPercentages);
 
                 Stats[Stat.MinAC] += temp.Awake.GetAC();
                 Stats[Stat.MaxAC] += temp.Awake.GetAC();
@@ -274,7 +283,7 @@ namespace Client.MirObjects
                     FastRun = true;
                 }
 
-                RefreshSocketStats(temp);
+                RefreshSocketStats(temp, lingFengWholeBodyPercentages);
 
                 if (realItem.Set == ItemSet.非套装) continue;
 
@@ -298,6 +307,8 @@ namespace Client.MirObjects
                 }
             }
 
+            UserItem.ApplyLingFengWholeBodyPercentages(Stats, lingFengWholeBodyPercentages);
+
             if (ItemMode.HasFlag(SpecialItemMode.Muscle))
             {
                 Stats[Stat.背包负重] = Stats[Stat.背包负重] * 2;
@@ -307,7 +318,7 @@ namespace Client.MirObjects
         }
 
 
-        private void RefreshSocketStats(UserItem equipItem)
+        private void RefreshSocketStats(UserItem equipItem, Stats lingFengWholeBodyPercentages)
         {
             if (equipItem == null) return;
 
@@ -337,6 +348,10 @@ namespace Client.MirObjects
 
                 Stats.Add(realItem.Stats);
                 Stats.Add(temp.AddedStats);
+                var lingFengItemStats = new Stats(realItem.Stats);
+                lingFengItemStats.Add(temp.AddedStats);
+                temp.ApplyLingFengCustomStats(Stats, lingFengItemStats);
+                temp.AccumulateLingFengWholeBodyPercentages(lingFengWholeBodyPercentages);
         
                 if (realItem.Light > Light) Light = realItem.Light;
                 if (realItem.Unique != SpecialItemMode.None)

@@ -22,6 +22,9 @@ namespace Server.MirObjects
 
         // Sanjian
         SpellEffect,
+        LingFengResource,
+        LingFengDelayedMessage,
+        LingFengTargetPage,
     }
 
     public class DelayedAction

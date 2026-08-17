@@ -298,15 +298,17 @@ public sealed class ServerLifecycleSmokeTests : IDisposable
 
             var owner = new object();
             var context = ScriptVariableContext.ForConversation(owner, 100);
-            Assert.True(envir.CSharpScripts.VariableCommands
-                .Mutate(context, "P.Rate", "MOV", "2.5").Success);
+            Assert.True(envir.InvokeOnMainThread(() => envir.CSharpScripts.VariableCommands
+                .Mutate(context, "P.Rate", "MOV", "2.5").Success));
 
             long compatibleBaseVersion = envir.CSharpScripts.Version;
             WriteVariableScript(scriptPath, "Decimal", "3.0", includeBonus: true);
             envir.CSharpScripts.Reload();
             Assert.True(envir.CSharpScripts.Version > compatibleBaseVersion);
-            Assert.Equal("2.5", envir.CSharpScripts.VariableCommands.Format(context, "P.Rate").Text);
-            Assert.Equal("0.5", envir.CSharpScripts.VariableCommands.Format(context, "P.Bonus").Text);
+            Assert.Equal("2.5", envir.InvokeOnMainThread(() =>
+                envir.CSharpScripts.VariableCommands.Format(context, "P.Rate").Text));
+            Assert.Equal("0.5", envir.InvokeOnMainThread(() =>
+                envir.CSharpScripts.VariableCommands.Format(context, "P.Bonus").Text));
 
             long incompatibleBaseVersion = envir.CSharpScripts.Version;
             WriteVariableScript(scriptPath, "Integer", "1", includeBonus: false);

@@ -94,6 +94,16 @@ public sealed class SqlPersistenceRoundTripTests
     }
 
     [Fact]
+    public void LingFengCustomItemAttributeSchemaIsAppendOnly()
+    {
+        SchemaMigration migration = Assert.Single(
+            SchemaMigrator.CreateDefaultMigrations(), item => item.Version == 21);
+        Assert.Equal(
+            "ALTER TABLE item_instances ADD COLUMN lingfeng_custom_attributes TEXT NOT NULL DEFAULT ''",
+            Assert.Single(migration.Statements));
+    }
+
+    [Fact]
     public void Sqlite_round_trips_server_persistent_variables()
     {
         var databasePath = Path.Combine(Path.GetTempPath(), $"base05-global-vars-{Guid.NewGuid():N}.db");
@@ -185,6 +195,19 @@ public sealed class SqlPersistenceRoundTripTests
             var itemInfo = new ItemInfo { Index = 303, Name = "base05-item", StackSize = 99 };
             source.ItemInfoList.Add(itemInfo);
             var inventoryItem = new UserItem(itemInfo) { UniqueID = 404, Count = 3, CurrentDura = 7, MaxDura = 9 };
+            Assert.True(inventoryItem.TrySetLingFengCustomAbility(5, 0, 249));
+            Assert.True(inventoryItem.TrySetLingFengCustomAbility(5, 1, 3));
+            Assert.True(inventoryItem.TryChangeLingFengCustomValues(5, "=", 12, 34, 56));
+            Assert.True(inventoryItem.TrySetLingFengByteMark(2, 255));
+            Assert.True(inventoryItem.TrySetLingFengIntMark(3, 123456));
+            Assert.True(inventoryItem.TrySetLingFengTextMark(1, "命格标记"));
+            Assert.True(inventoryItem.TrySetLingFengCustomText("命格持久化"));
+            Assert.True(inventoryItem.TrySetLingFengCustomProgressBar(0, 0, "1"));
+            Assert.True(inventoryItem.TrySetLingFengCustomProgressBar(0, 1, "命格%r%："));
+            Assert.True(inventoryItem.TryChangeLingFengCustomProgressBarValue(0, 0, "=", 1000));
+            Assert.True(inventoryItem.TryChangeLingFengCustomProgressBarValue(0, 1, "=", 600));
+            Assert.True(inventoryItem.TrySetLingFengItemEffect(1, 218));
+            Assert.True(inventoryItem.TryChangeLingFengNewItemValue(25, "=", 777));
             var storageItem = new UserItem(itemInfo) { UniqueID = 405, Count = 2, CurrentDura = 5, MaxDura = 9 };
             character.Inventory[0] = inventoryItem;
             account.Storage[0] = storageItem;
@@ -252,6 +275,31 @@ public sealed class SqlPersistenceRoundTripTests
             Assert.Equal(303, restoredInventoryItem.ItemIndex);
             Assert.Equal(303, restoredInventoryItem.Info.Index);
             Assert.Equal(3, restoredInventoryItem.Count);
+            LingFengCustomItemAttribute restoredCustom =
+                restoredInventoryItem.GetLingFengCustomAttribute(5);
+            Assert.Equal(249, restoredCustom.Colour);
+            Assert.Equal(3, restoredCustom.Binding);
+            Assert.Equal(12, restoredCustom.Value1);
+            Assert.Equal(34, restoredCustom.Value2);
+            Assert.Equal(56, restoredCustom.Value3);
+            Assert.True(restoredInventoryItem.TryGetLingFengByteMark(2, out byte restoredByteMark));
+            Assert.Equal((byte)255, restoredByteMark);
+            Assert.True(restoredInventoryItem.TryGetLingFengIntMark(3, out int restoredIntMark));
+            Assert.Equal(123456, restoredIntMark);
+            Assert.True(restoredInventoryItem.TryGetLingFengTextMark(1, out string restoredTextMark));
+            Assert.Equal("命格标记", restoredTextMark);
+            Assert.True(restoredInventoryItem.TryGetLingFengCustomProgressBarValue(
+                0, 0, out int restoredMaximum));
+            Assert.Equal(1000, restoredMaximum);
+            Assert.True(restoredInventoryItem.TryGetLingFengCustomProgressBarValue(
+                0, 1, out int restoredCurrent));
+            Assert.Equal(600, restoredCurrent);
+            Assert.Equal((ushort)218, restoredInventoryItem.GetLingFengItemEffect(1));
+            Assert.True(restoredInventoryItem.TryGetLingFengNewItemValue(
+                25, out int restoredNewItemValue));
+            Assert.Equal(777, restoredNewItemValue);
+            Assert.Contains("命格持久化",
+                restoredInventoryItem.GetLingFengCustomAttributeDisplayLines());
             Assert.Null(restoredCharacter.Inventory[1]);
 
             var restoredStorageItem = Assert.IsType<UserItem>(restoredAccount.Storage[0]);

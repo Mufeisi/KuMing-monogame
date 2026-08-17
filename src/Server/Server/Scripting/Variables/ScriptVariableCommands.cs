@@ -276,7 +276,8 @@ namespace Server.Scripting.Variables
             in ScriptVariableContext context,
             string expression,
             string destinationText,
-            Func<int, int, int> random = null)
+            Func<int, int, int> random = null,
+            bool truncateIntegerResult = false)
         {
             if (!ScriptVariableReferenceParser.TryParse(destinationText, out var destination))
                 return MutationFailure(ScriptVariableErrorCode.UnknownReference, "公式目标变量引用无效。", default);
@@ -305,11 +306,14 @@ namespace Server.Scripting.Variables
             ScriptVariableValue result = evaluated.Value;
             if (target.Value.Kind == ScriptVariableKind.Integer)
             {
-                if (result.Decimal != decimal.Truncate(result.Decimal) ||
-                    result.Decimal < long.MinValue || result.Decimal > long.MaxValue)
+                decimal integerResult = truncateIntegerResult
+                    ? decimal.Truncate(result.Decimal)
+                    : result.Decimal;
+                if (integerResult != decimal.Truncate(integerResult) ||
+                    integerResult < long.MinValue || integerResult > long.MaxValue)
                     return MutationFailure(ScriptVariableErrorCode.TypeMismatch,
                         "公式结果含小数；请使用 Decimal 目标或先显式取整。", target.Value);
-                result = ScriptVariableValue.FromInteger(decimal.ToInt64(result.Decimal));
+                result = ScriptVariableValue.FromInteger(decimal.ToInt64(integerResult));
             }
             return _module.Mutate(context, ScriptVariableMutation.Set(destination, result));
         }

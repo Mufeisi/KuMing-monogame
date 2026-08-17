@@ -126,14 +126,24 @@ namespace Server.Scripting.ServerSymbols
             }
             AddInteger(bindings, "GROUPMEMBERCOUNT", player.GroupMembers?.Count ?? 0);
             AddInteger(bindings, "RECALLREMAININGTIME", RecallRemainingSeconds(player));
+            AddInteger(bindings, "NPCREBORNCOUNT", player.GetLingFengNpcRebornRemaining());
+            AddInteger(bindings, "TRIGGERNPCREBORNCOUNT", player.GetLingFengNpcRebornTriggered());
             AddInteger(bindings, "KILLMONEXPRATE", EffectiveWholeMultiplier(player, Stat.经验增长数率));
-            AddInteger(bindings, "KILLMONBURSTRATE", EffectiveWholeMultiplier(player, Stat.物品掉落数率));
-            AddInteger(bindings, "KILLMONEXPRATETIME", BuffRemainingSeconds(player, BuffType.获取经验提升));
-            AddInteger(bindings, "KILLMONBURSTRATETIME", BuffRemainingSeconds(player, BuffType.物品掉落提升));
-            AddCompatibilityInteger(bindings, "POWERRATE", 1);
-            AddCompatibilityInteger(bindings, "POWERRATETIME", 0);
-            AddCompatibilityInteger(bindings, "ATTACKMONPOWERRATE", 1);
-            AddCompatibilityInteger(bindings, "ATTACKMONPOWERRATETIME", 0);
+            AddInteger(bindings, "KILLMONBURSTRATE",
+                Math.Max(0, player.GetLingFengDropRatePercent()) / 100);
+            AddInteger(bindings, "KILLMONEXPRATETIME", Math.Max(
+                BuffRemainingSeconds(player, BuffType.获取经验提升),
+                player.GetLingFengExperienceRateRemainingSeconds()));
+            AddInteger(bindings, "KILLMONBURSTRATETIME",
+                player.GetLingFengDropRateRemainingSeconds());
+            AddInteger(bindings, "POWERRATE",
+                Math.Max(0, player.GetLingFengPowerRatePercent(targetIsHuman: true)) / 100);
+            AddInteger(bindings, "POWERRATETIME",
+                player.GetLingFengPowerRateRemainingSeconds(targetIsHuman: true));
+            AddInteger(bindings, "ATTACKMONPOWERRATE",
+                Math.Max(0, player.GetLingFengPowerRatePercent(targetIsHuman: false)) / 100);
+            AddInteger(bindings, "ATTACKMONPOWERRATETIME",
+                player.GetLingFengPowerRateRemainingSeconds(targetIsHuman: false));
             IReadOnlyList<string> scriptParameters = LingFengTxtTriggerContext.Current?.ScriptParameters;
             if (scriptParameters != null)
             {
@@ -148,9 +158,9 @@ namespace Server.Scripting.ServerSymbols
             long credit = account?.Credit ?? 0;
             AddInteger(bindings, "GOLDCOUNT", gold);
             AddInteger(bindings, "GAMEGOLD", gold);
-            AddCompatibilityInteger(bindings, "GAMEPOINT", 0);
-            AddCompatibilityInteger(bindings, "GAMEDIAMOND", 0);
-            AddCompatibilityInteger(bindings, "GAMEGIRD", 0);
+            AddInteger(bindings, "GAMEPOINT", info?.LingFengProgress.GamePoint ?? 0);
+            AddInteger(bindings, "GAMEDIAMOND", info?.LingFengProgress.GameDiamond ?? 0);
+            AddInteger(bindings, "GAMEGIRD", info?.LingFengProgress.GameGird ?? 0);
             AddCompatibilityInteger(bindings, "JADE", 0);
             AddCompatibilityInteger(bindings, "GAMEGLORY", 0);
             AddInteger(bindings, "CREDITPOINT", credit);
@@ -277,7 +287,8 @@ namespace Server.Scripting.ServerSymbols
             AddDefinitions(definitions, ServerSymbolValueType.Integer, ServerSymbolContextKind.Player,
                 new[] { "GROUPMEMBERCOUNT", "RECALLREMAININGTIME", "KILLMONEXPRATE", "KILLMONBURSTRATE",
                     "KILLMONEXPRATETIME", "KILLMONBURSTRATETIME", "POWERRATE", "POWERRATETIME",
-                    "ATTACKMONPOWERRATE", "ATTACKMONPOWERRATETIME" }, "LFENV06-P1");
+                    "ATTACKMONPOWERRATE", "ATTACKMONPOWERRATETIME", "NPCREBORNCOUNT",
+                    "TRIGGERNPCREBORNCOUNT" }, "LFENV06-P1");
             AddDefinitions(definitions, ServerSymbolValueType.String,
                 ServerSymbolContextKind.Player | ServerSymbolContextKind.TriggerResult,
                 ScriptParameterNames, "LFENV06-P1");

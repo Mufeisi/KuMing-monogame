@@ -55,9 +55,8 @@ public sealed class LingFengMonsterDropProviderTests
     }
 
     [Theory]
-    [InlineData("#CHILD 1/1 RANDOM [N1<99999,7,@掉落前检测]\n(\n1/1 木剑\n)", "LFENV11-DROP-004")]
-    [InlineData("#CALL [\\QuestDiary\\不存在.txt] @缺页", "LFENV11-DROP-013")]
-    [InlineData("#CHILD 1/1 RANDOM\n(\n1/1 木剑", "LFENV11-DROP-006")]
+    [InlineData("#CHILD 1/1 RANDOM [N1]\n(\n1/1 木剑\n)", "LFENV11-DROP-004")]
+    [InlineData("#CHILD 0 RANDOM\n(\n1/1 木剑\n)", "LFENV11-DROP-003")]
     public void Provider_FailsClosedForUnsupportedOrInvalidCandidate(string text, string expectedCode)
     {
         TextFileDefinition source = new TextFileDefinition("Drops/失败", "MonItems/失败.txt", "CP936", "CRLF")
@@ -72,6 +71,73 @@ public sealed class LingFengMonsterDropProviderTests
 
         Assert.Null(provider);
         Assert.Contains(errors, error => error.Contains(expectedCode, StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Provider_兼容裸物品纯比较空组与分隔行并登记缺失外部页()
+    {
+        ItemInfo item = new() { Name = "裸物品" };
+        TextFileDefinition source = new TextFileDefinition("Drops/长尾")
+            .AddLines([
+                "----------------分隔说明----------------",
+                "#CHILD 1/1 RANDOM [U171>=0]", "(", "裸物品", ")",
+                "#CHILD 1/1 RANDOM", "(", ")",
+                "#CHILD 1/1 RANDOM [N1<99999,7,@掉落前检测]", "(", "裸物品", ")",
+                "#CALL [\\QuestDiary\\外部爆率.txt] @外部页"
+            ]);
+
+        Assert.True(LingFengMonsterDropProvider.TryCreate(
+            [source],
+            new Dictionary<string, TextFileDefinition>(StringComparer.Ordinal),
+            name => name == item.Name ? item : null,
+            (_, reference, comparison, operand) =>
+                reference is "U171" or "N1" && comparison is ">=" or "<" &&
+                operand is "0" or "99999",
+            (_, _) => false,
+            out LingFengMonsterDropProvider provider,
+            out IReadOnlyList<string> errors), string.Join(Environment.NewLine, errors));
+
+        Assert.Equal(2, provider.Get("Drops/长尾").Count);
+        Assert.Contains(provider.GetDependencyRequirements(), dependency =>
+            dependency.Level == LingFengDependencyLevel.E2 &&
+            dependency.Key == "LingFeng/DropConditionCallback/@掉落前检测");
+        Assert.Contains(provider.GetDependencyRequirements(), dependency =>
+            dependency.Level == LingFengDependencyLevel.E2 &&
+            dependency.Key.Contains("ExternalDropPage", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Provider_兼容分母简写生成器说明与页尾隐式结束组()
+    {
+        ItemInfo item = new() { Name = "旧式物品" };
+        TextFileDefinition source = new TextFileDefinition("Drops/旧式")
+            .AddLines(["本行文件由工具自动生成", "140 旧式物品", "#CHILD 1/1", "(", "1/1 旧式物品"]);
+
+        Assert.True(LingFengMonsterDropProvider.TryCreate(
+            [source], new Dictionary<string, TextFileDefinition>(StringComparer.Ordinal),
+            _ => item, out LingFengMonsterDropProvider provider,
+            out IReadOnlyList<string> errors), string.Join(Environment.NewLine, errors));
+
+        IReadOnlyList<DropInfo> drops = provider.Get(source.Key);
+        Assert.Equal(2, drops.Count);
+        Assert.Contains(drops, drop => drop.Item == item && drop.Chance == 140);
+        Assert.Contains(drops, drop => drop.GroupedDrop?.Single().Item == item);
+    }
+
+    [Fact]
+    public void Provider_兼容同一物理行粘连的两个概率项()
+    {
+        ItemInfo first = new() { Name = "MP强化药水" };
+        ItemInfo second = new() { Name = "宠物经验丹[初级]" };
+        TextFileDefinition source = new TextFileDefinition("Drops/粘连")
+            .AddLine("1/30 MP强化药水1/3000 宠物经验丹[初级]");
+
+        Assert.True(LingFengMonsterDropProvider.TryCreate(
+            [source], new Dictionary<string, TextFileDefinition>(),
+            name => name == first.Name ? first : name == second.Name ? second : null,
+            out LingFengMonsterDropProvider provider, out IReadOnlyList<string> errors),
+            string.Join(Environment.NewLine, errors));
+        Assert.Equal(2, provider.Get(source.Key).Count);
     }
 
     [Fact]
@@ -157,6 +223,39 @@ public sealed class LingFengMonsterDropProviderTests
     }
 
     [Fact]
+    public void ConditionalChild_支持无随机关键字继承位与OR条件()
+    {
+        ItemInfo item = new() { Name = "继承条件物品" };
+        TextFileDefinition source = new TextFileDefinition("Drops/继承条件")
+            .AddLines(["#CHILD 1/1 [N1=5;U2=9|OR,2]", "(", "1/1 继承条件物品", ")"]);
+
+        Assert.True(LingFengMonsterDropProvider.TryCreate(
+            [source],
+            new Dictionary<string, TextFileDefinition>(StringComparer.Ordinal),
+            _ => item,
+            (_, reference, _, _) => reference == "U2",
+            (_, _) => true,
+            out LingFengMonsterDropProvider provider,
+            out IReadOnlyList<string> errors), string.Join(Environment.NewLine, errors));
+
+        DropInfo drop = Assert.Single(provider.Get("Drops/继承条件"));
+        var player = new PlayerObject { Info = new CharacterInfo { Name = "主人" } };
+        var monster = new MonsterObject(new MonsterInfo { Name = "条件怪物" })
+        {
+            LingFengLastDamageActorKind = LingFengCombatActorKind.Pet,
+            LingFengLastDamageVariableInheritanceBit = 2
+        };
+
+        DropRewardInfo reward = drop.AttemptDropWithRandom(_ => 0, (minimum, _) => minimum,
+            dropRate: 1, context: new DropAttemptContext("monster", player, monster, source.Key));
+        Assert.Same(item, Assert.Single(reward.Items));
+
+        monster.LingFengLastDamageVariableInheritanceBit = 4;
+        Assert.Null(drop.AttemptDropWithRandom(_ => 0, (minimum, _) => minimum,
+            dropRate: 1, context: new DropAttemptContext("monster", player, monster, source.Key)));
+    }
+
+    [Fact]
     public void PhysicalEnvir_PublishesMonItemsIntoRealMonsterDropListAndRollsBackInvalidCandidate()
     {
         bool oldTxtEnabled = Settings.TxtScriptsEnabled;
@@ -193,7 +292,7 @@ public sealed class LingFengMonsterDropProviderTests
             IDropTableProvider published = envir.DropTableProvider;
 
             File.WriteAllText(Path.Combine(root, "MonItems", "翎风测试鸡.txt"),
-                "#CHILD 1/1 RANDOM [N1<1]\r\n(\r\n1/1 翎风木剑\r\n)\r\n", System.Text.Encoding.UTF8);
+                "#CHILD 1/1 RANDOM [N1]\r\n(\r\n1/1 翎风木剑\r\n)\r\n", System.Text.Encoding.UTF8);
             InvalidDataException failure = Assert.Throws<InvalidDataException>(
                 envir.ApplyPhysicalTextFileDefinitions);
 
@@ -265,6 +364,21 @@ public sealed class LingFengMonsterDropProviderTests
             useItems ? [] : [first, second],
             out _, out IReadOnlyList<string> errors));
         Assert.Contains(errors, error => error.Contains(expectedCode, StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void MonsterContent_DeduplicatesByteEquivalentSmartMonsterCopies()
+    {
+        TextFileDefinition first = new TextFileDefinition(
+                "Domain/A", "A/同名怪.ini", "CP936", "CRLF")
+            .AddLines(["[ActWalk]", "PlayTime=100"]);
+        TextFileDefinition second = new TextFileDefinition(
+                "Domain/B", "B/同名怪.ini", "CP936", "CRLF")
+            .AddLines(["[ActWalk]", "PlayTime=100"]);
+
+        Assert.True(LingFengMonsterContentProvider.TryCreate(
+            [], [first, second], out _, out IReadOnlyList<string> errors),
+            string.Join(Environment.NewLine, errors));
     }
 
     [Fact]

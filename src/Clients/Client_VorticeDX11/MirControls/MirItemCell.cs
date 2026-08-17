@@ -1485,7 +1485,7 @@ namespace Client.MirControls
                     #region To Trade
 
                     case MirGridType.Trade:
-                        if (Item != null && Item.Info.Bind.HasFlag(BindMode.DontTrade)) return;
+                        if (Item != null && Item.HasBindingFlag(BindMode.DontTrade)) return;
 
                         switch (GameScene.SelectedCell.GridType)
                         {
@@ -1770,7 +1770,7 @@ namespace Client.MirControls
                                 return;
                             }
 
-                            if (GameScene.SelectedCell.Item.Info.Bind.HasFlag(BindMode.DontTrade))
+                            if (GameScene.SelectedCell.Item.HasBindingFlag(BindMode.DontTrade))
                             {
                                 GameScene.Scene.ChatDialog.ReceiveChat("不能邮寄此物品", ChatType.System);
                                 return;

@@ -959,6 +959,14 @@ public abstract class Packet
                 return new S.CustomGuiActionResult();
             case (short)ServerPacketIds.CustomGuiClose:
                 return new S.CustomGuiClose();
+            case (short)ServerPacketIds.LingFengScreenEffect:
+                return new S.LingFengScreenEffect();
+            case (short)ServerPacketIds.LingFengDialog:
+                return new S.LingFengDialog();
+            case (short)ServerPacketIds.MagicCooldownCleared:
+                return new S.MagicCooldownCleared();
+            case (short)ServerPacketIds.LingFengMapEffect:
+                return new S.LingFengMapEffect();
             default:
                 return null;
         }

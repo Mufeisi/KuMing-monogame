@@ -6,6 +6,7 @@ namespace Server.Scripting
     {
         Credit = 0,
         Gold = 1,
+        UnsupportedCurrency3 = 3,
         UnsupportedCurrency4 = 4
     }
 
@@ -61,14 +62,19 @@ namespace Server.Scripting
             _hasRecipeSource = hasRecipeSource;
             var compatibilityDiagnostics = new List<string>();
             int virtualProductCount = _shopProducts.Count(value => value.ItemIndex == 0);
-            int unsupportedCurrencyCount = _shopProducts.Count(value =>
+            int unsupportedCurrency3Count = _shopProducts.Count(value =>
+                value.Currency == LingFengShopCurrency.UnsupportedCurrency3);
+            int unsupportedCurrency4Count = _shopProducts.Count(value =>
                 value.Currency == LingFengShopCurrency.UnsupportedCurrency4);
             if (virtualProductCount > 0)
                 compatibilityDiagnostics.Add(
                     $"LFENV13-SHOP-VIRTUAL：保留 {virtualProductCount} 个 ItemIndex=0 服务型商品事实，当前物品商城不激活购买。");
-            if (unsupportedCurrencyCount > 0)
+            if (unsupportedCurrency3Count > 0)
                 compatibilityDiagnostics.Add(
-                    $"LFENV13-SHOP-CURRENCY4：保留 {unsupportedCurrencyCount} 个货币类型 4 商品事实，当前缺少等价货币模型，不激活购买。");
+                    $"LFENV13-SHOP-CURRENCY3：保留 {unsupportedCurrency3Count} 个货币类型 3 商品事实，当前缺少等价货币模型，不激活购买。");
+            if (unsupportedCurrency4Count > 0)
+                compatibilityDiagnostics.Add(
+                    $"LFENV13-SHOP-CURRENCY4：保留 {unsupportedCurrency4Count} 个货币类型 4 商品事实，当前缺少等价货币模型，不激活购买。");
             _compatibilityDiagnostics = compatibilityDiagnostics.AsReadOnly();
         }
 
@@ -91,10 +97,18 @@ namespace Server.Scripting
                         "Commerce/MakeItem");
             }
             foreach (LingFengShopProductDefinition product in _shopProducts)
+            {
                 if (product.ItemIndex > 0)
                     yield return new LingFengDependencyRequirement(
                         LingFengDependencyKind.ItemIndex, product.ItemIndex.ToString(), LingFengDependencyLevel.E1,
                         "Commerce/ShopItemList");
+                if (product.Currency is LingFengShopCurrency.UnsupportedCurrency3 or
+                    LingFengShopCurrency.UnsupportedCurrency4)
+                    yield return new LingFengDependencyRequirement(
+                        LingFengDependencyKind.DomainAdapter,
+                        $"LingFeng/ShopCurrency/{(int)product.Currency}", LingFengDependencyLevel.E2,
+                        "Commerce/ShopItemList");
+            }
         }
 
         internal static bool TryCreate(
@@ -156,6 +170,7 @@ namespace Server.Scripting
             foreach (LingFengShopProductDefinition source in _shopProducts)
             {
                 if (!source.Enabled || source.ItemIndex == 0 ||
+                    source.Currency == LingFengShopCurrency.UnsupportedCurrency3 ||
                     source.Currency == LingFengShopCurrency.UnsupportedCurrency4) continue;
                 ItemInfo item = itemByIndex?.Invoke(source.ItemIndex);
                 if (item == null)

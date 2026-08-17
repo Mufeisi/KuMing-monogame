@@ -6690,4 +6690,192 @@ namespace ServerPackets
             writer.Write(Location.Y);
         }
     }
+    public sealed class LingFengScreenEffect : Packet
+    {
+        public override short Index => (short)ServerPacketIds.LingFengScreenEffect;
+
+        public bool Stop;
+        public int X;
+        public int Y;
+        public int IconPackage;
+        public int StartIndex;
+        public int FrameCount;
+        public int LoopCount;
+        public int FrameDelay;
+        public int BlendMode;
+        public int Reserved;
+        public int Layer;
+
+        protected override void ReadPacket(BinaryReader reader)
+        {
+            Stop = reader.ReadBoolean();
+            X = reader.ReadInt32();
+            Y = reader.ReadInt32();
+            IconPackage = reader.ReadInt32();
+            StartIndex = reader.ReadInt32();
+            FrameCount = reader.ReadInt32();
+            LoopCount = reader.ReadInt32();
+            FrameDelay = reader.ReadInt32();
+            BlendMode = reader.ReadInt32();
+            Reserved = reader.ReadInt32();
+            Layer = reader.ReadInt32();
+        }
+
+        protected override void WritePacket(BinaryWriter writer)
+        {
+            writer.Write(Stop);
+            writer.Write(X);
+            writer.Write(Y);
+            writer.Write(IconPackage);
+            writer.Write(StartIndex);
+            writer.Write(FrameCount);
+            writer.Write(LoopCount);
+            writer.Write(FrameDelay);
+            writer.Write(BlendMode);
+            writer.Write(Reserved);
+            writer.Write(Layer);
+        }
+    }
+
+    public sealed class LingFengMapEffect : Packet
+    {
+        public override short Index => (short)ServerPacketIds.LingFengMapEffect;
+
+        public Point Location;
+        public string LibraryName = string.Empty;
+        public int StartIndex;
+        public int FrameCount;
+        public int RepeatCount;
+        public int FrameDelay;
+        public bool Blend;
+        public byte Light;
+        public int EffectId;
+        public byte Layer;
+        public uint AnchorObjectId;
+        public Point PixelOffset;
+
+        protected override void ReadPacket(BinaryReader reader)
+        {
+            Location = new Point(reader.ReadInt32(), reader.ReadInt32());
+            LibraryName = reader.ReadString();
+            StartIndex = reader.ReadInt32();
+            FrameCount = reader.ReadInt32();
+            RepeatCount = reader.ReadInt32();
+            FrameDelay = reader.ReadInt32();
+            Blend = reader.ReadBoolean();
+            Light = reader.ReadByte();
+            EffectId = reader.ReadInt32();
+            Layer = reader.ReadByte();
+            AnchorObjectId = reader.ReadUInt32();
+            PixelOffset = new Point(reader.ReadInt32(), reader.ReadInt32());
+        }
+
+        protected override void WritePacket(BinaryWriter writer)
+        {
+            writer.Write(Location.X);
+            writer.Write(Location.Y);
+            writer.Write(LibraryName ?? string.Empty);
+            writer.Write(StartIndex);
+            writer.Write(FrameCount);
+            writer.Write(RepeatCount);
+            writer.Write(FrameDelay);
+            writer.Write(Blend);
+            writer.Write(Light);
+            writer.Write(EffectId);
+            writer.Write(Layer);
+            writer.Write(AnchorObjectId);
+            writer.Write(PixelOffset.X);
+            writer.Write(PixelOffset.Y);
+        }
+    }
+
+    public sealed class LingFengDialog : Packet
+    {
+        public override short Index => (short)ServerPacketIds.LingFengDialog;
+
+        public bool Remove;
+        public int DialogId;
+        public int IconPackage;
+        public int ImageIndex;
+        public bool Movable;
+        public int X;
+        public int Y;
+        public int OffsetX;
+        public int OffsetY;
+        public int Position;
+        public string ExternalTextFile = string.Empty;
+        public bool AbsolutePath;
+        public bool NpcStyle;
+        public string LibraryName = string.Empty;
+        public bool ShowCloseButton;
+        public int CloseButtonX;
+        public int CloseButtonY;
+        public bool ContinueNpcStyle;
+
+        protected override void ReadPacket(BinaryReader reader)
+        {
+            Remove = reader.ReadBoolean();
+            DialogId = reader.ReadInt32();
+            if (Remove) return;
+            IconPackage = reader.ReadInt32();
+            ImageIndex = reader.ReadInt32();
+            Movable = reader.ReadBoolean();
+            X = reader.ReadInt32();
+            Y = reader.ReadInt32();
+            OffsetX = reader.ReadInt32();
+            OffsetY = reader.ReadInt32();
+            Position = reader.ReadInt32();
+            ExternalTextFile = reader.ReadString();
+            AbsolutePath = reader.ReadBoolean();
+            NpcStyle = reader.ReadBoolean();
+            LibraryName = reader.ReadString();
+            ShowCloseButton = reader.ReadBoolean();
+            CloseButtonX = reader.ReadInt32();
+            CloseButtonY = reader.ReadInt32();
+            ContinueNpcStyle = reader.ReadBoolean();
+        }
+
+        protected override void WritePacket(BinaryWriter writer)
+        {
+            writer.Write(Remove);
+            writer.Write(DialogId);
+            if (Remove) return;
+            writer.Write(IconPackage);
+            writer.Write(ImageIndex);
+            writer.Write(Movable);
+            writer.Write(X);
+            writer.Write(Y);
+            writer.Write(OffsetX);
+            writer.Write(OffsetY);
+            writer.Write(Position);
+            writer.Write(ExternalTextFile ?? string.Empty);
+            writer.Write(AbsolutePath);
+            writer.Write(NpcStyle);
+            writer.Write(LibraryName ?? string.Empty);
+            writer.Write(ShowCloseButton);
+            writer.Write(CloseButtonX);
+            writer.Write(CloseButtonY);
+            writer.Write(ContinueNpcStyle);
+        }
+    }
+
+    public sealed class MagicCooldownCleared : Packet
+    {
+        public override short Index => (short)ServerPacketIds.MagicCooldownCleared;
+
+        public uint ObjectID;
+        public Spell Spell;
+
+        protected override void ReadPacket(BinaryReader reader)
+        {
+            ObjectID = reader.ReadUInt32();
+            Spell = (Spell)reader.ReadUInt16();
+        }
+
+        protected override void WritePacket(BinaryWriter writer)
+        {
+            writer.Write(ObjectID);
+            writer.Write((ushort)Spell);
+        }
+    }
 }

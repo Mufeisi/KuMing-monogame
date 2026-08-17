@@ -91,17 +91,26 @@ namespace Server.Scripting
     public sealed class PlayerItemPickupResult
     {
         public PlayerItemPickupResult(PlayerItemPickupSource source, MapObject picker, UserItem item, uint gold)
+            : this(source, picker, item, gold, null)
+        {
+        }
+
+        public PlayerItemPickupResult(
+            PlayerItemPickupSource source, MapObject picker, UserItem item, uint gold,
+            int? inventoryPosition)
         {
             Source = source;
             Picker = picker ?? throw new ArgumentNullException(nameof(picker));
             Item = item;
             Gold = gold;
+            InventoryPosition = inventoryPosition;
         }
 
         public PlayerItemPickupSource Source { get; }
         public MapObject Picker { get; }
         public UserItem Item { get; }
         public uint Gold { get; }
+        public int? InventoryPosition { get; }
         public bool IsGold => Item == null;
     }
 }

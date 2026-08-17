@@ -108,5 +108,39 @@ namespace Server.Scripting
                 return false;
             }
         }
+
+        public static bool TryCalculatePercent(
+            string valueText,
+            string percentText,
+            out long result,
+            out string diagnostic)
+        {
+            result = 0;
+            diagnostic = string.Empty;
+            if (!decimal.TryParse(valueText, NumberStyles.Number, CultureInfo.InvariantCulture, out decimal value) ||
+                !decimal.TryParse(percentText, NumberStyles.Number, CultureInfo.InvariantCulture, out decimal percent))
+            {
+                diagnostic = $"百分比参数无效：{valueText}，{percentText}。";
+                return false;
+            }
+
+            try
+            {
+                decimal calculated = decimal.Truncate(checked(value * percent) / 100m);
+                if (calculated < long.MinValue || calculated > long.MaxValue)
+                {
+                    diagnostic = "百分比计算结果超出整数范围。";
+                    return false;
+                }
+
+                result = decimal.ToInt64(calculated);
+                return true;
+            }
+            catch (OverflowException)
+            {
+                diagnostic = "百分比计算结果超出数值范围。";
+                return false;
+            }
+        }
     }
 }

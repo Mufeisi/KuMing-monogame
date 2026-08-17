@@ -129,7 +129,7 @@ public sealed class LingFengP0ServerSymbolIntegrationTests : IDisposable
     }
 
     [Fact]
-    public void 当前模型缺失的货币时装盾牌和假人计数使用显式兼容值()
+    public void 当前模型缺失的荣耀时装盾牌和假人计数使用显式兼容值()
     {
         PlayerObject player = CreatePlayer();
 
@@ -139,7 +139,7 @@ public sealed class LingFengP0ServerSymbolIntegrationTests : IDisposable
 
         Assert.Equal("0/0/0/空/空/0", result.Text);
         Assert.Equal(ScriptTextRenderStatus.CompletedWithDiagnostics, result.Status);
-        Assert.Equal(6, result.Diagnostics.Count);
+        Assert.Equal(4, result.Diagnostics.Count);
         Assert.All(result.Diagnostics, diagnostic =>
             Assert.Equal(ServerSymbolStatus.CompatibilitySubstitute, diagnostic.SymbolStatus));
     }

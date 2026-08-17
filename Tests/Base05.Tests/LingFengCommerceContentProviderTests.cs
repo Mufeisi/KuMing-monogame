@@ -83,20 +83,29 @@ public sealed class LingFengCommerceContentProviderTests
     }
 
     [Fact]
-    public void NonItemAndCurrencyFourProductsRemainFactsWithStableCompatibilityDiagnostics()
+    public void NonItemAndUnsupportedCurrencyProductsRemainFactsWithStableCompatibilityDiagnostics()
     {
         Assert.True(LingFengCommerceContentProvider.TryCreate(
             Definition("Commerce/ShopItems", "Shopitemlist.txt",
                 "0\t服务商品\t0\t1|1\t380\t1\t说明\t1\t0\t1",
+                "0\t三号货币商品\t2\t10|3\t380\t1\t说明\t1\t0\t1",
                 "0\t特殊货币商品\t1\t10|4\t380\t1\t说明\t1\t0\t1"),
             null, out LingFengCommerceContentProvider provider,
             out IReadOnlyList<string> errors), string.Join(Environment.NewLine, errors));
 
-        Assert.Equal(2, provider.ShopProducts.Count);
+        Assert.Equal(3, provider.ShopProducts.Count);
         Assert.Contains(provider.CompatibilityDiagnostics,
             value => value.StartsWith("LFENV13-SHOP-VIRTUAL", StringComparison.Ordinal));
         Assert.Contains(provider.CompatibilityDiagnostics,
+            value => value.StartsWith("LFENV13-SHOP-CURRENCY3", StringComparison.Ordinal));
+        Assert.Contains(provider.CompatibilityDiagnostics,
             value => value.StartsWith("LFENV13-SHOP-CURRENCY4", StringComparison.Ordinal));
+        Assert.Contains(provider.GetDependencyRequirements(), requirement =>
+            requirement.Level == LingFengDependencyLevel.E2 &&
+            requirement.Key == "LingFeng/ShopCurrency/3");
+        Assert.Contains(provider.GetDependencyRequirements(), requirement =>
+            requirement.Level == LingFengDependencyLevel.E2 &&
+            requirement.Key == "LingFeng/ShopCurrency/4");
     }
 
     [Fact]

@@ -17,6 +17,12 @@ namespace Server.MirDatabase
 
         public int Index;
         public string FileName = string.Empty, Title = string.Empty;
+        public string LingFengRuntimeTitle = string.Empty;
+        public string GetDisplayTitle() => string.IsNullOrEmpty(LingFengRuntimeTitle)
+            ? Title
+            : LingFengRuntimeTitle;
+        public bool LingFengIsMirror;
+        public string LingFengPhysicalFileName = string.Empty;
         public string LingFengAlias = string.Empty;
         public IReadOnlyDictionary<string, string> LingFengOptions =
             new System.Collections.ObjectModel.ReadOnlyDictionary<string, string>(
@@ -181,6 +187,31 @@ namespace Server.MirDatabase
         }
 
         internal MapInfo GetPersistenceView() => _lingFengPersistenceBaseline ?? this;
+
+        public string GetClientFileName() =>
+            LingFengIsMirror && !string.IsNullOrWhiteSpace(LingFengPhysicalFileName)
+                ? LingFengPhysicalFileName
+                : FileName;
+
+        internal MapInfo CreateLingFengMirrorClone(
+            string runtimeName, string title, ushort miniMap)
+        {
+            var clone = (MapInfo)MemberwiseClone();
+            clone.FileName = runtimeName;
+            clone.Title = title;
+            clone.MiniMap = miniMap;
+            clone.LingFengAlias = string.Empty;
+            clone.LingFengIsMirror = true;
+            clone.LingFengPhysicalFileName = GetClientFileName();
+            clone._lingFengPersistenceBaseline = null;
+            clone.SafeZones = new List<SafeZoneInfo>(SafeZones);
+            clone.Movements = new List<MovementInfo>();
+            clone.Respawns = new List<RespawnInfo>();
+            clone.NPCs = new List<NPCInfo>();
+            clone.MineZones = new List<MineZone>(MineZones);
+            clone.ActiveCoords = new List<Point>(ActiveCoords);
+            return clone;
+        }
 
 
         public void CreateMap()

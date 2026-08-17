@@ -60,6 +60,9 @@ namespace Server.Scripting
         string MagicId = "0",
         LingFengCombatActorKind ActorKind = LingFengCombatActorKind.Unknown)
     {
+        public uint CurrentTargetObjectId { get; init; }
+        public uint ActorObjectId { get; init; }
+
         public LingFengDamageEvent(
             PlayerDamagePerspective perspective,
             string attackerName,
@@ -241,6 +244,32 @@ namespace Server.Scripting
                 if (ReferenceEquals(_current, _context))
                     _current = _context.Previous;
                 _context = null;
+            }
+        }
+    }
+
+    public static class LingFengScriptTriggerSuppression
+    {
+        [ThreadStatic]
+        private static int _depth;
+
+        public static bool IsActive => _depth > 0;
+
+        public static IDisposable Enter()
+        {
+            _depth++;
+            return new SuppressionScope();
+        }
+
+        private sealed class SuppressionScope : IDisposable
+        {
+            private bool _disposed;
+
+            public void Dispose()
+            {
+                if (_disposed) return;
+                _disposed = true;
+                if (_depth > 0) _depth--;
             }
         }
     }

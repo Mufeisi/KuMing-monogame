@@ -14,14 +14,20 @@ namespace Server.Scripting
         private readonly CSharpDropTableProvider _inner;
         private readonly IReadOnlyDictionary<string, DropTableDefinition> _definitions;
         private readonly Func<string, ItemInfo> _itemResolver;
+        private readonly IReadOnlyList<LingFengDependencyRequirement> _externalDependencies;
+        internal IReadOnlySet<string> ConsumedScriptKeys { get; }
 
         private LingFengMonsterDropProvider(
             IReadOnlyDictionary<string, DropTableDefinition> definitions,
-            Func<string, ItemInfo> itemResolver)
+            Func<string, ItemInfo> itemResolver,
+            IReadOnlySet<string> consumedScriptKeys,
+            IReadOnlyList<LingFengDependencyRequirement> externalDependencies)
         {
             _definitions = definitions;
             _itemResolver = itemResolver;
             _inner = new CSharpDropTableProvider(definitions, itemResolver, skipMissingItems: false);
+            ConsumedScriptKeys = consumedScriptKeys;
+            _externalDependencies = externalDependencies;
         }
 
         public IReadOnlyList<DropInfo> Get(string key) => _inner.Get(key);
@@ -37,6 +43,8 @@ namespace Server.Scripting
 
         internal IEnumerable<LingFengDependencyRequirement> GetDependencyRequirements()
         {
+            foreach (LingFengDependencyRequirement dependency in _externalDependencies)
+                yield return dependency;
             foreach ((string key, DropTableDefinition table) in _definitions)
                 foreach (string itemName in EnumerateItems(table.Drops))
                     yield return new LingFengDependencyRequirement(
@@ -77,16 +85,20 @@ namespace Server.Scripting
         {
             var failures = new List<string>();
             var parsed = new Dictionary<string, DropTableDefinition>(StringComparer.Ordinal);
+            var consumedScriptKeys = new HashSet<string>(StringComparer.Ordinal);
+            var externalDependencies = new List<LingFengDependencyRequirement>();
             var scripts = scriptFiles ?? new Dictionary<string, TextFileDefinition>(StringComparer.Ordinal);
             foreach (TextFileDefinition source in (dropFiles ?? Array.Empty<TextFileDefinition>())
                          .OrderBy(definition => definition.Key, StringComparer.Ordinal))
             {
                 if (source == null) continue;
+                if (source.Key.StartsWith("questdiary/", StringComparison.Ordinal))
+                    consumedScriptKeys.Add(source.Key);
                 var table = new DropTableDefinition(source.Key);
                 var activeReferences = new HashSet<string>(StringComparer.Ordinal);
                 ParseRange(source, 0, source.Lines.Count, table.Drops, scripts,
                     comparisonEvaluator, callbackExecutor,
-                    activeReferences, 0, failures);
+                    activeReferences, consumedScriptKeys, externalDependencies, false, 0, failures);
                 if (table.Drops.Count > MaximumEntriesPerTable)
                     failures.Add($"LFENV11-DROP-010：掉落表超过 {MaximumEntriesPerTable} 项上限（{source.Key}）。");
                 if (!parsed.TryAdd(table.Key, table))
@@ -95,7 +107,13 @@ namespace Server.Scripting
 
             errors = failures.AsReadOnly();
             provider = failures.Count == 0
-                ? new LingFengMonsterDropProvider(parsed, itemResolver ?? throw new ArgumentNullException(nameof(itemResolver)))
+                ? new LingFengMonsterDropProvider(
+                    parsed,
+                    itemResolver ?? throw new ArgumentNullException(nameof(itemResolver)),
+                    new HashSet<string>(consumedScriptKeys, StringComparer.Ordinal),
+                    externalDependencies
+                        .DistinctBy(value => (value.Kind, value.Key, value.Level, value.SourceKey))
+                        .ToArray())
                 : null;
             return failures.Count == 0;
         }
@@ -109,6 +127,9 @@ namespace Server.Scripting
             Func<PlayerObject, string, string, string, bool> comparisonEvaluator,
             Func<PlayerObject, string, bool> callbackExecutor,
             ISet<string> activeReferences,
+            ISet<string> consumedScriptKeys,
+            ICollection<LingFengDependencyRequirement> externalDependencies,
+            bool allowImplicitChance,
             int depth,
             ICollection<string> errors)
         {
@@ -121,6 +142,8 @@ namespace Server.Scripting
             for (int index = start; index < end; index++)
             {
                 string line = StripComment(source.Lines[index]);
+                if (line.StartsWith(")#CHILD", StringComparison.OrdinalIgnoreCase))
+                    line = line[1..].TrimStart();
                 if (line.Length == 0 || line.StartsWith("//", StringComparison.Ordinal)) continue;
                 if (line.StartsWith("[@", StringComparison.Ordinal) && line.EndsWith(']')) continue;
                 if (line.Equals("#ACT", StringComparison.OrdinalIgnoreCase)) continue;
@@ -129,63 +152,81 @@ namespace Server.Scripting
                 if (line.StartsWith("#CALL", StringComparison.OrdinalIgnoreCase))
                 {
                     ParseCall(source, index, line, destination, scripts, comparisonEvaluator, callbackExecutor,
-                        activeReferences, depth, errors);
+                        activeReferences, consumedScriptKeys, externalDependencies, allowImplicitChance, depth, errors);
                     continue;
                 }
 
                 if (line.StartsWith("#CHILD", StringComparison.OrdinalIgnoreCase))
                 {
-                    if (!TxtScriptTokenizer.TryTokenize(line, out string[] tokens, out string tokenError) || tokens.Length < 3)
+                    if (!TxtScriptTokenizer.TryTokenize(line, out string[] tokens, out string tokenError) || tokens.Length < 2)
                     {
                         errors.Add($"LFENV11-DROP-003：CHILD 格式无效：{tokenError}（{source.GetSourceLocation(index)}）。");
                         continue;
                     }
-                    if (!TryChance(tokens[1], out int chance) ||
-                        !(tokens[2].Equals("RANDOM", StringComparison.OrdinalIgnoreCase) ||
-                          tokens[2].Equals("FIRST", StringComparison.OrdinalIgnoreCase)))
+                    if (!TryChance(tokens[1], out int chance))
                     {
-                        errors.Add($"LFENV11-DROP-003：CHILD 必须为 #CHILD 1/N RANDOM|FIRST（{source.GetSourceLocation(index)}）。");
+                        errors.Add($"LFENV11-DROP-003：CHILD 必须以 #CHILD 1/N 开始（{source.GetSourceLocation(index)}）。");
                         continue;
                     }
+                    int argumentIndex = 2;
+                    bool random = argumentIndex < tokens.Length &&
+                                  tokens[argumentIndex].Equals("RANDOM", StringComparison.OrdinalIgnoreCase);
+                    bool first = argumentIndex < tokens.Length &&
+                                 tokens[argumentIndex].Equals("FIRST", StringComparison.OrdinalIgnoreCase);
+                    if (random || first) argumentIndex++;
                     Func<DropAttemptContext, bool> condition = null;
-                    string conditionError = tokens.Length > 4 ? "参数过多" : string.Empty;
-                    if (tokens.Length > 4 ||
-                        tokens.Length == 4 && !TryBuildCondition(tokens[3], scripts,
+                    LingFengDependencyRequirement conditionDependency = null;
+                    string conditionError = tokens.Length > argumentIndex + 1 ? "参数过多" : string.Empty;
+                    if (tokens.Length > argumentIndex + 1 ||
+                        tokens.Length == argumentIndex + 1 && !TryBuildCondition(tokens[argumentIndex], scripts,
                             comparisonEvaluator, callbackExecutor,
-                            out condition, out conditionError))
+                            out condition, out conditionError, out conditionDependency))
                     {
                         errors.Add($"LFENV11-DROP-004：CHILD 条件无效：{conditionError}（{source.GetSourceLocation(index)}）。");
                         continue;
                     }
+                    if (conditionDependency != null) externalDependencies.Add(conditionDependency);
                     int open = NextContentLine(source, index + 1, end);
-                    if (open >= end || StripComment(source.Lines[open]) != "(")
+                    string openLine = open < end ? StripComment(source.Lines[open]) : string.Empty;
+                    if (!openLine.StartsWith('('))
                     {
                         errors.Add($"LFENV11-DROP-005：CHILD 后必须紧跟括号组（{source.GetSourceLocation(index)}）。");
                         continue;
                     }
                     int close = FindClosingParenthesis(source, open, end);
-                    if (close < 0)
-                    {
-                        errors.Add($"LFENV11-DROP-006：CHILD 括号组未闭合（{source.GetSourceLocation(index)}）。");
-                        continue;
-                    }
+                    if (close < 0) close = end;
                     var group = new DropGroupDefinition
                     {
-                        Random = tokens[2].Equals("RANDOM", StringComparison.OrdinalIgnoreCase),
-                        First = tokens[2].Equals("FIRST", StringComparison.OrdinalIgnoreCase)
+                        Random = random,
+                        First = first
                     };
+                    string inline = openLine.Substring(1).Trim();
+                    if (inline.Length > 0)
+                    {
+                        if (inline.StartsWith("#CALL", StringComparison.OrdinalIgnoreCase))
+                            ParseCall(source, open, inline, group.Drops, scripts,
+                                comparisonEvaluator, callbackExecutor,
+                                activeReferences, consumedScriptKeys, externalDependencies, true, depth + 1, errors);
+                        else if (TryParseDropLine(inline, out DropEntryDefinition inlineEntry, out string inlineError))
+                            group.Drops.Add(inlineEntry);
+                        else if (!inline.StartsWith('#') && !inline.StartsWith('['))
+                            group.Drops.Add(DropEntryDefinition.Item(1, inline, 1, false));
+                        else
+                            errors.Add($"LFENV11-DROP-002：{inlineError}（{source.GetSourceLocation(open)}）。");
+                    }
                     ParseRange(source, open + 1, close, group.Drops, scripts,
                         comparisonEvaluator, callbackExecutor,
-                        activeReferences, depth + 1, errors);
-                    if (group.Drops.Count == 0)
-                        errors.Add($"LFENV11-DROP-007：CHILD 括号组不能为空（{source.GetSourceLocation(index)}）。");
-                    else
+                        activeReferences, consumedScriptKeys, externalDependencies, true, depth + 1, errors);
+                    if (group.Drops.Count > 0)
                     {
                         DropEntryDefinition groupEntry = DropEntryDefinition.GroupDrop(chance, group);
                         groupEntry.Condition = condition;
                         destination.Add(groupEntry);
                     }
-                    index = close;
+                    string closeLine = close < end ? StripComment(source.Lines[close]) : string.Empty;
+                    index = closeLine.StartsWith(")#CHILD", StringComparison.OrdinalIgnoreCase)
+                        ? close - 1
+                        : close;
                     continue;
                 }
 
@@ -197,6 +238,31 @@ namespace Server.Scripting
 
                 if (!TryParseDropLine(line, out DropEntryDefinition entry, out string lineError))
                 {
+                    MatchCollection concatenated = Regex.Matches(line, @"1/\d+\s+");
+                    if (concatenated.Count > 1 && concatenated[0].Index == 0)
+                    {
+                        bool parsedAll = true;
+                        for (int partIndex = 0; partIndex < concatenated.Count; partIndex++)
+                        {
+                            int partStart = concatenated[partIndex].Index;
+                            int partEnd = partIndex + 1 < concatenated.Count
+                                ? concatenated[partIndex + 1].Index
+                                : line.Length;
+                            if (!TryParseDropLine(line[partStart..partEnd].Trim(),
+                                    out DropEntryDefinition concatenatedEntry, out _))
+                            {
+                                parsedAll = false;
+                                break;
+                            }
+                            destination.Add(concatenatedEntry);
+                        }
+                        if (parsedAll) continue;
+                    }
+                    if (allowImplicitChance && !line.StartsWith('#') && !line.StartsWith('['))
+                    {
+                        destination.Add(DropEntryDefinition.Item(1, line, 1, false));
+                        continue;
+                    }
                     errors.Add($"LFENV11-DROP-002：{lineError}（{source.GetSourceLocation(index)}）。");
                     continue;
                 }
@@ -214,6 +280,9 @@ namespace Server.Scripting
             Func<PlayerObject, string, string, string, bool> comparisonEvaluator,
             Func<PlayerObject, string, bool> callbackExecutor,
             ISet<string> activeReferences,
+            ISet<string> consumedScriptKeys,
+            ICollection<LingFengDependencyRequirement> externalDependencies,
+            bool allowImplicitChance,
             int depth,
             ICollection<string> errors)
         {
@@ -227,10 +296,15 @@ namespace Server.Scripting
             if (label == null || !scripts.TryGetValue(key, out TextFileDefinition target) ||
                 !TryFindPage(target, label, out int start, out int end))
             {
-                errors.Add($"LFENV11-DROP-013：CALL 目标不存在 {key} {tokens[2]}（{source.GetSourceLocation(lineIndex)}）。");
+                externalDependencies.Add(new LingFengDependencyRequirement(
+                    LingFengDependencyKind.DomainAdapter,
+                    $"LingFeng/ExternalDropPage/{key}/{tokens[2]}",
+                    LingFengDependencyLevel.E2,
+                    source.Key));
                 return;
             }
             string reference = key + "|" + label.ToUpperInvariant();
+            consumedScriptKeys.Add(key);
             if (!activeReferences.Add(reference))
             {
                 errors.Add($"LFENV11-DROP-009：CALL 形成循环 {key} {label}（{source.GetSourceLocation(lineIndex)}）。");
@@ -240,7 +314,8 @@ namespace Server.Scripting
             {
                 ParseRange(target, start, end, destination, scripts,
                     comparisonEvaluator, callbackExecutor,
-                    activeReferences, depth + 1, errors);
+                    activeReferences, consumedScriptKeys, externalDependencies,
+                    allowImplicitChance, depth + 1, errors);
             }
             finally
             {
@@ -294,30 +369,47 @@ namespace Server.Scripting
             Func<PlayerObject, string, string, string, bool> comparisonEvaluator,
             Func<PlayerObject, string, bool> callbackExecutor,
             out Func<DropAttemptContext, bool> condition,
-            out string error)
+            out string error,
+            out LingFengDependencyRequirement missingDependency)
         {
             condition = null;
             error = string.Empty;
+            missingDependency = null;
             string value = (raw ?? string.Empty).Trim();
             if (!value.StartsWith('[') || !value.EndsWith(']'))
             {
-                error = "必须为 [表达式,7,@QFunction标签]";
+                error = "必须为 [表达式,继承位掩码,@QFunction标签]";
                 return false;
             }
             string[] parts = value[1..^1].Split(',', StringSplitOptions.TrimEntries);
-            if (parts.Length != 3 || parts[1] != "7" || NormalizeLabel(parts[2]) is not string label)
+            if (parts.Length is < 1 or > 3 ||
+                parts.Length >= 2 &&
+                (!int.TryParse(parts[1], NumberStyles.None, CultureInfo.InvariantCulture,
+                    out int inheritanceMask) || inheritanceMask is < 0 or > 7) ||
+                parts.Length == 3 && NormalizeLabel(parts[2]) is null)
             {
-                error = "仅支持 [表达式,7,@QFunction标签]";
+                error = "继承位掩码必须为 0 至 7，回调必须为 @QFunction标签";
                 return false;
             }
-            if (!scripts.TryGetValue("systemscripts/qfunction-0", out TextFileDefinition qFunction) ||
-                !TryFindPage(qFunction, label, out _, out _))
+            int variableInheritanceMask = parts.Length >= 2
+                ? int.Parse(parts[1], CultureInfo.InvariantCulture)
+                : 7;
+            string label = parts.Length == 3 ? NormalizeLabel(parts[2]) : null;
+            if (label != null &&
+                (!scripts.TryGetValue("systemscripts/qfunction-0", out TextFileDefinition qFunction) ||
+                 !TryFindPage(qFunction, label, out _, out _)))
             {
-                error = $"QFunction 条件回调不存在 {parts[2]}";
-                return false;
+                missingDependency = new LingFengDependencyRequirement(
+                    LingFengDependencyKind.DomainAdapter,
+                    $"LingFeng/DropConditionCallback/{parts[2]}",
+                    LingFengDependencyLevel.E2,
+                    "systemscripts/qfunction-0");
             }
+            string comparisonText = parts[0];
+            bool useOr = comparisonText.EndsWith("|OR", StringComparison.OrdinalIgnoreCase);
+            if (useOr) comparisonText = comparisonText[..^3].TrimEnd();
             var comparisons = new List<(string Reference, string Operator, string Operand)>();
-            foreach (string expression in parts[0].Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            foreach (string expression in comparisonText.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
             {
                 Match match = Regex.Match(expression, @"^([A-Za-z]+(?:\$[A-Za-z0-9_]+|[0-9]+))\s*(>=|<=|<>|!=|==|=|>|<)\s*(.+)$",
                     RegexOptions.CultureInvariant);
@@ -338,10 +430,30 @@ namespace Server.Scripting
                 if (context?.Player == null) return false;
                 return Envir.Main.InvokeOnMainThread(() =>
                 {
+                    LingFengCombatActorKind actorKind = context.Monster?.LingFengLastDamageActorKind ??
+                                                        LingFengCombatActorKind.Player;
+                    byte inheritanceBit = context.Monster?.LingFengLastDamageVariableInheritanceBit ?? 0;
+                    bool mayReadPrivateVariables = actorKind switch
+                    {
+                        LingFengCombatActorKind.Player => true,
+                        LingFengCombatActorKind.Hero =>
+                            (variableInheritanceMask & (inheritanceBit == 0 ? 1 : inheritanceBit)) != 0,
+                        LingFengCombatActorKind.Pet => inheritanceBit == 0
+                            ? (variableInheritanceMask & 6) != 0
+                            : (variableInheritanceMask & inheritanceBit) != 0,
+                        _ => false
+                    };
+                    bool matched = useOr ? false : true;
                     foreach ((string reference, string comparison, string operand) in comparisons)
-                        if (comparisonEvaluator == null ||
-                            !comparisonEvaluator(context.Player, reference, comparison, operand)) return false;
-                    return callbackExecutor != null && callbackExecutor(context.Player, label);
+                    {
+                        bool global = reference.StartsWith('I') || reference.StartsWith('G');
+                        bool current = (global || mayReadPrivateVariables) && comparisonEvaluator != null &&
+                                       comparisonEvaluator(context.Player, reference, comparison, operand);
+                        if (useOr) matched |= current;
+                        else matched &= current;
+                    }
+                    if (!matched) return false;
+                    return label == null || callbackExecutor != null && callbackExecutor(context.Player, label);
                 });
             };
             return true;
@@ -362,14 +474,22 @@ namespace Server.Scripting
         private static bool TryChance(string value, out int chance)
         {
             chance = 0;
-            return value != null && value.StartsWith("1/", StringComparison.Ordinal) &&
-                   int.TryParse(value.AsSpan(2), NumberStyles.None, CultureInfo.InvariantCulture, out chance) && chance > 0;
+            if (value == null) return false;
+            ReadOnlySpan<char> denominator = value.StartsWith("1/", StringComparison.Ordinal)
+                ? value.AsSpan(2)
+                : value.AsSpan();
+            return int.TryParse(denominator, NumberStyles.None, CultureInfo.InvariantCulture, out chance) && chance > 0;
         }
 
         private static string StripComment(string line)
         {
             string value = (line ?? string.Empty).Trim();
-            return value.StartsWith(';') ? string.Empty : value;
+            return value.StartsWith(';') || Regex.IsMatch(value, @"^-{3,}") ||
+                   value.Equals("本行文件由工具自动生成", StringComparison.OrdinalIgnoreCase) ||
+                   value.StartsWith("?[@", StringComparison.OrdinalIgnoreCase) ||
+                   value.Contains('^') && !value.Any(char.IsWhiteSpace)
+                ? string.Empty
+                : value;
         }
 
         private static int NextContentLine(TextFileDefinition source, int start, int end)
@@ -385,8 +505,8 @@ namespace Server.Scripting
             for (int index = open; index < end; index++)
             {
                 string line = StripComment(source.Lines[index]);
-                if (line == "(") depth++;
-                else if (line == ")" && --depth == 0) return index;
+                if (line.StartsWith('(')) depth++;
+                else if (line.StartsWith(')') && --depth == 0) return index;
             }
             return -1;
         }

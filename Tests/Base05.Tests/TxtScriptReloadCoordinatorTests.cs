@@ -265,6 +265,33 @@ public sealed class TxtScriptReloadCoordinatorTests
     }
 
     [Fact]
+    public void 翎风带参和动态本地标签通过预检而静态缺页仍失败关闭()
+    {
+        string root = CreateRoot();
+        try
+        {
+            Write(root, "NPCs/带参跳转.txt",
+                "[@MAIN]\n#ACT\nGOTO @目标(1,测试)\nGOTO @<$STR(S$动态页)>\n" +
+                "[@目标]\n#SAY\n已到达");
+            using var coordinator = new TxtScriptReloadCoordinator(
+                Options(root), 10, _ => true, TxtScriptSnapshotValidator.Validate);
+
+            Assert.True(coordinator.ReloadNow().Published);
+
+            Write(root, "NPCs/带参跳转.txt",
+                "[@MAIN]\n#ACT\nGOTO @确实不存在\n[@目标]\n#SAY\n已到达");
+            TxtScriptReloadResult failed = coordinator.ReloadNow();
+            Assert.False(failed.Published);
+            Assert.Contains(failed.Errors, error =>
+                error.Contains("TXT-SNAPSHOT-010", StringComparison.Ordinal));
+        }
+        finally
+        {
+            Directory.Delete(root, true);
+        }
+    }
+
+    [Fact]
     public void 生产快照验证器拒绝无效变量声明并报告原始行号()
     {
         string root = CreateRoot();

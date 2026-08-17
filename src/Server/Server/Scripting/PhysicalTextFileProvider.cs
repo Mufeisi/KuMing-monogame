@@ -49,6 +49,8 @@ namespace Server.Scripting
         internal LingFengWorldContentProvider WorldContentProvider { get; }
         internal LingFengCommerceContentProvider CommerceContentProvider { get; }
         internal LingFengRuleListContentProvider RuleListContentProvider { get; }
+        internal LingFengCsvContentProvider CsvContentProvider { get; }
+        internal LingFengTextDataProvider TextDataProvider { get; }
         internal IReadOnlyList<TextFileDefinition> CommerceSourceDefinitions { get; }
         internal IReadOnlyList<string> DomainDiagnostics { get; }
         public LingFengExternalDependencyManifest ExternalDependencyManifest { get; }
@@ -95,6 +97,8 @@ namespace Server.Scripting
             TextFileDefinition shopItems = null;
             TextFileDefinition makeItems = null;
             var ruleLists = new Dictionary<string, TextFileDefinition>(StringComparer.Ordinal);
+            var csvDefinitions = new Dictionary<string, TextFileDefinition>(StringComparer.OrdinalIgnoreCase);
+            var textDataDefinitions = new Dictionary<string, TextFileDefinition>(StringComparer.OrdinalIgnoreCase);
             var domainDiagnostics = new List<string>();
             var externalDependencies = new List<LingFengDependencyRequirement>();
             int acceptedFiles = 0;
@@ -162,6 +166,18 @@ namespace Server.Scripting
                             $"翎风 Envir 文件未归属：{relative}（规则：{classification.RuleId}）");
                     if (!classification.MayPublishAsScript)
                     {
+                        if (Path.GetExtension(relative).Equals(".csv", StringComparison.OrdinalIgnoreCase))
+                        {
+                            string csvKey = relative.Replace('\\', '/').ToLowerInvariant();
+                            TextFileDefinition csvDefinition = ReadDefinition(
+                                "csv/" + Path.ChangeExtension(csvKey, null),
+                                fullFile, options.MaxFileBytes, joinContinuations: false);
+                            if (!csvDefinitions.TryAdd(csvKey, csvDefinition))
+                                throw new InvalidDataException(
+                                    $"重复的翎风 CSV 逻辑路径：{csvKey}；来源：{fullFile}");
+                            acceptedFiles++;
+                            continue;
+                        }
                         bool mappedDomainConfiguration = false;
                         if (classification.Owner == LingFengEnvirFileOwner.DomainConfiguration &&
                             TryMapMonsterDropKey(relative, out string dropKey))
@@ -195,6 +211,19 @@ namespace Server.Scripting
                             smartMonsters.Add(ReadDefinition(smartKey, fullFile, options.MaxFileBytes));
                         }
                         string normalizedRelative = relative.Replace('\\', '/');
+                        if (!mappedDomainConfiguration &&
+                            classification.Owner == LingFengEnvirFileOwner.DomainConfiguration &&
+                            (Path.GetExtension(normalizedRelative).Equals(".txt", StringComparison.OrdinalIgnoreCase) ||
+                             Path.GetExtension(normalizedRelative).Equals(".ini", StringComparison.OrdinalIgnoreCase)))
+                        {
+                            string textDataKey = normalizedRelative.ToLowerInvariant();
+                            if (!textDataDefinitions.TryAdd(textDataKey, ReadDefinition(
+                                    "textdata/" + Path.ChangeExtension(textDataKey, null),
+                                    fullFile, options.MaxFileBytes)))
+                                throw new InvalidDataException(
+                                    $"重复的翎风文本数据逻辑路径：{textDataKey}；来源：{fullFile}");
+                            mappedDomainConfiguration = true;
+                        }
                         if (classification.Owner == LingFengEnvirFileOwner.ClientContract)
                         {
                             externalDependencyFiles++;
@@ -219,6 +248,15 @@ namespace Server.Scripting
                     acceptedFiles++;
                     TextFileDefinition classifiedDefinition = ReadDefinition(
                         classification.LogicKey, fullFile, options.MaxFileBytes);
+                    if (Path.GetExtension(relative).Equals(".ini", StringComparison.OrdinalIgnoreCase))
+                    {
+                        string textDataKey = relative.Replace('\\', '/').ToLowerInvariant();
+                        if (!textDataDefinitions.TryAdd(textDataKey, ReadDefinition(
+                                "textdata/" + Path.ChangeExtension(textDataKey, null),
+                                fullFile, options.MaxFileBytes)))
+                            throw new InvalidDataException(
+                                $"重复的翎风文本数据逻辑路径：{textDataKey}；来源：{fullFile}");
+                    }
                     if (!definitions.TryAdd(classification.LogicKey, classifiedDefinition))
                     {
                         TextFileDefinition existing = definitions[classification.LogicKey];
@@ -240,11 +278,32 @@ namespace Server.Scripting
                 }
             }
 
+            if (options.Layout == TxtScriptLayout.LingFeng)
+            {
+                var macroDefinitions = new Dictionary<string, TextFileDefinition>(
+                    definitions, StringComparer.Ordinal);
+                foreach ((string key, TextFileDefinition definition) in mapQuestScripts)
+                {
+                    if (!macroDefinitions.TryAdd(key, definition))
+                        throw new InvalidDataException(
+                            $"地图任务脚本与已有脚本逻辑 Key 冲突：{key}；来源：{definition.SourcePath}");
+                }
+                LingFengDefineExpander.Expand(macroDefinitions);
+                foreach (string key in definitions.Keys.ToArray())
+                    definitions[key] = macroDefinitions[key];
+                foreach (string key in mapQuestScripts.Keys.ToArray())
+                    mapQuestScripts[key] = macroDefinitions[key];
+            }
+
             DomainDiagnostics = domainDiagnostics.AsReadOnly();
             if (options.Layout == TxtScriptLayout.LingFeng && monsterDrops.Count > 0)
             {
+                TextFileDefinition[] dropFragments = definitions.Values
+                    .Where(definition => definition.Lines.Any(line =>
+                        line.TrimStart().StartsWith("#CHILD", StringComparison.OrdinalIgnoreCase)))
+                    .ToArray();
                 if (!LingFengMonsterDropProvider.TryCreate(
-                        monsterDrops.Values,
+                        monsterDrops.Values.Concat(dropFragments),
                         definitions,
                         Envir.Main.GetItemInfo,
                         out LingFengMonsterDropProvider dropProvider,
@@ -296,6 +355,10 @@ namespace Server.Scripting
                     throw new InvalidDataException(string.Join(Environment.NewLine, ruleErrors));
                 RuleListContentProvider = ruleProvider;
             }
+            if (options.Layout == TxtScriptLayout.LingFeng && csvDefinitions.Count > 0)
+                CsvContentProvider = new LingFengCsvContentProvider(csvDefinitions);
+            if (options.Layout == TxtScriptLayout.LingFeng && textDataDefinitions.Count > 0)
+                TextDataProvider = new LingFengTextDataProvider(textDataDefinitions, root);
             CommerceSourceDefinitions = Array.AsReadOnly(
                 new[] { shopItems, makeItems }
                     .Where(value => value != null)
@@ -316,7 +379,12 @@ namespace Server.Scripting
             PreflightSummary = new LingFengEnvirPreflightSummary(
                 acceptedFiles, runtimeDataFiles, externalDependencyFiles, 0);
             _definitions = definitions;
-            _all = definitions.Values.ToArray();
+            _all = definitions.Values
+                .Concat(csvDefinitions.Values)
+                .Concat(textDataDefinitions.Values.Where(data =>
+                    !definitions.Values.Any(script => string.Equals(
+                        script.SourcePath, data.SourcePath, StringComparison.OrdinalIgnoreCase))))
+                .ToArray();
         }
 
         private enum LingFengCommerceSourceKind
@@ -342,6 +410,8 @@ namespace Server.Scripting
                 !normalized.EndsWith(".txt", StringComparison.OrdinalIgnoreCase))
                 return false;
             string stem = Path.GetFileNameWithoutExtension(normalized);
+            if (stem.Equals("EffectImageList", StringComparison.OrdinalIgnoreCase))
+                return false;
             if (stem.Equals("Shopitemlist", StringComparison.OrdinalIgnoreCase))
             {
                 key = "commerce/shopitems";
@@ -509,9 +579,9 @@ namespace Server.Scripting
             else if (directory.Equals("Npc_def", StringComparison.OrdinalIgnoreCase))
                 mappedPath = $"NpcDefs/{nestedPath}";
             else if (directory.Equals("QuestDiary", StringComparison.OrdinalIgnoreCase))
-                mappedPath = $"QuestDiary/{nestedPath}";
+                mappedPath = $"QuestDiary/{Path.ChangeExtension(nestedPath, null)}";
             else if (directory.Equals("DeFines", StringComparison.OrdinalIgnoreCase))
-                mappedPath = $"Defines/{nestedPath}";
+                mappedPath = $"Defines/{Path.ChangeExtension(nestedPath, null)}";
             else if (directory.Equals("MapQuest_def", StringComparison.OrdinalIgnoreCase)
                      && nestedPath.Equals("QManage.txt", StringComparison.OrdinalIgnoreCase))
                 mappedPath = "SystemScripts/QManage";
@@ -528,7 +598,8 @@ namespace Server.Scripting
             return true;
         }
 
-        private static TextFileDefinition ReadDefinition(string key, string file, long maxFileBytes)
+        private static TextFileDefinition ReadDefinition(
+            string key, string file, long maxFileBytes, bool joinContinuations = true)
         {
             long fileBytes = new FileInfo(file).Length;
             if (fileBytes > maxFileBytes)
@@ -574,10 +645,20 @@ namespace Server.Scripting
             }
 
             string newLine = DetectNewLine(text);
-            string[] lines = text.Split(new[] { "\r\n", "\n", "\r" }, StringSplitOptions.None);
+            string[] lines = text.Split(new[] { "\r\n", "\n", "\r" }, StringSplitOptions.None)
+                .Select(TxtScriptTokenizer.NormalizePhysicalLine)
+                .ToArray();
             var definition = new TextFileDefinition(key, Path.GetFullPath(file), encodingName, newLine);
-            foreach ((string line, int sourceLine) in BuildLogicalLines(lines))
-                definition.AddLine(line, sourceLine);
+            if (joinContinuations)
+            {
+                foreach ((string line, int sourceLine) in BuildLogicalLines(lines))
+                    definition.AddLine(line, sourceLine);
+            }
+            else
+            {
+                for (int index = 0; index < lines.Length; index++)
+                    definition.AddLine(lines[index], index + 1);
+            }
             return definition;
         }
 

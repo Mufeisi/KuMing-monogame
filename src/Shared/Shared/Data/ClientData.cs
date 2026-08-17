@@ -567,6 +567,11 @@ public class ClientBuff
     public bool Paused;
 
     public int[] Values;
+    public bool IsLingFengScript;
+    public int LingFengIconPackage;
+    public int LingFengIconIndex;
+    public byte LingFengSlot;
+    public string LingFengDescription = string.Empty;
 
     public ClientBuff()
     {
@@ -594,6 +599,15 @@ public class ClientBuff
         {
             Values[i] = reader.ReadInt32();
         }
+
+        IsLingFengScript = reader.ReadBoolean();
+        if (IsLingFengScript)
+        {
+            LingFengIconPackage = reader.ReadInt32();
+            LingFengIconIndex = reader.ReadInt32();
+            LingFengSlot = reader.ReadByte();
+            LingFengDescription = reader.ReadString();
+        }
     }
 
     public void Save(BinaryWriter writer)
@@ -611,6 +625,15 @@ public class ClientBuff
         for (int i = 0; i < Values.Length; i++)
         {
             writer.Write(Values[i]);
+        }
+
+        writer.Write(IsLingFengScript);
+        if (IsLingFengScript)
+        {
+            writer.Write(LingFengIconPackage);
+            writer.Write(LingFengIconIndex);
+            writer.Write(LingFengSlot);
+            writer.Write(LingFengDescription ?? string.Empty);
         }
     }
 }
