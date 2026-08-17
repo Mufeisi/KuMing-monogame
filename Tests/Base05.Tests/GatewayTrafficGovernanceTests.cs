@@ -327,6 +327,17 @@ public sealed class GatewayTrafficGovernanceTests
             Reason = "性能基线关闭治理规则",
         }, "performance-test");
         var observe = new GatewayTrafficGovernance(observeFixture.PolicyPath, auditSink: _ => { });
+        GatewayGovernancePolicy observeBaseline = observe.CaptureSnapshot().Policy;
+        observe.SetPolicy(new GatewayGovernanceChangeRequest
+        {
+            ExpectedRevision = observeBaseline.Revision,
+            Mode = GatewayGovernanceMode.Observe,
+            MaximumPacketBytes = observeBaseline.MaximumPacketBytes,
+            Rules = observeBaseline.Rules.Select(rule => rule.Category == GatewayTrafficCategory.Movement
+                ? With(rule, 1_000_000, rule.Response, rule.RestrictionSeconds)
+                : rule).ToArray(),
+            Reason = "性能基线只测正常观察分类",
+        }, "performance-test");
 
         for (int index = 0; index < 10_000; index++)
         {
