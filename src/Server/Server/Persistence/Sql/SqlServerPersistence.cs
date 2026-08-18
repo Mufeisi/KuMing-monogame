@@ -105,7 +105,7 @@ namespace Server.Persistence.Sql
             public long ExpiryUtcMs { get; set; }
             public string LastIp { get; set; }
             public long LastUtcMs { get; set; }
-            public int AdminAccount { get; set; }
+            public int AdminLevel { get; set; }
             public long Gold { get; set; }
             public long Credit { get; set; }
         }
@@ -1431,7 +1431,7 @@ namespace Server.Persistence.Sql
                         ExpiryUtcMs = ToUtcMs(account.ExpiryDate),
                         LastIp = account.LastIP ?? string.Empty,
                         LastUtcMs = ToUtcMs(account.LastDate),
-                        AdminAccount = account.AdminAccount ? 1 : 0,
+                        AdminLevel = account.AdminLevel,
                         Gold = account.Gold,
                         Credit = account.Credit,
                     });
@@ -1529,7 +1529,7 @@ namespace Server.Persistence.Sql
                         expiry_utc_ms = account.ExpiryUtcMs,
                         last_ip = account.LastIp ?? string.Empty,
                         last_utc_ms = account.LastUtcMs,
-                        admin_account = account.AdminAccount,
+                        admin_account = account.AdminLevel,
                         gold = account.Gold,
                         credit = account.Credit,
                         updated_utc_ms = nowMs,
@@ -1564,7 +1564,7 @@ namespace Server.Persistence.Sql
                 "expiry_utc_ms AS ExpiryUtcMs, " +
                 "last_ip AS LastIp, " +
                 "last_utc_ms AS LastUtcMs, " +
-                "admin_account AS AdminAccount, " +
+                "admin_account AS AdminLevel, " +
                 "gold AS Gold, " +
                 "credit AS Credit " +
                 "FROM accounts " +
@@ -1609,7 +1609,7 @@ namespace Server.Persistence.Sql
                     account.ExpiryDate = FromUtcMsToLocal(row.ExpiryUtcMs);
                     account.LastIP = row.LastIp ?? string.Empty;
                     account.LastDate = FromUtcMsToLocal(row.LastUtcMs);
-                    account.AdminAccount = row.AdminAccount != 0;
+                    account.AdminLevel = row.AdminLevel;
                     account.Gold = (uint)Math.Clamp(row.Gold, 0, uint.MaxValue);
                     account.Credit = (uint)Math.Clamp(row.Credit, 0, uint.MaxValue);
                 }

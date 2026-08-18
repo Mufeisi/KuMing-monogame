@@ -1,6 +1,6 @@
 # SEC-04 管理端安全配置
 
-现有管理 HTTP 服务继续使用 `[Network] StartHTTPService`、`HTTPIPAddress` 与 `HTTPTrustedIPAddress`，但所有非 `/api/` 微端资源请求现在还必须通过独立 Bearer 令牌鉴权。管理令牌不复用 `GMPassword`。
+现有管理 HTTP 服务继续使用 `[Network] StartHTTPService`、`HTTPIPAddress` 与 `HTTPTrustedIPAddress`，但所有非 `/api/` 微端资源请求现在还必须通过独立 Bearer 令牌鉴权。管理令牌独立于游戏内管理员权限（已废弃聊天框 GM 口令，管理员由账号权限等级授予）。
 
 ## 监听边界
 

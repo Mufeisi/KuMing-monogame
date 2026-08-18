@@ -11,7 +11,6 @@ internal static class ProductionSecurityPolicy
     internal const string ImportTlsPassword = "LYOCRYSTAL_IMPORT_TLS_CERT_PASSWORD";
     internal const string ImportAdministratorToken = "LYOCRYSTAL_IMPORT_ADMIN_TOKEN";
     internal const string ImportOperatorToken = "LYOCRYSTAL_IMPORT_OPERATOR_TOKEN";
-    internal const string ImportGameMasterPassword = "LYOCRYSTAL_IMPORT_GM_PASSWORD";
     internal const string ImportMySqlConnectionString = "LYOCRYSTAL_IMPORT_MYSQL_CONNECTION_STRING";
     internal const string ImportMicroCode = "LYOCRYSTAL_IMPORT_MICRO_CODE";
     internal const string ImportAiApiKey = "LYOCRYSTAL_IMPORT_AI_API_KEY";
@@ -20,11 +19,6 @@ internal static class ProductionSecurityPolicy
     {
         ImportTransientSecrets();
         ProductionRpoPolicy.ValidateConfiguredSaveDelay();
-
-        string gameMasterPassword = Require(ProtectedSecretStore.GameMasterPassword, "游戏 GM 口令");
-        if (gameMasterPassword == "@123456" || gameMasterPassword.Length < 12)
-            throw new InvalidOperationException("正式服游戏 GM 口令不得使用默认值且至少 12 个字符");
-        Settings.GMPassword = gameMasterPassword;
 
         if (Settings.TlsEnabled)
             _ = Require(ProtectedSecretStore.TlsCertificatePassword, "TLS 证书密码");
@@ -69,7 +63,6 @@ internal static class ProductionSecurityPolicy
         ProtectedSecretStore.ImportAndClearEnvironment(ProtectedSecretStore.TlsCertificatePassword, ImportTlsPassword);
         ProtectedSecretStore.ImportAndClearEnvironment(ProtectedSecretStore.AdministratorToken, ImportAdministratorToken);
         ProtectedSecretStore.ImportAndClearEnvironment(ProtectedSecretStore.OperatorToken, ImportOperatorToken);
-        ProtectedSecretStore.ImportAndClearEnvironment(ProtectedSecretStore.GameMasterPassword, ImportGameMasterPassword);
         ProtectedSecretStore.ImportAndClearEnvironment(ProtectedSecretStore.MySqlConnectionString, ImportMySqlConnectionString);
         ProtectedSecretStore.ImportAndClearEnvironment(ProtectedSecretStore.MicroCode, ImportMicroCode);
         ProtectedSecretStore.ImportAndClearEnvironment(ProtectedSecretStore.AiApiKey, ImportAiApiKey);

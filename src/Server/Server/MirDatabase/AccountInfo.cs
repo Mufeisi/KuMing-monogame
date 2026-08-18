@@ -79,7 +79,12 @@ namespace Server.MirDatabase
         public MirConnection Connection;
         
         public LinkedList<AuctionInfo> Auctions = new LinkedList<AuctionInfo>();
-        public bool AdminAccount;
+
+        /// <summary>账号权限等级：0=普通玩家，&gt;0=管理员（按等级细分的命令权限随后续版本扩展）。</summary>
+        public int AdminLevel;
+
+        /// <summary>兼容布尔语义：是否具备管理员权限（权限等级 &gt; 0）。</summary>
+        public bool AdminAccount => AdminLevel > 0;
 
         public AccountInfo()
         {
@@ -182,7 +187,7 @@ namespace Server.MirDatabase
                     Storage[i] = item;
             }
 
-            if (Envir.LoadVersion >= 10) AdminAccount = reader.ReadBoolean();
+            if (Envir.LoadVersion >= 10) AdminLevel = reader.ReadBoolean() ? 1 : 0;
             if (!AdminAccount)
             {
                 for (int i = 0; i < Characters.Count; i++)
@@ -238,7 +243,7 @@ namespace Server.MirDatabase
 
                 Storage[i].Save(writer);
             }
-            writer.Write(AdminAccount);
+            writer.Write(AdminLevel);
         }
 
         public List<SelectInfo> GetSelectInfo()

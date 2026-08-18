@@ -519,15 +519,6 @@ namespace Server
             if (MessageBox.Show(this, warning, "安全确认", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes)
                 return;
 
-            if (!PasswordPromptForm.TryPrompt(this, "GM 密码确认", "请输入 GMPassword 以继续：", out var input))
-                return;
-
-            if (!string.Equals(input.Trim(), Settings.GMPassword, StringComparison.Ordinal))
-            {
-                MessageBox.Show(this, "GM 密码错误，已取消打开脚本调试。", "验证失败", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                return;
-            }
-
             using var form = new ScriptDebugForm();
             form.ShowDialog(this);
         }

@@ -287,7 +287,7 @@ namespace Server
             AdminCheckBox.Name = "AdminCheckBox";
             AdminCheckBox.Size = new Size(87, 21);
             AdminCheckBox.TabIndex = 32;
-            AdminCheckBox.Text = "管理员模式";
+            AdminCheckBox.Text = "管理员";
             AdminCheckBox.UseVisualStyleBackColor = true;
             AdminCheckBox.CheckedChanged += AdminCheckBox_CheckedChanged;
             // 
@@ -625,7 +625,7 @@ namespace Server
             // 
             // adminHeader
             // 
-            adminHeader.Text = "管理员";
+            adminHeader.Text = "权限等级";
             adminHeader.Width = 73;
             // 
             // bannedHeader

@@ -18,7 +18,6 @@ public sealed class ProductionSecurityTests : IDisposable
     {
         _secretScope = ProtectedSecretStore.UseTestRoot(_secretRoot);
         Settings.TestServer = false;
-        Settings.GMPassword = "@123456";
         Settings.TlsEnabled = false;
         Settings.StartHTTPService = false;
         Settings.DatabaseProvider = "Sqlite";
@@ -42,15 +41,15 @@ public sealed class ProductionSecurityTests : IDisposable
     public void DPAPI受保护存储往返且文件不含明文()
     {
         const string secret = "high-entropy-secret-value-1234567890";
-        ProtectedSecretStore.Write(ProtectedSecretStore.GameMasterPassword, secret);
+        ProtectedSecretStore.Write(ProtectedSecretStore.MicroCode, secret);
 
-        Assert.Equal(secret, ProtectedSecretStore.Read(ProtectedSecretStore.GameMasterPassword));
+        Assert.Equal(secret, ProtectedSecretStore.Read(ProtectedSecretStore.MicroCode));
         string file = Assert.Single(Directory.GetFiles(_secretRoot, "*.dpapi"));
         byte[] bytes = File.ReadAllBytes(file);
         Assert.DoesNotContain(secret, Encoding.UTF8.GetString(bytes));
 
-        ProtectedSecretStore.Delete(ProtectedSecretStore.GameMasterPassword);
-        Assert.Null(ProtectedSecretStore.Read(ProtectedSecretStore.GameMasterPassword));
+        ProtectedSecretStore.Delete(ProtectedSecretStore.MicroCode);
+        Assert.Null(ProtectedSecretStore.Read(ProtectedSecretStore.MicroCode));
     }
 
     [Fact]
@@ -82,30 +81,30 @@ public sealed class ProductionSecurityTests : IDisposable
     [Fact]
     public void CI短暂导入后立即清除环境变量并应用秘密()
     {
-        const string imported = "imported-game-master-password-123456";
-        string original = Environment.GetEnvironmentVariable(ProductionSecurityPolicy.ImportGameMasterPassword);
+        const string imported = "imported-administrator-token-with-at-least-32-chars";
+        string original = Environment.GetEnvironmentVariable(ProductionSecurityPolicy.ImportAdministratorToken);
         try
         {
-            Environment.SetEnvironmentVariable(ProductionSecurityPolicy.ImportGameMasterPassword, imported);
+            Settings.StartHTTPService = true;
+            Settings.HTTPIPAddress = "http://127.0.0.1:7777/";
+            Settings.HTTPTrustedIPAddress = "127.0.0.1";
+
+            Environment.SetEnvironmentVariable(ProductionSecurityPolicy.ImportAdministratorToken, imported);
             ProductionSecurityPolicy.ValidateAndApply();
 
-            Assert.Null(Environment.GetEnvironmentVariable(ProductionSecurityPolicy.ImportGameMasterPassword));
-            Assert.Equal(imported, ProtectedSecretStore.Read(ProtectedSecretStore.GameMasterPassword));
-            Assert.Equal(imported, Settings.GMPassword);
+            Assert.Null(Environment.GetEnvironmentVariable(ProductionSecurityPolicy.ImportAdministratorToken));
+            Assert.Equal(imported, ProtectedSecretStore.Read(ProtectedSecretStore.AdministratorToken));
         }
         finally
         {
-            Environment.SetEnvironmentVariable(ProductionSecurityPolicy.ImportGameMasterPassword, original);
+            Settings.StartHTTPService = false;
+            Environment.SetEnvironmentVariable(ProductionSecurityPolicy.ImportAdministratorToken, original);
         }
     }
 
     [Fact]
-    public void 正式启动策略拒绝默认口令公网明文管理与缺失秘密()
+    public void 正式启动策略拒绝公网明文管理与缺失秘密()
     {
-        ProtectedSecretStore.Write(ProtectedSecretStore.GameMasterPassword, "@123456");
-        Assert.Throws<InvalidOperationException>(() => ProductionSecurityPolicy.ValidateAndApply());
-
-        ProtectedSecretStore.Write(ProtectedSecretStore.GameMasterPassword, "safe-game-master-password-123456");
         Settings.StartHTTPService = true;
         Settings.HTTPIPAddress = "http://0.0.0.0:7777/";
         Settings.HTTPTrustedIPAddress = "127.0.0.1";
@@ -121,12 +120,12 @@ public sealed class ProductionSecurityTests : IDisposable
         Settings.StartHTTPService = false;
         Settings.TlsEnabled = true;
         Assert.Throws<InvalidOperationException>(() => ProductionSecurityPolicy.ValidateAndApply());
+        Settings.TlsEnabled = false;
     }
 
     [Fact]
     public void 完整受保护配置覆盖运行时明文占位并通过门禁()
     {
-        ProtectedSecretStore.Write(ProtectedSecretStore.GameMasterPassword, "safe-game-master-password-123456");
         ProtectedSecretStore.Write(ProtectedSecretStore.TlsCertificatePassword, "tls-password-123456");
         ProtectedSecretStore.Write(ProtectedSecretStore.AdministratorToken, "administrator-token-at-least-32-characters");
         ProtectedSecretStore.Write(ProtectedSecretStore.OperatorToken, "operator-token-at-least-32-characters-long");
@@ -134,7 +133,6 @@ public sealed class ProductionSecurityTests : IDisposable
         ProtectedSecretStore.Write(ProtectedSecretStore.MicroCode, "micro-code-1234567890");
         ProtectedSecretStore.Write(ProtectedSecretStore.AiApiKey, "ai-api-key-1234567890");
 
-        Settings.GMPassword = "plain-placeholder";
         Settings.TlsEnabled = true;
         Settings.StartHTTPService = true;
         Settings.HTTPIPAddress = "http://127.0.0.1:7777/";
@@ -148,7 +146,6 @@ public sealed class ProductionSecurityTests : IDisposable
 
         ProductionSecurityPolicy.ValidateAndApply();
 
-        Assert.Equal("safe-game-master-password-123456", Settings.GMPassword);
         Assert.Contains("Password=secret", Settings.MySqlConnectionString);
         Assert.Equal("micro-code-1234567890", Settings.MicroCode);
         Assert.Equal("ai-api-key-1234567890", Settings.AiScriptsApiKey);
@@ -157,6 +154,10 @@ public sealed class ProductionSecurityTests : IDisposable
     [Fact]
     public void Envir在创建工作线程前拒绝正式服弱配置()
     {
+        Settings.StartHTTPService = true;
+        Settings.HTTPIPAddress = "http://0.0.0.0:7777/";
+        Settings.HTTPTrustedIPAddress = "127.0.0.1";
+
         var environment = new Envir();
         var options = new EnvirStartOptions
         {
@@ -171,13 +172,12 @@ public sealed class ProductionSecurityTests : IDisposable
 
         Assert.Throws<InvalidOperationException>(() => environment.Start(options));
         Assert.False(environment.Running);
+        Settings.StartHTTPService = false;
     }
 
     [Fact]
     public void 正式服SQLite拒绝关闭备份或缺少异地目录()
     {
-        ProtectedSecretStore.Write(ProtectedSecretStore.GameMasterPassword, "safe-game-master-password-123456");
-
         Settings.SqliteBackupEnabled = false;
         Assert.Throws<InvalidOperationException>(() => ProductionSecurityPolicy.ValidateAndApply());
 
@@ -192,8 +192,6 @@ public sealed class ProductionSecurityTests : IDisposable
     [Fact]
     public void 正式启动策略拒绝越界保存间隔并接受边界值()
     {
-        ProtectedSecretStore.Write(ProtectedSecretStore.GameMasterPassword, "safe-game-master-password-123456");
-
         Settings.SaveDelay = 0;
         Assert.Throws<InvalidOperationException>(() => ProductionSecurityPolicy.ValidateAndApply());
         Settings.SaveDelay = 6;
@@ -209,7 +207,6 @@ public sealed class ProductionSecurityTests : IDisposable
     {
         private readonly bool _testServer = Settings.TestServer;
         private readonly int _saveDelay = Settings.SaveDelay;
-        private readonly string _gmPassword = Settings.GMPassword;
         private readonly bool _tlsEnabled = Settings.TlsEnabled;
         private readonly bool _startHttp = Settings.StartHTTPService;
         private readonly string _httpAddress = Settings.HTTPIPAddress;
@@ -230,7 +227,6 @@ public sealed class ProductionSecurityTests : IDisposable
         {
             Settings.TestServer = _testServer;
             Settings.SaveDelay = _saveDelay;
-            Settings.GMPassword = _gmPassword;
             Settings.TlsEnabled = _tlsEnabled;
             Settings.StartHTTPService = _startHttp;
             Settings.HTTPIPAddress = _httpAddress;

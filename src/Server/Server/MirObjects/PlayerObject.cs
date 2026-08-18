@@ -400,8 +400,7 @@ namespace Server.MirObjects
             return true;
         }
 
-        public string GMPassword = Settings.GMPassword;
-        public bool GMLogin, EnableGroupRecall, EnableGuildInvite, AllowMarriage, AllowLoverRecall, AllowMentor, HasMapShout, HasServerShout; //TODO - Remove        
+        public bool EnableGroupRecall, EnableGuildInvite, AllowMarriage, AllowLoverRecall, AllowMentor, HasMapShout, HasServerShout; //TODO - Remove        
 
         public long LastRecallTime, LastTeleportTime, LastProbeTime;
 
@@ -2773,25 +2772,6 @@ namespace Server.MirObjects
 
             MessageQueue.EnqueueChat(string.Format("{0}: {1}", Name, message));
 
-            if (GMLogin)
-            {
-                if (message == GMPassword)
-                {
-                    IsGM = true;
-                    UpdateGMBuff();
-                    MessageQueue.Enqueue(string.Format("游戏管理员:{0} 现在是游戏管理员身份", Name));
-                    ReceiveChat("升级为游戏管理员", ChatType.System);
-                    Envir.RemoveRank(Info);//remove gm chars from ranking to avoid causing bugs in rank list
-                }
-                else
-                {
-                    MessageQueue.Enqueue(string.Format("游戏管理员:{0} 试图以游戏管理员身份登录", Name));
-                    ReceiveChat("登录密码不正确", ChatType.System);
-                }
-                GMLogin = false;
-                return;
-            }
-
             if (Info.ChatBanned)
             {
                 if (Info.ChatBanExpiryDate > Envir.Now)
@@ -3074,11 +3054,6 @@ namespace Server.MirObjects
                             if (!opened.Success)
                                 ReceiveChat(opened.Diagnostic, ChatType.System);
                         }
-                        return;
-
-                    case "LOGIN":
-                        GMLogin = true;
-                        ReceiveChat("请输入管理员密码！", ChatType.Hint);
                         return;
 
                     case "KILL":

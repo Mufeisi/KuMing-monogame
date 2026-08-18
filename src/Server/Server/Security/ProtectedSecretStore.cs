@@ -8,7 +8,6 @@ internal static class ProtectedSecretStore
     internal const string TlsCertificatePassword = "tls-certificate-password";
     internal const string AdministratorToken = "administrator-token";
     internal const string OperatorToken = "operator-token";
-    internal const string GameMasterPassword = "game-master-password";
     internal const string MySqlConnectionString = "mysql-connection-string";
     internal const string MicroCode = "micro-code";
     internal const string AiApiKey = "ai-api-key";

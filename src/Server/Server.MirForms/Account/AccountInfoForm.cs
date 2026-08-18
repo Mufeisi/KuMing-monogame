@@ -59,7 +59,7 @@ namespace Server
             ListItem.SubItems[0].Text = account.Index.ToString();
             ListItem.SubItems[1].Text = account.AccountID;
             ListItem.SubItems[2].Text = account.UserName;
-            ListItem.SubItems[3].Text = account.AdminAccount.ToString();
+            ListItem.SubItems[3].Text = account.AdminLevel.ToString();
             ListItem.SubItems[4].Text = account.Banned.ToString();
             ListItem.SubItems[5].Text = account.BanReason;
             ListItem.SubItems[6].Text = account.ExpiryDate.ToString();
@@ -73,7 +73,7 @@ namespace Server
 
             ListItem.SubItems.Add(account.AccountID);
             ListItem.SubItems.Add(account.UserName);
-            ListItem.SubItems.Add(account.AdminAccount.ToString());
+            ListItem.SubItems.Add(account.AdminLevel.ToString());
             ListItem.SubItems.Add(account.Banned.ToString());
             ListItem.SubItems.Add(account.BanReason);
             ListItem.SubItems.Add(account.ExpiryDate.ToString());
@@ -472,7 +472,7 @@ namespace Server
             AccountInfoListView.BeginUpdate();
             for (int i = 0; i < _selectedAccountInfos.Count; i++)
             {
-                _selectedAccountInfos[i].AdminAccount = AdminCheckBox.CheckState == CheckState.Checked ? true : false;
+                _selectedAccountInfos[i].AdminLevel = AdminCheckBox.CheckState == CheckState.Checked ? 1 : 0;
                 Update(AccountInfoListView.SelectedItems[i], _selectedAccountInfos[i]);
             }
             AutoResize();
