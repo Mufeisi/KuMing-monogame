@@ -53,8 +53,10 @@ public sealed class LingFengPilotMigrationTests
         Assert.Equal(files, manifest.Keys.OrderBy(path => path, StringComparer.Ordinal));
         foreach (string relativePath in files)
         {
+            string content = File.ReadAllText(Path.Combine(contentRoot, relativePath))
+                .Replace("\r\n", "\n", StringComparison.Ordinal);
             string actual = Convert.ToHexString(SHA256.HashData(
-                File.ReadAllBytes(Path.Combine(contentRoot, relativePath)))).ToLowerInvariant();
+                System.Text.Encoding.UTF8.GetBytes(content))).ToLowerInvariant();
             Assert.Equal(manifest[relativePath], actual);
         }
     }

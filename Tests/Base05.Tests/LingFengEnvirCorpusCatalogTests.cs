@@ -225,7 +225,10 @@ public sealed class LingFengEnvirCorpusCatalogTests
         Assert.Equal("CLASS", job["别名"]);
     }
 
-    [Fact]
+    [ExternalResourceFact(
+        "外部资源阻塞：本机未挂载权威语料或服务器常量附件。",
+        @"D:\ChuanQi\服务端",
+        @"%USERPROFILE%\.codex\attachments\ce95e84e-d950-4361-b3c0-434da8313c6d\pasted-text.txt")]
     public void 本机权威语料存在时重新计算并拒绝生成目录漂移()
     {
         const string corpusRoot = @"D:\ChuanQi\服务端";

@@ -111,7 +111,9 @@ public sealed class LingFengEnvirFileClassifierTests
         }
     }
 
-    [Fact]
+    [ExternalResourceFact(
+        @"外部资源阻塞：本机未挂载 D:\ChuanQi\服务端 权威语料。",
+        @"D:\ChuanQi\服务端")]
     public void 本机代表Envir每个文件都有唯一所有权且非脚本不可发布()
     {
         const string corpusRoot = @"D:\ChuanQi\服务端";

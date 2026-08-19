@@ -11,6 +11,9 @@ public sealed class ClientSettingsLoginIntegrationTests
     [Fact]
     public void PC冒烟配置忽略普通配置并只从环境变量激活()
     {
+        var settingsType = typeof(PCClient::Client.Security.LoginSettingsIntegration).Assembly
+            .GetType("Client.Settings", throwOnError: true)!;
+        IReadOnlyDictionary<FieldInfo, object?> settingsSnapshot = CaptureStaticFields(settingsType);
         var originalDirectory = Environment.CurrentDirectory;
         var originalPassword = Environment.GetEnvironmentVariable("LYOCRYSTAL_SMOKETEST_PASSWORD");
         var originalMode = Environment.GetEnvironmentVariable("LYOCRYSTAL_LEG01_SMOKE");
@@ -32,8 +35,6 @@ public sealed class ClientSettingsLoginIntegrationTests
             Environment.SetEnvironmentVariable("LYOCRYSTAL_SMOKETEST_ACCOUNT", "runtimeuser");
             Environment.SetEnvironmentVariable("LYOCRYSTAL_SMOKETEST_CHARACTER", "RuntimeHero");
 
-            var settingsType = typeof(PCClient::Client.Security.LoginSettingsIntegration).Assembly
-                .GetType("Client.Settings", throwOnError: true)!;
             settingsType.GetMethod("Load", BindingFlags.Static | BindingFlags.Public)!.Invoke(null, null);
 
             Assert.False(ReadStaticBool(settingsType, "SmokeTestAutoLogin"));
@@ -72,6 +73,7 @@ public sealed class ClientSettingsLoginIntegrationTests
             Environment.SetEnvironmentVariable("LYOCRYSTAL_SMOKETEST_CHARACTER", originalCharacter);
             Environment.SetEnvironmentVariable("LYOCRYSTAL_SMOKETEST_EXISTING_ACCOUNT", originalExistingAccount);
             Environment.CurrentDirectory = originalDirectory;
+            RestoreStaticFields(settingsSnapshot);
             Directory.Delete(directory, recursive: true);
         }
     }
@@ -114,6 +116,9 @@ public sealed class ClientSettingsLoginIntegrationTests
     [Fact]
     public void 真实客户端宿主加载保存并由PC网络队列接收本次内存密码()
     {
+        var pcAssembly = typeof(PCClient::Client.Security.LoginSettingsIntegration).Assembly;
+        var settingsType = pcAssembly.GetType("Client.Settings", throwOnError: true)!;
+        IReadOnlyDictionary<FieldInfo, object?> settingsSnapshot = CaptureStaticFields(settingsType);
         var originalDirectory = Environment.CurrentDirectory;
         var directory = Path.Combine(Path.GetTempPath(), "lyocrystal-sec01-client-" + Guid.NewGuid().ToString("N"));
         var mobileRoot = Path.Combine(directory, "mobile");
@@ -122,6 +127,10 @@ public sealed class ClientSettingsLoginIntegrationTests
 
         try
         {
+            settingsType.GetField("Reader", BindingFlags.Static | BindingFlags.NonPublic)!.SetValue(null, null);
+            settingsType.GetField("AccountID", BindingFlags.Static | BindingFlags.Public)!.SetValue(null, string.Empty);
+            settingsType.GetField("Password", BindingFlags.Static | BindingFlags.Public)!.SetValue(null, string.Empty);
+
             const string legacyConfig = "[Game]\r\nAccountID=settingsuser\r\nPassword=persisted-secret\r\nRememberPassword=true\r\n";
             File.WriteAllText(Path.Combine(directory, "Mir2Config.ini"), legacyConfig);
             File.WriteAllText(Path.Combine(directory, "Language.ini"), "[Language]\r\n");
@@ -139,7 +148,6 @@ public sealed class ClientSettingsLoginIntegrationTests
             Assert.Empty(mobileLoaded.Password);
             Assert.False(mobileLoaded.RememberPassword);
 
-            var pcAssembly = typeof(PCClient::Client.Security.LoginSettingsIntegration).Assembly;
             var networkType = pcAssembly.GetType("Client.MirNetwork.Network", throwOnError: true)!;
             var sendListField = networkType.GetField("_sendList", BindingFlags.Static | BindingFlags.NonPublic)!;
             var sendQueue = Activator.CreateInstance(sendListField.FieldType)!;
@@ -164,8 +172,22 @@ public sealed class ClientSettingsLoginIntegrationTests
         finally
         {
             Environment.CurrentDirectory = originalDirectory;
+            RestoreStaticFields(settingsSnapshot);
             Directory.Delete(directory, recursive: true);
         }
+    }
+
+    private static IReadOnlyDictionary<FieldInfo, object?> CaptureStaticFields(Type type) =>
+        type.GetFields(BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic)
+            .Where(field => !field.IsLiteral && !field.IsInitOnly)
+            .ToDictionary(
+                field => field,
+                field => field.GetValue(null) is Array value ? value.Clone() : field.GetValue(null));
+
+    private static void RestoreStaticFields(IReadOnlyDictionary<FieldInfo, object?> snapshot)
+    {
+        foreach ((FieldInfo field, object? value) in snapshot)
+            field.SetValue(null, value);
     }
 
     private static void AssertConfigContainsNoPassword(string path)

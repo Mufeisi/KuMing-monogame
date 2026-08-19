@@ -243,7 +243,9 @@ public sealed class LingFengRobotScheduleProviderTests
         }
     }
 
-    [Fact]
+    [ExternalResourceFact(
+        @"外部资源阻塞：本机未挂载 D:\ChuanQi\服务端 权威语料。",
+        @"D:\ChuanQi\服务端")]
     public void 本机代表Robot定义全部通过严格调度解析()
     {
         const string corpusRoot = @"D:\ChuanQi\服务端";

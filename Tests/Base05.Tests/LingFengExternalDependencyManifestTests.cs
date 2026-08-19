@@ -255,7 +255,9 @@ public sealed class LingFengExternalDependencyManifestTests
         }
     }
 
-    [Fact]
+    [ExternalResourceFact(
+        "外部资源阻塞：本机未挂载 LFENV-ROOT-0002 代表语料。",
+        @"D:\ChuanQi\服务端\01酷明传奇\MirServer_01\Mir200\Envir")]
     public void 代表Envir的每个文件进入四类预检计数且依赖清单可重算()
     {
         const string root = @"D:\ChuanQi\服务端\01酷明传奇\MirServer_01\Mir200\Envir";

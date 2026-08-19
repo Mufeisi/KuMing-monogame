@@ -349,7 +349,11 @@ public sealed class LingFengCompleteSliceTests
         }
     }
 
-    [Fact]
+    [ExternalResourceFact(
+        "外部资源阻塞：本机未挂载封神原版法宝语料、完整 Envir 或数据库。",
+        @"D:\ChuanQi\服务端\封神\MirServer_法宝玩法精简提取包\MirServer\Mir200\Envir",
+        @"D:\ChuanQi\服务端\封神\MirServer\Mir200\Envir",
+        @"D:\ChuanQi\服务端\封神\MirServer\Mud2\DB\ApexM2.DB")]
     public void 封神原版法宝收录扣币回收登记并在重启后保留()
     {
         string sourceRoot = @"D:\ChuanQi\服务端\封神\MirServer_法宝玩法精简提取包\MirServer\Mir200\Envir";
@@ -495,7 +499,10 @@ public sealed class LingFengCompleteSliceTests
         }
     }
 
-    [Fact]
+    [ExternalResourceFact(
+        "外部资源阻塞：本机未挂载封神法宝数据库或新龙城地图资源。",
+        @"D:\ChuanQi\服务端\封神\MirServer\Mud2\DB\ApexM2.DB",
+        @"D:\ChuanQi\服务端\封神\MirServer\Mir200\Map\新龙城.map")]
     public void 法宝玩法从登录到击杀提交保存重启形成可核账闭环()
     {
         string sourceDatabase = @"D:\ChuanQi\服务端\封神\MirServer\Mud2\DB\ApexM2.DB";
@@ -736,7 +743,9 @@ public sealed class LingFengCompleteSliceTests
         }
     }
 
-    [Fact]
+    [ExternalResourceFact(
+        "外部资源阻塞：本机未挂载 LFENV-ROOT-0002 代表语料。",
+        @"D:\ChuanQi\服务端\01酷明传奇\MirServer_01\Mir200\Envir")]
     public void 酷明原样Envir通过严格E1脚本预检()
     {
         AssertStrictSnapshot(
@@ -744,7 +753,9 @@ public sealed class LingFengCompleteSliceTests
             "LFENV-ROOT-0002");
     }
 
-    [Fact]
+    [ExternalResourceFact(
+        "外部资源阻塞：本机未挂载 01酷明原版 Envir。",
+        @"D:\ChuanQi\服务端\01酷明传奇\MirServer_01\Mir200\Envir")]
     public void 酷明原样机器人脚本通过真实运行时解析()
     {
         const string sourceRoot = @"D:\ChuanQi\服务端\01酷明传奇\MirServer_01\Mir200\Envir";
@@ -788,7 +799,11 @@ public sealed class LingFengCompleteSliceTests
         }
     }
 
-    [Fact]
+    [ExternalResourceFact(
+        "外部资源阻塞：本机未挂载 01酷明原版 Envir、地图或数据库。",
+        @"D:\ChuanQi\服务端\01酷明传奇\MirServer_01\Mir200\Envir",
+        @"D:\ChuanQi\服务端\01酷明传奇\MirServer_01\Mir200\MAP",
+        @"D:\ChuanQi\服务端\01酷明传奇\MirServer_01\Mud2\DB\ApexM2.DB")]
     public void 酷明原样Envir真实资源缺口被E1审计准确报告()
     {
         const string sourceRoot = @"D:\ChuanQi\服务端\01酷明传奇\MirServer_01\Mir200\Envir";
@@ -948,7 +963,9 @@ public sealed class LingFengCompleteSliceTests
         }
     }
 
-    [Fact]
+    [ExternalResourceFact(
+        "外部资源阻塞：本机未挂载 01酷明命格原始脚本。",
+        @"D:\ChuanQi\服务端\01酷明传奇\MirServer_01\Mir200\Envir\QuestDiary\11命格系统")]
     public void 酷明命格完整目录未知命令为零且跨玩法调用保留为外部依赖()
     {
         string source = @"D:\ChuanQi\服务端\01酷明传奇\MirServer_01\Mir200\Envir\QuestDiary\11命格系统";
@@ -1000,7 +1017,9 @@ public sealed class LingFengCompleteSliceTests
         }
     }
 
-    [Fact]
+    [ExternalResourceFact(
+        "外部资源阻塞：本机未挂载 LFENV-ROOT-0018 代表语料。",
+        @"D:\ChuanQi\服务端\封神\MirServer_法宝玩法精简提取包\MirServer\Mir200\Envir")]
     public void 封神法宝精简包通过严格脚本预检()
     {
         AssertStrictSnapshot(

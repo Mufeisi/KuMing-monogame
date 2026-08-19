@@ -519,7 +519,9 @@ public sealed class LingFengMonsterDropProviderTests
         Assert.Null(info.LingFengContent);
     }
 
-    [Theory]
+    [ExternalResourceTheory(
+        "外部资源阻塞：本机未挂载 LFENV-ROOT-0002 代表语料。",
+        @"D:\ChuanQi\服务端\01酷明传奇\MirServer_01\Mir200\Envir")]
     [InlineData(@"D:\ChuanQi\服务端\01酷明传奇\MirServer_01\Mir200\Envir", "LFENV-ROOT-0002")]
     public void RepresentativeEnvir_StrictlyBuildsMonsterDomainCandidate(string root, string rootId)
     {
