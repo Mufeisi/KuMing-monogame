@@ -371,7 +371,7 @@ public sealed class ResourceContentAuthoringTests
         Assert.Null(failure);
     }
 
-    [Fact]
+    [WideDisplayFact]
     public void 资源作者工作区可后台渲染宽屏与折叠态截图()
     {
         Exception failure = null;
@@ -517,5 +517,13 @@ public sealed class ResourceContentAuthoringTests
         public NonActivatingRejectingLibraryEditorForm() : base(null, _ => false) { }
 
         protected override bool ShowWithoutActivation => true;
+    }
+}
+public sealed class WideDisplayFactAttribute : FactAttribute
+{
+    public WideDisplayFactAttribute()
+    {
+        if ((Screen.PrimaryScreen?.WorkingArea.Width ?? 0) < 1280)
+            Skip = "当前显示环境宽度不足 1280，无法验证宽屏与折叠态截图。";
     }
 }

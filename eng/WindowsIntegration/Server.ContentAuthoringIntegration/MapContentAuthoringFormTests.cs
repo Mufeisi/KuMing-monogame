@@ -180,7 +180,12 @@ public sealed class MapContentAuthoringFormTests
                 using var form = new DropGenForm(name => name == "木剑", _ => null, root);
                 FlowLayoutPanel toolbar = Assert.IsType<FlowLayoutPanel>(Assert.Single(form.Controls.Find("DropAuthoringToolbar", true)));
                 Assert.Equal(["分析", "差异", "保存", "重载"], toolbar.Controls.Cast<Button>().Select(value => value.Text));
-                Assert.Equal(new Size(1100, 700), form.MinimumSize);
+                Assert.Equal(700, form.MinimumSize.Height);
+                int displayBoundWidth = (Screen.PrimaryScreen?.WorkingArea.Width ?? 1100)
+                    - SystemInformation.FrameBorderSize.Width * 2;
+                Assert.True(
+                    form.MinimumSize.Width == 1100 || form.MinimumSize.Width >= displayBoundWidth,
+                    $"窗体最小宽度应为 1100，或受当前显示环境约束；实际 {form.MinimumSize.Width}，显示上限 {displayBoundWidth}。");
                 Assert.True(Assert.IsType<TextBox>(Assert.Single(form.Controls.Find("DropAnalysisTextBox", true))).Font.Size >= 12F);
                 form.ClientSize = new Size(1100, 700);
                 Assert.False(Assert.IsType<Panel>(Assert.Single(form.Controls.Find("DropAuthoringPanel", true))).Visible);
