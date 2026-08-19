@@ -36,8 +36,19 @@ namespace Server.Scripting
         {
             var errors = new List<string>();
             foreach ((string key, DropTableDefinition table) in _definitions)
+            {
                 if (!CSharpDropTableProvider.TryBuildStrict(table, _itemResolver, out string error))
+                {
+                    // “找不到物品”属于运行时安全的数据缺项（怪物掉不出该物品，但不崩溃），
+                    // 按数据降级记录诊断，不作为启动硬阻断；结构坏行/循环/括号仍失败关闭。
+                    if (CSharpDropTableProvider.IsMissingItemError(error))
+                    {
+                        MessageQueue.Instance.Enqueue($"LFENV11-DROP-DEPENDENCY-DEGRADED：{key} {error}");
+                        continue;
+                    }
                     errors.Add($"LFENV11-DROP-DEPENDENCY：{key} {error}");
+                }
+            }
             return errors.AsReadOnly();
         }
 

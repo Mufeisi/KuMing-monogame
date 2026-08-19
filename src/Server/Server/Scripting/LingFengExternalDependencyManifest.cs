@@ -50,6 +50,12 @@ namespace Server.Scripting
 
     public sealed class LingFengExternalDependencyManifest
     {
+        // 数据缺项（物品/怪物/地图静态引用）在运行时均为 no-op/判否引用，不崩溃，
+        // 因此只作为运行时安全的数据降级；只有客户端契约与领域 Adapter 缺失才构成
+        // 启动级硬阻断（失败关闭）。这是生产阻断点与测试共享的分类契约。
+        public static bool BlocksStartup(LingFengDependencyKind kind) =>
+            kind is LingFengDependencyKind.ClientContract or LingFengDependencyKind.DomainAdapter;
+
         private readonly LingFengDependencyRequirement[] _requirements;
 
         internal LingFengExternalDependencyManifest(IEnumerable<LingFengDependencyRequirement> requirements)
@@ -126,6 +132,7 @@ namespace Server.Scripting
                 ["EXTBAGPAGECOUNT"] = "LingFeng/ExtendedBag",
                 ["EXTBAGOPENITEMCOUNT"] = "LingFeng/ExtendedBag",
                 ["OPENBIGDIALOGBOX"] = "LingFeng/BigDialog",
+                ["OPENMERCHANTBIGDLG"] = "LingFeng/NpcStyleDialog",
                 ["OPENITEMBOX"] = "LingFeng/MonsterItemBox",
                 ["ADDBUTTON"] = "LingFeng/CustomButton",
                 ["OPENGODBLESS"] = "LingFeng/GodBlessBag",

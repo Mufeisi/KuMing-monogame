@@ -274,7 +274,9 @@ namespace Server.Scripting
                 return false;
 
             return TryDispatchTarget(false, provider, target, caller, false,
-                new LingFengTxtHookTarget(targetKey, $"[@{normalizedLabel.TrimStart('@')}]"));
+                new LingFengTxtHookTarget(
+                    targetKey, $"[@{normalizedLabel.TrimStart('@')}]"),
+                appendSpeechToCurrentDialog: true);
         }
 
         private static bool TryDispatchTarget(
@@ -284,7 +286,8 @@ namespace Server.Scripting
             object payload,
             bool cSharpEligible,
             LingFengTxtHookTarget target,
-            PlayerDamageRequest damageRequest = null)
+            PlayerDamageRequest damageRequest = null,
+            bool appendSpeechToCurrentDialog = false)
         {
             if (cSharpInvoked || player == null || !IsCompatibilityEnabled(provider)) return cSharpInvoked;
             if (!CanDispatchTxt(cSharpEligible, target.ScriptKey)) return false;
@@ -310,7 +313,9 @@ namespace Server.Scripting
                                    : LingFengTxtTriggerContext.PushDamage((LingFengDamageEvent)payload, damageRequest))
                         {
                             NPCScript script = NPCScript.GetOrAdd(0, target.ScriptKey, NPCScriptType.Called);
-                            return script.CallSystem(player, target.Label);
+                            return appendSpeechToCurrentDialog
+                                ? script.CallHuman(player, target.Label)
+                                : script.CallSystem(player, target.Label);
                         }
                     }
                     finally

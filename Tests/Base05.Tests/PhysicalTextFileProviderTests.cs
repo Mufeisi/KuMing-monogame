@@ -418,8 +418,10 @@ public sealed class PhysicalTextFileProviderTests
         {
             WriteUtf8(root, "QuestDiary/配置/常量.txt",
                 "[@配置]\n{\n#Define $(货币变量) GameGold\n}");
+            WriteUtf8(root, "Defines/Constant.ini",
+                "#Define #原版逻辑标志# 552");
             WriteUtf8(root, "QuestDiary/玩法/消费.txt",
-                "[@消费]\n{\n#IF\nCheck$(货币变量) ? 30\n#ACT\n$(货币变量) - 30\n}");
+                "[@消费]\n{\n#IF\nCheck$(货币变量) ? 30\n#ACT\n$(货币变量) - 30\nSET [#原版逻辑标志#] 1\n}");
             Settings.TxtScriptsCompatibilityVersion = "LFM2-2026-08-15-snapshot";
 
             var provider = new PhysicalTextFileProvider(
@@ -427,7 +429,10 @@ public sealed class PhysicalTextFileProviderTests
             TextFileDefinition definition = provider.GetByKey("QuestDiary/玩法/消费");
             Assert.Contains("CheckGameGold ? 30", definition.Lines);
             Assert.Contains("GameGold - 30", definition.Lines);
+            Assert.Contains("SET [552] 1", definition.Lines);
             Assert.StartsWith("; #Define", provider.GetByKey("QuestDiary/配置/常量").Lines[2]);
+            Assert.StartsWith("; #Define", Assert.Single(
+                provider.GetByKey("Defines/Constant").Lines));
 
             var player = new PlayerObject
             {
@@ -449,7 +454,7 @@ public sealed class PhysicalTextFileProviderTests
     }
 
     [Fact]
-    public void LingFengDefine冲突或循环拒绝整个候选()
+    public void LingFengDefine冲突与循环均拒绝整个候选()
     {
         string conflictRoot = CreateTemporaryRoot();
         string cycleRoot = CreateTemporaryRoot();

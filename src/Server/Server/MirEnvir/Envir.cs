@@ -3417,20 +3417,45 @@ namespace Server.MirEnvir
                     string.Equals(value.Name, monsterName, StringComparison.OrdinalIgnoreCase)),
                 mapName => provider.WorldContentProvider?.DefinesMapReference(mapName) == true ||
                            MapInfoList.Any(value =>
-                               string.Equals(value.FileName, mapName, StringComparison.OrdinalIgnoreCase)),
+                               string.Equals(value.FileName, mapName, StringComparison.OrdinalIgnoreCase) ||
+                               string.Equals(value.LingFengAlias, mapName, StringComparison.OrdinalIgnoreCase)),
                 key => clientContracts.Contains(key),
                 key => domainAdapters.Contains(key));
             LingFengDependencyReport report = provider.ExternalDependencyManifest.Evaluate(level, probe);
-            if (report.Success) return;
 
             const int maximumReportedDependencies = 200;
-            string details = string.Join(Environment.NewLine, report.Missing
+
+            // E1 数据缺项（物品/怪物/地图静态引用）为运行时安全的 no-op/判否引用，
+            // 如实结构化报告但不阻断启动；仅 E2 客户端契约与领域 Adapter 缺失失败关闭。
+            LingFengDependencyRequirement[] hardBlocking = report.Missing
+                .Where(value => LingFengExternalDependencyManifest.BlocksStartup(value.Kind))
+                .ToArray();
+            LingFengDependencyRequirement[] dataDegraded = report.Missing
+                .Where(value => !LingFengExternalDependencyManifest.BlocksStartup(value.Kind))
+                .ToArray();
+
+            if (dataDegraded.Length > 0)
+            {
+                int reported = Math.Min(dataDegraded.Length, maximumReportedDependencies);
+                string degradedDetails = string.Join(Environment.NewLine, dataDegraded
+                    .Take(reported)
+                    .Select(value =>
+                        $"LFENV15-DEPENDENCY-DEGRADED：level={value.Level};kind={value.Kind};key={value.Key};source={value.SourceKey}"));
+                if (dataDegraded.Length > reported)
+                    degradedDetails += Environment.NewLine +
+                                       $"LFENV15-DEPENDENCY-DEGRADED-SUMMARY：degraded={dataDegraded.Length};reported={reported}";
+                MessageQueue.Enqueue($"[Scripts] 外部依赖数据缺项（运行时安全降级，不阻断启动）共 {dataDegraded.Length} 项：\n{degradedDetails}");
+            }
+
+            if (hardBlocking.Length == 0) return;
+
+            string details = string.Join(Environment.NewLine, hardBlocking
                 .Take(maximumReportedDependencies)
                 .Select(value =>
                     $"LFENV15-DEPENDENCY-MISSING：level={value.Level};kind={value.Kind};key={value.Key};source={value.SourceKey}"));
-            if (report.Missing.Count > maximumReportedDependencies)
+            if (hardBlocking.Length > maximumReportedDependencies)
                 details += Environment.NewLine +
-                           $"LFENV15-DEPENDENCY-SUMMARY：missing={report.Missing.Count};reported={maximumReportedDependencies}";
+                           $"LFENV15-DEPENDENCY-SUMMARY：missing={hardBlocking.Length};reported={maximumReportedDependencies}";
             throw new InvalidDataException(details);
         }
 

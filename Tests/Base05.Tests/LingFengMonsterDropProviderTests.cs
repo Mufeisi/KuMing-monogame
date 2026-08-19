@@ -157,7 +157,7 @@ public sealed class LingFengMonsterDropProviderTests
     }
 
     [Fact]
-    public void DependencyValidation_RejectsMissingDropItem()
+    public void DependencyValidation_缺物品降级不报而结构坏行仍阻断()
     {
         Assert.True(LingFengMonsterDropProvider.TryCreate(
             [new TextFileDefinition("Drops/缺物品").AddLine("1/1 不存在物品")],
@@ -166,7 +166,8 @@ public sealed class LingFengMonsterDropProviderTests
             out LingFengMonsterDropProvider provider,
             out IReadOnlyList<string> syntaxErrors), string.Join(Environment.NewLine, syntaxErrors));
 
-        Assert.Contains(provider.ValidateDependencies(),
+        // “找不到物品”属于运行时安全的数据缺项：如实降级、不入启动阻断集合。
+        Assert.DoesNotContain(provider.ValidateDependencies(),
             error => error.Contains("LFENV11-DROP-DEPENDENCY", StringComparison.Ordinal) &&
                      error.Contains("不存在物品", StringComparison.Ordinal));
     }

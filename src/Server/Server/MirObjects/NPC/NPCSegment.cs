@@ -62,6 +62,11 @@ namespace Server.MirObjects
                     reference.Scope == ScriptVariableScope.L ||
                     reference.Scope == ScriptVariableScope.Dict);
         }
+        private static bool LooksLikeUnresolvableVariable(string text)
+        {
+            string value = (text ?? string.Empty).Trim();
+            return value.Length >= 3 && char.IsAsciiLetter(value[0]) && value[1] == '$';
+        }
 
         private bool TryFormatScriptVariable(PlayerObject player, string expression, out string text)
         {
@@ -4685,7 +4690,9 @@ namespace Server.MirObjects
                     newValue = player.Class.ToString();
                     break;
                 case "MAP":
-                    newValue = player.CurrentMap.Info.FileName;
+                    newValue = string.IsNullOrWhiteSpace(player.CurrentMap.Info.LingFengAlias)
+                        ? player.CurrentMap.Info.FileName
+                        : player.CurrentMap.Info.LingFengAlias;
                     break;
                 case "MAPNAME":
                     newValue = player.CurrentMap.Info.Title;
@@ -4852,7 +4859,9 @@ namespace Server.MirObjects
                     newValue = Monster.Level.ToString(CultureInfo.InvariantCulture);
                     break;
                 case "MAP":
-                    newValue = Monster.CurrentMap.Info.FileName;
+                    newValue = string.IsNullOrWhiteSpace(Monster.CurrentMap.Info.LingFengAlias)
+                        ? Monster.CurrentMap.Info.FileName
+                        : Monster.CurrentMap.Info.LingFengAlias;
                     break;
                 case "MAPNAME":
                     newValue = Monster.CurrentMap.Info.Title;
@@ -5529,7 +5538,7 @@ namespace Server.MirObjects
                             }
                             int available = player.Info.Inventory
                                 .Where(item => item != null && LingFengItemCommandExecutor.NameMatches(
-                                    item.Info.FriendlyName, param[0], partialMode == 1))
+                                    item.Info.Name, param[0], partialMode == 1))
                                 .Sum(item => item.Count);
                             failed = available < required;
                         }
@@ -5946,6 +5955,11 @@ namespace Server.MirObjects
                         break;
                     case CheckType.LingFengCompare:
                         {
+                            if (LooksLikeUnresolvableVariable(param[1]) || LooksLikeUnresolvableVariable(param[2]))
+                            {
+                                failed = true;
+                                break;
+                            }
                             string command = param[0];
                             string leftValue = param[1];
                             string rightValue = param[2];
@@ -7653,7 +7667,7 @@ namespace Server.MirObjects
                                 .Select((item, index) => (item, index))
                                 .Where(entry => entry.item != null &&
                                     LingFengItemCommandExecutor.NameMatches(
-                                        entry.item.Info.FriendlyName, param[0], partialMode == 1) &&
+                                        entry.item.Info.Name, param[0], partialMode == 1) &&
                                     LingFengItemCommandExecutor.DurabilityMatches(
                                         entry.item.CurrentDura, entry.item.MaxDura, durabilityMode))
                                 .ToArray();

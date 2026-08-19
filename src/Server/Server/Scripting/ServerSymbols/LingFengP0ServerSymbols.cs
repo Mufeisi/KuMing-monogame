@@ -108,7 +108,9 @@ namespace Server.Scripting.ServerSymbols
             AddInteger(bindings, "SPD", StatValue(player, Stat.Agility));
             AddInteger(bindings, "LUCK", StatValue(player, Stat.Luck));
 
-            AddString(bindings, "MAP", map?.Info?.FileName);
+            AddString(bindings, "MAP", string.IsNullOrWhiteSpace(map?.Info?.LingFengAlias)
+                ? map?.Info?.FileName
+                : map.Info.LingFengAlias);
             AddString(bindings, "MAPTITLE", map?.Info?.Title);
             AddInteger(bindings, "X", player.CurrentLocation.X);
             AddInteger(bindings, "Y", player.CurrentLocation.Y);

@@ -493,11 +493,13 @@ namespace Server.MirEnvir
                 
         }
 
-        public bool Load()
+        public bool Load() =>
+            Load(Path.Combine(Settings.MapPath, Info.FileName + ".map"));
+
+        internal bool Load(string fileName)
         {
             try
             {
-                string fileName = Path.Combine(Settings.MapPath, Info.FileName + ".map");
                 if (File.Exists(fileName))
                 {
                     byte[] fileBytes = File.ReadAllBytes(fileName);

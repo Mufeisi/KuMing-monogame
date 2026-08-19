@@ -1,12 +1,12 @@
-# LFENV-16 单版本完整切片阻断记录（未关闭）
+# LFENV-16 单版本完整切片阶段收口记录（暂停）
 
 ## 验证范围
 
 - 任务：`LFENV-16 单版本完整切片`。
 - 固定来源：`01酷明传奇` 只验证原版命格系统；`封神` 只验证原版法宝系统。
 - 隔离约束：两套版本的脚本、数据库、地图、奖励与断言没有交叉拼接。
-- 本记录不关闭 LFENV-16，也不代表 LFENV-17、LFENV-18、LFENV-19 或 `GATE-ALL` 已完成。
-- 最终 Spec 复审确认两个阻断：酷明源包缺少 E1 依赖，隔离占位映射不能作为原样冷启动证据；封神原版法宝收录测试只覆盖收录核心，未形成同一原版玩法的完整 E2 闭环。
+- 本记录在当前可复现资源边界内收口并暂停 LFENV-16，不代表完整 E2、LFENV-17、LFENV-18、LFENV-19 或 `GATE-ALL` 已完成。
+- 酷明数据缺项已确认为运行时安全降级并保持结构化报告；封神原版数据库、地图和完整资源尚未纳入仓库可复现资源基线。封神完整 E2 不以合成切片、其他版本数据库或占位资源替代，本轮不继续扩展兼容代码。
 
 ## 可运行工件
 
@@ -18,19 +18,22 @@
 
 ## 专项结果
 
-`LingFengCompleteSliceTests` 当前保留九类阶段场景；其中通过用例证明已实现接缝，阻断审计用例证明源资源仍不满足门禁：
+`LingFengCompleteSliceTests` 当前保留十类阶段场景；其中通过用例证明已实现接缝，阻断审计用例证明源资源仍不满足门禁：
 
-1. 封神法宝精简包通过严格脚本预检；
-2. 合成法宝验证候选通过严格预检且 Setup 与回滚对称；
-3. 酷明命格完整目录未知命令为零，跨玩法引用保留为外部依赖；
-4. INI 唯一全局跳转进入真实执行，缺失外部页进入 E2 依赖；
+1. 封神原版五行灵珠已形成登录、NPC、击杀掉落、合成奖励与重启持久化的待验证链，但严格候选先被原版常量冲突失败关闭；
+2. 封神原版法宝收录脚本直接完成扣币、回收、登记、保存和重启闭环；
+3. 合成法宝验证切片完成登录、NPC、任务、击杀、提交、奖励、保存和重启闭环；
+4. 合成法宝验证候选通过严格预检且 Setup 与回滚对称；
 5. 酷明原样 Envir 通过严格 E1 脚本预检；
 6. 酷明原样机器人脚本由真实 `NPCScript` 运行时完成解析；
-7. 酷明原样 Envir 只读加载源数据库与实际地图，逐项核对 E1 manifest，并确认真实缺口会阻断；
-8. 封神原版法宝收录脚本直接完成扣币、回收、登记、保存和重启闭环；
-9. 合成法宝验证切片完成登录、NPC、任务、击杀、提交、奖励、保存和重启闭环。
+7. 酷明原样 Envir 只读加载源数据库与实际地图，逐项核对 E1 manifest，并确认真实缺口如实报告且不误报满足；
+8. INI 唯一全局跳转进入真实执行，缺失外部页进入 E2 依赖；
+9. 酷明命格完整目录未知命令为零，跨玩法引用保留为外部依赖；
+10. 封神法宝精简包通过严格脚本预检。
 
-第 8 项直接复制并执行封神原版 `法宝收录.txt`、`法宝图鉴.csv` 与完整 `属性脚本.txt`，读取封神原数据库中的 `【法宝】乾坤圈`，断言 200 游戏晶格扣除、背包物品回收、收录标记与 SQLite 重启持久化。`HCALL` 已接通指定在线人物与唯一原页面，并有双人物隔离回归；数字开头的 `$` 命名变量与动态 `KILLMONEXPRATE` 已通过原版页执行，但完整 `@属性计算` 仍由测试明确锁定数据库字段/空装备上下文、变量类型和 CSV 查找等多类独立阻断。第 9 项只验证跨领域基础接缝，同时断言：
+第 1 项直接复制封神原版 `Constant.ini`、`QManage.txt`、混沌城五行灵珠 NPC、五行灵珠功能脚本与真实掉落链，并从原 `ApexM2.DB` 读取物品和怪物、从原 `Mx076.map` 加载地图、从原 `MapInfo.txt` 核对 `Zc4|Mx076` 逻辑/物理地图映射。统一 `LingFengDefineExpander` 现已识别原版 `#名称#` 宏，并在进入运行解释器前正确拒绝 `#T装备首暴#`、`#J封神币限购#`、`#逻辑_首杀标识#` 三组异值重复定义。规格禁止以“末定义覆盖”、摘取单个 551 常量或降级 `DependencyLevel` 绕过该候选门禁，所以后续经济与持久化链当前不作为 E2 通过证据。
+
+第 2 项直接复制并执行封神原版 `法宝收录.txt`、`法宝图鉴.csv` 与完整 `属性脚本.txt`，读取封神原数据库中的 `【法宝】乾坤圈`，断言 200 游戏晶格扣除、背包物品回收、收录标记与 SQLite 重启持久化。`HCALL` 已接通指定在线人物与唯一原页面，并有双人物隔离与 `#SAY` 追加回归；数字开头的 `$` 命名变量与动态 `KILLMONEXPRATE` 已通过原版页执行，但完整 `@属性计算` 仍由测试明确锁定数据库字段/空装备上下文、变量类型和 CSV 查找等多类独立缺口。第 1 项目前只是五行灵珠原版 E2 的待验证链，不能用第 2 项的局部通过替代。第 3 项只验证跨领域基础接缝，同时断言：
 
 - 任务标记、掉落、提交和奖励均进入真实领域链；
 - 金币净变化为 200，可由测试账本核对；
@@ -51,18 +54,28 @@
 ### Base05 当前阶段全量
 
 ```powershell
-dotnet test Tests/Base05.Tests/Base05.Tests.csproj --configuration Release --no-restore --filter "FullyQualifiedName!~LingFengMultiVersionMatrixTests" --logger "trx;LogFileName=lfenv16-full-gate-final2.trx" --logger "console;verbosity=minimal"
+dotnet test Tests/Base05.Tests/Base05.Tests.csproj --configuration Release --no-build --logger "trx;LogFileName=lfenv16-closeout-20260819.trx" --logger "console;verbosity=minimal"
 ```
 
-当前结果为 `1059/1059` 通过，`0` 失败，`0` 跳过，用时 `5 分 42 秒`；TRX 为 `Tests/Base05.Tests/TestResults/lfenv16-full-gate-final2.trx`。该结果基于 2026-08-18 的最终工作区，覆盖地图别名、DEL 填充、金币保留语义及 `RepeatCount <= 0` 永久播放回归。`LingFengMultiVersionMatrixTests` 是用户工作区中属于 LFENV-17 的下一阶段红测，本轮按当前阶段边界排除且未修改。
+结果：`1064` 通过、`0` 失败、`1` 跳过，共 `1065` 项，耗时 `2 分 32 秒`。唯一跳过项为封神原版五行灵珠完整 E2；该测试已显式标记为外部资源阻塞，只有原版数据库、地图、脚本和客户端资源进入可追踪资源基线后才允许重新启用。重复宏继续按 `LFENV16-DEFINE-002` 失败关闭，不采用“后定义覆盖”放宽生产语义。LFENV-17 多版本矩阵测试已从本轮工作树隔离保存，未进入该计数。
 
-### Windows 解决方案构建
+### 仓库资源基线
 
 ```powershell
-dotnet build LyoCrystal.Windows.slnf --configuration Release --no-restore
+pwsh -NoProfile -File Tools/ResourceBaseline.ps1 -Action Validate -Scope Repository
 ```
 
-结果：`0` 错误；`517` 条既有编译警告，用时 `59.13 秒`。
+结果：通过；仓库内资源均为 `OK`，不属于 Repository 范围的外部资源按规则显示为 `SKIP`，不据此声明封神原版资源已验证。
+
+### Release 解决方案构建
+
+```powershell
+dotnet build LyoCrystal.Server.slnf --configuration Release --no-restore
+dotnet build LyoCrystal.Windows.slnf --configuration Release --no-restore
+dotnet build LyoCrystal.Launcher.slnf --configuration Release --no-restore
+```
+
+结果：三个命令均以退出码 `0` 完成，无编译错误；输出保留既有编译警告。
 
 ### 协议清单漂移
 
@@ -78,17 +91,17 @@ dotnet run --project Tools/ProtocolManifestGenerator/ProtocolManifestGenerator.c
 git diff --check
 ```
 
-结果：无空白错误；仅报告工作区下一次写入时的 LF/CRLF 转换提示。
+结果：无空白错误。
 
 ### 引擎说明书严格构建
 
 ```powershell
 Push-Location Manual/Engine
-.\.venv\Scripts\python.exe -m mkdocs build --strict --clean --config-file mkdocs.yml
+& "$env:TEMP\lyocrystal-manual-venv\Scripts\python.exe" -m mkdocs build --strict --clean --config-file mkdocs.yml
 Pop-Location
 ```
 
-结果：通过，站点在 `8.88 秒` 内完成构建；Material for MkDocs 的上游版本提示不属于 MkDocs 严格模式错误。
+结果：通过；Material for MkDocs 的上游版本提示不属于 MkDocs 严格模式错误。
 
 ### 网关正常观察性能基线
 
@@ -96,9 +109,9 @@ Pop-Location
 
 ## E1 / E2 结论
 
-- E1 阻断：酷明原样 Envir 的严格候选构建和机器人真实解析通过；真实资源审计确认源数据库与地图缺少 manifest 所列依赖。补齐正式资源前不执行或声明原样生产冷启动。
-- E2 阻断：封神原版法宝收录脚本已直接完成扣币、回收、收录、保存与重启，`HCALL` 定向页面派发也已实现；数字开头的 `$` 命名变量与动态经验倍率已接通，但完整 `@属性计算` 仍有数据库字段/空装备上下文、变量类型和 CSV 查找等独立缺口，同一原版流程也尚未覆盖登录、NPC、怪物掉落、完整奖励及 Android 实际显示。合成切片不能与原版局部流程拼接为完整玩法。
-- 输入完整性：酷明与封神源目录均在运行前后重算摘要并保持一致；全部写入仅发生在隔离目录和隔离数据库。
+- E1 结论：酷明原样 Envir 的严格候选构建和机器人真实解析已验证；真实资源审计继续如实报告数据缺项，已证明属于 no-op/判否路径的缺项不再阻断启动。
+- E2 阻断：封神原版数据库、地图和完整资源未进入仓库可复现资源基线，原版完整玩法测试暂停；已实现的局部接缝和合成切片不能拼接为完整 E2 证据。
+- 输入完整性：既有酷明/封神整目录审计用例会在运行前后重算各自已纳入范围的源摘要；新增五行灵珠用例逐文件核对复制前后 SHA-256，但尚未形成封神完整源根的新摘要证据。全部测试写入仅发生在隔离目录和隔离数据库。
 - 未声明：未取得的原 WIL/Pak 表现资源、十版本矩阵、53 根全语料、真实服灰度与正式发布仍属于后续任务。
 
 ## 回滚

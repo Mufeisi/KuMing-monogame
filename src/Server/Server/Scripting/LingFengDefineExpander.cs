@@ -7,10 +7,10 @@ internal static class LingFengDefineExpander
     private const int MaximumDepth = 16;
     private const int MaximumExpandedLineLength = 64 * 1024;
     private static readonly Regex DefineRegex = new(
-        @"^\s*#DEFINE\s+(?<name>\$\([^\)\r\n]+\))\s+(?<value>.*?)(?:\s+;.*)?$",
+        @"^\s*#DEFINE\s+(?<name>\$\([^\)\r\n]+\)|#[^#\r\n]+#)\s+(?<value>.*?)(?:\s+;.*)?$",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
     private static readonly Regex ReferenceRegex = new(
-        @"\$\([^\)\r\n]+\)",
+        @"\$\([^\)\r\n]+\)|#[^#\r\n]+#",
         RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
     public static void Expand(IDictionary<string, TextFileDefinition> definitions)

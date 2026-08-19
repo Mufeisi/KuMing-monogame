@@ -57,7 +57,7 @@ namespace Server.Scripting
             }
         }
 
-        private static bool IsMissingItemError(string error)
+        internal static bool IsMissingItemError(string error)
         {
             if (string.IsNullOrWhiteSpace(error))
                 return false;

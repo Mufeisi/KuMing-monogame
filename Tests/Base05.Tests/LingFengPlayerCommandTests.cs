@@ -13,6 +13,26 @@ namespace Base05.Tests;
 public sealed class LingFengPlayerCommandTests
 {
     [Fact]
+    public void 翎风Map常量优先返回原版逻辑地图名并保留物理名回退()
+    {
+        var segment = Segment();
+        var player = new SilentPlayerObject
+        {
+            Info = new CharacterInfo { Name = "地图别名人物" },
+            CurrentMap = new Map(new MapInfo
+            {
+                FileName = "Mx076",
+                LingFengAlias = "Zc4"
+            })
+        };
+
+        Assert.Equal("Zc4", segment.ReplaceValue(player, "<$Map>"));
+
+        player.CurrentMap.Info.LingFengAlias = string.Empty;
+        Assert.Equal("Mx076", segment.ReplaceValue(player, "<$Map>"));
+    }
+
+    [Fact]
     public void 翎风扩展字符串分隔按起始变量连续写入并返回分段数()
     {
         string oldVersion = Settings.TxtScriptsCompatibilityVersion;
@@ -1470,6 +1490,10 @@ public sealed class LingFengPlayerCommandTests
             var failing = Segment();
             failing.ParseCheck("LARGE 非数字 1");
             Assert.False(failing.Check(player));
+
+            var invalidVariable = Segment();
+            invalidVariable.ParseCheck("EQUAL I$不存在 I$不存在");
+            Assert.False(invalidVariable.Check(player));
         }
         finally
         {
@@ -2062,13 +2086,18 @@ public sealed class LingFengPlayerCommandTests
         var target = new SilentPlayerObject
         {
             Info = new CharacterInfo { Name = "法宝属性接收者" },
-            Account = new AccountInfo()
+            Account = new AccountInfo(),
+            CurrentMap = new Map(new MapInfo { Index = 916190, FileName = "HCALL测试地图" }),
+            NPCSpeech = ["原对话"]
         };
         Directory.CreateDirectory(Path.Combine(root, "QuestDiary"));
+        Directory.CreateDirectory(Path.Combine(root, "Defines"));
         try
         {
+            File.WriteAllText(Path.Combine(root, "Defines", "Constant.ini"),
+                "#Define #原版属性标志# 552\n");
             File.WriteAllText(Path.Combine(root, "QuestDiary", "属性脚本.txt"),
-                "[@属性计算]\n#ACT\nGIVEGOLD 7\n");
+                "[@属性计算]\n#ACT\nGIVEGOLD 7\nSET [#原版属性标志#] 1\n#SAY\n原版属性计算完成\n");
             Settings.CSharpScriptsEnabled = false;
             Settings.TxtScriptsEnabled = true;
             Settings.TxtScriptsPath = root;
@@ -2080,6 +2109,12 @@ public sealed class LingFengPlayerCommandTests
             Envir.Main.Players.Add(source);
             Envir.Main.Players.Add(target);
 
+            Assert.True(loadedTarget.CallHuman(target, "[@属性计算]"));
+            Assert.Equal(new[] { "原对话", "原版属性计算完成" }, target.NPCSpeech);
+            target.Account.Gold = 0;
+            target.Info.Flags[552] = false;
+            target.NPCSpeech = ["原对话"];
+
             var segment = Segment();
             segment.ParseAct(segment.ActList,
                 "HCALL 法宝属性接收者 @属性计算");
@@ -2088,6 +2123,8 @@ public sealed class LingFengPlayerCommandTests
             Assert.True(segment.Check(source));
             Assert.Equal(0u, source.Account.Gold);
             Assert.Equal(7u, target.Account.Gold);
+            Assert.True(target.Info.Flags[552]);
+            Assert.Equal(new[] { "原对话", "原版属性计算完成" }, target.NPCSpeech);
         }
         finally
         {
@@ -7297,6 +7334,12 @@ public sealed class LingFengPlayerCommandTests
                 { Name = "命格融合材料", StackSize = 10 });
             Assert.True(shortTake.Check(player));
             Assert.Null(player.Info.Inventory[0]);
+
+            var tieredItemCheck = Segment();
+            tieredItemCheck.ParseCheck("CHECKITEM 【法宝】火灵珠[鸿蒙] 1");
+            player.Info.Inventory[0] = new UserItem(new ItemInfo
+                { Name = "【法宝】火灵珠[鸿蒙]", StackSize = 1 });
+            Assert.True(tieredItemCheck.Check(player));
 
             Assert.Throws<InvalidDataException>(() =>
                 segment.ParseAct(segment.ActList, "GIVE 屠龙 1 0 0 0 0 0 0 -1"));

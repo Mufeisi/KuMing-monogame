@@ -24,6 +24,331 @@ namespace Base05.Tests;
 [Collection(nameof(PhysicalTextFileProviderCollection))]
 public sealed class LingFengCompleteSliceTests
 {
+    [Fact(Skip = "外部资源阻塞：封神原版数据库、地图和完整资源尚未纳入仓库可复现资源基线。")]
+    public void 封神原版五行灵珠从登录击杀到合成奖励并在重启后保留()
+    {
+        const string sourceRoot = @"D:\ChuanQi\服务端\封神\MirServer\Mir200\Envir";
+        const string sourceDatabase = @"D:\ChuanQi\服务端\封神\MirServer\Mud2\DB\ApexM2.DB";
+        const string sourceMap = @"D:\ChuanQi\服务端\封神\MirServer\Mir200\Map\Mx076.map";
+        string sourceMapInfo = Path.Combine(sourceRoot, "MapInfo.txt");
+        if (!Directory.Exists(sourceRoot) || !File.Exists(sourceDatabase) ||
+            !File.Exists(sourceMap) || !File.Exists(sourceMapInfo))
+            throw Xunit.Sdk.SkipException.ForSkip("本机未挂载封神原版 Envir、数据库或混沌城地图。");
+
+        bool oldTxtEnabled = Settings.TxtScriptsEnabled;
+        bool oldCSharpEnabled = Settings.CSharpScriptsEnabled;
+        bool oldStrict = Settings.TxtScriptsStrictCompatibility;
+        string oldTxtPath = Settings.TxtScriptsPath;
+        TxtScriptLayout oldLayout = Settings.TxtScriptsLayout;
+        string oldVersion = Settings.TxtScriptsCompatibilityVersion;
+        LingFengDependencyLevel oldLevel = Settings.TxtScriptsDependencyLevel;
+        string oldClientContracts = Settings.TxtScriptsClientContracts;
+        string oldDomainAdapters = Settings.TxtScriptsDomainAdapters;
+        float oldDropRate = Settings.DropRate;
+        NPCScript oldDefaultNpc = Envir.Main.DefaultNPC;
+        ItemInfo[] oldItems = Envir.Main.ItemInfoList.ToArray();
+        MonsterInfo[] oldMonsters = Envir.Main.MonsterInfoList.ToArray();
+        MapInfo[] oldMaps = Envir.Main.MapInfoList.ToArray();
+        int[] oldScriptIds = Envir.Main.Scripts.Keys.ToArray();
+        string runtimeRoot = Path.Combine(Path.GetTempPath(),
+            $"lfenv16-original-orb-{Guid.NewGuid():N}");
+        string databasePath = Path.Combine(Path.GetTempPath(), $"lfenv16-original-orb-{Guid.NewGuid():N}.db");
+        Map map = null;
+        TestPlayer player = null;
+        try
+        {
+            string[] originalFiles =
+            [
+                @"Defines\Constant.ini",
+                "EffectImageList.txt",
+                @"MapQuest_def\QManage.txt",
+                @"Market_Def\【4大陆】\功能-五行灵珠-Zc4.txt",
+                @"QuestDiary\【2功能脚本】\五行灵珠.txt",
+                @"MonItems\火灵珠[灵体].txt",
+                @"QuestDiary\【9爆率文件】\通用爆率4.txt",
+                @"QuestDiary\【9爆率文件】\人形怪1.txt",
+                @"QuestDiary\【9爆率文件】\【34】地图爆率.txt"
+            ];
+            foreach (string originalFile in originalFiles)
+                CopyOriginalFile(sourceRoot, runtimeRoot, originalFile);
+            Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+            Assert.Contains(File.ReadAllLines(sourceMapInfo, Encoding.GetEncoding(936)),
+                line => line.StartsWith("[Zc4|Mx076", StringComparison.OrdinalIgnoreCase) &&
+                        line.Contains("混沌城", StringComparison.Ordinal));
+
+            var items = new List<ItemInfo>();
+            var monsters = new List<MonsterInfo>();
+            LoadAllLegacyItems(sourceDatabase, items);
+            LoadAllLegacyMonsters(sourceDatabase, monsters);
+            Envir.Main.ItemInfoList.Clear();
+            Envir.Main.ItemInfoList.AddRange(items);
+            Envir.Main.MonsterInfoList.Clear();
+            Envir.Main.MonsterInfoList.AddRange(monsters);
+
+            var mapInfo = new MapInfo
+            {
+                Index = 916180,
+                FileName = "Mx076",
+                Title = "混沌城",
+                LingFengAlias = "Zc4"
+            };
+            Envir.Main.MapInfoList.Add(mapInfo);
+            Settings.CSharpScriptsEnabled = false;
+            Settings.TxtScriptsEnabled = true;
+            Settings.TxtScriptsPath = runtimeRoot;
+            Settings.TxtScriptsLayout = TxtScriptLayout.LingFeng;
+            Settings.TxtScriptsStrictCompatibility = true;
+            Settings.TxtScriptsCompatibilityVersion = "LFM2-2026-08-15-snapshot";
+            Settings.TxtScriptsDependencyLevel = LingFengDependencyLevel.None;
+            Settings.TxtScriptsClientContracts = string.Empty;
+            Settings.TxtScriptsDomainAdapters = string.Empty;
+            Settings.DropRate = 20_000;
+            Envir.Main.ApplyPhysicalTextFileDefinitions();
+            Envir.Main.ReloadDrops();
+
+            ItemInfo fireOrb = Assert.Single(items, value => value.Name == "【法宝】火灵珠[鸿蒙]");
+            ItemInfo reward = Assert.Single(items, value => value.Name == "【法宝】五行灵珠[鸿蒙]");
+            ItemInfo chaosOrb = Assert.Single(items, value => value.Name == "混沌宝珠");
+            string[] startingOrbNames =
+            [
+                "【法宝】雷灵珠[鸿蒙]", "【法宝】土灵珠[鸿蒙]",
+                "【法宝】水灵珠[鸿蒙]", "【法宝】木灵珠[鸿蒙]"
+            ];
+            MonsterInfo fireSpirit = Assert.Single(monsters, value => value.Name == "火灵珠[灵体]");
+            Assert.NotEmpty(fireSpirit.Drops);
+            string[] deterministicDropNames = fireSpirit.Drops
+                .Select(drop => drop.AttemptDropWithRandom(_ => 0, (minimum, _) => minimum,
+                    dropRate: 20_000))
+                .Where(value => value != null)
+                .SelectMany(value => value.Items)
+                .Select(value => value.Name)
+                .ToArray();
+            Assert.Contains(fireOrb.Name, deterministicDropNames);
+
+            map = new Map(mapInfo);
+            Assert.True(map.Load(sourceMap));
+            Point playLocation = Assert.Single(map.WalkableCells.Take(1));
+            var account = new AccountInfo
+            {
+                Index = 916181,
+                AccountID = "lfenv16-original-orb",
+                Gold = 2_100_000_000
+            };
+            var character = new CharacterInfo
+            {
+                Index = 916182,
+                Name = "封神原版灵珠人物",
+                AccountInfo = account,
+                Level = ushort.MaxValue,
+                CurrentMapIndex = mapInfo.Index,
+                CurrentLocation = playLocation,
+                HP = 100
+            };
+            account.Characters.Add(character);
+            for (int index = 0; index < startingOrbNames.Length; index++)
+                character.Inventory[index] = new UserItem(
+                    Assert.Single(items, value => value.Name == startingOrbNames[index])) { Count = 1 };
+            character.Inventory[startingOrbNames.Length] = new UserItem(chaosOrb) { Count = 10 };
+            character.LingFengProgress.SetGameGird(100_000);
+            player = new TestPlayer
+            {
+                Info = character,
+                Account = account,
+                Stats = new Stats(),
+                CurrentMap = map,
+                CurrentLocation = playLocation,
+                Node = new LinkedListNode<MapObject>(null!)
+            };
+            player.Node.Value = player;
+            character.Mount = new MountInfo(player);
+            player.Report = new Reporting(player);
+            player.Stats[Stat.HP] = 100;
+            player.Stats[Stat.物品掉落数率] = 100;
+            var connection = (MirConnection)RuntimeHelpers.GetUninitializedObject(typeof(MirConnection));
+            connection.SentItemInfo = items;
+            connection.SentHeroInfo = [];
+            player.Connection = connection;
+            map.Players.Add(player);
+            Envir.Main.Players.Add(player);
+
+            NPCScript qManage = NPCScript.GetOrAdd(0, "SystemScripts/QManage", NPCScriptType.Called);
+            Envir.Main.DefaultNPC = qManage;
+            player.CallDefaultNPC(DefaultNPCType.Login);
+            Assert.Contains(qManage.NPCPages, page => page.Key == "[@LOGIN]");
+            ScriptVariableTextResult loginMarker = Envir.Main.CSharpScripts.VariableCommands.Format(
+                ScriptVariableContext.ForConversation(player, player.NPCObjectID, player.CurrentMap),
+                "S$历史主城");
+            Assert.True(loginMarker.Success, loginMarker.Diagnostic);
+            Assert.Equal("Zc1／139／128", loginMarker.Text);
+
+            var monster = new TestMonster(fireSpirit)
+            {
+                CurrentMap = map,
+                CurrentLocation = playLocation,
+                EXPOwner = player,
+                HP = 1,
+                Node = new LinkedListNode<MapObject>(null!)
+            };
+            monster.Node.Value = monster;
+            monster.Stats[Stat.HP] = 1;
+            map.GetCell(playLocation).Add(monster);
+            monster.Die();
+            Point? fireDropLocation = null;
+            for (int x = 0; x < map.Width && fireDropLocation == null; x++)
+            for (int y = 0; y < map.Height && fireDropLocation == null; y++)
+                if (map.Cells[x, y].Objects?.OfType<ItemObject>()
+                    .Any(value => value.Item.Info == fireOrb) == true)
+                    fireDropLocation = new Point(x, y);
+            Assert.NotNull(fireDropLocation);
+            player.CurrentLocation = fireDropLocation.Value;
+            player.PickUp();
+            Assert.Contains(character.Inventory, item => item?.Info == fireOrb);
+
+            NPCScript npc = NPCScript.GetOrAdd(916183,
+                "【4大陆】/功能-五行灵珠-Zc4", NPCScriptType.Normal);
+            npc.Call(player, 916183, NPCScript.MainKey);
+            ServerPackets.LingFengDialog stylePacket = Assert.Single(
+                player.Packets.OfType<ServerPackets.LingFengDialog>());
+            Assert.True(stylePacket.NpcStyle);
+            Assert.Equal("NewUI2", stylePacket.LibraryName);
+            Assert.Equal(4, stylePacket.ImageIndex);
+            Assert.True(stylePacket.ShowCloseButton);
+            Assert.True(stylePacket.ContinueNpcStyle);
+            var mobilePresentation = new LingFengClientPresentationState();
+            mobilePresentation.Apply(stylePacket);
+            Assert.True(mobilePresentation.Dialogs[0].NpcStyle);
+            ServerPackets.NPCResponse pcDialog = Assert.Single(
+                player.Packets.OfType<ServerPackets.NPCResponse>());
+            Assert.Contains(pcDialog.Page,
+                line => line.Contains("【法宝】五行灵珠[鸿蒙]", StringComparison.Ordinal));
+            var androidDialog = new AndroidServerPackets.NPCResponse { Page = [.. pcDialog.Page] };
+            Assert.Equal(pcDialog.GetPacketBytes().ToArray(), androidDialog.GetPacketBytes().ToArray());
+
+            NPCScript fiveOrb = Assert.Single(Envir.Main.Scripts.Values, value =>
+                value.FileName.EndsWith("【2功能脚本】/五行灵珠", StringComparison.OrdinalIgnoreCase));
+            Assert.True(fiveOrb.CallSystem(player, "[@五行灵珠配置]"));
+            var configuredTarget = Envir.Main.CSharpScripts.VariableCommands.Format(
+                ScriptVariableContext.ForPlayer(player), "S$五行灵珠_物品名称");
+            Assert.Equal(reward.Name, configuredTarget.Text);
+            Assert.All(Enumerable.Range(1, 6), index =>
+            {
+                var gray = Envir.Main.CSharpScripts.VariableCommands.Format(
+                    ScriptVariableContext.ForPlayer(player), $"N$五行灵珠_灰亮展示{index}");
+                Assert.Equal("0", gray.Text);
+            });
+            int rewardCountBeforeSynthesis = character.Inventory
+                .Where(item => item?.Info == reward)
+                .Sum(item => item.Count);
+            int chaosCountBeforeSynthesis = character.Inventory
+                .Where(item => item?.Info == chaosOrb)
+                .Sum(item => item.Count);
+            string[] requiredOrbNames = [fireOrb.Name, .. startingOrbNames];
+            Dictionary<string, int> orbCountsBeforeSynthesis = requiredOrbNames.ToDictionary(
+                name => name,
+                name => character.Inventory
+                    .Where(item => item?.Info.Name == name)
+                    .Sum(item => item.Count),
+                StringComparer.Ordinal);
+            Assert.True(fiveOrb.CallSystem(player,
+                "[@合成灵珠执行](【法宝】五行灵珠[鸿蒙])"));
+            int rewardCountAfterSynthesis = character.Inventory
+                .Where(item => item?.Info == reward)
+                .Sum(item => item.Count);
+            int chaosCountAfterSynthesis = character.Inventory
+                .Where(item => item?.Info == chaosOrb)
+                .Sum(item => item.Count);
+            Dictionary<string, int> orbCountsAfterSynthesis = requiredOrbNames.ToDictionary(
+                name => name,
+                name => character.Inventory
+                    .Where(item => item?.Info.Name == name)
+                    .Sum(item => item.Count),
+                StringComparer.Ordinal);
+            string variableState = string.Join("; ", Enumerable.Range(1, 6).Select(index =>
+            {
+                var result = Envir.Main.CSharpScripts.VariableCommands.Format(
+                    ScriptVariableContext.ForPlayer(player), $"N$五行灵珠_灰亮展示{index}");
+                return $"灰{index}={result.Text}";
+            }));
+            var targetNameState = Envir.Main.CSharpScripts.VariableCommands.Format(
+                ScriptVariableContext.ForPlayer(player), "S$五行灵珠_物品名称");
+            var exchangeFlagState = Envir.Main.CSharpScripts.VariableCommands.Format(
+                ScriptVariableContext.ForPlayer(player), "N$五行灵珠_兑换逻辑");
+            Assert.True(rewardCountAfterSynthesis == rewardCountBeforeSynthesis + 1 &&
+                        character.LingFengProgress.GameGird == 0 &&
+                        account.Gold == 100_000_000u && character.Flags[551] &&
+                        chaosCountBeforeSynthesis == 10 && chaosCountAfterSynthesis == 0 &&
+                        requiredOrbNames.All(name =>
+                            orbCountsBeforeSynthesis[name] == 1 &&
+                            orbCountsAfterSynthesis[name] == 1),
+                $"{variableState}; GameGird={character.LingFengProgress.GameGird}; Gold={account.Gold}; " +
+                $"Chaos={character.Inventory.Where(item => item?.Info == chaosOrb).Sum(item => item.Count)}; " +
+                $"Flag551={character.Flags[551]}; Target={targetNameState.Text}; " +
+                $"ExchangeFlag={exchangeFlagState.Text}; " +
+                $"RewardBefore={rewardCountBeforeSynthesis}; RewardAfter={rewardCountAfterSynthesis}; " +
+                $"MapFile={map.Info.FileName}; MapAlias={map.Info.LingFengAlias}; " +
+                $"Messages={string.Join(" | ", MessageQueue.Instance.MessageLog.TakeLast(8))}");
+            Assert.Equal(rewardCountBeforeSynthesis + 1, rewardCountAfterSynthesis);
+            Assert.Equal(10, chaosCountBeforeSynthesis);
+            Assert.Equal(0, chaosCountAfterSynthesis);
+            Assert.All(requiredOrbNames, name =>
+                Assert.Equal(orbCountsBeforeSynthesis[name], orbCountsAfterSynthesis[name]));
+            Assert.Equal(0, character.LingFengProgress.GameGird);
+            Assert.Equal(100_000_000u, account.Gold);
+            Assert.True(character.Flags[551]);
+
+            var persistence = new SqlServerPersistence(DatabaseProviderKind.Sqlite,
+                new SqlDatabaseOptions { SqlitePath = databasePath });
+            var source = new Envir();
+            source.ItemInfoList.AddRange(items);
+            source.AccountList.Add(account);
+            source.CharacterList.Add(character);
+            persistence.SaveAccounts(source);
+            ((IPendingSaveCoordinator)persistence).DrainPendingSaves();
+
+            var restarted = new Envir();
+            restarted.ItemInfoList.AddRange(items);
+            persistence.LoadAccounts(restarted);
+            CharacterInfo restored = Assert.Single(restarted.CharacterList);
+            Assert.Contains(restored.Inventory, item => item?.Info.Name == reward.Name);
+            Assert.Equal(0, restored.LingFengProgress.GameGird);
+            Assert.Equal(100_000_000u, Assert.Single(restarted.AccountList).Gold);
+            Assert.True(restored.Flags[551]);
+        }
+        finally
+        {
+            if (player != null)
+            {
+                Envir.Main.Players.Remove(player);
+                map?.Players.Remove(player);
+            }
+            foreach (int scriptId in Envir.Main.Scripts.Keys.Except(oldScriptIds).ToArray())
+                Envir.Main.Scripts.Remove(scriptId);
+            Envir.Main.DefaultNPC = oldDefaultNpc;
+            Envir.Main.ItemInfoList.Clear();
+            Envir.Main.ItemInfoList.AddRange(oldItems);
+            Envir.Main.MonsterInfoList.Clear();
+            Envir.Main.MonsterInfoList.AddRange(oldMonsters);
+            Envir.Main.MapInfoList.Clear();
+            Envir.Main.MapInfoList.AddRange(oldMaps);
+            Settings.CSharpScriptsEnabled = oldCSharpEnabled;
+            Settings.TxtScriptsEnabled = oldTxtEnabled;
+            Settings.TxtScriptsPath = oldTxtPath;
+            Settings.TxtScriptsLayout = oldLayout;
+            Settings.TxtScriptsStrictCompatibility = oldStrict;
+            Settings.TxtScriptsCompatibilityVersion = oldVersion;
+            Settings.TxtScriptsDependencyLevel = oldLevel;
+            Settings.TxtScriptsClientContracts = oldClientContracts;
+            Settings.TxtScriptsDomainAdapters = oldDomainAdapters;
+            Settings.DropRate = oldDropRate;
+            Envir.Main.ApplyPhysicalTextFileDefinitions();
+            Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
+            TryDelete(databasePath);
+            TryDelete(databasePath + "-wal");
+            TryDelete(databasePath + "-shm");
+            if (Directory.Exists(runtimeRoot)) Directory.Delete(runtimeRoot, true);
+        }
+    }
+
     [Fact]
     public void 封神原版法宝收录扣币回收登记并在重启后保留()
     {
@@ -500,9 +825,15 @@ public sealed class LingFengCompleteSliceTests
                 _ => false,
                 _ => false));
 
-        Assert.False(report.Success,
-            "酷明原始资源已满足 E1；请将本阻断测试升级为真实生产冷启动验收。");
         Assert.NotEmpty(report.Missing);
+        // 数据缺项按“运行时安全降级”契约处理：如实报告且不误报，且不得混入
+        // E2 客户端契约/领域 Adapter 这类真正的启动硬阻断（硬阻断会由生产路径失败关闭）。
+        Assert.All(report.Missing, requirement =>
+            Assert.True(requirement.Kind is LingFengDependencyKind.ItemName or
+                            LingFengDependencyKind.ItemIndex or
+                            LingFengDependencyKind.Monster or
+                            LingFengDependencyKind.Map,
+                $"酷明 E1 缺口混入了硬阻断依赖：{requirement.Kind}:{requirement.Key}:{requirement.SourceKey}"));
         Assert.All(report.Missing, requirement =>
         {
             bool exists = requirement.Kind switch

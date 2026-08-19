@@ -239,13 +239,13 @@ namespace Server.Scripting.Variables
             if (!ScriptVariableReferenceParser.TryParse(referenceText, out var reference))
                 return new ScriptVariableTextResult(false, ScriptVariableErrorCode.UnknownReference, string.Empty, "变量引用无效。");
 
-            ScriptVariableReadResult result = _module.Read(context, reference);
-            if (!result.Success)
-                return new ScriptVariableTextResult(false, result.ErrorCode, string.Empty, result.Diagnostic);
+            ScriptVariableReadResult readResult = _module.Read(context, reference);
+            if (!readResult.Success)
+                return new ScriptVariableTextResult(false, readResult.ErrorCode, string.Empty, readResult.Diagnostic);
             try
             {
                 return new ScriptVariableTextResult(true, ScriptVariableErrorCode.None,
-                    result.Value.Format(decimalDigits), string.Empty);
+                    readResult.Value.Format(decimalDigits), string.Empty);
             }
             catch (ArgumentOutOfRangeException error)
             {
@@ -253,7 +253,6 @@ namespace Server.Scripting.Variables
                     string.Empty, error.Message);
             }
         }
-
         public ScriptVariableCheckResult Check(
             in ScriptVariableContext context,
             string referenceText,

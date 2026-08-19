@@ -1807,6 +1807,19 @@ namespace Server.MirObjects
 
         public bool CallSystem(PlayerObject player, string key)
         {
+            return CallSystem(player, key, appendSpeechToCurrentDialog: false);
+        }
+
+        internal bool CallHuman(PlayerObject player, string key)
+        {
+            return CallSystem(player, key, appendSpeechToCurrentDialog: true);
+        }
+
+        private bool CallSystem(
+            PlayerObject player,
+            string key,
+            bool appendSpeechToCurrentDialog)
+        {
             if (player == null || string.IsNullOrWhiteSpace(key)) return false;
             key = key.ToUpperInvariant();
 
@@ -1868,6 +1881,7 @@ namespace Server.MirObjects
             }
             finally
             {
+                List<string> generatedSpeech = player.NPCSpeech;
                 _systemCallDepth--;
                 _currentSystemScriptId = previousSystemScriptId;
                 player.ActionList.RemoveAll(action =>
@@ -1881,6 +1895,11 @@ namespace Server.MirObjects
                 player.NPCPage = previousPage;
                 player.NPCDelayed = previousDelayed;
                 player.NPCSpeech = previousSpeech;
+                if (appendSpeechToCurrentDialog && generatedSpeech?.Count > 0)
+                {
+                    player.NPCSpeech ??= new List<string>();
+                    player.NPCSpeech.AddRange(generatedSpeech);
+                }
             }
 
             return true;
@@ -1892,9 +1911,10 @@ namespace Server.MirObjects
                 string.Equals(candidate.Key, key, StringComparison.OrdinalIgnoreCase));
             if (page != null) return page;
 
-            if (Envir.TextFileProvider?.GetByKey(FileName) is not TextFileDefinition definition ||
-                !definition.Lines.Any(line => IsMatchingPageDeclaration(line, key)))
+            if (Envir.TextFileProvider?.GetByKey(FileName) is not TextFileDefinition definition)
                 return null;
+
+            if (!definition.Lines.Any(line => IsMatchingPageDeclaration(line, key))) return null;
 
             page = ParsePage(definition.Lines.ToList(), key);
             NPCPages.Add(page);
