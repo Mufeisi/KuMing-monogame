@@ -400,7 +400,7 @@ namespace Server.MirObjects
             return true;
         }
 
-        public bool EnableGroupRecall, EnableGuildInvite, AllowMarriage, AllowLoverRecall, AllowMentor, HasMapShout, HasServerShout; //TODO - Remove        
+        public bool EnableGroupRecall, EnableGuildInvite, AllowMarriage, AllowLoverRecall, AllowMentor, HasMapShout, HasServerShout; //TODO - Remove
 
         public long LastRecallTime, LastTeleportTime, LastProbeTime;
 
