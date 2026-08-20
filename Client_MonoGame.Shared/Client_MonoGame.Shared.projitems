@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <MSBuildAllProjects>$(MSBuildAllProjects);$(MSBuildThisFileFullPath)</MSBuildAllProjects>
+    <HasSharedItems>true</HasSharedItems>
+    <SharedGUID>7f86da0f-b060-4f1b-b1a2-2c80d4c4d7e4</SharedGUID>
+  </PropertyGroup>
+  <PropertyGroup Label="Configuration">
+    <Import_RootNamespace>MonoShare</Import_RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="$(MSBuildThisFileDirectory)InternalsVisibleTo.BootstrapRuntimeSmokeTest.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)BootstrapPackageRuntime.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)BootstrapPackageDownloader.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)BootstrapPackageUpdateRuntime.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)BootstrapPackageUpdateService.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ClientResourceLayout.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)MirControls\MirAnimatedControl.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)MirControls\MirImageControl.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)MirControls\MirControl.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)MirControls\MirButton.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)CMain.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)MirControls\MirLabel.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)MirControls\MirMessageBox.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)MirControls\MirScene.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)MirControls\MirTextBox.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)MirControls\MirAmountBox.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)MirGraphics\AsynDownLoadResources.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)MirGraphics\DXManager.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)MirGraphics\MLibrary.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)MirGraphics\MicroLibraryHelper.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)MirGraphics\SpriteBatchStack.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)MirNetwork\Network.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)MirNetwork\SocketClient.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)MirObjects\Damage.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)MirObjects\DecoObject.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)MirObjects\Effect.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)MirObjects\Frames.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)MirObjects\ItemObject.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)MirObjects\MapCode.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)MirObjects\MapObject.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)MirObjects\MonsterObject.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)MirObjects\NPCObject.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)MirObjects\PlayerObject.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)MirObjects\SpellObject.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)MirObjects\UserObject.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)MirScenes\GameScene.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)MirScenes\LoginScene.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)MirScenes\PreLoginUpdateScene.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)MirScenes\SelectScene.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)MirSounds\Libraries\ISoundLibrary.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)MirSounds\Libraries\NullLibrary.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)MirSounds\Libraries\WavLibrary.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)MirSounds\MicroSoundHelper.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)MirSounds\SoundManager.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Settings.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)UI\UIProfile.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)UI\UIProfileId.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)UI\UIManager.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)UI\FairyGui\**\*.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Share\Extensions\MonoGameConversionExtensions.cs" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(TargetFramework)' == 'net8.0-windows'">
+    <Folder Include="$(MSBuildThisFileDirectory)Content\" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(TargetFramework)' == 'net8.0-windows'">
+    <MonoGameContentReference Include="$(MSBuildThisFileDirectory)Content\Content.mgcb" />
+    <None Include="$(MSBuildThisFileDirectory)Content\Content.mgcb" />
+    <None Update="$(MSBuildThisFileDirectory)Content\hm.ttf">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)Assets\UI\复古\**\*.*">
+      <Link>Assets\UI\复古\%(RecursiveDir)%(Filename)%(Extension)</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)BootstrapAssets\**\*.*">
+      <Link>BootstrapAssets\%(RecursiveDir)%(Filename)%(Extension)</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+</Project>

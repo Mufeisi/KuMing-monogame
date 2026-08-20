@@ -1,0 +1,62 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>disable</Nullable>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
+    <AssemblyName>CMirLibraryViewer</AssemblyName>
+    <RootNamespace>CMirLibraryViewer</RootNamespace>
+	<AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+	<AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
+	<ApplicationIcon>HAL System ID Icon 14.ico</ApplicationIcon>
+  </PropertyGroup>
+
+	<Choose>
+		<When Condition="$(Configuration)=='Debug' and '$(Mode)' == 'Dev'">
+		</When>
+		<When Condition="$(Configuration)=='Release'">
+			<PropertyGroup>
+				<DebugSymbols>false</DebugSymbols>
+				<Optimize>true</Optimize>
+				<DefineConstants>TRACE</DefineConstants>
+			</PropertyGroup>
+		</When>
+		<When Condition="$(Configuration)=='Debug'">
+			<Choose>
+				<When Condition="$([MSBuild]::IsOSPlatform('Windows'))">
+					<PropertyGroup>
+						<OutputPath>..\Build\Server Tools\LibraryViewer</OutputPath>
+					</PropertyGroup>
+				</When>
+				<When Condition="$([MSBuild]::IsOSPlatform('OSX'))">
+					<PropertyGroup>
+						<OutputPath>/Volumes/Data/Server Tools/LibraryViewer</OutputPath>
+					</PropertyGroup>
+				</When>
+				<When Condition="$([MSBuild]::IsOSPlatform('Linux'))">
+					<PropertyGroup>
+						<OutputPath>/Volumes/opt/Server Tools/LibraryViewer</OutputPath>
+					</PropertyGroup>
+				</When>
+			</Choose>
+		</When>
+	</Choose>
+
+  <ItemGroup>
+    <Content Include="HAL System ID Icon 14.ico" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Controls\FixedListViewControl\CustomFormControl.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="ManagedSquish">
+      <HintPath>..\Components\Squish 2.0\ManagedSquish.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
+</Project>

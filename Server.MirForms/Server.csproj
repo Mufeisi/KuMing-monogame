@@ -1,0 +1,108 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<ApplicationIcon>HAL System ID Icon 102.ico</ApplicationIcon>
+		<OutputType>WinExe</OutputType>
+		<Nullable>enable</Nullable>
+		<UseWindowsForms>true</UseWindowsForms>
+		<UseWPF>true</UseWPF>
+		<!--1、-windows+UseWindowsForms-PublishTrimmed(目前不支持winform)一起用不生成runtime后置目录（强制单平台环境）-->
+		<TargetFramework>net8.0-windows</TargetFramework>
+		<!---2、不生成framework+runtime前置目录-->
+		<AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+		<AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
+		<!---3、不生成pdb文件-->
+		<DebugType>embedded</DebugType>
+		<!--winform AOT-->
+		<PublishAot>False</PublishAot>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<_SuppressWinFormsTrimError>true</_SuppressWinFormsTrimError>
+		<!--解决AOT设计器报错-->
+		<JsonSerializerIsReflectionEnabledByDefault>true</JsonSerializerIsReflectionEnabledByDefault>
+	</PropertyGroup>
+
+	<Choose>
+		<When Condition="$(Configuration)=='Debug' and '$(Mode)' == 'Dev'">
+		</When>
+		<When Condition="$(Configuration)=='Release'">
+			<PropertyGroup>
+				<DebugSymbols>false</DebugSymbols>
+				<Optimize>true</Optimize>
+				<DefineConstants>TRACE</DefineConstants>
+			</PropertyGroup>
+		</When>
+		<When Condition="$(Configuration)=='Debug'">
+			<Choose>
+				<When Condition="$([MSBuild]::IsOSPlatform('Windows'))">
+					<PropertyGroup>
+						<OutputPath>..\Build\Server</OutputPath>
+					</PropertyGroup>
+				</When>
+				<When Condition="$([MSBuild]::IsOSPlatform('OSX'))">
+					<PropertyGroup>
+						<OutputPath>/Volumes/Data/Server</OutputPath>
+					</PropertyGroup>
+				</When>
+				<When Condition="$([MSBuild]::IsOSPlatform('Linux'))">
+					<PropertyGroup>
+						<OutputPath>/Volumes/opt/Server</OutputPath>
+					</PropertyGroup>
+				</When>
+			</Choose>
+		</When>
+	</Choose>
+
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+		<NoWarn>1701;1702</NoWarn>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+		<NoWarn>1701;1702</NoWarn>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<Compile Remove="bin\**" />
+		<EmbeddedResource Remove="bin\**" />
+		<None Remove="bin\**" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<Content Include="HAL System ID Icon 102.ico" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="log4net" Version="3.0.3" />
+		<PackageReference Include="Microsoft.CodeAnalysis" Version="4.12.0" />
+		<PackageReference Include="Microsoft.CodeAnalysis.CSharp.Scripting" Version="4.12.0" />
+		<PackageReference Include="Microsoft.CodeAnalysis.VisualBasic" Version="4.12.0" />
+		<PackageReference Include="Microsoft.CodeAnalysis.VisualBasic.Workspaces" Version="4.12.0" />
+		<PackageReference Include="RoslynPad.Editor.Windows" Version="4.12.1" />
+		<PackageReference Include="RoslynPad.Roslyn.Windows" Version="4.12.1" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\Server\Server.Library.csproj" />
+		<ProjectReference Include="..\Shared\Shared.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<Reference Include="CustomFormControl">
+			<HintPath>..\Components\CustomFormControl.dll</HintPath>
+		</Reference>
+		<Reference Include="Microsoft.VisualBasic.PowerPacks.Vs">
+			<HintPath>..\Components\Microsoft.VisualBasic.PowerPacks.Vs.dll</HintPath>
+		</Reference>
+	</ItemGroup>
+
+	<ItemGroup>
+		<None Update="log4net.config">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+	</ItemGroup>
+
+	<!--winform AOT-->
+	<ItemGroup>
+		<PackageReference Include="VC-LTL" Version="5.1.1-Beta3" />
+		<PackageReference Include="WinFormsComInterop" Version="0.5.0" />
+	</ItemGroup>
+</Project>

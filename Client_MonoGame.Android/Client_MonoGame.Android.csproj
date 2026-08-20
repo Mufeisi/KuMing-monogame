@@ -1,0 +1,59 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="..\Client_MonoGame.Mobile.props" Condition="Exists('..\Client_MonoGame.Mobile.props')" />
+
+  <PropertyGroup>
+    <TargetFramework>net11.0-android</TargetFramework>
+    <SupportedOSPlatformVersion>21.0</SupportedOSPlatformVersion>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>Client_MonoGame.Android</RootNamespace>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseMaui>true</UseMaui>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <ApplicationId>com.lommir.client.monogame.android</ApplicationId>
+    <ApplicationVersion>20000</ApplicationVersion>
+    <ApplicationDisplayVersion>2.0.0</ApplicationDisplayVersion>
+    <EmbedAssembliesIntoApk>true</EmbedAssembliesIntoApk>
+    <MonoGamePlatform>Android</MonoGamePlatform>
+    <DefineConstants>$(DefineConstants);REAL_ANDROID</DefineConstants>
+    <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == ''">android-arm64</RuntimeIdentifier>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)' == 'Debug'">
+    <AndroidFastDeploymentType>None</AndroidFastDeploymentType>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <UseMonoRuntime>true</UseMonoRuntime>
+    <RunAOTCompilation>true</RunAOTCompilation>
+    <AndroidEnableProfiledAot>false</AndroidEnableProfiledAot>
+    <AndroidAotMode>Normal</AndroidAotMode>
+    <PublishTrimmed>true</PublishTrimmed>
+    <TrimMode>partial</TrimMode>
+    <UseSystemResourceKeys>true</UseSystemResourceKeys>
+    <DebugSymbols>false</DebugSymbols>
+    <AndroidPackageFormat Condition="'$(AndroidPackageFormat)' == ''">apk</AndroidPackageFormat>
+    <JavaMaximumHeapSize>4G</JavaMaximumHeapSize>
+    <IsAotCompatible>true</IsAotCompatible>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="MainActivity.cs" />
+    <Compile Include="MainApplication.cs" />
+    <Compile Include="MauiProgram.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="11.0.0-preview.2.*" />
+    <PackageReference Include="MonoGame.Content.Builder.Task" Version="$(MobileMonoGameVersion)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Client_MonoGame.Shared\Client_MonoGame.Shared.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <MonoGameContentReference Include="Content\Content.mgcb" />
+  </ItemGroup>
+</Project>

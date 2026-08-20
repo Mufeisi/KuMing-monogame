@@ -1,0 +1,1 @@
+dotnet run -c Debug --project ../Tools/MobileBootstrapAudit -- --sync-manifest
